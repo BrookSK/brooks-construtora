@@ -36,7 +36,7 @@
 							<h1 style="font-size: 150%;">PROJETO ROCHA ANDRADE<br>Arquitetura 300 metros</h1>
 							<p><span style="font-size: 120%;">Reforma completa de apartamento de 300m2.</span></p>
 						</div>
-						<a href="/projetos" class="button secondary" style="padding:0px 5px 0px 5px;">
+						<a href="/projeto/projeto-rocha-andrade" class="button secondary" style="padding:0px 5px 0px 5px;">
 							<span>Veja detalhes do projeto</span>
 						</a>
 					</div>
@@ -59,7 +59,7 @@
 							<h1 style="font-size: 150%;">PROJETO NORAH CARNEIRO<br>Arquitetura 250 metros</h1>
 							<p><span style="font-size: 120%;">Reforma completa de apartamento de 250m2.</span></p>
 						</div>
-						<a href="/projetos" class="button secondary" style="padding:0px 5px 0px 5px;">
+						<a href="/projeto/projeto-norah-carneiro" class="button secondary" style="padding:0px 5px 0px 5px;">
 							<span>Veja detalhes do projeto</span>
 						</a>
 					</div>
@@ -82,7 +82,7 @@
 							<h3 class="uppercase"><span style="font-size: 150%;">PROJETO Jóia Bergamo</span></h3>
 							<p><span style="font-size: 120%;">Reforma completa de apartamento de 270m2.</span></p>
 						</div>
-						<a href="/projetos" class="button secondary" style="padding:0px 5px 0px 5px;">
+						<a href="/projeto/projeto-joia-bergamo-reforma-rsvp" class="button secondary" style="padding:0px 5px 0px 5px;">
 							<span>Veja detalhes do projeto</span>
 						</a>
 					</div>
@@ -105,7 +105,7 @@
 							<h3 class="uppercase"><span style="font-size: 150%;">Reforma Corporativa Cafeteria do Palácio dos Bandeirantes</span></h3>
 							<p><span style="font-size: 120%;">Reforma completa de corporativo em horário noturno e finais de semana.</span></p>
 						</div>
-						<a href="/projetos" class="button secondary" style="padding:0px 5px 0px 5px;">
+						<a href="/projeto/reforma-corporativa-cafeteria-do-palacio-dos-bandeirantes" class="button secondary" style="padding:0px 5px 0px 5px;">
 							<span>Veja detalhes do projeto</span>
 						</a>
 					</div>
@@ -129,7 +129,7 @@
 							<h3 class="uppercase"><span style="font-size: 150%;">Reforma Corporativa</span></h3>
 							<p><span style="font-size: 120%;">Reforma completa de escritório no Itaim Bibi, execução noturna e finais de semana.</span></p>
 						</div>
-						<a href="/projetos" class="button secondary" style="padding:0px 5px 0px 5px;">
+						<a href="/projeto/reforma-corporativa-de-escritorio-no-itaim-bibi" class="button secondary" style="padding:0px 5px 0px 5px;">
 							<span>Veja detalhes do projeto</span>
 						</a>
 					</div>
@@ -152,7 +152,7 @@
 							<h3 class="uppercase"><span style="font-size: 150%;">Reforma completa de mansão no Alphaville</span></h3>
 							<p><span style="font-size: 120%;">Reforma completa de casa no Alphaville.</span></p>
 						</div>
-						<a href="/projetos" class="button secondary" style="padding:0px 5px 0px 5px;">
+						<a href="/projeto/reforma-completa-de-mansao-no-alphaville" class="button secondary" style="padding:0px 5px 0px 5px;">
 							<span>Veja detalhes do projeto</span>
 						</a>
 					</div>
@@ -176,7 +176,7 @@
 							<h3 class="uppercase"><span style="font-size: 150%;">PROJETO Jóia Bergamo 2</span></h3>
 							<p><span style="font-size: 120%;">Reforma completa de apartamento de 270m2.</span></p>
 						</div>
-						<a href="/projetos" class="button secondary" style="padding:0px 5px 0px 5px;">
+						<a href="/projeto/projeto-joia-bergamo-2" class="button secondary" style="padding:0px 5px 0px 5px;">
 							<span>Veja detalhes do projeto</span>
 						</a>
 					</div>
@@ -292,7 +292,7 @@
 							<div class="col-inner" style="padding: 0; margin: 0;">
 								<div class="box has-hover box-default box-text-bottom">
 									<div class="box-image">
-										<a href="/projetos">
+										<a href="/projeto/projeto-rocha-andrade">
 											<div class="image-zoom image-cover" style="padding-top:335px;">
 												<img src="/assets/images/wp/2024/11/IMG_2477-1-jpg.webp" class="attachment- size-" alt="Projeto Rocha Andrade" />
 											</div>
@@ -314,7 +314,7 @@
 							<div class="col-inner" style="padding: 0; margin: 0;">
 								<div class="box has-hover box-default box-text-bottom">
 									<div class="box-image">
-										<a href="/projetos">
+										<a href="/projeto/projeto-norah-carneiro">
 											<div class="image-zoom image-cover" style="padding-top:335px;">
 												<img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-51-1-scaled.webp" class="attachment- size-" alt="Projeto Norah Carneiro" />
 											</div>
@@ -336,7 +336,7 @@
 							<div class="col-inner" style="padding: 0; margin: 0;">
 								<div class="box has-hover box-default box-text-bottom">
 									<div class="box-image">
-										<a href="/projetos">
+										<a href="/projeto/projeto-joia-bergamo-reforma-rsvp">
 											<div class="image-zoom image-cover" style="padding-top:335px;">
 												<img src="/assets/images/wp/2023/01/GUR1123-HDR-2-scaled.jpg" class="attachment- size-" alt="Projeto Jóia Bergamo" />
 											</div>
@@ -358,7 +358,7 @@
 							<div class="col-inner" style="padding: 0; margin: 0;">
 								<div class="box has-hover box-default box-text-bottom">
 									<div class="box-image">
-										<a href="/projetos">
+										<a href="/projeto/reforma-corporativa-cafeteria-do-palacio-dos-bandeirantes">
 											<div class="image-zoom image-cover" style="padding-top:335px;">
 												<img src="/assets/images/wp/2024/11/palacio-bandeirantes-jpg.webp" class="attachment- size-" alt="Reforma Corporativa" />
 											</div>
@@ -383,7 +383,7 @@
 							<div class="col-inner">
 								<div class="box has-hover box-default box-text-bottom">
 									<div class="box-image">
-										<a href="/projetos">
+										<a href="/projeto/reforma-corporativa-de-escritorio-no-itaim-bibi">
 											<div class="image-zoom image-cover" style="padding-top:335px;">
 												<img src="/assets/images/wp/2024/11/escritorio-itaim-jpeg.webp" class="attachment- size-" alt="Reforma Corporativa Itaim" />
 											</div>
@@ -405,7 +405,7 @@
 							<div class="col-inner">
 								<div class="box has-hover box-default box-text-bottom">
 									<div class="box-image">
-										<a href="/projetos">
+										<a href="/projeto/reforma-completa-de-mansao-no-alphaville">
 											<div class="image-zoom image-cover" style="padding-top:335px;">
 												<img src="/assets/images/wp/2024/11/mansao-alphaville-jpeg.webp" class="attachment- size-" alt="Mansão Alphaville" />
 											</div>
@@ -427,7 +427,7 @@
 							<div class="col-inner">
 								<div class="box has-hover box-default box-text-bottom">
 									<div class="box-image">
-										<a href="/projetos">
+										<a href="/projeto/projeto-joia-bergamo-2">
 											<div class="image-zoom image-cover" style="padding-top:335px;">
 												<img src="/assets/images/wp/2024/11/bergamo2-jpg.webp" class="attachment- size-" alt="Projeto Jóia Bergamo 2" />
 											</div>

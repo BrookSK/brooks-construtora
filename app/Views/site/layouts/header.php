@@ -49,8 +49,6 @@
 			-webkit-font-smoothing: antialiased;
 			-moz-osx-font-smoothing: grayscale;
 		}
-		.icon-angle-down:before { content: "\f107"; }
-		.icon-angle-up:before { content: "\f106"; }
 		.icon-menu:before { content: "\e800"; }
 		.icon-search:before { content: "\e801"; }
 		.icon-envelop:before { content: "\e803"; }
