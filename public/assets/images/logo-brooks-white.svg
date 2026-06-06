@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" width="200" height="50">
+  <text x="5" y="35" font-family="Arial, sans-serif" font-weight="bold" font-size="32" fill="#ffffff">BROO</text>
+  <text x="105" y="35" font-family="Arial, sans-serif" font-weight="bold" font-size="32" fill="#ffffff">S</text>
+  <path d="M98 10 L108 35 L103 35 L98 25 Z" fill="#4CAF50"/>
+  <text x="5" y="48" font-family="Arial, sans-serif" font-size="9" letter-spacing="3" fill="#cccccc">CONSTRUTORA</text>
+</svg>
