@@ -3,85 +3,136 @@
  * Script para baixar assets do site WordPress antigo
  * Execute: php tools/download_assets.php
  * 
- * Este script extrai URLs de imagens dos HTMLs salvos e tenta baixá-las
- * para a pasta public/assets/images/wp/
+ * Baixa imagens, vídeos e outros assets referenciados nos HTMLs limpos
+ * e organiza nas pastas corretas do novo projeto.
  */
 
-$htmlDir = __DIR__ . '/../htmls';
-$outputDir = __DIR__ . '/../public/assets/images/wp';
+$cleanDir = __DIR__ . '/../htmls/clean';
+$baseOutputDir = __DIR__ . '/../public/assets/images/wp';
+$flatsomeDir = __DIR__ . '/../public/assets/flatsome';
 
-if (!is_dir($outputDir)) {
-    mkdir($outputDir, 0755, true);
+// Cria diretórios necessários
+$dirs = [$baseOutputDir, $flatsomeDir . '/assets/css/icons'];
+foreach ($dirs as $dir) {
+    if (!is_dir($dir)) mkdir($dir, 0755, true);
 }
 
-$htmlFiles = glob($htmlDir . '/*.html');
-$urls = [];
+// Lê todos os HTMLs limpos
+$htmlFiles = glob($cleanDir . '/*.html');
+$uploadUrls = [];
+$themeUrls = [];
 
 foreach ($htmlFiles as $file) {
     $content = file_get_contents($file);
     
-    // Extrai URLs de imagens do WordPress
-    preg_match_all('/https:\/\/www\.brooksconstrutora\.com\.br\/wp-content\/uploads\/[^"\'<>\s]+\.(jpg|jpeg|png|gif|webp|svg)/i', $content, $matches);
-    
-    if (!empty($matches[0])) {
-        $urls = array_merge($urls, $matches[0]);
+    // URLs de uploads (imagens, vídeos, PDFs)
+    preg_match_all('#https?://www\.brooksconstrutora\.com\.br/wp-content/uploads/([^\s"\'<>]+)#i', $content, $m1);
+    if (!empty($m1[0])) {
+        foreach ($m1[0] as $i => $url) {
+            $uploadUrls[$url] = $m1[1][$i]; // caminho relativo
+        }
     }
     
-    // Extrai URLs de logos/temas
-    preg_match_all('/https:\/\/www\.brooksconstrutora\.com\.br\/wp-content\/themes\/[^"\'<>\s]+\.(jpg|jpeg|png|gif|webp|svg)/i', $content, $matches2);
-    
-    if (!empty($matches2[0])) {
-        $urls = array_merge($urls, $matches2[0]);
+    // URLs do tema Flatsome (fontes de ícones, etc)
+    preg_match_all('#https?://www\.brooksconstrutora\.com\.br/wp-content/themes/flatsome/([^\s"\'<>]+\.(woff2?|ttf|eot|svg|png|jpg))#i', $content, $m2);
+    if (!empty($m2[0])) {
+        foreach ($m2[0] as $i => $url) {
+            $themeUrls[$url] = $m2[1][$i]; // caminho relativo
+        }
     }
 }
 
-$urls = array_unique($urls);
-echo "Encontradas " . count($urls) . " URLs de imagens.\n\n";
+echo "============================================\n";
+echo "  DOWNLOAD DE ASSETS - BROOKS CONSTRUTORA\n";
+echo "============================================\n\n";
+echo "Uploads encontrados: " . count($uploadUrls) . "\n";
+echo "Assets do tema encontrados: " . count($themeUrls) . "\n\n";
 
 $downloaded = 0;
 $errors = 0;
+$skipped = 0;
 
-foreach ($urls as $url) {
-    // Limpa a URL (remove HTML entities)
-    $url = html_entity_decode($url);
-    $url = preg_replace('/&amp;/', '&', $url);
+// Baixa uploads
+echo "--- UPLOADS ---\n";
+foreach ($uploadUrls as $url => $relativePath) {
+    $localPath = $baseOutputDir . '/' . $relativePath;
+    $localDir = dirname($localPath);
     
-    // Cria o caminho local mantendo a estrutura
-    $path = parse_url($url, PHP_URL_PATH);
-    $localPath = $outputDir . '/' . basename($path);
+    if (!is_dir($localDir)) mkdir($localDir, 0755, true);
     
     if (file_exists($localPath)) {
-        echo "[SKIP] Já existe: " . basename($path) . "\n";
+        $skipped++;
         continue;
     }
     
-    echo "[DOWN] Baixando: " . basename($path) . " ... ";
+    echo "  Baixando: " . basename($relativePath) . " ... ";
     
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 30,
-            'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        ]
+    $ctx = stream_context_create([
+        'http' => ['timeout' => 30, 'user_agent' => 'Mozilla/5.0']
     ]);
     
-    $imageContent = @file_get_contents($url, false, $context);
+    $data = @file_get_contents($url, false, $ctx);
     
-    if ($imageContent !== false) {
-        file_put_contents($localPath, $imageContent);
-        echo "OK (" . round(strlen($imageContent) / 1024) . " KB)\n";
+    if ($data !== false && strlen($data) > 0) {
+        file_put_contents($localPath, $data);
+        echo "OK (" . round(strlen($data) / 1024) . " KB)\n";
         $downloaded++;
     } else {
         echo "ERRO\n";
         $errors++;
     }
     
-    // Evita muitas requisições simultâneas
-    usleep(500000); // 0.5s
+    usleep(300000); // 0.3s entre requests
 }
 
-echo "\n============================\n";
-echo "Download concluído!\n";
-echo "Baixados: {$downloaded}\n";
-echo "Erros: {$errors}\n";
-echo "Total URLs: " . count($urls) . "\n";
-echo "\nImagens salvas em: {$outputDir}\n";
+// Baixa assets do tema
+echo "\n--- TEMA FLATSOME ---\n";
+foreach ($themeUrls as $url => $relativePath) {
+    $localPath = $flatsomeDir . '/' . $relativePath;
+    $localDir = dirname($localPath);
+    
+    if (!is_dir($localDir)) mkdir($localDir, 0755, true);
+    
+    if (file_exists($localPath)) {
+        $skipped++;
+        continue;
+    }
+    
+    echo "  Baixando: " . basename($relativePath) . " ... ";
+    
+    $ctx = stream_context_create([
+        'http' => ['timeout' => 30, 'user_agent' => 'Mozilla/5.0']
+    ]);
+    
+    $data = @file_get_contents($url, false, $ctx);
+    
+    if ($data !== false && strlen($data) > 0) {
+        file_put_contents($localPath, $data);
+        echo "OK (" . round(strlen($data) / 1024) . " KB)\n";
+        $downloaded++;
+    } else {
+        echo "ERRO\n";
+        $errors++;
+    }
+    
+    usleep(300000);
+}
+
+echo "\n============================================\n";
+echo "  RESULTADO\n";
+echo "============================================\n";
+echo "  Baixados: {$downloaded}\n";
+echo "  Já existiam: {$skipped}\n";
+echo "  Erros: {$errors}\n";
+echo "============================================\n";
+echo "\nPastas de destino:\n";
+echo "  Imagens/uploads: {$baseOutputDir}/\n";
+echo "  Tema Flatsome: {$flatsomeDir}/\n";
+echo "\nNOTA: Se o site WordPress antigo estiver offline, você precisará\n";
+echo "copiar os arquivos manualmente do backup do servidor.\n";
+echo "\nEstruturas necessárias:\n";
+echo "  /public/assets/images/wp/2023/01/ -> imagens de 2023\n";
+echo "  /public/assets/images/wp/2024/11/ -> imagens de 2024\n";
+echo "  /public/assets/flatsome/assets/css/icons/ -> fontes fl-icons\n";
+echo "  /public/assets/videos/ -> vídeos (IMG_96791.mp4)\n";
+echo "  /public/assets/docs/ -> documentos (portfolio.pdf)\n";

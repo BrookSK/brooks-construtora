@@ -1,74 +1,118 @@
-<?php $pageTitle = htmlspecialchars($magazine['title']); include ROOT_PATH . '/app/Views/site/layouts/header.php'; ?>
+<?php include __DIR__ . '/../layouts/header.php'; ?>
 
-<section class="magazine-viewer py-5">
-    <div class="container">
-        <div class="text-center mb-4">
-            <h1><?= htmlspecialchars($magazine['title']) ?></h1>
-            <?php if ($magazine['subtitle']): ?>
-                <p class="lead text-muted"><?= htmlspecialchars($magazine['subtitle']) ?></p>
-            <?php endif; ?>
-            <span class="text-muted">Publicada em <?= date('d/m/Y', strtotime($magazine['published_at'])) ?></span>
-        </div>
+<div id="content" role="main" class="content-area">
 
-        <div class="magazine-pages">
-            <?php foreach ($pages as $page): ?>
-                <?php if ($page['layout_type'] === 'cover'): ?>
-                    <div class="mag-page mag-cover">
-                        <?php if ($magazine['cover_image']): ?>
-                            <img src="<?= $magazine['cover_image'] ?>" alt="Capa" class="img-fluid rounded">
-                        <?php else: ?>
-                            <div class="mag-cover-text">
-                                <h2><?= htmlspecialchars($magazine['title']) ?></h2>
-                                <p><?= htmlspecialchars($magazine['subtitle'] ?? '') ?></p>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+	<!-- Page Title -->
+	<section class="section" id="section_magazine_show_title">
+		<div class="bg section-bg fill bg-fill bg-loaded"></div>
+		<div class="section-content relative">
+			<div class="row align-center">
+				<div class="col medium-10 small-12 large-10">
+					<div class="col-inner text-center">
+						<div class="gap-element clearfix" style="display:block; height:auto; padding-top: 45px;"></div>
+						<h4 class="uppercase" style="text-align: left;">
+							<em><strong><span style="font-size: 150%;"><?= htmlspecialchars($magazine['title'] ?? 'Revista Brooks') ?></span></strong></em>
+						</h4>
+						<?php if (!empty($magazine['published_at'])): ?>
+						<div class="text" style="font-size: 0.8rem; color: rgb(100, 100, 100); text-align: left;">
+							<p>Publicado em <?= date('d/m/Y', strtotime($magazine['published_at'])) ?></p>
+						</div>
+						<?php endif; ?>
+					</div>
+				</div>
+			</div>
+		</div>
+		<style>
+			#section_magazine_show_title { padding-top: 30px; padding-bottom: 0px; }
+		</style>
+	</section>
 
-                <?php elseif ($page['layout_type'] === 'backcover'): ?>
-                    <div class="mag-page mag-backcover">
-                        <div class="mag-backcover-content">
-                            <h3>BROOKS CONSTRUTORA</h3>
-                            <p><?= nl2br(htmlspecialchars($page['content'] ?? '')) ?></p>
-                            <p class="mt-4"><small>&copy; <?= date('Y') ?> Brooks Construtora. Todos os direitos reservados.</small></p>
-                            <p><small>www.brooksconstrutora.com.br</small></p>
-                        </div>
-                    </div>
+	<!-- Magazine Content -->
+	<section class="section" id="section_magazine_content">
+		<div class="bg section-bg fill bg-fill bg-loaded"></div>
+		<div class="section-content relative">
+			<div class="row align-center">
+				<div class="col medium-10 small-12 large-10">
+					<div class="col-inner">
 
-                <?php else: ?>
-                    <div class="mag-page mag-content">
-                        <div class="mag-page-header">
-                            <span class="mag-logo">BROOKS <small>CONSTRUTORA</small></span>
-                            <span class="mag-page-number"><?= str_pad($page['page_number'], 2, '0', STR_PAD_LEFT) ?></span>
-                        </div>
+						<?php if (!empty($pages)): ?>
+							<?php foreach ($pages as $page): ?>
+							<article class="magazine-topic" style="margin-bottom: 40px; padding-bottom: 40px; border-bottom: 1px solid #eee;">
+								<h2 style="font-size: 1.4rem; font-weight: 400; margin-bottom: 15px; color: #3a3b4e;">
+									<?= htmlspecialchars($page['title'] ?? '') ?>
+								</h2>
+								<?php if (!empty($page['image'])): ?>
+								<div style="margin-bottom: 20px;">
+									<img src="<?= htmlspecialchars($page['image']) ?>" alt="<?= htmlspecialchars($page['title'] ?? '') ?>" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 4px;" />
+								</div>
+								<?php endif; ?>
+								<div class="text" style="font-size: 0.9rem; line-height: 1.7; color: rgb(50, 50, 50);">
+									<?= $page['content'] ?? '' ?>
+								</div>
+							</article>
+							<?php endforeach; ?>
+						<?php elseif (!empty($magazine['content'])): ?>
+							<div class="text" style="font-size: 0.9rem; line-height: 1.7; color: rgb(50, 50, 50);">
+								<?= $magazine['content'] ?>
+							</div>
+						<?php endif; ?>
 
-                        <?php if ($page['image_url']): ?>
-                            <div class="mag-page-image">
-                                <img src="<?= $page['image_url'] ?>" alt="" class="img-fluid rounded">
-                            </div>
-                        <?php endif; ?>
+					</div>
+				</div>
+			</div>
+		</div>
+		<style>
+			#section_magazine_content { padding-top: 30px; padding-bottom: 30px; }
+		</style>
+	</section>
 
-                        <?php if ($page['title']): ?>
-                            <h3 class="mag-page-title"><?= htmlspecialchars($page['title']) ?></h3>
-                        <?php endif; ?>
+	<!-- Newsletter CTA -->
+	<section class="section" id="section_magazine_newsletter">
+		<div class="bg section-bg fill bg-fill bg-loaded" style="background-color: #3a3b4e;"></div>
+		<div class="section-content relative">
+			<div class="row align-center">
+				<div class="col medium-8 small-12 large-6">
+					<div class="col-inner text-center" style="padding: 40px 20px;">
+						<div class="text" style="color: #fff;">
+							<h3 style="font-weight: 400; margin-bottom: 10px;">Gostou do conteúdo?</h3>
+							<p style="opacity: 0.8; margin-bottom: 20px;">Cadastre-se para receber as próximas edições da Revista Brooks diretamente no seu e-mail.</p>
+						</div>
+						<form action="/newsletter/subscribe" method="POST" class="newsletter-form">
+							<div style="display: flex; gap: 8px; max-width: 400px; margin: 0 auto;">
+								<input type="email" name="email" placeholder="Seu e-mail" required
+									style="flex: 1; padding: 10px 15px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px; font-size: 0.9rem;">
+								<button type="submit" class="button secondary" style="padding: 10px 20px;">
+									<span>Assinar</span>
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+		<style>
+			#section_magazine_newsletter { padding-top: 0px; padding-bottom: 0px; }
+		</style>
+	</section>
 
-                        <?php if ($page['content']): ?>
-                            <div class="mag-page-text">
-                                <?php foreach (explode("\n", $page['content']) as $p): ?>
-                                    <?php if (trim($p)): ?>
-                                        <p><?= htmlspecialchars(trim($p)) ?></p>
-                                    <?php endif; ?>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                <?php endif; ?>
-            <?php endforeach; ?>
-        </div>
+	<!-- Back to magazine list -->
+	<section class="section" id="section_magazine_back">
+		<div class="section-content relative">
+			<div class="row align-center">
+				<div class="col medium-10 small-12 large-10">
+					<div class="col-inner text-center">
+						<a href="/revista" class="button secondary" style="padding: 10px 30px;">
+							<span>&larr; Voltar para Revista</span>
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+		<style>
+			#section_magazine_back { padding-top: 30px; padding-bottom: 60px; }
+		</style>
+	</section>
 
-        <div class="text-center mt-5">
-            <a href="/revista" class="btn btn-outline-dark">← Voltar para Revistas</a>
-        </div>
-    </div>
-</section>
+</div><!-- #content -->
 
-<?php include ROOT_PATH . '/app/Views/site/layouts/footer.php'; ?>
+<?php include __DIR__ . '/../layouts/footer.php'; ?>

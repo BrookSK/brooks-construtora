@@ -1,81 +1,185 @@
-    <!-- Newsletter Section -->
-    <section class="newsletter-section">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-5">
-                    <h3>Receba nossas novidades</h3>
-                    <p>Inscreva-se para receber nossa revista digital e ficar por dentro das tendências em construção e reformas.</p>
-                </div>
-                <div class="col-lg-7">
-                    <form class="newsletter-form" id="newsletter-form" method="POST" action="/newsletter/subscribe">
-                        <div class="input-group">
-                            <input type="text" class="form-control" name="name" placeholder="Seu nome">
-                            <input type="email" class="form-control" name="email" placeholder="Seu melhor e-mail" required>
-                            <button type="submit" class="btn btn-newsletter">Inscrever-se</button>
-                        </div>
-                        <div class="newsletter-message mt-2" id="newsletter-message"></div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </section>
+	</main>
 
-    <!-- Footer -->
-    <footer class="site-footer">
-        <div class="container">
-            <div class="row g-4">
-                <div class="col-lg-4">
-                    <div class="footer-brand">
-                        <img src="/assets/images/logo-brooks-white.svg" alt="Brooks Construtora" class="footer-logo">
-                        <p class="mt-3">A Brooks Construtora é uma empresa especializada em reformas e construções de alto padrão, inserida no mercado de engenharia civil.</p>
-                    </div>
-                </div>
-                <div class="col-lg-3">
-                    <h5>Links Rápidos</h5>
-                    <ul class="footer-links">
-                        <li><a href="/">Home</a></li>
-                        <li><a href="/sobre">Sobre</a></li>
-                        <li><a href="/projetos">Projetos</a></li>
-                        <li><a href="/revista">Revista</a></li>
-                        <li><a href="/contato">Contato</a></li>
-                    </ul>
-                </div>
-                <div class="col-lg-2">
-                    <h5>Redes Sociais</h5>
-                    <ul class="footer-links">
-                        <?php if (!empty($settings['site_instagram'] ?? '')): ?>
-                            <li><a href="<?= $settings['site_instagram'] ?>" target="_blank"><i class="bi bi-instagram"></i> Instagram</a></li>
-                        <?php endif; ?>
-                        <?php if (!empty($settings['site_facebook'] ?? '')): ?>
-                            <li><a href="<?= $settings['site_facebook'] ?>" target="_blank"><i class="bi bi-facebook"></i> Facebook</a></li>
-                        <?php endif; ?>
-                        <?php if (!empty($settings['site_linkedin'] ?? '')): ?>
-                            <li><a href="<?= $settings['site_linkedin'] ?>" target="_blank"><i class="bi bi-linkedin"></i> LinkedIn</a></li>
-                        <?php endif; ?>
-                    </ul>
-                </div>
-                <div class="col-lg-3">
-                    <h5>Contato</h5>
-                    <ul class="footer-links footer-contact">
-                        <?php if (!empty($settings['site_phone'] ?? '')): ?>
-                            <li><i class="bi bi-telephone"></i> <?= htmlspecialchars($settings['site_phone']) ?></li>
-                        <?php endif; ?>
-                        <?php if (!empty($settings['site_email'] ?? '')): ?>
-                            <li><i class="bi bi-envelope"></i> <?= htmlspecialchars($settings['site_email']) ?></li>
-                        <?php endif; ?>
-                        <?php if (!empty($settings['site_address'] ?? '')): ?>
-                            <li><i class="bi bi-geo-alt"></i> <?= htmlspecialchars($settings['site_address']) ?></li>
-                        <?php endif; ?>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; <?= date('Y') ?> Brooks Construtora. Todos os direitos reservados.</p>
-            </div>
-        </div>
-    </footer>
+<footer id="footer" class="footer-wrapper">
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/assets/js/main.js"></script>
+<!-- FOOTER 2 -->
+<div class="footer-widgets footer footer-2 dark">
+	<div class="row dark large-columns-2 mb-0">
+
+		<div id="block_widget-2" class="col pb-0 widget block_widget">
+			<span class="widget-title">Portfólio</span><div class="is-divider small"></div>
+			<div id="text-footer-portfolio" class="text">
+				<p style="text-align: left;">Faça o download do nosso portfólio digital</p>
+			</div>
+
+			<div class="img has-hover hide-for-medium x md-x lg-x y md-y lg-y" id="image_footer_pdf">
+				<a class="" href="/assets/docs/portfolio.pdf" target="_blank" rel="noopener noreferrer">
+					<div class="img-inner dark" style="margin:0px 0px 0px 3px;">
+						<img width="453" height="497" src="/assets/images/wp/2023/01/icone-pdf-1.png" class="attachment-original size-original" alt="Download PDF" />
+					</div>
+				</a>
+				<style>
+					#image_footer_pdf { width: 13%; }
+				</style>
+			</div>
+
+			<div class="img has-hover show-for-medium hide-for-small x md-x lg-x y md-y lg-y" id="image_footer_pdf_tablet">
+				<a class="" href="/assets/docs/portfolio.pdf" target="_blank" rel="noopener noreferrer">
+					<div class="img-inner dark" style="margin:0px 0px 0px 0px;">
+						<img width="453" height="497" src="/assets/images/wp/2023/01/icone-pdf-1.png" class="attachment-original size-original" alt="Download PDF" />
+					</div>
+				</a>
+				<style>
+					#image_footer_pdf_tablet { width: 8%; }
+					@media (min-width:850px) { #image_footer_pdf_tablet { width: 17%; } }
+				</style>
+			</div>
+
+			<div class="img has-hover show-for-small x md-x lg-x y md-y lg-y" id="image_footer_pdf_mobile">
+				<a class="" href="/assets/docs/portfolio.pdf" target="_blank" rel="noopener noreferrer">
+					<div class="img-inner dark" style="margin:0px 0px 0px 3px;">
+						<img width="453" height="497" src="/assets/images/wp/2023/01/icone-pdf-1.png" class="attachment-original size-original" alt="Download PDF" />
+					</div>
+				</a>
+				<style>
+					#image_footer_pdf_mobile { width: 19%; }
+					@media (min-width:550px) { #image_footer_pdf_mobile { width: 11%; } }
+					@media (min-width:850px) { #image_footer_pdf_mobile { width: 17%; } }
+				</style>
+			</div>
+
+			<div class="gap-element clearfix" style="display:block; height:auto; padding-top: 30px;"></div>
+
+			<div id="text-footer-instagram" class="text">
+				<p style="text-align: left;">Acompanhe nossos trabalhos no Instagram</p>
+			</div>
+			<div class="social-icons follow-icons full-width text-left" style="font-size:165%">
+				<a href="https://www.instagram.com/brooksconstrutora/" target="_blank" rel="noopener noreferrer nofollow" data-label="Instagram" class="icon primary button circle instagram tooltip" title="Follow on Instagram" aria-label="Siga no Instagram">
+					<i class="icon-instagram"></i>
+				</a>
+			</div>
+		</div>
+
+		<div id="block_widget-3" class="col pb-0 widget block_widget">
+			<span class="widget-title">Atendimento</span><div class="is-divider small"></div>
+			<?php $whatsapp = $settings['site_whatsapp'] ?? '5511993392659'; ?>
+			<p>WhatsApp <a href="https://api.whatsapp.com/send?phone=<?= $whatsapp ?>&text=Oi!" target="_blank"><?= $settings['site_phone'] ?? '(11) 99339-2659' ?></a><br>(Mariana ou Kauê)</p>
+			<p>E-mail<br><a href="mailto:<?= $settings['site_email'] ?? 'contato@brooksconstrutora.com.br' ?>"><?= $settings['site_email'] ?? 'contato@brooksconstrutora.com.br' ?></a></p>
+			<p>Avenida Brigadeiro Faria Lima, 1811<br>Conjunto 910 - Jardim Paulistano<br>CEP 1452-001 - São Paulo/SP</p>
+			<p>BROOKS CONSTRUTORA<br>CNPJ 24.811.527/0001-64</p>
+
+			<!-- Newsletter Form -->
+			<div class="newsletter-footer" style="margin-top: 20px;">
+				<span class="widget-title">Newsletter</span><div class="is-divider small"></div>
+				<p>Receba novidades e conteúdos exclusivos:</p>
+				<form action="/newsletter/subscribe" method="POST" class="newsletter-form">
+					<div class="flex-row" style="gap: 8px;">
+						<input type="email" name="email" placeholder="Seu e-mail" required class="search-field mb-0" style="flex: 1; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
+						<button type="submit" class="button secondary" style="padding: 8px 16px;">
+							<span>Assinar</span>
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
+	</div>
+</div>
+
+<div class="absolute-footer dark medium-text-center small-text-center">
+	<div class="container clearfix">
+		<div class="footer-secondary pull-right">
+			<div class="footer-text inline-block small-block">
+				<p>Desenvolvido por <a href="https://www.rededesigner.com.br/" target="_blank" rel="noopener noreferrer">Rede Designer</a></p>
+			</div>
+		</div>
+		<div class="footer-primary pull-left">
+			<div class="copyright-footer">
+				<p>Copyright <?= date('Y') ?> &copy; Brooks Construtora</p>
+			</div>
+		</div>
+	</div>
+</div>
+
+<a href="#top" class="back-to-top button icon invert plain fixed bottom z-1 is-outline hide-for-medium circle" id="top-link" aria-label="Voltar ao topo"><i class="icon-angle-up"></i></a>
+
+</footer>
+
+</div><!-- #wrapper -->
+
+<!-- Mobile Menu -->
+<div id="main-menu" class="mobile-sidebar no-scrollbar mfp-hide">
+	<div class="sidebar-menu no-scrollbar">
+		<ul class="nav nav-sidebar nav-vertical nav-uppercase" data-tab="1">
+			<li class="menu-item"><a href="/">Home</a></li>
+			<li class="menu-item"><a href="/sobre">Sobre</a></li>
+			<li class="menu-item"><a href="/projetos">Projetos</a></li>
+			<li class="menu-item"><a href="/revista">Revista</a></li>
+			<li class="menu-item"><a href="/contato">Contato</a></li>
+			<?php $whatsappFooter = $settings['site_whatsapp'] ?? '5511993392659'; ?>
+			<li class="menu-item has-icon-left">
+				<a href="https://api.whatsapp.com/send?phone=<?= $whatsappFooter ?>&text=Oi!" target="_blank">
+					<img class="ux-sidebar-menu-icon" width="35" height="35" src="/assets/images/wp/2023/01/whatsapp.png" alt="WhatsApp" /><?= $settings['site_phone'] ?? '(11) 99339-2659' ?>
+				</a>
+			</li>
+			<li class="html header-social-icons ml-0">
+				<div class="social-icons follow-icons">
+					<a href="https://www.instagram.com/brooksconstrutora/" target="_blank" rel="noopener noreferrer nofollow" data-label="Instagram" class="icon plain instagram tooltip" title="Siga no Instagram" aria-label="Siga no Instagram"><i class="icon-instagram"></i></a>
+				</div>
+			</li>
+		</ul>
+	</div>
+</div>
+
+<!-- WhatsApp Float Button -->
+<div id="qlwapp" class="qlwapp-free qlwapp-button qlwapp-bottom-right qlwapp-all qlwapp-rounded">
+	<div class="qlwapp-container">
+		<?php $whatsappBtn = $settings['site_whatsapp'] ?? '5511993392659'; ?>
+		<a class="qlwapp-toggle" data-action="open" data-phone="<?= $whatsappBtn ?>" data-message="Olá, estou acessando o site da Brooks e gostaria de algumas informações." href="https://api.whatsapp.com/send?phone=<?= $whatsappBtn ?>&text=Ol%C3%A1%2C%20estou%20acessando%20o%20site%20da%20Brooks%20e%20gostaria%20de%20algumas%20informa%C3%A7%C3%B5es." target="_blank">
+			<i class="qlwapp-icon qlwapp-whatsapp-icon"></i>
+			<i class="qlwapp-close" data-action="close">&times;</i>
+			<span class="qlwapp-text">Podemos ajudar?</span>
+		</a>
+	</div>
+</div>
+
+<!-- Flatsome JS -->
+<script src="/assets/flatsome/assets/js/flatsome.js"></script>
+<!-- WhatsApp Chat CSS (inline) -->
+<style>
+	#qlwapp .qlwapp-toggle {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		background-color: #25d366;
+		color: #fff;
+		padding: 10px 20px;
+		border-radius: 50px;
+		text-decoration: none;
+		font-size: 14px;
+		box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+		transition: all 0.3s ease;
+	}
+	#qlwapp .qlwapp-toggle:hover {
+		transform: scale(1.05);
+		box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+	}
+	#qlwapp .qlwapp-whatsapp-icon:before {
+		content: "\f232";
+		font-family: "fl-icons";
+	}
+	#qlwapp .qlwapp-close { display: none; }
+	#qlwapp.qlwapp-bottom-right {
+		position: fixed;
+		bottom: 45px;
+		right: 20px;
+		z-index: 9999;
+	}
+	@media (max-width: 549px) {
+		#qlwapp.qlwapp-bottom-right { bottom: 0px; }
+		#qlwapp .qlwapp-text { display: none; }
+	}
+</style>
+
 </body>
 </html>

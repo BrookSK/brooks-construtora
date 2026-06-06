@@ -1,22 +1,28 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Página não encontrada - Brooks Construtora</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background: #f8f9fa; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .error-page { text-align: center; }
-        .error-page h1 { font-size: 6rem; font-weight: 800; color: #1a472a; }
-    </style>
-</head>
-<body>
-    <div class="error-page">
-        <h1>404</h1>
-        <h3>Página não encontrada</h3>
-        <p class="text-muted">A página que você procura não existe ou foi removida.</p>
-        <a href="/" class="btn btn-dark mt-3">Voltar para Home</a>
-    </div>
-</body>
-</html>
+<?php include __DIR__ . '/../layouts/header.php'; ?>
+
+<div id="content" role="main" class="content-area">
+
+	<section class="section" id="section_404">
+		<div class="bg section-bg fill bg-fill bg-loaded"></div>
+		<div class="section-content relative">
+			<div class="row align-center">
+				<div class="col medium-8 small-12 large-6">
+					<div class="col-inner text-center" style="padding: 80px 20px;">
+						<h1 style="font-size: 5rem; font-weight: 300; color: #3a3b4e; margin-bottom: 10px;">404</h1>
+						<h2 style="font-weight: 400; color: #666; margin-bottom: 20px;">Página não encontrada</h2>
+						<p style="color: #999; margin-bottom: 30px;">A página que você está procurando não existe ou foi movida.</p>
+						<a href="/" class="button secondary" style="padding: 12px 30px;">
+							<span>Voltar para Home</span>
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+		<style>
+			#section_404 { padding-top: 30px; padding-bottom: 60px; }
+		</style>
+	</section>
+
+</div><!-- #content -->
+
+<?php include __DIR__ . '/../layouts/footer.php'; ?>

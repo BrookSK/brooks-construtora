@@ -103,15 +103,24 @@ Adicionar ao crontab do servidor:
 
 ## Imagens e Assets
 
-As imagens de logo devem ser colocadas manualmente em:
-- `/public/assets/images/logo-brooks.png` (logo escuro, para fundo claro)
-- `/public/assets/images/logo-brooks-white.png` (logo branco, para fundo escuro)
+O site institucional usa exatamente o mesmo HTML e layout do WordPress (tema Flatsome).
+Os assets precisam ser copiados nas seguintes estruturas:
 
-Imagens de projetos em:
-- `/public/assets/images/projects/`
+```
+public/assets/images/wp/2023/01/    → imagens de 2023 (logo, diferenciais, galeria, avaliações)
+public/assets/images/wp/2024/11/    → imagens de 2024 (projetos, banners)
+public/assets/flatsome/assets/css/icons/ → fontes fl-icons (woff2, woff, ttf)
+public/assets/videos/               → vídeos (IMG_96791.mp4)
+public/assets/docs/                  → documentos (portfolio.pdf)
+```
+
+Execute `php tools/download_assets.php` para tentar baixar automaticamente do site antigo.
+Se o WordPress estiver offline, copie manualmente os arquivos do backup.
 
 ## Notas Importantes
 
 - **Sem .env**: Todas as configurações dinâmicas ficam no banco de dados, gerenciadas pela tela de Configurações do admin.
 - **Sem migrations automáticas**: Os arquivos `.sql` devem ser executados manualmente. Para alterações futuras, crie uma nova migration (nunca edite as existentes).
+- **Site idêntico ao WordPress**: O HTML do site institucional é o mesmo do WordPress antigo (tema Flatsome) adaptado para o MVC. Header, footer, slider, grid de projetos, accordion de missão/visão/valores - tudo igual ao original.
 - **Newsletter**: O campo de inscrição fica no footer de todas as páginas do site.
+- **Scripts úteis**: `php tools/download_assets.php` para baixar imagens do WP, `php tools/extract_html.php` para extrair HTML dos view-source.
