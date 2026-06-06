@@ -42,14 +42,18 @@ class ProjectController extends Controller
             return;
         }
 
-        $siteSettings = Setting::getGroup('site_');
+        try {
+            $siteSettings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $siteSettings = [];
+        }
 
         // Verifica se existe uma view estática para este projeto
         if (in_array($slug, $this->staticProjects)) {
             $viewFile = ROOT_PATH . '/app/Views/site/projects/' . $slug . '.php';
             if (file_exists($viewFile)) {
                 $settings = $siteSettings;
-                require_once $viewFile;
+                include $viewFile;
                 return;
             }
         }
