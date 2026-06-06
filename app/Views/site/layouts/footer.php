@@ -144,6 +144,17 @@
 </div>
 
 <!-- Flatsome JS -->
+<script>
+var flatsomeVars = {
+    "ajaxurl": "/",
+    "rtl": "",
+    "sticky_height": "70",
+    "lightbox": {"close_markup": "<button title=\"Close (Esc)\" type=\"button\" class=\"mfp-close\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"28\" height=\"28\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"feather feather-x\"><line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\"></line><line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\"></line></svg></button>","close_btn_inside": false},
+    "user": {"can_edit_pages": false},
+    "i18n": {"mainMenu": "Menu principal","toggleButton": "Toggle"},
+    "options": {"cookie_notice_version": "1","swatches_layout": false,"swatches_disable_deselect": false,"swatches_box_reset": false,"swatches_box_reset_extent": false,"search_result_type": false}
+};
+</script>
 <script src="/assets/flatsome/assets/js/chunk.vendors-slider.js"></script>
 <script src="/assets/flatsome/assets/js/flatsome.js"></script>
 <script>
