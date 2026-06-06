@@ -144,7 +144,76 @@
 </div>
 
 <!-- Flatsome JS -->
+<script src="/assets/flatsome/assets/js/chunk.vendors-slider.js"></script>
 <script src="/assets/flatsome/assets/js/flatsome.js"></script>
+<script>
+// Inicializa backgrounds e slider após carregamento
+document.addEventListener('DOMContentLoaded', function() {
+    // Marca backgrounds como loaded
+    document.querySelectorAll('.bg.section-bg').forEach(function(el) {
+        el.classList.add('bg-loaded');
+    });
+    
+    // Accordion toggle
+    document.querySelectorAll('.accordion-title').forEach(function(title) {
+        title.addEventListener('click', function(e) {
+            e.preventDefault();
+            var item = this.closest('.accordion-item');
+            var wasActive = item.classList.contains('active');
+            item.parentElement.querySelectorAll('.accordion-item').forEach(function(s) { s.classList.remove('active'); });
+            if (!wasActive) item.classList.add('active');
+        });
+    });
+
+    // Mobile menu
+    document.querySelectorAll('[data-open="#main-menu"]').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('main-menu').classList.toggle('active');
+        });
+    });
+
+    // Back to top
+    var topLink = document.getElementById('top-link');
+    if (topLink) {
+        window.addEventListener('scroll', function() {
+            topLink.style.display = window.scrollY > 300 ? 'flex' : 'none';
+        });
+        topLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        });
+    }
+
+    // Simple slider auto-rotation (fallback if Flickity not loaded)
+    document.querySelectorAll('.slider').forEach(function(slider) {
+        var slides = slider.querySelectorAll(':scope > .section');
+        if (slides.length <= 1) return;
+        // Check if Flickity is available
+        if (window.Flickity) return; // Flickity handles it
+        var current = 0;
+        slides.forEach(function(s, i) { s.style.display = i === 0 ? 'block' : 'none'; });
+        setInterval(function() {
+            slides[current].style.display = 'none';
+            current = (current + 1) % slides.length;
+            slides[current].style.display = 'block';
+        }, 3000);
+    });
+
+    // Newsletter AJAX
+    document.querySelectorAll('.newsletter-form').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var fd = new FormData(this);
+            var f = this;
+            fetch('/newsletter/subscribe', {method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'}})
+            .then(function(r){return r.json()})
+            .then(function(d){ alert(d.message || 'OK'); if(d.success) f.reset(); })
+            .catch(function(){ alert('Erro. Tente novamente.'); });
+        });
+    });
+});
+</script>
 <!-- WhatsApp Chat CSS (inline) -->
 <style>
 	#qlwapp .qlwapp-toggle {
