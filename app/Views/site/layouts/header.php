@@ -53,8 +53,6 @@
 		.icon-angle-up:before { content: "\f106"; }
 		.icon-menu:before { content: "\e800"; }
 		.icon-search:before { content: "\e801"; }
-		.icon-instagram:before { content: "\f16d"; }
-		.icon-facebook:before { content: "\f09a"; }
 		.icon-envelop:before { content: "\e803"; }
 		/* WhatsApp float button icon */
 		.qlwapp-whatsapp-icon {
