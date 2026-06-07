@@ -164,8 +164,8 @@ foreach ($pages as $page):
 <?php endforeach; ?>
 
 <div style="text-align:center;margin:30px 0 50px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-    <button onclick="generatePDF()" id="btn-pdf" style="background:#3a3b4e;color:#fff;border:none;padding:12px 24px;border-radius:4px;font-weight:600;font-size:14px;cursor:pointer;">Baixar PDF</button>
-    <a href="/revista" style="background:#fff;color:#3a3b4e;border:1px solid #3a3b4e;padding:12px 24px;border-radius:4px;font-weight:600;font-size:14px;text-decoration:none;">Voltar</a>
+    <button onclick="generatePDF()" id="btn-pdf" style="background:#3a3b4e !important;color:#fff !important;border:none !important;padding:12px 24px !important;border-radius:4px !important;font-weight:600;font-size:14px;cursor:pointer;line-height:1.5;height:auto;width:auto;">Baixar PDF</button>
+    <a href="/revista" style="background:#fff !important;color:#3a3b4e !important;border:1px solid #3a3b4e !important;padding:12px 24px !important;border-radius:4px !important;font-weight:600;font-size:14px;text-decoration:none;line-height:1.5;display:inline-block;">Voltar</a>
 </div>
 </div>
 
