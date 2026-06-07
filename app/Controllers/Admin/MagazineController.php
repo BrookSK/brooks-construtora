@@ -507,7 +507,8 @@ class MagazineController extends Controller
                 $htmlBody = \App\Services\EmailTemplate::magazinePublished(
                     $magazine['title'],
                     $magazineId,
-                    $subscriber['name'] ?? ''
+                    $subscriber['name'] ?? '',
+                    $subscriber['email'] ?? ''
                 );
 
                 $mail->send(

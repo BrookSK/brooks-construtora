@@ -88,10 +88,11 @@ HTML;
         return self::wrap('Nova Revista Gerada', $body);
     }
 
-    public static function magazinePublished(string $magazineTitle, int $magazineId, string $subscriberName = ''): string
+    public static function magazinePublished(string $magazineTitle, int $magazineId, string $subscriberName = '', string $subscriberEmail = ''): string
     {
         $baseUrl = self::baseUrl();
         $viewUrl = "{$baseUrl}/revista/ver/{$magazineId}";
+        $unsubscribeUrl = "{$baseUrl}/newsletter/unsubscribe?email=" . urlencode($subscriberEmail);
         $greeting = !empty($subscriberName) ? "Olá, {$subscriberName}!" : "Olá!";
 
         $body = <<<HTML
@@ -112,7 +113,8 @@ HTML;
 
 <p style="text-align:center; font-size:13px; color:#666; margin-top:15px;">Você também pode baixar a revista em PDF acessando o link acima.</p>
 
-<p style="font-size:12px; color:#999; margin-top:25px; text-align:center;">Você recebeu este e-mail por ser assinante da Revista Brooks Construtora.</p>
+<p style="font-size:12px; color:#999; margin-top:25px; text-align:center;">Você recebeu este e-mail por ser assinante da Revista Brooks Construtora.<br>
+<a href="{$unsubscribeUrl}" style="color:#999; text-decoration:underline;">Não quero mais receber</a></p>
 HTML;
 
         return self::wrap('Nova Revista: ' . $magazineTitle, $body);

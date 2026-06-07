@@ -45,6 +45,34 @@ class NewsletterController extends Controller
         }
     }
 
+    public function unsubscribe(): void
+    {
+        $email = trim($this->input('email'));
+
+        try {
+            $settings = \App\Models\Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
+
+        $success = false;
+        $message = '';
+
+        if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            if ($this->isPost()) {
+                // Confirma o cancelamento
+                $result = Newsletter::unsubscribe($email);
+                $success = true;
+                $message = 'Sua inscrição foi cancelada com sucesso. Você não receberá mais nossos e-mails.';
+            }
+        }
+
+        // Mostra a página de confirmação
+        $pageTitle = 'Cancelar Inscrição';
+        $currentPage = '';
+        include ROOT_PATH . '/app/Views/site/newsletter/unsubscribe.php';
+    }
+
     private function isAjax(): bool
     {
         return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&

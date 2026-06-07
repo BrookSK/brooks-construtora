@@ -123,6 +123,7 @@ class Router
             'contato' => ['HomeController', 'contato'],
             'contato/enviar' => ['HomeController', 'enviarContato'],
             'newsletter/subscribe' => ['NewsletterController', 'subscribe'],
+            'newsletter/unsubscribe' => ['NewsletterController', 'unsubscribe'],
             'revista' => ['MagazineController', 'index'],
             'revista/ver' => ['MagazineController', 'show'],
         ];
