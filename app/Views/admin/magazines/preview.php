@@ -303,7 +303,7 @@ async function generatePDF() {
         pdf.addImage(imgData, 'JPEG', 0, 0, 595, 842);
     }
 
-    pdf.save('<?= preg_replace('/[^a-zA-Z0-9_-]/', '_', $magazine['title']) ?>_Brooks_Construtora.pdf');
+    pdf.save('<?php $fn = iconv('UTF-8','ASCII//TRANSLIT', $magazine['title']); $fn = preg_replace('/[^a-zA-Z0-9_-]/', '_', $fn); $fn = preg_replace('/_+/', '_', trim($fn, '_')); echo $fn; ?>_Brooks_Construtora.pdf');
 
     document.getElementById('pdf-toolbar').style.display = 'flex';
     btn.disabled = false;

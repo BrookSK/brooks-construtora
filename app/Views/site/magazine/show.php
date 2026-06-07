@@ -164,8 +164,8 @@ foreach ($pages as $page):
 <?php endforeach; ?>
 
 <div style="text-align:center;margin:30px 0 50px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-    <button onclick="generatePDF()" id="btn-pdf" style="background:#3a3b4e;color:#fff;border:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.2);">Baixar PDF</button>
-    <a href="/revista" style="background:transparent;color:#3a3b4e;border:2px solid #3a3b4e;padding:10px 24px;border-radius:50px;font-weight:700;font-size:14px;text-decoration:none;">Voltar</a>
+    <button onclick="generatePDF()" id="btn-pdf" style="background:#3a3b4e;color:#fff;border:none;padding:12px 24px;border-radius:4px;font-weight:600;font-size:14px;cursor:pointer;">Baixar PDF</button>
+    <a href="/revista" style="background:#fff;color:#3a3b4e;border:1px solid #3a3b4e;padding:12px 24px;border-radius:4px;font-weight:600;font-size:14px;text-decoration:none;">Voltar</a>
 </div>
 </div>
 
@@ -183,7 +183,7 @@ async function generatePDF() {
         var canvas = await html2canvas(pages[i], { scale:2, useCORS:true, allowTaint:true, width:595, height:842, scrollY:0, scrollX:0, windowWidth:595 });
         pdf.addImage(canvas.toDataURL('image/jpeg',0.92), 'JPEG', 0, 0, 595, 842);
     }
-    pdf.save('<?= preg_replace('/[^a-zA-Z0-9_-]/', '_', $magazine['title']) ?>_Brooks.pdf');
+    pdf.save('<?php $fn = iconv('UTF-8','ASCII//TRANSLIT', $magazine['title']); $fn = preg_replace('/[^a-zA-Z0-9_-]/', '_', $fn); $fn = preg_replace('/_+/', '_', trim($fn, '_')); echo $fn; ?>_Brooks_Construtora.pdf');
     btn.disabled = false; btn.textContent = 'Baixar PDF';
 }
 </script>
