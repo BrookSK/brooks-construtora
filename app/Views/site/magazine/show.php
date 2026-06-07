@@ -163,9 +163,15 @@ foreach ($pages as $page):
 
 <?php endforeach; ?>
 
-<div style="text-align:center;margin:30px 0 50px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-    <button onclick="generatePDF()" id="btn-pdf" style="background:#3a3b4e !important;color:#fff !important;border:none !important;padding:12px 24px !important;border-radius:4px !important;font-weight:600;font-size:14px;cursor:pointer;line-height:1.5;height:auto;width:auto;">Baixar PDF</button>
-    <a href="/revista" style="background:#fff !important;color:#3a3b4e !important;border:1px solid #3a3b4e !important;padding:12px 24px !important;border-radius:4px !important;font-weight:600;font-size:14px;text-decoration:none;line-height:1.5;display:inline-block;">Voltar</a>
+<style>
+#mag-actions{text-align:center;margin:30px 0 50px;display:flex;gap:12px;justify-content:center}
+#mag-actions button,#mag-actions a{padding:11px 28px;border-radius:4px;font-weight:600;font-size:13px;text-decoration:none;display:inline-block;cursor:pointer;line-height:1.4;text-transform:uppercase;letter-spacing:0.5px}
+#mag-actions button{background:#3a3b4e;color:#fff;border:2px solid #3a3b4e}
+#mag-actions a{background:#fff;color:#3a3b4e;border:2px solid #3a3b4e}
+</style>
+<div id="mag-actions">
+    <button onclick="generatePDF()" id="btn-pdf">Baixar PDF</button>
+    <a href="/revista">Voltar</a>
 </div>
 </div>
 
