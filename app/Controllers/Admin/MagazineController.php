@@ -78,6 +78,9 @@ class MagazineController extends Controller
         $this->redirect('/admin/magazines/topics');
     }
 
+    /**
+     * Inicia a geração de revista em background (dispara processo no servidor)
+     */
     public function generate(): void
     {
         if (!$this->isPost()) {
@@ -93,60 +96,131 @@ class MagazineController extends Controller
             return;
         }
 
+        // Verifica se já tem um job em andamento
+        $activeJob = Database::fetch(
+            "SELECT * FROM generation_jobs WHERE status IN ('pending', 'processing') ORDER BY created_at DESC LIMIT 1"
+        );
+
+        if ($activeJob) {
+            $this->json(['error' => 'Já existe uma geração em andamento. Aguarde a conclusão.'], 409);
+            return;
+        }
+
         try {
-            $openai = new OpenAIService();
-
-            // Gera o conteúdo da revista
-            $content = $openai->generateMagazineContent($topic['title'], $topic['description']);
-
-            // Cria a revista
-            $magazineId = Magazine::create([
-                'title' => $content['title'],
-                'subtitle' => $content['subtitle'],
-                'topic_id' => $topicId,
-                'status' => Magazine::STATUS_GENERATED,
-                'cover_image' => null,
-                'generated_by' => 'ai',
+            // Cria o job no banco
+            $jobId = Database::insert('generation_jobs', [
+                'type' => 'magazine_full',
+                'status' => 'pending',
+                'total_steps' => 0,
+                'current_step' => 0,
+                'current_step_label' => 'Aguardando início...',
+                'started_by' => Auth::id(),
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
-            // Cria as páginas (salvando image_suggestion para gerar imagens depois)
-            foreach ($content['pages'] as $index => $page) {
-                Magazine::addPage($magazineId, [
-                    'page_number' => $index + 1,
-                    'title' => $page['title'] ?? '',
-                    'subtitle' => $page['subtitle'] ?? '',
-                    'content' => $page['content'] ?? '',
-                    'image_url' => null,
-                    'image_url_2' => null,
-                    'image_suggestion' => $page['image_suggestion'] ?? null,
-                    'image_suggestion_2' => $page['image_suggestion_2'] ?? null,
-                    'caption' => $page['caption'] ?? null,
-                    'layout_type' => $page['layout'] ?? 'internal_01',
-                    'created_at' => date('Y-m-d H:i:s'),
-                ]);
+            // Dispara o script em background
+            $phpBinary = PHP_BINARY ?: 'php';
+            $scriptPath = ROOT_PATH . '/cron/generate_magazine_background.php';
+            $userId = Auth::id();
+
+            // Comando para rodar em background (compatível com Windows e Linux)
+            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                $cmd = "start /B \"{$phpBinary}\" \"{$scriptPath}\" {$jobId} {$topicId} {$userId}";
+                pclose(popen($cmd, 'r'));
+            } else {
+                $cmd = "{$phpBinary} \"{$scriptPath}\" {$jobId} {$topicId} {$userId} > /dev/null 2>&1 &";
+                exec($cmd);
             }
 
-            // Marca o tema como usado
-            MagazineTopic::markAsUsed($topicId);
-
-            // Envia e-mail de notificação
-            $this->sendGenerationNotification($magazineId, $content['title']);
-
-            // Retorna JSON com ID da revista para o frontend iniciar geração de imagens
             $this->json([
                 'success' => true,
-                'magazine_id' => $magazineId,
-                'title' => $content['title'],
-                'message' => 'Conteúdo da revista gerado com sucesso!',
+                'job_id' => $jobId,
+                'message' => 'Geração iniciada em segundo plano!',
             ]);
         } catch (\Exception $e) {
-            $this->json(['error' => 'Erro ao gerar revista: ' . $e->getMessage()], 500);
+            $this->json(['error' => 'Erro ao iniciar geração: ' . $e->getMessage()], 500);
         }
     }
 
     /**
-     * Retorna a lista de imagens pendentes para gerar de uma revista
+     * Retorna o status de um job específico (polling endpoint)
+     */
+    public function jobStatus(): void
+    {
+        $jobId = (int) $this->input('job_id');
+
+        if (!$jobId) {
+            $job = Database::fetch(
+                "SELECT * FROM generation_jobs WHERE status IN ('pending', 'processing') ORDER BY created_at DESC LIMIT 1"
+            );
+        } else {
+            $job = Database::fetch("SELECT * FROM generation_jobs WHERE id = ?", [$jobId]);
+        }
+
+        if (!$job) {
+            $this->json(['active' => false]);
+            return;
+        }
+
+        $this->json([
+            'active' => in_array($job['status'], ['pending', 'processing']),
+            'job_id' => (int) $job['id'],
+            'magazine_id' => $job['magazine_id'] ? (int) $job['magazine_id'] : null,
+            'status' => $job['status'],
+            'total_steps' => (int) $job['total_steps'],
+            'current_step' => (int) $job['current_step'],
+            'current_step_label' => $job['current_step_label'],
+            'error_message' => $job['error_message'],
+            'started_at' => $job['started_at'],
+            'completed_at' => $job['completed_at'],
+        ]);
+    }
+
+    /**
+     * Retorna se existe algum job ativo (para o indicador global no layout)
+     */
+    public function activeJob(): void
+    {
+        $job = Database::fetch(
+            "SELECT * FROM generation_jobs WHERE status IN ('pending', 'processing') ORDER BY created_at DESC LIMIT 1"
+        );
+
+        if (!$job) {
+            // Retorna o último job completado nos últimos 30 segundos (para o frontend perceber a conclusão)
+            $recent = Database::fetch(
+                "SELECT * FROM generation_jobs WHERE status IN ('completed', 'failed') AND completed_at >= DATE_SUB(NOW(), INTERVAL 30 SECOND) ORDER BY completed_at DESC LIMIT 1"
+            );
+
+            if ($recent) {
+                $this->json([
+                    'active' => false,
+                    'recent' => true,
+                    'job_id' => (int) $recent['id'],
+                    'magazine_id' => $recent['magazine_id'] ? (int) $recent['magazine_id'] : null,
+                    'status' => $recent['status'],
+                    'current_step_label' => $recent['current_step_label'],
+                    'error_message' => $recent['error_message'],
+                ]);
+                return;
+            }
+
+            $this->json(['active' => false, 'recent' => false]);
+            return;
+        }
+
+        $this->json([
+            'active' => true,
+            'job_id' => (int) $job['id'],
+            'magazine_id' => $job['magazine_id'] ? (int) $job['magazine_id'] : null,
+            'status' => $job['status'],
+            'total_steps' => (int) $job['total_steps'],
+            'current_step' => (int) $job['current_step'],
+            'current_step_label' => $job['current_step_label'],
+        ]);
+    }
+
+    /**
+     * Retorna a lista de imagens pendentes para gerar de uma revista (usado pelo botão Regenerar)
      */
     public function pendingImages(): void
     {
@@ -162,15 +236,14 @@ class MagazineController extends Controller
         $pending = [];
 
         foreach ($pages as $page) {
-            // Pula cover, subcover e backcover (não precisam de imagem gerada)
             if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])) {
                 continue;
             }
 
             $suggestion = $page['image_suggestion'] ?? null;
             $suggestion2 = $page['image_suggestion_2'] ?? null;
+            $oneImageLayouts = ['internal_04', 'internal_07'];
 
-            // Imagem 1 - se tem sugestão e não tem imagem ainda
             if ($suggestion && empty($page['image_url'])) {
                 $pending[] = [
                     'page_id' => $page['id'],
@@ -181,9 +254,6 @@ class MagazineController extends Controller
                 ];
             }
 
-            // Imagem 2 - se tem sugestão e não tem imagem ainda
-            // Layouts com 1 imagem apenas: internal_04, internal_07
-            $oneImageLayouts = ['internal_04', 'internal_07'];
             if ($suggestion2 && empty($page['image_url_2']) && !in_array($page['layout_type'], $oneImageLayouts)) {
                 $pending[] = [
                     'page_id' => $page['id'],
@@ -205,7 +275,7 @@ class MagazineController extends Controller
     }
 
     /**
-     * Gera UMA imagem específica para uma página (chamado pelo frontend em sequência)
+     * Gera UMA imagem específica (chamado pelo frontend para regenerar individualmente)
      */
     public function generateSingleImage(): void
     {
@@ -234,7 +304,6 @@ class MagazineController extends Controller
             $description = $page['title'] ?? 'Construção de alto padrão';
         }
 
-        // Determina orientação baseado no layout
         $layout = $page['layout_type'] ?? '';
         $orientation = 'landscape';
 
@@ -451,16 +520,14 @@ class MagazineController extends Controller
 
         // Determina orientação baseado no layout e posição da imagem
         $layout = $page['layout_type'] ?? '';
-        $orientation = 'landscape'; // padrão: deitada
+        $orientation = 'landscape';
 
-        // Imagens que ficam em coluna (metade da largura, mais altas) = portrait
         if (in_array($layout, ['internal_02', 'internal_07'])) {
-            if ($field === 'image_url') $orientation = 'portrait'; // imagem principal lateral
+            if ($field === 'image_url') $orientation = 'portrait';
         }
         if ($layout === 'internal_05' || $layout === 'internal_06') {
-            $orientation = 'portrait'; // imagens em grid vertical
+            $orientation = 'portrait';
         }
-        // internal_01 imagem 2 fica na coluna direita = portrait
         if ($layout === 'internal_01' && $field === 'image_url_2') {
             $orientation = 'portrait';
         }

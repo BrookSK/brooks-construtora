@@ -72,6 +72,8 @@ class Router
             'magazines/generate-image' => ['MagazineController', 'generatePageImage'],
             'magazines/pending-images' => ['MagazineController', 'pendingImages'],
             'magazines/generate-single-image' => ['MagazineController', 'generateSingleImage'],
+            'magazines/job-status' => ['MagazineController', 'jobStatus'],
+            'magazines/active-job' => ['MagazineController', 'activeJob'],
             'magazines/approve' => ['MagazineController', 'approve'],
             'magazines/publish' => ['MagazineController', 'publish'],
             'magazines/preview' => ['MagazineController', 'preview'],

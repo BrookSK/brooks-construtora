@@ -197,5 +197,154 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Indicador global de geração em background -->
+    <div id="global-job-indicator" style="display:none; position:fixed; bottom:20px; right:20px; z-index:9999; max-width:380px;">
+        <div class="card shadow-lg border-0" style="border-radius:12px; overflow:hidden;">
+            <div id="job-indicator-header" class="card-header py-2 px-3 d-flex align-items-center justify-content-between" style="background:#3a3b4e; color:#fff; font-size:0.8rem;">
+                <span>
+                    <span id="job-indicator-icon" class="spinner-border spinner-border-sm me-1" style="width:12px;height:12px;"></span>
+                    <strong>Gerando Revista</strong>
+                </span>
+                <button type="button" class="btn btn-sm p-0 text-white opacity-75" onclick="toggleJobDetails()" style="line-height:1;">
+                    <i class="bi bi-chevron-down" id="job-toggle-icon"></i>
+                </button>
+            </div>
+            <div id="job-indicator-body" class="card-body p-3">
+                <div class="progress mb-2" style="height:6px;">
+                    <div id="job-global-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%;"></div>
+                </div>
+                <p id="job-global-label" class="mb-0 small text-muted" style="font-size:0.75rem;">Aguardando início...</p>
+            </div>
+            <!-- Footer aparece quando completo -->
+            <div id="job-indicator-footer" class="card-footer py-2 px-3 d-none" style="font-size:0.8rem;">
+                <a href="#" id="job-edit-link" class="text-decoration-none">
+                    <i class="bi bi-pencil"></i> Abrir revista
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const indicator = document.getElementById('global-job-indicator');
+        const bar = document.getElementById('job-global-bar');
+        const label = document.getElementById('job-global-label');
+        const icon = document.getElementById('job-indicator-icon');
+        const header = document.getElementById('job-indicator-header');
+        const body = document.getElementById('job-indicator-body');
+        const footer = document.getElementById('job-indicator-footer');
+        const editLink = document.getElementById('job-edit-link');
+        const toggleIcon = document.getElementById('job-toggle-icon');
+
+        let collapsed = false;
+        let currentJobId = null;
+        let pollInterval = null;
+        let dismissTimeout = null;
+
+        window.toggleJobDetails = function() {
+            collapsed = !collapsed;
+            body.style.display = collapsed ? 'none' : 'block';
+            toggleIcon.className = collapsed ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+        };
+
+        function showIndicator() {
+            indicator.style.display = 'block';
+        }
+
+        function hideIndicator() {
+            indicator.style.display = 'none';
+        }
+
+        function updateIndicator(data) {
+            if (data.active) {
+                showIndicator();
+                footer.classList.add('d-none');
+                icon.className = 'spinner-border spinner-border-sm me-1';
+                icon.style.width = '12px';
+                icon.style.height = '12px';
+                header.style.background = '#3a3b4e';
+
+                const pct = data.total_steps > 0 
+                    ? Math.round((data.current_step / data.total_steps) * 100) 
+                    : 0;
+                bar.style.width = pct + '%';
+                bar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+                label.textContent = data.current_step_label || 'Processando...';
+                currentJobId = data.job_id;
+            } else if (data.recent) {
+                showIndicator();
+                currentJobId = data.job_id;
+
+                if (data.status === 'completed') {
+                    icon.className = 'bi bi-check-circle-fill me-1';
+                    icon.style.width = 'auto';
+                    icon.style.height = 'auto';
+                    header.style.background = '#28a745';
+                    bar.style.width = '100%';
+                    bar.className = 'progress-bar bg-success';
+                    label.textContent = data.current_step_label || 'Concluído!';
+
+                    if (data.magazine_id) {
+                        editLink.href = '/admin/magazines/edit/' + data.magazine_id;
+                        footer.classList.remove('d-none');
+                    }
+
+                    // Esconde após 15 segundos
+                    if (dismissTimeout) clearTimeout(dismissTimeout);
+                    dismissTimeout = setTimeout(hideIndicator, 15000);
+                } else if (data.status === 'failed') {
+                    icon.className = 'bi bi-x-circle-fill me-1';
+                    icon.style.width = 'auto';
+                    icon.style.height = 'auto';
+                    header.style.background = '#dc3545';
+                    bar.style.width = '100%';
+                    bar.className = 'progress-bar bg-danger';
+                    label.textContent = data.error_message || data.current_step_label || 'Erro na geração.';
+
+                    if (dismissTimeout) clearTimeout(dismissTimeout);
+                    dismissTimeout = setTimeout(hideIndicator, 20000);
+                }
+            } else {
+                // Nenhum job ativo nem recente
+                if (!currentJobId) {
+                    hideIndicator();
+                }
+            }
+        }
+
+        async function pollStatus() {
+            try {
+                const resp = await fetch('/admin/magazines/active-job');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    updateIndicator(data);
+
+                    // Se não tem mais job ativo, diminui frequência de polling
+                    if (!data.active && !data.recent) {
+                        clearInterval(pollInterval);
+                        pollInterval = setInterval(pollStatus, 10000); // a cada 10s quando idle
+                    } else if (data.active) {
+                        clearInterval(pollInterval);
+                        pollInterval = setInterval(pollStatus, 3000); // a cada 3s quando ativo
+                    }
+                }
+            } catch(e) {
+                // Silencioso em caso de erro de rede
+            }
+        }
+
+        // Inicia o polling
+        pollStatus();
+        pollInterval = setInterval(pollStatus, 5000); // começa a cada 5s
+
+        // Expõe função para forçar refresh (usado pela página de topics)
+        window.forceJobPoll = function() {
+            clearInterval(pollInterval);
+            pollInterval = setInterval(pollStatus, 3000);
+            pollStatus();
+        };
+    })();
+    </script>
 </body>
 </html>

@@ -53,11 +53,11 @@
 
         <!-- Gerar Todas as Imagens -->
         <div class="card mb-3">
-            <div class="card-header"><h6 class="mb-0"><i class="bi bi-stars"></i> Geração de Imagens</h6></div>
+            <div class="card-header"><h6 class="mb-0"><i class="bi bi-stars"></i> Imagens com IA</h6></div>
             <div class="card-body">
-                <p class="small text-muted mb-2">Gerar automaticamente todas as imagens pendentes desta revista usando IA.</p>
+                <p class="small text-muted mb-2">As imagens são geradas automaticamente em segundo plano ao criar a revista. Use o botão abaixo para regenerar imagens pendentes.</p>
                 <button type="button" class="btn btn-warning btn-sm w-100" id="btn-generate-all-images" data-magazine-id="<?= $magazine['id'] ?>">
-                    <i class="bi bi-images"></i> Gerar Todas as Imagens
+                    <i class="bi bi-images"></i> Regenerar Imagens Pendentes
                 </button>
                 <div id="gen-all-progress" class="mt-2 d-none">
                     <div class="progress mb-1" style="height: 18px;">
