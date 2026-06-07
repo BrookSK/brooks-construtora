@@ -97,7 +97,7 @@ JSON puro sem markdown:
 
     public function generateImage(string $description, string $orientation = 'landscape'): ?string
     {
-        $size = $orientation === 'portrait' ? '1024x1792' : '1792x1024';
+        $size = $orientation === 'portrait' ? '1024x1536' : '1536x1024';
         
         $prompt = "Fotografia profissional de arquitetura e construção de alto padrão. {$description}. Estilo editorial para revista, iluminação natural, sem pessoas em destaque. IMPORTANTE: NÃO incluir nenhum texto, letra, palavra, número ou tipografia na imagem. Apenas fotografia pura sem elementos textuais.";
 
