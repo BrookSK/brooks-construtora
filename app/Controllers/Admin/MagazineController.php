@@ -284,6 +284,21 @@ class MagazineController extends Controller
                     'layout_type' => $page['layout_type'],
                 ];
             }
+
+            // Imagem 3 — para layouts com 3 imagens (internal_05, internal_06)
+            $threeImageLayouts = ['internal_05', 'internal_06'];
+            if (in_array($page['layout_type'], $threeImageLayouts) && empty($page['image_url_3'] ?? null)) {
+                $desc3 = $suggestion2 ?: $suggestion;
+                if ($desc3) {
+                    $pending[] = [
+                        'page_id' => $page['id'],
+                        'page_number' => $page['page_number'],
+                        'field' => 'image_url_3',
+                        'description' => $desc3 . ' (ângulo alternativo)',
+                        'layout_type' => $page['layout_type'],
+                    ];
+                }
+            }
         }
 
         $this->json([
@@ -812,6 +827,22 @@ class MagazineController extends Controller
                     'description' => $suggestion2,
                     'orientation' => $orientation,
                 ];
+            }
+
+            // Imagem 3 — para layouts que usam 3 imagens (internal_05, internal_06)
+            $threeImageLayouts = ['internal_05', 'internal_06'];
+            if (in_array($page['layout_type'], $threeImageLayouts) && empty($page['image_url_3'])) {
+                // Usa image_suggestion_2 como base com variação, ou image_suggestion se não tiver
+                $desc3 = $suggestion2 ?: $suggestion;
+                if ($desc3) {
+                    $imagesToGenerate[] = [
+                        'page_id' => $page['id'],
+                        'page_number' => $page['page_number'],
+                        'field' => 'image_url_3',
+                        'description' => $desc3 . ' (ângulo alternativo)',
+                        'orientation' => 'portrait',
+                    ];
+                }
             }
         }
 

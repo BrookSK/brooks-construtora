@@ -197,6 +197,22 @@ foreach ($pages as $page) {
             'layout_type' => $page['layout_type'],
         ];
     }
+
+    // Imagem 3 — para layouts que usam 3 imagens (internal_05, internal_06)
+    $threeImageLayouts = ['internal_05', 'internal_06'];
+    if (in_array($page['layout_type'], $threeImageLayouts) && empty($page['image_url_3'])) {
+        $desc3 = $suggestion2 ?: $suggestion;
+        if ($desc3) {
+            $imagesToGenerate[] = [
+                'page_id' => $page['id'],
+                'page_number' => $page['page_number'],
+                'field' => 'image_url_3',
+                'description' => $desc3 . ' (ângulo alternativo)',
+                'orientation' => 'portrait',
+                'layout_type' => $page['layout_type'],
+            ];
+        }
+    }
 }
 
 // Total de passos: 3 (conteúdo + salvar + identificar) + N imagens
