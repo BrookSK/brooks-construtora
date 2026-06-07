@@ -102,12 +102,14 @@
                     <?php if (!in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])): ?>
                     <?php
                         // Layouts que usam 3 imagens
-                        $threeImages = in_array($page['layout_type'], ['internal_05', 'internal_06', 'internal_07']);
+                        $threeImages = in_array($page['layout_type'], ['internal_05', 'internal_06']);
+                        // Layouts que usam só 1 imagem
+                        $oneImage = in_array($page['layout_type'], ['internal_04', 'internal_07']);
                         $colSize = $threeImages ? '4' : '6';
                     ?>
                     <div class="row g-2">
                         <!-- Imagem 1 -->
-                        <div class="col-md-<?= $colSize ?>">
+                        <div class="col-md-<?= $oneImage ? '12' : $colSize ?>">
                             <label class="form-label small">Imagem 1</label>
                             <div class="border rounded p-2" style="min-height:80px;background:#f9f9f9;">
                                 <?php if ($page['image_url']): ?>
@@ -128,6 +130,7 @@
                             </div>
                         </div>
                         <!-- Imagem 2 -->
+                        <?php if (!$oneImage): ?>
                         <div class="col-md-<?= $colSize ?>">
                             <label class="form-label small">Imagem 2</label>
                             <div class="border rounded p-2" style="min-height:80px;background:#f9f9f9;">
@@ -149,6 +152,7 @@
                                 </div>
                             </div>
                         </div>
+                        <?php endif; ?>
                         <!-- Imagem 3 (para layouts que precisam) -->
                         <?php if ($threeImages): ?>
                         <div class="col-md-4">
