@@ -93,11 +93,11 @@
 			<p>BROOKS CONSTRUTORA<br>CNPJ 24.811.527/0001-64</p>
 
 			<!-- Newsletter - link para página da revista -->
-			<div style="margin-top: 20px;">
+			<!-- <div style="margin-top: 20px;">
 				<span class="widget-title">Revista Digital</span><div class="is-divider small"></div>
 				<p style="font-size: 0.85rem;">Assine nossa revista gratuita sobre construção e reformas.</p>
 				<a href="/revista" class="button secondary" style="padding: 6px 16px; font-size: 0.8rem;">Ver Revista</a>
-			</div>
+			</div> -->
 		</div>
 
 	</div>
