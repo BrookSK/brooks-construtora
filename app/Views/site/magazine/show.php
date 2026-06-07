@@ -12,8 +12,8 @@ include ROOT_PATH . '/app/Views/site/layouts/header.php';
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
 <style>
-.mag-preview{max-width:595px;margin:30px auto}
-.mag-preview .page{background:#fff;width:595px;height:842px;margin:0 auto 25px;position:relative;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.12);page-break-before:always}
+.mag-preview{max-width:595px;margin:30px auto;padding:0 10px}
+.mag-preview .page{background:#fff;width:100%;max-width:595px;height:auto;min-height:auto;aspect-ratio:595/842;margin:0 auto 25px;position:relative;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.12);page-break-before:always}
 .mag-preview .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#1a472a}
 .mag-preview .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
 .mag-preview .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.4) 0%,rgba(0,0,0,0.05) 35%,rgba(0,0,0,0.05) 50%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0.8) 90%,rgba(0,0,0,0.92) 100%)}
@@ -50,6 +50,20 @@ include ROOT_PATH . '/app/Views/site/layouts/header.php';
 .mag-preview .pg-back .txt{color:rgba(255,255,255,0.85);font-size:0.9rem;max-width:380px;line-height:1.6}
 .mag-preview .pg-back .bar{position:absolute;bottom:0;left:0;right:0;background:#e53935;padding:12px 25px;display:flex;justify-content:space-between;font-size:0.6rem;color:#fff}
 .mag-preview .img-placeholder{background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;color:#2e7d32;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
+@media(max-width:620px){
+    .mag-preview .page{aspect-ratio:auto;height:auto;min-height:500px}
+    .mag-preview .pg-cover .title{font-size:2.5rem}
+    .mag-preview .pg-cover .topic{font-size:1rem;margin-bottom:50px}
+    .mag-preview .pg-cover .logo{max-width:150px}
+    .mag-preview .pg-int{padding:20px 20px;height:auto;overflow:visible}
+    .mag-preview .title-big{font-size:1.8rem}
+    .mag-preview .title-upper{font-size:0.6rem}
+    .mag-preview .text,.mag-preview .text-sm{font-size:0.75rem}
+    .mag-preview .two-col{flex-direction:column}
+    .mag-preview .img-half{width:100%}
+    .mag-preview .overlay-section{height:280px}
+    .mag-preview .pg-back .logo{max-width:180px}
+}
 </style>
 
 <div class="mag-preview">
