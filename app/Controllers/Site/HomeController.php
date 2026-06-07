@@ -72,13 +72,8 @@ class HomeController extends Controller
             $siteEmail = Setting::get('site_email', '');
 
             if (!empty($siteEmail)) {
-                $body = "Nova mensagem de contato:\n\n";
-                $body .= "Nome: {$name}\n";
-                $body .= "E-mail: {$email}\n";
-                $body .= "Telefone: {$phone}\n\n";
-                $body .= "Mensagem:\n{$message}";
-
-                $mailService->send($siteEmail, 'Novo contato - Site Brooks Construtora', $body);
+                $htmlBody = \App\Services\EmailTemplate::contactReceived($name, $email, $phone, nl2br(htmlspecialchars($message)));
+                $mailService->send($siteEmail, 'Novo contato - Site Brooks Construtora', $htmlBody, true);
             }
 
             $this->setFlash('success', 'Mensagem enviada com sucesso! Entraremos em contato em breve.');

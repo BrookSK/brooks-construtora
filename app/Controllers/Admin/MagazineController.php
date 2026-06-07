@@ -425,18 +425,14 @@ class MagazineController extends Controller
         try {
             $mail = new MailService();
             $emailList = array_map('trim', explode(',', $emails));
+            $htmlBody = \App\Services\EmailTemplate::magazineGenerated($title, $magazineId);
 
             foreach ($emailList as $email) {
                 if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    $mail->send(
-                        $email,
-                        'Nova Revista Gerada - Brooks Construtora',
-                        "Uma nova revista foi gerada e está aguardando revisão.\n\nTítulo: {$title}\n\nAcesse o painel administrativo para revisar, fazer upload da capa e publicar."
-                    );
+                    $mail->send($email, 'Nova Revista Gerada - Brooks Construtora', $htmlBody, true);
                 }
             }
         } catch (\Exception $e) {
-            // Log do erro, mas não interrompe o fluxo
             error_log('Erro ao enviar notificação: ' . $e->getMessage());
         }
     }
@@ -448,14 +444,18 @@ class MagazineController extends Controller
             $subscribers = \App\Models\Newsletter::getActiveSubscribers();
             $mail = new MailService();
 
-            $appUrl = \App\Core\Application::getInstance()->getConfig('app_url');
-            $link = $appUrl . '/revista/ver/' . $magazineId;
-
             foreach ($subscribers as $subscriber) {
+                $htmlBody = \App\Services\EmailTemplate::magazinePublished(
+                    $magazine['title'],
+                    $magazineId,
+                    $subscriber['name'] ?? ''
+                );
+
                 $mail->send(
                     $subscriber['email'],
                     'Nova Revista: ' . $magazine['title'] . ' - Brooks Construtora',
-                    "Olá" . (!empty($subscriber['name']) ? " {$subscriber['name']}" : "") . "!\n\nUma nova edição da nossa revista foi publicada.\n\nTítulo: {$magazine['title']}\n\nAcesse: {$link}\n\nAtenciosamente,\nBrooks Construtora"
+                    $htmlBody,
+                    true
                 );
             }
         } catch (\Exception $e) {

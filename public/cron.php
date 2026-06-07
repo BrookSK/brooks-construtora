@@ -211,13 +211,15 @@ try {
         try {
             $mail = new App\Services\MailService();
             $emailList = array_map('trim', explode(',', $emails));
+            $htmlBody = App\Services\EmailTemplate::magazineGenerated($content['title'], $magazineId);
 
             foreach ($emailList as $email) {
                 if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
                     $mail->send(
                         $email,
                         'Nova Revista Gerada - Brooks Construtora',
-                        "Uma nova revista foi gerada automaticamente.\n\nTítulo: {$content['title']}\n\nAcesse o painel administrativo para revisar, fazer upload da capa e publicar.\n\nURL: " . ($config['app_url'] ?? '') . "/admin/magazines/edit/{$magazineId}"
+                        $htmlBody,
+                        true
                     );
                 }
             }
