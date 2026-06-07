@@ -208,18 +208,16 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </div>
 
 <?php elseif ($layout === 'internal_06'): ?>
-<!-- PÁG INTERNA 06: Grid 4 imagens + texto lateral -->
+<!-- PÁG INTERNA 06: Grid 2 imagens topo + 1 imagem esquerda + texto direita -->
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <div class="img-grid" style="margin-bottom:20px">
-        <?php if($img1): ?><img src="<?= $img1 ?>" alt=""><?php else: ?><div class="img-placeholder" style="height:280px">IMAGEM 1</div><?php endif; ?>
-        <?php if($img2): ?><img src="<?= $img2 ?>" alt=""><?php else: ?><div class="img-placeholder" style="height:280px">IMAGEM 2</div><?php endif; ?>
-        <?php if($img1): ?><img src="<?= $img1 ?>" alt=""><?php else: ?><div class="img-placeholder" style="height:280px">IMAGEM 3</div><?php endif; ?>
-        <?php if($img2): ?><img src="<?= $img2 ?>" alt=""><?php else: ?><div class="img-placeholder" style="height:280px">IMAGEM 4</div><?php endif; ?>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+        <?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:280px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:280px">IMAGEM 1</div><?php endif; ?>
+        <?php if($img2): ?><img src="<?= $img2 ?>" style="width:50%;height:280px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:280px">IMAGEM 2</div><?php endif; ?>
     </div>
-    <div class="two-col">
-        <div class="col"></div>
-        <div class="col"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
+    <div style="display:flex;gap:8px">
+        <?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:280px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:280px">IMAGEM 3</div><?php endif; ?>
+        <div style="width:50%;padding:15px 10px"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
     </div>
 </div>
 
