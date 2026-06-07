@@ -164,10 +164,16 @@ foreach ($pages as $page):
 <?php endforeach; ?>
 
 <style>
-#mag-actions{text-align:center;margin:30px 0 50px;display:flex;gap:12px;justify-content:center}
-#mag-actions button,#mag-actions a{padding:11px 28px;border-radius:4px;font-weight:600;font-size:13px;text-decoration:none;display:inline-block;cursor:pointer;line-height:1.4;text-transform:uppercase;letter-spacing:0.5px}
-#mag-actions button{background:#3a3b4e;color:#fff;border:2px solid #3a3b4e}
-#mag-actions a{background:#fff;color:#3a3b4e;border:2px solid #3a3b4e}
+#mag-actions{text-align:center;margin:30px 0 50px;display:flex;gap:12px;justify-content:center;align-items:center}
+#mag-actions button,#mag-actions a{
+    all:unset !important;
+    padding:13px 30px !important;border-radius:3px !important;font-weight:600 !important;font-size:13px !important;
+    text-decoration:none !important;display:inline-flex !important;align-items:center !important;justify-content:center !important;
+    cursor:pointer !important;line-height:1 !important;text-transform:uppercase !important;letter-spacing:0.5px !important;
+    height:44px !important;box-sizing:border-box !important;font-family:Inter,sans-serif !important;
+}
+#mag-actions button{background:#3a3b4e !important;color:#fff !important;border:2px solid #3a3b4e !important}
+#mag-actions a{background:#fff !important;color:#3a3b4e !important;border:2px solid #3a3b4e !important}
 </style>
 <div id="mag-actions">
     <button onclick="generatePDF()" id="btn-pdf">Baixar PDF</button>
