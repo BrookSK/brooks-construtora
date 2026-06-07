@@ -92,8 +92,8 @@
 					Segunda a Sexta: 8h às 18h</p>
 
 					<div style="margin-top: 20px;">
-						<a href="https://www.instagram.com/brooksconstrutora/" target="_blank" class="icon primary button circle instagram" style="margin-right: 5px;" aria-label="Instagram">
-							<i class="icon-instagram"></i>
+						<a href="https://www.instagram.com/brooksconstrutora/" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: #E1306C; color: #fff; padding: 10px 18px; border-radius: 50px; text-decoration: none; font-size: 14px; font-weight: 700;" aria-label="Instagram">
+							<i class="icon-instagram" style="font-size: 18px;"></i> Siga no Instagram
 						</a>
 					</div>
 				</div>
