@@ -41,8 +41,8 @@
 
             <div class="alert alert-info mt-4">
                 <i class="bi bi-info-circle"></i>
-                <strong>Como funciona:</strong> Configure uma cron job no servidor para executar <code>php artisan magazine:generate</code> diariamente.
-                O sistema verificará automaticamente se é hora de gerar uma nova revista baseado nestas configurações.
+                <strong>Como funciona:</strong> Configure o cron do servidor para acessar a URL a cada 10 minutos (configurável em <a href="/admin/settings">Configurações</a>).
+                O sistema verifica automaticamente se é hora de gerar uma nova revista baseado nestas configurações e não gera duplicatas.
             </div>
 
             <div class="mt-3 text-end">

@@ -44,6 +44,11 @@ class SettingsController extends Controller
             'magazine_day_of_week' => Setting::get('magazine_day_of_week', '1'),
             'magazine_day_of_month' => Setting::get('magazine_day_of_month', '1'),
 
+            // Cron
+            'cron_token' => Setting::get('cron_token', ''),
+            'cron_last_run' => Setting::get('cron_last_run', ''),
+            'cron_last_generated' => Setting::get('cron_last_generated', ''),
+
             // E-mails de notificação
             'notification_emails' => Setting::get('notification_emails', ''),
 
@@ -79,6 +84,7 @@ class SettingsController extends Controller
             'openai_api_key', 'openai_model', 'openai_image_model',
             'magazine_frequency', 'magazine_times_per_period',
             'magazine_day_of_week', 'magazine_day_of_month',
+            'cron_token',
             'notification_emails',
             'site_title', 'site_description', 'site_phone', 'site_email',
             'site_address', 'site_instagram', 'site_facebook',

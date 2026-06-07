@@ -89,6 +89,39 @@
         </div>
     </div>
 
+    <!-- Cron / Agendamento -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-clock-history"></i> Cron - Geração Automática</h6>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Token de Segurança do Cron</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" name="cron_token" value="<?= htmlspecialchars($settings['cron_token'] ?? '') ?>" placeholder="Será gerado automaticamente no primeiro acesso">
+                    <button type="button" class="btn btn-outline-secondary" onclick="this.previousElementSibling.value = [...Array(64)].map(() => Math.random().toString(36)[2]).join('')">Gerar Novo</button>
+                </div>
+                <small class="text-muted">Use este token na URL do cron. Se estiver vazio, será gerado automaticamente ao acessar a URL pela primeira vez.</small>
+            </div>
+            <div class="alert alert-info mb-3">
+                <strong>URL do Cron:</strong><br>
+                <code id="cron-url"><?= rtrim($config['app_url'] ?? 'https://www.brooksconstrutora.com.br', '/') ?>/cron.php?token=<?= htmlspecialchars($settings['cron_token'] ?? 'SEU_TOKEN') ?></code>
+                <br><br>
+                <strong>Configure no servidor (a cada 10 minutos):</strong><br>
+                <code>*/10 * * * * curl -s "<?= rtrim($config['app_url'] ?? 'https://www.brooksconstrutora.com.br', '/') ?>/cron.php?token=<?= htmlspecialchars($settings['cron_token'] ?? 'SEU_TOKEN') ?>" > /dev/null 2>&1</code>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Última execução:</strong> <?= !empty($settings['cron_last_run']) ? $settings['cron_last_run'] : 'Nunca' ?></p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Última revista gerada:</strong> <?= !empty($settings['cron_last_generated']) ? $settings['cron_last_generated'] : 'Nunca' ?></p>
+                </div>
+            </div>
+            <small class="text-muted">O sistema verifica a frequência configurada em "Agendamento" e só gera quando chegar o dia correto. Mesmo rodando a cada 10 min, só gera 1x por período.</small>
+        </div>
+    </div>
+
     <!-- Site -->
     <div class="card mb-4">
         <div class="card-header">
