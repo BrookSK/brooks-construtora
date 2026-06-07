@@ -204,10 +204,11 @@ $totalSteps = 3 + count($imagesToGenerate);
 updateJob($jobId, ['total_steps' => $totalSteps]);
 
 // ============================================================
-// PASSO 4+: Gerar cada imagem
+// PASSO 4+: Gerar cada imagem (com retry automático)
 // ============================================================
 $imageCount = 0;
 $imageErrors = 0;
+$maxRetries = 3;
 
 foreach ($imagesToGenerate as $i => $img) {
     $stepNum = 4 + $i;
@@ -216,19 +217,29 @@ foreach ($imagesToGenerate as $i => $img) {
     
     updateStep($jobId, $stepNum, $label);
 
-    try {
-        $imageUrl = $openai->generateImage($img['description'], $img['orientation']);
-        
-        if ($imageUrl) {
-            Magazine::updatePage($img['page_id'], [$img['field'] => $imageUrl]);
-            $imageCount++;
-        } else {
-            $imageErrors++;
+    $success = false;
+
+    for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+        try {
+            if ($attempt > 1) {
+                updateStep($jobId, $stepNum, "Gerando {$imgLabel} da Página {$img['page_number']}... (tentativa {$attempt}/{$maxRetries})");
+                sleep(3);
+            }
+
+            $imageUrl = $openai->generateImage($img['description'], $img['orientation']);
+            
+            if ($imageUrl) {
+                Magazine::updatePage($img['page_id'], [$img['field'] => $imageUrl]);
+                $imageCount++;
+                $success = true;
+                break;
+            }
+        } catch (Exception $e) {
+            error_log("Job #{$jobId} - Tentativa {$attempt} falhou Pág.{$img['page_number']} ({$img['field']}): " . $e->getMessage());
+            if ($attempt === $maxRetries) {
+                $imageErrors++;
+            }
         }
-    } catch (Exception $e) {
-        $imageErrors++;
-        // Continua com as próximas imagens mesmo se uma falhar
-        error_log("Job #{$jobId} - Erro imagem Pág.{$img['page_number']} ({$img['field']}): " . $e->getMessage());
     }
 }
 

@@ -818,26 +818,40 @@ class MagazineController extends Controller
         $totalSteps = 3 + count($imagesToGenerate);
         $updateJob(['total_steps' => $totalSteps]);
 
-        // PASSO 4+: Gerar cada imagem
+        // PASSO 4+: Gerar cada imagem (com retry automático)
         $imageCount = 0;
         $imageErrors = 0;
+        $maxRetries = 3;
 
         foreach ($imagesToGenerate as $i => $img) {
             $stepNum = 4 + $i;
             $imgLabel = ($img['field'] === 'image_url_2') ? 'Imagem 2' : 'Imagem 1';
             $updateStep($stepNum, "Gerando {$imgLabel} da Página {$img['page_number']}...");
 
-            try {
-                $imageUrl = $openai->generateImage($img['description'], $img['orientation']);
-                if ($imageUrl) {
-                    Magazine::updatePage($img['page_id'], [$img['field'] => $imageUrl]);
-                    $imageCount++;
-                } else {
-                    $imageErrors++;
+            $success = false;
+
+            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+                try {
+                    if ($attempt > 1) {
+                        $updateStep($stepNum, "Gerando {$imgLabel} da Página {$img['page_number']}... (tentativa {$attempt}/{$maxRetries})");
+                        // Aguarda um pouco antes de tentar novamente
+                        sleep(3);
+                    }
+
+                    $imageUrl = $openai->generateImage($img['description'], $img['orientation']);
+                    if ($imageUrl) {
+                        Magazine::updatePage($img['page_id'], [$img['field'] => $imageUrl]);
+                        $imageCount++;
+                        $success = true;
+                        break; // Sucesso, sai do loop de retry
+                    }
+                } catch (\Exception $e) {
+                    error_log("Job #{$jobId} - Tentativa {$attempt} falhou Pág.{$img['page_number']} ({$img['field']}): " . $e->getMessage());
+                    if ($attempt === $maxRetries) {
+                        // Última tentativa falhou
+                        $imageErrors++;
+                    }
                 }
-            } catch (\Exception $e) {
-                $imageErrors++;
-                error_log("Job #{$jobId} - Erro imagem Pág.{$img['page_number']}: " . $e->getMessage());
             }
         }
 
