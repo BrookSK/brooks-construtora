@@ -104,11 +104,17 @@
                 <small class="text-muted">Use este token na URL do cron. Se estiver vazio, será gerado automaticamente ao acessar a URL pela primeira vez.</small>
             </div>
             <div class="alert alert-info mb-3">
+                <?php
+                    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                    $baseUrl = $scheme . '://' . $host;
+                    $cronToken = htmlspecialchars($settings['cron_token'] ?? 'SEU_TOKEN');
+                ?>
                 <strong>URL do Cron:</strong><br>
-                <code id="cron-url"><?= rtrim($config['app_url'] ?? 'https://www.brooksconstrutora.com.br', '/') ?>/cron.php?token=<?= htmlspecialchars($settings['cron_token'] ?? 'SEU_TOKEN') ?></code>
+                <code><?= $baseUrl ?>/cron.php?token=<?= $cronToken ?></code>
                 <br><br>
                 <strong>Configure no servidor (a cada 10 minutos):</strong><br>
-                <code>*/10 * * * * curl -s "<?= rtrim($config['app_url'] ?? 'https://www.brooksconstrutora.com.br', '/') ?>/cron.php?token=<?= htmlspecialchars($settings['cron_token'] ?? 'SEU_TOKEN') ?>" > /dev/null 2>&1</code>
+                <code>*/10 * * * * curl -s "<?= $baseUrl ?>/cron.php?token=<?= $cronToken ?>" > /dev/null 2>&1</code>
             </div>
             <div class="row">
                 <div class="col-md-6">
