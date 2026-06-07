@@ -95,26 +95,18 @@ JSON puro sem markdown:
         return $content;
     }
 
-    public function generateImage(string $description): ?string
+    public function generateImage(string $description, string $orientation = 'landscape'): ?string
     {
-        $prompt = "Imagem profissional para revista de construção/arquitetura de alto padrão: {$description}. Estilo fotográfico, alta qualidade, iluminação natural.";
+        $size = $orientation === 'portrait' ? '1024x1792' : '1792x1024';
+        
+        $prompt = "Fotografia profissional de arquitetura e construção de alto padrão. {$description}. Estilo editorial para revista, iluminação natural, sem pessoas em destaque. IMPORTANTE: NÃO incluir nenhum texto, letra, palavra, número ou tipografia na imagem. Apenas fotografia pura sem elementos textuais.";
 
         $data = [
             'model' => $this->imageModel,
             'prompt' => $prompt,
             'n' => 1,
-            'size' => '1024x1024',
+            'size' => $size,
         ];
-
-        // gpt-image-1 usa formato diferente
-        if (strpos($this->imageModel, 'gpt-image') !== false) {
-            $data = [
-                'model' => $this->imageModel,
-                'prompt' => $prompt,
-                'n' => 1,
-                'size' => '1024x1024',
-            ];
-        }
 
         $response = $this->request('https://api.openai.com/v1/images/generations', $data);
         $result = json_decode($response, true);

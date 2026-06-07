@@ -19,18 +19,18 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Inter',sans-serif;background:#333;padding:20px 0}
         .preview{max-width:595px;margin:0 auto}
-        .page{background:#fff;width:100%;height:842px;margin:0 auto 25px;position:relative;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-after:always}
+        .page{background:#fff;width:595px;height:842px;margin:0 auto 25px;position:relative;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
 
         /* ===== CAPA ===== */
-        .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0}
+        .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#1a472a}
         .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
         .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(26,71,42,0.7) 0%,rgba(26,71,42,0.3) 25%,rgba(0,0,0,0.1) 50%,rgba(0,0,0,0.6) 85%,rgba(0,0,0,0.85) 100%)}
         .pg-cover .content{position:relative;z-index:2;text-align:center;width:100%;height:100%;display:flex;flex-direction:column;padding:30px 40px}
         .pg-cover .title{font-size:5rem;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}
         .pg-cover .sub-line{display:flex;align-items:center;justify-content:center;gap:15px;margin-top:5px;font-size:0.7rem;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,0.9)}
         .pg-cover .sub-line .ln{width:40px;height:2px;background:#fff}
-        .pg-cover .logo{margin:auto;max-width:220px;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.3))}
-        .pg-cover .topic{font-size:1.3rem;font-weight:800;color:#fff;font-style:italic;text-align:left;padding:0 30px;margin-top:auto;margin-bottom:80px}
+        .pg-cover .logo{margin:auto;max-width:220px;filter:drop-shadow(0 4px 15px rgba(0,0,0,0.5))}
+        .pg-cover .topic{font-size:1.4rem;font-weight:800;color:#fff;font-style:italic;text-align:left;padding:15px 30px;margin-top:auto;margin-bottom:70px;text-shadow:0 2px 8px rgba(0,0,0,0.6)}
         .pg-cover .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8)}
 
         /* ===== PÁGINA INTERNA BASE ===== */
@@ -255,6 +255,64 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 
 <?php endforeach; ?>
 </div>
+
+<!-- Botão flutuante para baixar PDF -->
+<div id="pdf-toolbar" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;gap:10px;">
+    <button onclick="generatePDF()" id="btn-pdf" style="background:#e53935;color:#fff;border:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.3);display:flex;align-items:center;gap:8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Baixar PDF
+    </button>
+    <a href="/admin/magazines/edit/<?= $magazine['id'] ?>" style="background:#3a3b4e;color:#fff;border:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.3);text-decoration:none;display:flex;align-items:center;gap:8px;">
+        ← Voltar
+    </a>
+</div>
+
+<!-- html2pdf.js (client-side PDF generation) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+<script>
+function generatePDF() {
+    var btn = document.getElementById('btn-pdf');
+    btn.disabled = true;
+    btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span> Gerando...';
+    
+    var style = document.createElement('style');
+    style.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(style);
+
+    var element = document.querySelector('.preview');
+    var filename = '<?= preg_replace('/[^a-zA-Z0-9_-]/', '_', $magazine['title']) ?>_Brooks_Construtora.pdf';
+
+    // Esconde toolbar durante geração
+    document.getElementById('pdf-toolbar').style.display = 'none';
+
+    var opt = {
+        margin: 0,
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true,
+            allowTaint: true,
+            scrollY: 0,
+            windowWidth: 595
+        },
+        jsPDF: { 
+            unit: 'px', 
+            format: [595, 842], 
+            orientation: 'portrait',
+            hotfixes: ['px_scaling']
+        },
+        pagebreak: { mode: ['css', 'legacy'], before: '.page' }
+    };
+
+    html2pdf().set(opt).from(element).save().then(function() {
+        document.getElementById('pdf-toolbar').style.display = 'flex';
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar PDF';
+    });
+}
+</script>
+
 </body>
 </html>
 

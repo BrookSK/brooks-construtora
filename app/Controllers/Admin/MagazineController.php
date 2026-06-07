@@ -317,16 +317,31 @@ class MagazineController extends Controller
         }
 
         $description = $this->input('description', $page['title'] ?? 'Construção de alto padrão');
+        $field = $this->input('field', 'image_url');
+        $allowedFields = ['image_url', 'image_url_2', 'image_url_3'];
+        if (!in_array($field, $allowedFields)) $field = 'image_url';
+
+        // Determina orientação baseado no layout e posição da imagem
+        $layout = $page['layout_type'] ?? '';
+        $orientation = 'landscape'; // padrão: deitada
+
+        // Imagens que ficam em coluna (metade da largura, mais altas) = portrait
+        if (in_array($layout, ['internal_02', 'internal_07'])) {
+            if ($field === 'image_url') $orientation = 'portrait'; // imagem principal lateral
+        }
+        if ($layout === 'internal_05' || $layout === 'internal_06') {
+            $orientation = 'portrait'; // imagens em grid vertical
+        }
+        // internal_01 imagem 2 fica na coluna direita = portrait
+        if ($layout === 'internal_01' && $field === 'image_url_2') {
+            $orientation = 'portrait';
+        }
 
         try {
             $openai = new OpenAIService();
-            $imageUrl = $openai->generateImage($description);
+            $imageUrl = $openai->generateImage($description, $orientation);
 
             if ($imageUrl) {
-                $field = $this->input('field', 'image_url');
-                $allowedFields = ['image_url', 'image_url_2', 'image_url_3'];
-                if (!in_array($field, $allowedFields)) $field = 'image_url';
-
                 Magazine::updatePage($pageId, [$field => $imageUrl]);
                 $this->json(['success' => true, 'url' => $imageUrl]);
             } else {
