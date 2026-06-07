@@ -296,6 +296,42 @@ class MagazineController extends Controller
         }
     }
 
+    public function generatePageImage(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $pageId = (int) $this->input('page_id');
+        $page = Database::fetch("SELECT * FROM magazine_pages WHERE id = ?", [$pageId]);
+
+        if (!$page) {
+            $this->json(['error' => 'Página não encontrada.'], 404);
+            return;
+        }
+
+        $description = $this->input('description', $page['title'] ?? 'Construção de alto padrão');
+
+        try {
+            $openai = new OpenAIService();
+            $imageUrl = $openai->generateImage($description);
+
+            if ($imageUrl) {
+                $field = $this->input('field', 'image_url');
+                $allowedFields = ['image_url', 'image_url_2'];
+                if (!in_array($field, $allowedFields)) $field = 'image_url';
+
+                Magazine::updatePage($pageId, [$field => $imageUrl]);
+                $this->json(['success' => true, 'url' => $imageUrl]);
+            } else {
+                $this->json(['error' => 'Não foi possível gerar a imagem.'], 500);
+            }
+        } catch (\Exception $e) {
+            $this->json(['error' => 'Erro: ' . $e->getMessage()], 500);
+        }
+    }
+
     public function approve(): void
     {
         if (!$this->isPost()) {

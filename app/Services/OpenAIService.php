@@ -85,22 +85,11 @@ JSON puro sem markdown:
             throw new \Exception('Resposta inválida da IA ao gerar conteúdo da revista.');
         }
 
-        // Tenta gerar imagens para cada página
+        // Tenta gerar imagens para cada página (DESABILITADO no fluxo síncrono para evitar timeout)
+        // As imagens serão geradas sob demanda ou via cron
         foreach ($content['pages'] as &$page) {
-            if (!empty($page['image_suggestion'])) {
-                try {
-                    $page['image_url'] = $this->generateImage($page['image_suggestion']);
-                } catch (\Exception $e) {
-                    $page['image_url'] = null;
-                }
-            }
-            if (!empty($page['image_suggestion_2'])) {
-                try {
-                    $page['image_url_2'] = $this->generateImage($page['image_suggestion_2']);
-                } catch (\Exception $e) {
-                    $page['image_url_2'] = null;
-                }
-            }
+            $page['image_url'] = null;
+            $page['image_url_2'] = null;
         }
 
         return $content;
