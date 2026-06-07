@@ -2,7 +2,7 @@
 /**
  * BACKGROUND: Geração completa de revista (conteúdo + imagens)
  * 
- * Este script é disparado pelo admin via exec() e roda em background.
+ * Este script é disparado pelo admin e roda em background no servidor.
  * Ele gera o conteúdo da revista e depois todas as imagens, atualizando
  * o progresso na tabela generation_jobs para que o frontend possa acompanhar.
  *
@@ -12,6 +12,9 @@
 // Evita timeout do PHP (pode demorar para gerar muitas imagens)
 set_time_limit(0);
 ignore_user_abort(true);
+
+// Não iniciar sessão — este script roda em background sem browser
+define('BACKGROUND_PROCESS', true);
 
 define('ROOT_PATH', dirname(__DIR__));
 
@@ -37,6 +40,16 @@ if (!$jobId || !$topicId) {
     echo "Uso: php generate_magazine_background.php <job_id> <topic_id> <user_id>\n";
     exit(1);
 }
+
+// Log para debug
+$logFile = ROOT_PATH . '/cron/background_generation.log';
+function bgLog(string $msg): void {
+    global $logFile;
+    $time = date('Y-m-d H:i:s');
+    file_put_contents($logFile, "[{$time}] {$msg}\n", FILE_APPEND);
+}
+
+bgLog("=== Processo iniciado. Job #{$jobId}, Topic #{$topicId}, User #{$userId} ===");
 
 // Funções auxiliares para atualizar o job
 function updateJob(int $jobId, array $data): void
@@ -68,11 +81,16 @@ updateJob($jobId, [
     'current_step_label' => 'Iniciando geração...',
 ]);
 
+bgLog("Job marcado como processing.");
+
 $topic = MagazineTopic::find($topicId);
 if (!$topic) {
     failJob($jobId, 'Tema não encontrado.');
+    bgLog("ERRO: Tema #{$topicId} não encontrado.");
     exit(1);
 }
+
+bgLog("Tema encontrado: " . $topic['title']);
 
 // ============================================================
 // PASSO 1: Gerar conteúdo da revista via GPT
@@ -82,8 +100,10 @@ updateStep($jobId, 1, 'Gerando conteúdo da revista com IA...');
 try {
     $openai = new OpenAIService();
     $content = $openai->generateMagazineContent($topic['title'], $topic['description']);
+    bgLog("Conteúdo gerado com sucesso. Título: " . $content['title']);
 } catch (Exception $e) {
     failJob($jobId, 'Erro ao gerar conteúdo: ' . $e->getMessage());
+    bgLog("ERRO ao gerar conteúdo: " . $e->getMessage());
     exit(1);
 }
 
@@ -246,4 +266,5 @@ try {
 }
 
 echo "Job #{$jobId} concluído. Revista #{$magazineId}. Imagens: {$imageCount} OK, {$imageErrors} erros.\n";
+bgLog("=== Processo concluído. Revista #{$magazineId}. Imagens: {$imageCount} OK, {$imageErrors} erros. ===");
 exit(0);

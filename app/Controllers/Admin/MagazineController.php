@@ -118,25 +118,46 @@ class MagazineController extends Controller
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
-            // Dispara o script em background
-            $phpBinary = PHP_BINARY ?: 'php';
-            $scriptPath = ROOT_PATH . '/cron/generate_magazine_background.php';
             $userId = Auth::id();
 
-            // Comando para rodar em background (compatível com Windows e Linux)
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                $cmd = "start /B \"{$phpBinary}\" \"{$scriptPath}\" {$jobId} {$topicId} {$userId}";
-                pclose(popen($cmd, 'r'));
-            } else {
-                $cmd = "{$phpBinary} \"{$scriptPath}\" {$jobId} {$topicId} {$userId} > /dev/null 2>&1 &";
-                exec($cmd);
+            // IMPORTANTE: Fecha a sessão ANTES de enviar a resposta
+            // Isso permite que requests de polling funcionem em paralelo
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
             }
 
-            $this->json([
+            // Envia a resposta JSON ao navegador imediatamente
+            $response = json_encode([
                 'success' => true,
                 'job_id' => $jobId,
                 'message' => 'Geração iniciada em segundo plano!',
             ]);
+
+            // Limpa qualquer output buffering acumulado
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
+            http_response_code(200);
+            header('Content-Type: application/json');
+            header('Content-Length: ' . strlen($response));
+            header('Connection: close');
+            echo $response;
+            flush();
+
+            // Se PHP-FPM, desconecta completamente o request
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
+            }
+
+            // Continua executando sem timeout
+            set_time_limit(0);
+            ignore_user_abort(true);
+
+            // Executa a geração no mesmo processo
+            $this->executeBackgroundGeneration($jobId, $topicId, $userId);
+            exit;
+
         } catch (\Exception $e) {
             $this->json(['error' => 'Erro ao iniciar geração: ' . $e->getMessage()], 500);
         }
@@ -667,6 +688,174 @@ class MagazineController extends Controller
 
         $this->setFlash('success', 'Agendamento atualizado com sucesso!');
         $this->redirect('/admin/magazines/schedule');
+    }
+
+    /**
+     * Executa a geração completa da revista em background (após já ter respondido ao navegador)
+     */
+    private function executeBackgroundGeneration(int $jobId, int $topicId, int $userId): void
+    {
+        $updateJob = function(array $data) use ($jobId) {
+            Database::update('generation_jobs', $data, 'id = ?', [$jobId]);
+        };
+
+        $updateStep = function(int $step, string $label) use ($updateJob) {
+            $updateJob(['current_step' => $step, 'current_step_label' => $label]);
+        };
+
+        $failJob = function(string $error) use ($updateJob) {
+            $updateJob([
+                'status' => 'failed',
+                'error_message' => $error,
+                'completed_at' => date('Y-m-d H:i:s'),
+            ]);
+        };
+
+        // Marca como processando
+        $updateJob([
+            'status' => 'processing',
+            'started_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $topic = MagazineTopic::find($topicId);
+        if (!$topic) {
+            $failJob('Tema não encontrado.');
+            return;
+        }
+
+        // PASSO 1: Gerar conteúdo
+        $updateStep(1, 'Gerando conteúdo da revista com IA...');
+
+        try {
+            $openai = new OpenAIService();
+            $content = $openai->generateMagazineContent($topic['title'], $topic['description']);
+        } catch (\Exception $e) {
+            $failJob('Erro ao gerar conteúdo: ' . $e->getMessage());
+            return;
+        }
+
+        // PASSO 2: Salvar no banco
+        $updateStep(2, 'Salvando revista no banco de dados...');
+
+        try {
+            $magazineId = Magazine::create([
+                'title' => $content['title'],
+                'subtitle' => $content['subtitle'] ?? '',
+                'topic_id' => $topicId,
+                'status' => Magazine::STATUS_GENERATED,
+                'cover_image' => null,
+                'generated_by' => 'ai',
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            foreach ($content['pages'] as $index => $page) {
+                Magazine::addPage($magazineId, [
+                    'page_number' => $index + 1,
+                    'title' => $page['title'] ?? '',
+                    'subtitle' => $page['subtitle'] ?? '',
+                    'content' => $page['content'] ?? '',
+                    'image_url' => null,
+                    'image_url_2' => null,
+                    'image_suggestion' => $page['image_suggestion'] ?? null,
+                    'image_suggestion_2' => $page['image_suggestion_2'] ?? null,
+                    'caption' => $page['caption'] ?? null,
+                    'layout_type' => $page['layout'] ?? 'internal_01',
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            $updateJob(['magazine_id' => $magazineId]);
+            MagazineTopic::markAsUsed($topicId);
+        } catch (\Exception $e) {
+            $failJob('Erro ao salvar revista: ' . $e->getMessage());
+            return;
+        }
+
+        // PASSO 3: Identificar imagens
+        $updateStep(3, 'Identificando imagens para gerar...');
+
+        $pages = Magazine::getPages($magazineId);
+        $imagesToGenerate = [];
+
+        foreach ($pages as $page) {
+            if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])) {
+                continue;
+            }
+
+            $suggestion = $page['image_suggestion'] ?? null;
+            $suggestion2 = $page['image_suggestion_2'] ?? null;
+            $oneImageLayouts = ['internal_04', 'internal_07'];
+
+            if ($suggestion) {
+                $orientation = 'landscape';
+                if (in_array($page['layout_type'], ['internal_02', 'internal_07'])) $orientation = 'portrait';
+                if (in_array($page['layout_type'], ['internal_05', 'internal_06'])) $orientation = 'portrait';
+
+                $imagesToGenerate[] = [
+                    'page_id' => $page['id'],
+                    'page_number' => $page['page_number'],
+                    'field' => 'image_url',
+                    'description' => $suggestion,
+                    'orientation' => $orientation,
+                ];
+            }
+
+            if ($suggestion2 && !in_array($page['layout_type'], $oneImageLayouts)) {
+                $orientation = 'landscape';
+                if ($page['layout_type'] === 'internal_01') $orientation = 'portrait';
+                if (in_array($page['layout_type'], ['internal_05', 'internal_06'])) $orientation = 'portrait';
+
+                $imagesToGenerate[] = [
+                    'page_id' => $page['id'],
+                    'page_number' => $page['page_number'],
+                    'field' => 'image_url_2',
+                    'description' => $suggestion2,
+                    'orientation' => $orientation,
+                ];
+            }
+        }
+
+        $totalSteps = 3 + count($imagesToGenerate);
+        $updateJob(['total_steps' => $totalSteps]);
+
+        // PASSO 4+: Gerar cada imagem
+        $imageCount = 0;
+        $imageErrors = 0;
+
+        foreach ($imagesToGenerate as $i => $img) {
+            $stepNum = 4 + $i;
+            $imgLabel = ($img['field'] === 'image_url_2') ? 'Imagem 2' : 'Imagem 1';
+            $updateStep($stepNum, "Gerando {$imgLabel} da Página {$img['page_number']}...");
+
+            try {
+                $imageUrl = $openai->generateImage($img['description'], $img['orientation']);
+                if ($imageUrl) {
+                    Magazine::updatePage($img['page_id'], [$img['field'] => $imageUrl]);
+                    $imageCount++;
+                } else {
+                    $imageErrors++;
+                }
+            } catch (\Exception $e) {
+                $imageErrors++;
+                error_log("Job #{$jobId} - Erro imagem Pág.{$img['page_number']}: " . $e->getMessage());
+            }
+        }
+
+        // FINALIZAR
+        $finalLabel = "Concluído! {$imageCount} imagens geradas.";
+        if ($imageErrors > 0) {
+            $finalLabel .= " ({$imageErrors} falharam)";
+        }
+
+        $updateJob([
+            'status' => 'completed',
+            'current_step' => $totalSteps,
+            'current_step_label' => $finalLabel,
+            'completed_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        // Envia notificação
+        $this->sendGenerationNotification($magazineId, $content['title']);
     }
 
     private function sendGenerationNotification(int $magazineId, string $title): void

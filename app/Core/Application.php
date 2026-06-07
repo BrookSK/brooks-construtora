@@ -45,6 +45,13 @@ class Application
 
     private function startSession(): void
     {
+        // Não inicia sessão em processos de background (CLI sem browser)
+        if (defined('BACKGROUND_PROCESS') && BACKGROUND_PROCESS) {
+            return;
+        }
+        if (php_sapi_name() === 'cli' && !isset($_SERVER['HTTP_HOST'])) {
+            return;
+        }
         if (session_status() === PHP_SESSION_NONE) {
             session_name($this->config['session']['name'] ?? 'brooks_session');
             session_start();
