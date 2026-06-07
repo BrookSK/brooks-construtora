@@ -62,9 +62,11 @@
 
 		<div id="block_widget-3" class="col pb-0 widget block_widget">
 			<span class="widget-title">Atendimento</span><div class="is-divider small"></div>
-			<?php $whatsapp = $settings['site_whatsapp'] ?? '5511993392659'; ?>
-			<p>WhatsApp <a href="https://api.whatsapp.com/send?phone=<?= $whatsapp ?>&text=Oi!" target="_blank"><?= $settings['site_phone'] ?? '(11) 99339-2659' ?></a><br>(Mariana ou Kauê)</p>
-			<p>E-mail<br><a href="mailto:<?= $settings['site_email'] ?? 'contato@brooksconstrutora.com.br' ?>"><?= $settings['site_email'] ?? 'contato@brooksconstrutora.com.br' ?></a></p>
+			<?php $whatsapp = !empty($settings['site_whatsapp']) ? $settings['site_whatsapp'] : '5511993392659'; ?>
+			<?php $phone = !empty($settings['site_phone']) ? $settings['site_phone'] : '(11) 99339-2659'; ?>
+			<?php $email = !empty($settings['site_email']) ? $settings['site_email'] : 'contato@brooksconstrutora.com.br'; ?>
+			<p>WhatsApp <a href="https://api.whatsapp.com/send?phone=<?= $whatsapp ?>&amp;text=Oi!" target="_blank"><?= $phone ?></a><br>(Mariana ou Kauê)</p>
+			<p>E-mail<br><a href="mailto:<?= $email ?>"><?= $email ?></a></p>
 			<p>Avenida Brigadeiro Faria Lima, 1811<br>Conjunto 910 - Jardim Paulistano<br>CEP 1452-001 - São Paulo/SP</p>
 			<p>BROOKS CONSTRUTORA<br>CNPJ 24.811.527/0001-64</p>
 
@@ -120,10 +122,10 @@
 			<li class="menu-item"><a href="/projetos">Projetos</a></li>
 			<li class="menu-item"><a href="/revista">Revista</a></li>
 			<li class="menu-item"><a href="/contato">Contato</a></li>
-			<?php $whatsappFooter = $settings['site_whatsapp'] ?? '5511993392659'; ?>
+			<?php $whatsappFooter = !empty($settings['site_whatsapp']) ? $settings['site_whatsapp'] : '5511993392659'; ?>
 			<li class="menu-item has-icon-left">
-				<a href="https://api.whatsapp.com/send?phone=<?= $whatsappFooter ?>&text=Oi!" target="_blank">
-					<img class="ux-sidebar-menu-icon" width="35" height="35" src="/assets/images/wp/2023/01/whatsapp.png" alt="WhatsApp" /><?= $settings['site_phone'] ?? '(11) 99339-2659' ?>
+				<a href="https://api.whatsapp.com/send?phone=<?= $whatsappFooter ?>&amp;text=Oi!" target="_blank">
+					<img class="ux-sidebar-menu-icon" width="35" height="35" src="/assets/images/wp/2023/01/whatsapp.png" alt="WhatsApp" /><?= !empty($settings['site_phone']) ? $settings['site_phone'] : '(11) 99339-2659' ?>
 				</a>
 			</li>
 			<li class="html header-social-icons ml-0">
@@ -138,8 +140,8 @@
 <!-- WhatsApp Float Button -->
 <div id="qlwapp" class="qlwapp-free qlwapp-button qlwapp-bottom-right qlwapp-all qlwapp-rounded">
 	<div class="qlwapp-container">
-		<?php $whatsappBtn = $settings['site_whatsapp'] ?? '5511993392659'; ?>
-		<a class="qlwapp-toggle" data-action="open" data-phone="<?= $whatsappBtn ?>" data-message="Olá, estou acessando o site da Brooks e gostaria de algumas informações." href="https://api.whatsapp.com/send?phone=<?= $whatsappBtn ?>&text=Ol%C3%A1%2C%20estou%20acessando%20o%20site%20da%20Brooks%20e%20gostaria%20de%20algumas%20informa%C3%A7%C3%B5es." target="_blank">
+		<?php $whatsappBtn = !empty($settings['site_whatsapp']) ? $settings['site_whatsapp'] : '5511993392659'; ?>
+		<a class="qlwapp-toggle" data-action="open" data-phone="<?= $whatsappBtn ?>" data-message="Olá, estou acessando o site da Brooks e gostaria de algumas informações." href="https://api.whatsapp.com/send?phone=<?= $whatsappBtn ?>&amp;text=Ol%C3%A1%2C%20estou%20acessando%20o%20site%20da%20Brooks%20e%20gostaria%20de%20algumas%20informa%C3%A7%C3%B5es." target="_blank">
 			<i class="qlwapp-icon qlwapp-whatsapp-icon"></i>
 			<i class="qlwapp-close" data-action="close">&times;</i>
 			<span class="qlwapp-text">Podemos ajudar?</span>

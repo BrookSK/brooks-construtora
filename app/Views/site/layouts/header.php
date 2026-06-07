@@ -175,10 +175,10 @@
 					<!-- Right Elements -->
 					<div class="flex-col hide-for-medium flex-right">
 						<ul class="header-nav header-nav-main nav nav-right nav-size-xlarge nav-spacing-xlarge nav-uppercase">
-							<?php $whatsapp = $settings['site_whatsapp'] ?? '5511993392659'; ?>
+							<?php $whatsapp = !empty($settings['site_whatsapp']) ? $settings['site_whatsapp'] : '5511993392659'; ?>
 							<li class="menu-item menu-item-design-default has-icon-left">
-								<a href="https://api.whatsapp.com/send?phone=<?= $whatsapp ?>&text=Oi!" class="nav-top-link" target="_blank">
-									<img class="ux-menu-icon" width="35" height="35" src="/assets/images/wp/2023/01/whatsapp.png" alt="WhatsApp" /><?= $settings['site_phone'] ?? '(11) 99339-2659' ?>
+								<a href="https://api.whatsapp.com/send?phone=<?= $whatsapp ?>&amp;text=Oi!" class="nav-top-link" target="_blank">
+									<img class="ux-menu-icon" width="35" height="35" src="/assets/images/wp/2023/01/whatsapp.png" alt="WhatsApp" /><?= !empty($settings['site_phone']) ? $settings['site_phone'] : '(11) 99339-2659' ?>
 								</a>
 							</li>
 						</ul>

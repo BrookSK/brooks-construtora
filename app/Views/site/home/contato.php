@@ -74,10 +74,11 @@
 				<div class="col-inner" style="padding: 40px 30px; background: #f9f9f9; border-radius: 8px;">
 					<h4 class="uppercase" style="margin-bottom: 20px;"><em><strong>Informações</strong></em></h4>
 
-					<?php $whatsappContato = $settings['site_whatsapp'] ?? '5511993392659'; ?>
+					<?php $whatsappContato = !empty($settings['site_whatsapp']) ? $settings['site_whatsapp'] : '5511993392659'; ?>
+					<?php $phoneContato = !empty($settings['site_phone']) ? $settings['site_phone'] : '(11) 99339-2659'; ?>
 
 					<p><strong>WhatsApp</strong><br>
-					<a href="https://api.whatsapp.com/send?phone=<?= $whatsappContato ?>&text=Oi!" target="_blank"><?= $settings['site_phone'] ?? '(11) 99339-2659' ?></a><br>
+					<a href="https://api.whatsapp.com/send?phone=<?= $whatsappContato ?>&amp;text=Oi!" target="_blank"><?= $phoneContato ?></a><br>
 					(Mariana ou Kauê)</p>
 
 					<p><strong>E-mail</strong><br>
