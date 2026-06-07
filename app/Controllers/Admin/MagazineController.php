@@ -193,7 +193,9 @@ class MagazineController extends Controller
             foreach ($_POST['pages'] as $pageId => $pageData) {
                 Magazine::updatePage((int) $pageId, [
                     'title' => $pageData['title'] ?? '',
+                    'subtitle' => $pageData['subtitle'] ?? '',
                     'content' => $pageData['content'] ?? '',
+                    'caption' => $pageData['caption'] ?? '',
                 ]);
             }
         }
@@ -289,7 +291,10 @@ class MagazineController extends Controller
 
         if (move_uploaded_file($file['tmp_name'], $destination)) {
             $imageUrl = '/uploads/magazines/pages/' . $filename;
-            Magazine::updatePage($pageId, ['image_url' => $imageUrl]);
+            $field = $this->input('field', 'image_url');
+            $allowedFields = ['image_url', 'image_url_2'];
+            if (!in_array($field, $allowedFields)) $field = 'image_url';
+            Magazine::updatePage($pageId, [$field => $imageUrl]);
             $this->json(['success' => true, 'url' => $imageUrl]);
         } else {
             $this->json(['error' => 'Erro ao salvar o arquivo.'], 500);
