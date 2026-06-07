@@ -67,7 +67,7 @@ Layouts obrigatórios na ordem:
 9. \"internal_07\" - title: citação grande impactante, content: 2 parágrafos, image_suggestion
 10. \"backcover\" - content: \"Construção consciente do zero ao acabamento. Comprometidos com o meio ambiente, com as pessoas e com o futuro.\"
 
-Textos profissionais sobre construção/reformas alto padrão. Parágrafos com 3-4 linhas. image_suggestion = descrição de foto de construção/arquitetura.
+Textos profissionais sobre construção/reformas alto padrão. Parágrafos com 6-8 linhas cada (textos longos e detalhados para preencher a página). image_suggestion = descrição de foto de construção/arquitetura.
 
 JSON puro sem markdown:
 {\"title\":\"PALAVRA\",\"subtitle\":\"CONSTRUÇÃO — SUSTENTÁVEL\",\"pages\":[...]}";

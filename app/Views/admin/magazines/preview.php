@@ -44,20 +44,20 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         /* Elementos comuns */
         .img-full{width:100%;object-fit:cover;border-radius:0}
         .img-half{width:48%;object-fit:cover}
-        .title-big{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:800;font-style:italic;color:#111;margin-bottom:12px}
-        .title-upper{font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;font-weight:500;color:#111;margin-bottom:15px}
-        .subtitle{font-size:0.95rem;font-weight:400;color:#333;margin-bottom:12px}
-        .text{font-size:0.72rem;line-height:1.7;color:#333;text-align:justify;margin-bottom:10px}
-        .text-sm{font-size:0.6rem;line-height:1.6;color:#444;text-align:justify}
-        .caption{font-size:0.7rem;font-weight:600;color:#111;margin-top:5px}
-        .caption-sub{font-size:0.55rem;color:#666}
-        .two-col{display:flex;gap:15px}
+        .title-big{font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:900;font-style:normal;color:#111;margin-bottom:15px;line-height:1.1}
+        .title-upper{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px}
+        .subtitle{font-size:1.1rem;font-weight:400;color:#333;margin-bottom:18px}
+        .text{font-size:0.78rem;line-height:1.8;color:#333;text-align:left;margin-bottom:12px}
+        .text-sm{font-size:0.68rem;line-height:1.7;color:#444;text-align:justify;margin-bottom:8px}
+        .caption{font-size:0.78rem;font-weight:700;color:#111;margin-top:10px}
+        .caption-sub{font-size:0.58rem;color:#666}
+        .two-col{display:flex;gap:18px}
         .two-col .col{flex:1}
         .img-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-        .img-grid img{width:100%;height:180px;object-fit:cover}
+        .img-grid img,.img-grid .img-placeholder{width:100%;height:280px;object-fit:cover}
 
         /* ===== INTERNAL_04 - Imagem full com overlay ===== */
-        .overlay-section{position:relative;width:100%;height:380px;overflow:hidden;margin-bottom:15px}
+        .overlay-section{position:relative;width:100%;height:480px;overflow:hidden;margin-bottom:18px}
         .overlay-section img{width:100%;height:100%;object-fit:cover}
         .overlay-section .ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,50,0,0.95));padding:25px 30px 20px}
         .overlay-section .ov h2{font-family:'Playfair Display',serif;font-size:2rem;font-weight:800;font-style:italic;color:#fff}
@@ -79,6 +79,12 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
     $img1 = $page['image_url'] ?? '';
     $img2 = $page['image_url_2'] ?? '';
     $layout = $page['layout_type'] ?? 'internal_01';
+    // Numeração começa em 01 a partir das páginas internas (ignora cover e subcover)
+    static $internalPageNum = 0;
+    if (!in_array($layout, ['cover', 'subcover', 'backcover'])) {
+        $internalPageNum++;
+    }
+    $displayPageNum = str_pad($internalPageNum, 2, '0', STR_PAD_LEFT);
 ?>
 
 <?php if ($layout === 'cover'): ?>
@@ -129,19 +135,19 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php elseif ($layout === 'internal_01'): ?>
 <!-- PÁG INTERNA 01: Imagem full topo + texto 2 colunas com imagem -->
 <div class="page pg-int">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= str_pad($page['page_number'],2,'0',STR_PAD_LEFT) ?></div></div>
-    <?php if ($img1): ?><img src="<?= $img1 ?>" class="img-full" style="height:220px;margin-bottom:15px" alt=""><?php else: ?><div class="img-full img-placeholder" style="height:220px;margin-bottom:15px">IMAGEM</div><?php endif; ?>
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
+    <?php if ($img1): ?><img src="<?= $img1 ?>" class="img-full" style="height:300px;margin-bottom:18px" alt=""><?php else: ?><div class="img-full img-placeholder" style="height:300px;margin-bottom:18px">IMAGEM</div><?php endif; ?>
     <?php if ($page['title']): ?><div class="title-upper"><?= htmlspecialchars($page['title']) ?></div><?php endif; ?>
     <div class="two-col">
         <div class="col"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
-        <div class="col"><?php if($img2): ?><img src="<?= $img2 ?>" style="width:100%;height:180px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:180px">IMAGEM</div><?php endif; ?></div>
+        <div class="col"><?php if($img2): ?><img src="<?= $img2 ?>" style="width:100%;height:280px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:280px">IMAGEM</div><?php endif; ?></div>
     </div>
 </div>
 
 <?php elseif ($layout === 'internal_02'): ?>
 <!-- PÁG INTERNA 02: Imagem grande esquerda + texto direita + título bold -->
 <div class="page pg-int">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= str_pad($page['page_number'],2,'0',STR_PAD_LEFT) ?></div></div>
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <div class="two-col" style="margin-bottom:15px">
         <div class="col"><?php if($img1): ?><img src="<?= $img1 ?>" style="width:100%;height:250px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:250px">IMAGEM</div><?php endif; ?></div>
         <div class="col">
@@ -159,13 +165,13 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php elseif ($layout === 'internal_03'): ?>
 <!-- PÁG INTERNA 03: Título bold + subtítulo + texto full + 2 imagens -->
 <div class="page pg-int">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= str_pad($page['page_number'],2,'0',STR_PAD_LEFT) ?></div></div>
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <div class="title-big"><?= htmlspecialchars($page['title'] ?? '') ?></div>
     <?php if($page['subtitle']??''): ?><div class="subtitle"><?= htmlspecialchars($page['subtitle']) ?></div><?php endif; ?>
     <?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
     <div style="display:flex;gap:10px;margin-top:15px">
-        <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:200px" alt=""><?php else: ?><div class="img-half img-placeholder" style="height:200px">IMAGEM</div><?php endif; ?>
-        <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:200px" alt=""><?php else: ?><div class="img-half img-placeholder" style="height:200px">IMAGEM</div><?php endif; ?>
+        <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php else: ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
+        <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php else: ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
     </div>
     <?php if($page['caption']??''): ?><div class="caption" style="margin-top:8px"><?= htmlspecialchars($page['caption']) ?></div><?php endif; ?>
 </div>
@@ -173,7 +179,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php elseif ($layout === 'internal_04'): ?>
 <!-- PÁG INTERNA 04: Imagem full com overlay + título sobreposto -->
 <div class="page pg-int">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= str_pad($page['page_number'],2,'0',STR_PAD_LEFT) ?></div></div>
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <div class="overlay-section">
         <?php if($img1): ?><img src="<?= $img1 ?>" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:100%">IMAGEM</div><?php endif; ?>
         <div class="ov">
@@ -187,13 +193,13 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php elseif ($layout === 'internal_05'): ?>
 <!-- PÁG INTERNA 05: 2 imagens + 2 colunas texto -->
 <div class="page pg-int">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= str_pad($page['page_number'],2,'0',STR_PAD_LEFT) ?></div></div>
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <div style="display:flex;gap:10px;margin-bottom:10px">
-        <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:200px" alt=""><?php else: ?><div class="img-half img-placeholder" style="height:200px">IMAGEM</div><?php endif; ?>
-        <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:200px" alt=""><?php else: ?><div class="img-half img-placeholder" style="height:200px">IMAGEM</div><?php endif; ?>
+        <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php else: ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
+        <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php else: ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
     </div>
     <?php if($page['caption']??''): ?><div class="caption"><?= htmlspecialchars($page['caption']) ?></div><div class="caption-sub"><?= htmlspecialchars($page['subtitle']??'') ?></div><?php endif; ?>
-    <div style="margin-top:15px"><div class="title-big" style="font-size:1.5rem"><?= htmlspecialchars($page['title'] ?? '') ?></div></div>
+    <div style="margin-top:15px"><div class="title-big" style="font-size:1.8rem"><?= htmlspecialchars($page['title'] ?? '') ?></div></div>
     <div class="two-col">
         <?php $cols = explode('|||', $page['content']??''); ?>
         <div class="col"><?php foreach(explode("\n",$cols[0]??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
@@ -204,12 +210,12 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php elseif ($layout === 'internal_06'): ?>
 <!-- PÁG INTERNA 06: Grid 4 imagens + texto lateral -->
 <div class="page pg-int">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= str_pad($page['page_number'],2,'0',STR_PAD_LEFT) ?></div></div>
-    <div class="img-grid" style="margin-bottom:15px">
-        <?php if($img1): ?><img src="<?= $img1 ?>" alt=""><?php else: ?><div class="img-placeholder">IMAGEM 1</div><?php endif; ?>
-        <?php if($img2): ?><img src="<?= $img2 ?>" alt=""><?php else: ?><div class="img-placeholder">IMAGEM 2</div><?php endif; ?>
-        <?php if($img1): ?><img src="<?= $img1 ?>" alt=""><?php else: ?><div class="img-placeholder">IMAGEM 3</div><?php endif; ?>
-        <?php if($img2): ?><img src="<?= $img2 ?>" alt=""><?php else: ?><div class="img-placeholder">IMAGEM 4</div><?php endif; ?>
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
+    <div class="img-grid" style="margin-bottom:20px">
+        <?php if($img1): ?><img src="<?= $img1 ?>" alt=""><?php else: ?><div class="img-placeholder" style="height:280px">IMAGEM 1</div><?php endif; ?>
+        <?php if($img2): ?><img src="<?= $img2 ?>" alt=""><?php else: ?><div class="img-placeholder" style="height:280px">IMAGEM 2</div><?php endif; ?>
+        <?php if($img1): ?><img src="<?= $img1 ?>" alt=""><?php else: ?><div class="img-placeholder" style="height:280px">IMAGEM 3</div><?php endif; ?>
+        <?php if($img2): ?><img src="<?= $img2 ?>" alt=""><?php else: ?><div class="img-placeholder" style="height:280px">IMAGEM 4</div><?php endif; ?>
     </div>
     <div class="two-col">
         <div class="col"></div>
@@ -220,10 +226,10 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php elseif ($layout === 'internal_07'): ?>
 <!-- PÁG INTERNA 07: Citação grande + imagem com texto -->
 <div class="page pg-int">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= str_pad($page['page_number'],2,'0',STR_PAD_LEFT) ?></div></div>
-    <div style="margin:30px 0 25px"><p style="font-size:1.6rem;font-weight:600;color:#111;line-height:1.3"><?= htmlspecialchars($page['title'] ?? '') ?></p></div>
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
+    <div style="margin:40px 0 30px"><p style="font-size:1.8rem;font-weight:600;color:#111;line-height:1.3"><?= htmlspecialchars($page['title'] ?? '') ?></p></div>
     <div class="two-col">
-        <div class="col"><?php if($img1): ?><img src="<?= $img1 ?>" style="width:100%;height:320px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:320px">IMAGEM</div><?php endif; ?></div>
+        <div class="col"><?php if($img1): ?><img src="<?= $img1 ?>" style="width:100%;height:420px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:420px">IMAGEM</div><?php endif; ?></div>
         <div class="col"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
     </div>
 </div>
@@ -242,7 +248,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php else: ?>
 <!-- FALLBACK -->
 <div class="page pg-int">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= str_pad($page['page_number'],2,'0',STR_PAD_LEFT) ?></div></div>
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <?php if($img1): ?><img src="<?= $img1 ?>" class="img-full" style="height:250px;margin-bottom:15px" alt=""><?php endif; ?>
     <?php if($page['title']): ?><div class="title-big"><?= htmlspecialchars($page['title']) ?></div><?php endif; ?>
     <?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
@@ -253,3 +259,4 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </div>
 </body>
 </html>
+
