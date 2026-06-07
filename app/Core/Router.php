@@ -50,6 +50,8 @@ class Router
             'dashboard' => ['DashboardController', 'index'],
             'settings' => ['SettingsController', 'index'],
             'settings/update' => ['SettingsController', 'update'],
+            'settings/upload-magazine-logo' => ['SettingsController', 'uploadMagazineLogo'],
+            'settings/remove-magazine-logo' => ['SettingsController', 'removeMagazineLogo'],
             'newsletter' => ['NewsletterController', 'index'],
             'newsletter/export' => ['NewsletterController', 'export'],
             'newsletter/delete' => ['NewsletterController', 'delete'],

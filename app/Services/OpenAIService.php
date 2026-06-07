@@ -51,38 +51,111 @@ class OpenAIService
 
     public function generateMagazineContent(string $topicTitle, string $topicDescription): array
     {
-        $prompt = "Você é um redator especializado em construção civil e arquitetura de alto padrão. 
-        Crie o conteúdo completo para uma revista digital da Brooks Construtora.
-        
-        TEMA: {$topicTitle}
-        DESCRIÇÃO: {$topicDescription}
-        
-        A revista deve seguir este modelo (baseado no PDF de referência):
-        - Página 1 (Capa): título da revista e subtítulo
-        - Página 2 (Subcapa): uma variação do título com o logo
-        - Páginas 3-8: conteúdo editorial com textos informativos, divididos em seções
-        - Página 9 (Contracapa): frase de impacto e informações da empresa
-        
-        Para cada página interna (3-8), crie:
-        - Um título de seção
-        - 2-3 parágrafos de conteúdo relevante e bem escrito
-        - Uma sugestão de imagem para ilustrar
-        
-        O conteúdo deve ser profissional, informativo e voltado para clientes de alto padrão.
-        
-        Retorne em formato JSON:
+        $prompt = "Você é um redator especializado em construção civil e arquitetura de alto padrão.
+Crie o conteúdo completo para uma revista digital da Brooks Construtora.
+
+TEMA: {$topicTitle}
+DESCRIÇÃO: {$topicDescription}
+
+A revista DEVE ter EXATAMENTE 10 páginas com estes layouts específicos (siga RIGOROSAMENTE):
+
+PÁGINA 1 - layout: \"cover\"
+- Título curto da revista (1-2 palavras impactantes, ex: \"NÚCLEO\", \"ECO\", \"RAÍZES\")
+- Subtítulo no formato: \"CONSTRUÇÃO — SUSTENTÁVEL\" ou similar com 2 palavras separadas por travessão
+
+PÁGINA 2 - layout: \"subcover\"
+- Variação do título da capa (ex: se capa é \"NÚCLEO\", subcapa pode ser \"ECO BROOKS\")
+- Subtítulo variação: \"CONSTRUÇÃO — CONSCIENTE\" ou similar
+
+PÁGINA 3 - layout: \"internal_01\"
+- Título uppercase em caixa alta (manchete da matéria principal)
+- Conteúdo: 2 parágrafos densos de texto (cada um com 4-5 linhas)
+- image_suggestion: foto de obra/construção para imagem full-width no topo
+- image_suggestion_2: foto secundária para coluna direita
+
+PÁGINA 4 - layout: \"internal_02\"
+- Título grande bold italic (subtema)
+- subtitle: frase complementar ao título
+- Conteúdo: 2 parágrafos
+- image_suggestion: imagem principal grande (ocupa lado esquerdo)
+- image_suggestion_2: imagem menor para coluna direita inferior
+
+PÁGINA 5 - layout: \"internal_03\"
+- Título bold grande italic
+- subtitle: subtítulo descritivo
+- Conteúdo: 2 parágrafos longos (texto principal full-width)
+- image_suggestion: imagem 1 para grid
+- image_suggestion_2: imagem 2 para grid
+- caption: legenda das imagens (texto em itálico)
+
+PÁGINA 6 - layout: \"internal_04\"
+- Título bold grande (será sobreposto na imagem com fundo escuro)
+- subtitle: texto curto uppercase que aparece ao lado do título
+- Conteúdo: 3 parágrafos de texto abaixo da imagem
+- image_suggestion: imagem impactante full-width com paisagem/obra
+
+PÁGINA 7 - layout: \"internal_05\"
+- Título bold (seção)
+- subtitle: \"LOREM IPSUM\" / subtítulo curto
+- Conteúdo: 2 parágrafos em coluna esquerda + 2 parágrafos em coluna direita (separe com |||)
+- image_suggestion: imagem 1 (lado esquerdo)
+- image_suggestion_2: imagem 2 (lado direito)
+- caption: legenda curta para as imagens
+
+PÁGINA 8 - layout: \"internal_06\"
+- Sem título (página de galeria)
+- Conteúdo: 2 parágrafos de texto que ficam à direita das imagens
+- image_suggestion: imagem para grid (4 imagens serão geradas)
+- image_suggestion_2: segunda imagem para grid
+
+PÁGINA 9 - layout: \"internal_07\"
+- Título: frase de destaque/citação grande (1-2 linhas impactantes sobre o tema)
+- Conteúdo: 2 parágrafos que ficam à direita da imagem
+- image_suggestion: imagem de apoio
+
+PÁGINA 10 - layout: \"backcover\"
+- Conteúdo: frase institucional (\"Construção consciente do zero ao acabamento. Comprometidos com o meio ambiente, com as pessoas e com o futuro.\")
+
+REGRAS IMPORTANTES:
+- Todo conteúdo DEVE ser sobre o tema \"{$topicTitle}\"
+- Textos profissionais, informativos, voltados para clientes de alto padrão
+- Cada parágrafo deve ter 3-5 linhas (nem muito curto, nem muito longo)
+- Títulos devem ser criativos e impactantes
+- image_suggestion deve descrever fotos reais de construção/arquitetura/reformas
+
+Retorne APENAS JSON válido (sem markdown, sem ```):
+{
+    \"title\": \"TÍTULO CURTO DA REVISTA\",
+    \"subtitle\": \"CONSTRUÇÃO — SUSTENTÁVEL\",
+    \"pages\": [
         {
-            \"title\": \"Título da revista\",
-            \"subtitle\": \"Subtítulo/tema\",
-            \"pages\": [
-                {\"title\": \"Título da página\", \"content\": \"Conteúdo da página\", \"layout\": \"cover\", \"image_suggestion\": \"Descrição da imagem sugerida\"},
-                ...
-            ]
-        }
-        
-        Retorne APENAS o JSON, sem markdown ou texto adicional.";
+            \"layout\": \"cover\",
+            \"title\": \"TÍTULO\",
+            \"subtitle\": \"CONSTRUÇÃO — SUSTENTÁVEL\"
+        },
+        {
+            \"layout\": \"subcover\",
+            \"title\": \"VARIAÇÃO TÍTULO\",
+            \"subtitle\": \"CONSTRUÇÃO — CONSCIENTE\"
+        },
+        {
+            \"layout\": \"internal_01\",
+            \"title\": \"TÍTULO DA MATÉRIA\",
+            \"content\": \"Parágrafo 1...\\n\\nParágrafo 2...\",
+            \"image_suggestion\": \"descrição da imagem principal\",
+            \"image_suggestion_2\": \"descrição da imagem secundária\"
+        },
+        ...continua para todas as 10 páginas...
+    ]
+}";
 
         $response = $this->chatCompletion($prompt);
+        
+        // Limpa possíveis marcadores de code block
+        $response = trim($response);
+        $response = preg_replace('/^```json\s*/i', '', $response);
+        $response = preg_replace('/\s*```$/i', '', $response);
+        
         $content = json_decode($response, true);
 
         if (!is_array($content) || !isset($content['pages'])) {
@@ -91,13 +164,18 @@ class OpenAIService
 
         // Tenta gerar imagens para cada página
         foreach ($content['pages'] as &$page) {
-            if (isset($page['image_suggestion']) && !empty($page['image_suggestion'])) {
+            if (!empty($page['image_suggestion'])) {
                 try {
-                    $imageUrl = $this->generateImage($page['image_suggestion']);
-                    $page['image_url'] = $imageUrl;
+                    $page['image_url'] = $this->generateImage($page['image_suggestion']);
                 } catch (\Exception $e) {
                     $page['image_url'] = null;
-                    error_log('Erro ao gerar imagem: ' . $e->getMessage());
+                }
+            }
+            if (!empty($page['image_suggestion_2'])) {
+                try {
+                    $page['image_url_2'] = $this->generateImage($page['image_suggestion_2']);
+                } catch (\Exception $e) {
+                    $page['image_url_2'] = null;
                 }
             }
         }

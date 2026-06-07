@@ -49,6 +49,9 @@ class SettingsController extends Controller
             'cron_last_run' => Setting::get('cron_last_run', ''),
             'cron_last_generated' => Setting::get('cron_last_generated', ''),
 
+            // Logo da Revista
+            'magazine_logo' => Setting::get('magazine_logo', ''),
+
             // E-mails de notificação
             'notification_emails' => Setting::get('notification_emails', ''),
 
@@ -102,5 +105,66 @@ class SettingsController extends Controller
 
         $this->setFlash('success', 'Configurações atualizadas com sucesso!');
         $this->redirect('/admin/settings');
+    }
+
+    public function uploadMagazineLogo(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        if (!isset($_FILES['magazine_logo']) || $_FILES['magazine_logo']['error'] !== UPLOAD_ERR_OK) {
+            $this->json(['error' => 'Erro no upload do arquivo.'], 400);
+            return;
+        }
+
+        $file = $_FILES['magazine_logo'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+
+        if (!in_array($file['type'], $allowedTypes)) {
+            $this->json(['error' => 'Tipo não permitido. Use PNG, WEBP, JPG ou SVG.'], 400);
+            return;
+        }
+
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = 'magazine_logo_' . time() . '.' . $ext;
+        $uploadDir = ROOT_PATH . '/public/uploads/settings/';
+
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $destination = $uploadDir . $filename;
+
+        if (move_uploaded_file($file['tmp_name'], $destination)) {
+            // Remove logo anterior se existir
+            $oldLogo = Setting::get('magazine_logo', '');
+            if (!empty($oldLogo) && file_exists(ROOT_PATH . '/public' . $oldLogo)) {
+                unlink(ROOT_PATH . '/public' . $oldLogo);
+            }
+
+            $logoUrl = '/uploads/settings/' . $filename;
+            Setting::set('magazine_logo', $logoUrl);
+            $this->json(['success' => true, 'url' => $logoUrl]);
+        } else {
+            $this->json(['error' => 'Erro ao salvar arquivo.'], 500);
+        }
+    }
+
+    public function removeMagazineLogo(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $oldLogo = Setting::get('magazine_logo', '');
+        if (!empty($oldLogo) && file_exists(ROOT_PATH . '/public' . $oldLogo)) {
+            unlink(ROOT_PATH . '/public' . $oldLogo);
+        }
+
+        Setting::set('magazine_logo', '');
+        $this->json(['success' => true]);
     }
 }

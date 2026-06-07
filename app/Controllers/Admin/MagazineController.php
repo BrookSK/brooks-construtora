@@ -116,9 +116,12 @@ class MagazineController extends Controller
                 Magazine::addPage($magazineId, [
                     'page_number' => $index + 1,
                     'title' => $page['title'] ?? '',
+                    'subtitle' => $page['subtitle'] ?? '',
                     'content' => $page['content'] ?? '',
                     'image_url' => $page['image_url'] ?? null,
-                    'layout_type' => $page['layout'] ?? 'text_image',
+                    'image_url_2' => $page['image_url_2'] ?? null,
+                    'caption' => $page['caption'] ?? null,
+                    'layout_type' => $page['layout'] ?? 'internal_01',
                     'created_at' => date('Y-m-d H:i:s'),
                 ]);
             }

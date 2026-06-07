@@ -75,6 +75,44 @@
         </div>
     </div>
 
+    <!-- Logo da Revista -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-image"></i> Logo da Revista Digital</h6>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">Esta imagem será usada como logo nas capas e contracapas das revistas geradas. Recomendado: PNG ou WEBP com fundo transparente, branca (para aparecer em fundo escuro).</p>
+            <div class="row align-items-center">
+                <div class="col-md-4 text-center">
+                    <div style="background:#1a472a; padding:20px; border-radius:8px; display:inline-block;">
+                        <?php $magazineLogo = $settings['magazine_logo'] ?? ''; ?>
+                        <?php if (!empty($magazineLogo)): ?>
+                            <img src="<?= htmlspecialchars($magazineLogo) ?>" alt="Logo Revista" style="max-width:200px; max-height:80px;">
+                        <?php else: ?>
+                            <img src="/assets/images/wp/2024/11/logo-brooks-1400x396.webp" alt="Logo Padrão" style="max-width:200px; max-height:80px;">
+                        <?php endif; ?>
+                    </div>
+                    <p class="text-muted small mt-2"><?= !empty($magazineLogo) ? 'Logo customizada' : 'Usando logo padrão' ?></p>
+                </div>
+                <div class="col-md-8">
+                    <form id="magazine-logo-form" enctype="multipart/form-data">
+                        <div class="mb-2">
+                            <input type="file" class="form-control" name="magazine_logo" id="magazine-logo-input" accept="image/*">
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="bi bi-upload"></i> Enviar Logo
+                        </button>
+                        <?php if (!empty($magazineLogo)): ?>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeMagazineLogo()">
+                                <i class="bi bi-trash"></i> Remover
+                            </button>
+                        <?php endif; ?>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Notificações -->
     <div class="card mb-4">
         <div class="card-header">
@@ -181,5 +219,27 @@
         </button>
     </div>
 </form>
+
+<script>
+document.getElementById('magazine-logo-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var fd = new FormData(this);
+    fetch('/admin/settings/upload-magazine-logo', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) { alert('Logo atualizada!'); location.reload(); }
+        else { alert(data.error || 'Erro ao enviar.'); }
+    })
+    .catch(() => alert('Erro ao enviar.'));
+});
+
+function removeMagazineLogo() {
+    if (!confirm('Remover logo customizada e voltar para a padrão?')) return;
+    fetch('/admin/settings/remove-magazine-logo', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => { if (data.success) location.reload(); })
+    .catch(() => alert('Erro.'));
+}
+</script>
 
 <?php $content = ob_get_clean(); include ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>
