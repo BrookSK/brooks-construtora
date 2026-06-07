@@ -67,8 +67,9 @@
                 <div class="col-md-6">
                     <label class="form-label">Modelo de Imagens</label>
                     <select class="form-select" name="openai_image_model">
-                        <option value="dall-e-3" <?= $settings['openai_image_model'] === 'dall-e-3' ? 'selected' : '' ?>>DALL-E 3</option>
-                        <option value="dall-e-2" <?= $settings['openai_image_model'] === 'dall-e-2' ? 'selected' : '' ?>>DALL-E 2</option>
+                        <option value="gpt-image-1" <?= ($settings['openai_image_model'] ?? '') === 'gpt-image-1' ? 'selected' : '' ?>>GPT Image 1 (Recomendado)</option>
+                        <option value="dall-e-3" <?= ($settings['openai_image_model'] ?? '') === 'dall-e-3' ? 'selected' : '' ?>>DALL-E 3</option>
+                        <option value="dall-e-2" <?= ($settings['openai_image_model'] ?? '') === 'dall-e-2' ? 'selected' : '' ?>>DALL-E 2</option>
                     </select>
                 </div>
             </div>

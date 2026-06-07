@@ -104,17 +104,33 @@ JSON puro sem markdown:
             'prompt' => $prompt,
             'n' => 1,
             'size' => '1024x1024',
-            'quality' => 'standard',
         ];
+
+        // gpt-image-1 usa formato diferente
+        if (strpos($this->imageModel, 'gpt-image') !== false) {
+            $data = [
+                'model' => $this->imageModel,
+                'prompt' => $prompt,
+                'n' => 1,
+                'size' => '1024x1024',
+            ];
+        }
 
         $response = $this->request('https://api.openai.com/v1/images/generations', $data);
         $result = json_decode($response, true);
 
         if (isset($result['data'][0]['url'])) {
-            // Baixa a imagem e salva localmente
             $imageUrl = $result['data'][0]['url'];
             $localPath = $this->downloadImage($imageUrl);
             return $localPath;
+        } elseif (isset($result['data'][0]['b64_json'])) {
+            // gpt-image-1 retorna base64
+            $imageContent = base64_decode($result['data'][0]['b64_json']);
+            $uploadDir = ROOT_PATH . '/public/uploads/magazines/ai/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+            $filename = 'ai_' . uniqid() . '.png';
+            file_put_contents($uploadDir . $filename, $imageContent);
+            return '/uploads/magazines/ai/' . $filename;
         }
 
         return null;

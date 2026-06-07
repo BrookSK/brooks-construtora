@@ -223,7 +223,18 @@ document.querySelectorAll('.generate-img-btn').forEach(btn=>{
     btn.addEventListener('click', function(){
         var pageId = this.dataset.pageId;
         var field = this.dataset.field;
-        var desc = prompt('Descreva a imagem que deseja gerar:', 'Foto profissional de construção de alto padrão');
+        
+        // Pega o título e conteúdo da página para usar como contexto
+        var card = this.closest('.card');
+        var titleInput = card.querySelector('input[name*="[title]"]');
+        var contentInput = card.querySelector('textarea[name*="[content]"]');
+        var pageTitle = titleInput ? titleInput.value : '';
+        var pageContent = contentInput ? contentInput.value.substring(0, 200) : '';
+        
+        var autoDesc = 'Foto profissional de construção/arquitetura: ' + pageTitle;
+        if (pageContent) autoDesc += '. Contexto: ' + pageContent.split('\n')[0];
+        
+        var desc = prompt('Descrição da imagem para gerar com IA:', autoDesc);
         if(!desc) return;
         
         this.disabled = true;
