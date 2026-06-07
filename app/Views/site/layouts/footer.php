@@ -1,5 +1,27 @@
 	</main>
 
+<!-- Bloco Newsletter - Assine a Revista -->
+<section class="section" id="section_newsletter_cta" style="background-color: #3a3b4e; padding: 40px 0;">
+	<div class="container">
+		<div class="row align-center">
+			<div class="col medium-8 small-12 large-6" style="width: 100%; max-width: 600px; margin: 0 auto;">
+				<div class="text-center">
+					<h3 style="color: #fff; margin-bottom: 8px; font-weight: 400;">Assine a Revista Brooks</h3>
+					<p style="color: rgba(255,255,255,0.7); margin-bottom: 20px; font-size: 0.9rem;">Receba edições exclusivas sobre construção sustentável, reformas de alto padrão e tendências de arquitetura.</p>
+					<form action="/newsletter/subscribe" method="POST" class="newsletter-form">
+						<div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+							<input type="text" name="name" placeholder="Seu nome" style="flex: 1; min-width: 140px; padding: 10px 15px; border: none; border-radius: 4px; font-size: 14px;">
+							<input type="email" name="email" placeholder="Seu e-mail" required style="flex: 1; min-width: 180px; padding: 10px 15px; border: none; border-radius: 4px; font-size: 14px;">
+							<button type="submit" class="button secondary" style="padding: 10px 22px; white-space: nowrap;">Assinar Grátis</button>
+						</div>
+						<p style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 10px;">Sem spam. Cancele quando quiser.</p>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
+
 <footer id="footer" class="footer-wrapper">
 
 <!-- FOOTER 2 -->
@@ -70,22 +92,11 @@
 			<p>Avenida Brigadeiro Faria Lima, 1811<br>Conjunto 910 - Jardim Paulistano<br>CEP 1452-001 - São Paulo/SP</p>
 			<p>BROOKS CONSTRUTORA<br>CNPJ 24.811.527/0001-64</p>
 
-			<!-- Newsletter Form -->
-			<div class="newsletter-footer" style="margin-top: 20px;">
+			<!-- Newsletter - link para página da revista -->
+			<div style="margin-top: 20px;">
 				<span class="widget-title">Revista Digital</span><div class="is-divider small"></div>
-				<p>Assine gratuitamente nossa revista digital sobre construção, reformas e arquitetura de alto padrão. Receba edições exclusivas diretamente no seu e-mail.</p>
-				<form action="/newsletter/subscribe" method="POST" class="newsletter-form">
-					<div style="margin-bottom: 8px;">
-						<input type="text" name="name" placeholder="Seu nome" class="search-field mb-0" style="width: 100%; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
-					</div>
-					<div class="flex-row" style="gap: 8px;">
-						<input type="email" name="email" placeholder="Seu melhor e-mail" required class="search-field mb-0" style="flex: 1; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
-						<button type="submit" class="button secondary" style="padding: 8px 16px;">
-							<span>Assinar</span>
-						</button>
-					</div>
-					<p style="font-size: 0.75rem; opacity: 0.6; margin-top: 8px;">Sem spam. Cancele quando quiser.</p>
-				</form>
+				<p style="font-size: 0.85rem;">Assine nossa revista gratuita sobre construção e reformas.</p>
+				<a href="/revista" class="button secondary" style="padding: 6px 16px; font-size: 0.8rem;">Ver Revista</a>
 			</div>
 		</div>
 
