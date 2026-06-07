@@ -96,11 +96,11 @@
                     <p class="text-muted small mt-2"><?= !empty($magazineLogo) ? 'Logo customizada' : 'Usando logo padrão' ?></p>
                 </div>
                 <div class="col-md-8">
-                    <form id="magazine-logo-form" enctype="multipart/form-data">
+                    <div id="magazine-logo-form">
                         <div class="mb-2">
                             <input type="file" class="form-control" name="magazine_logo" id="magazine-logo-input" accept="image/*">
                         </div>
-                        <button type="submit" class="btn btn-sm btn-primary">
+                        <button type="button" class="btn btn-sm btn-primary" id="magazine-logo-submit">
                             <i class="bi bi-upload"></i> Enviar Logo
                         </button>
                         <?php if (!empty($magazineLogo)): ?>
@@ -108,7 +108,7 @@
                                 <i class="bi bi-trash"></i> Remover
                             </button>
                         <?php endif; ?>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -222,11 +222,13 @@
 </form>
 
 <script>
-var logoForm = document.getElementById('magazine-logo-form');
-if (logoForm) {
-    logoForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        var fd = new FormData(this);
+var logoBtn = document.getElementById('magazine-logo-submit');
+if (logoBtn) {
+    logoBtn.addEventListener('click', function() {
+        var fileInput = document.getElementById('magazine-logo-input');
+        if (!fileInput.files.length) { alert('Selecione um arquivo.'); return; }
+        var fd = new FormData();
+        fd.append('magazine_logo', fileInput.files[0]);
         fetch('/admin/settings/upload-magazine-logo', { method: 'POST', body: fd })
         .then(r => r.json())
         .then(data => {
