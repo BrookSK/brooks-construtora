@@ -52,7 +52,9 @@
 <body>
     <div class="login-card">
         <div class="brand">
-            <img src="/assets/images/wp/2024/11/logo-brooks-1400x396.webp" alt="Brooks Construtora">
+            <div style="background: #3a3b4e; padding: 15px 20px; border-radius: 8px; display: inline-block;">
+                <img src="/assets/images/wp/2024/11/logo-brooks-1400x396.webp" alt="Brooks Construtora">
+            </div>
             <p>Painel Administrativo</p>
         </div>
 
