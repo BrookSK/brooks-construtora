@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Brooks Construtora Admin</title>
+    <link rel="icon" href="/assets/images/wp/2023/01/cropped-favicon-1-32x32.png" sizes="32x32" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background-color: #1a472a;
+            background-color: #3a3b4e;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -25,25 +26,25 @@
             text-align: center;
             margin-bottom: 2rem;
         }
-        .login-card .brand h2 {
-            color: #1a472a;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
+        .login-card .brand img {
+            max-width: 200px;
+            margin-bottom: 0.75rem;
         }
         .login-card .brand p {
             color: #666;
             font-size: 0.9rem;
+            margin: 0;
         }
         .btn-login {
-            background-color: #1a472a;
-            border-color: #1a472a;
+            background-color: #3a3b4e;
+            border-color: #3a3b4e;
             color: #fff;
             padding: 0.75rem;
             font-weight: 600;
         }
         .btn-login:hover {
-            background-color: #2d6b40;
-            border-color: #2d6b40;
+            background-color: #446084;
+            border-color: #446084;
             color: #fff;
         }
     </style>
@@ -51,8 +52,8 @@
 <body>
     <div class="login-card">
         <div class="brand">
-            <h2>BROOKS</h2>
-            <p>Construtora - Painel Administrativo</p>
+            <img src="/assets/images/wp/2024/11/logo-brooks-1400x396.webp" alt="Brooks Construtora">
+            <p>Painel Administrativo</p>
         </div>
 
         <?php if (!empty($flash)): ?>

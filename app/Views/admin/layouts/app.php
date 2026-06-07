@@ -4,49 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $pageTitle ?? 'Painel' ?> - Brooks Construtora Admin</title>
+    <link rel="icon" href="/assets/images/wp/2023/01/cropped-favicon-1-32x32.png" sizes="32x32" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         :root {
-            --bs-primary: #1a472a;
             --sidebar-width: 260px;
+            --color-primary: #3a3b4e;
+            --color-primary-hover: #446084;
+            --color-accent: #dd3333;
+            --color-bg: #f4f6f9;
         }
-        body { background-color: #f4f6f9; }
+        body { background-color: var(--color-bg); font-family: 'Segoe UI', sans-serif; }
         .sidebar {
             position: fixed;
             top: 0;
             left: 0;
             width: var(--sidebar-width);
             height: 100vh;
-            background-color: #1a472a;
+            background-color: var(--color-primary);
             color: #fff;
             overflow-y: auto;
             z-index: 1000;
             transition: all 0.3s;
         }
         .sidebar .brand {
-            padding: 1.5rem 1rem;
+            padding: 1.25rem 1rem;
             text-align: center;
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
         .sidebar .brand img { max-width: 160px; }
-        .sidebar .brand h5 { margin: 0.5rem 0 0; font-size: 0.85rem; opacity: 0.7; }
+        .sidebar .brand p { margin: 0.5rem 0 0; font-size: 0.75rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
         .sidebar .nav-link {
-            color: rgba(255,255,255,0.8);
+            color: rgba(255,255,255,0.75);
             padding: 0.75rem 1.25rem;
             display: flex;
             align-items: center;
             gap: 0.75rem;
             transition: all 0.2s;
             border-left: 3px solid transparent;
+            font-size: 0.9rem;
         }
         .sidebar .nav-link:hover,
         .sidebar .nav-link.active {
             color: #fff;
-            background-color: rgba(255,255,255,0.1);
-            border-left-color: #4CAF50;
+            background-color: rgba(255,255,255,0.08);
+            border-left-color: var(--color-accent);
         }
-        .sidebar .nav-link i { font-size: 1.1rem; }
+        .sidebar .nav-link i { font-size: 1.1rem; width: 20px; text-align: center; }
         .main-content {
             margin-left: var(--sidebar-width);
             padding: 1.5rem;
@@ -57,7 +62,7 @@
             border-radius: 8px;
             padding: 1rem 1.5rem;
             margin-bottom: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -65,24 +70,36 @@
         .card {
             border: none;
             border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
         .stat-card {
-            border-left: 4px solid #4CAF50;
+            border-left: 4px solid var(--color-accent);
         }
         .stat-card .stat-number {
             font-size: 2rem;
             font-weight: 700;
-            color: #1a472a;
+            color: var(--color-primary);
         }
         .btn-primary {
-            background-color: #1a472a;
-            border-color: #1a472a;
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
         }
         .btn-primary:hover {
-            background-color: #2d6b40;
-            border-color: #2d6b40;
+            background-color: var(--color-primary-hover);
+            border-color: var(--color-primary-hover);
         }
+        .btn-outline-primary {
+            color: var(--color-primary);
+            border-color: var(--color-primary);
+        }
+        .btn-outline-primary:hover {
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
+            color: #fff;
+        }
+        .badge.bg-primary { background-color: var(--color-primary) !important; }
+        .badge.bg-success { background-color: #28a745 !important; }
+        .badge.bg-danger { background-color: var(--color-accent) !important; }
         @media (max-width: 768px) {
             .sidebar { transform: translateX(-100%); }
             .sidebar.show { transform: translateX(0); }
@@ -94,8 +111,8 @@
     <!-- Sidebar -->
     <nav class="sidebar" id="sidebar">
         <div class="brand">
-            <h4 class="text-white mb-0">BROOKS</h4>
-            <h5>CONSTRUTORA - ADMIN</h5>
+            <img src="/assets/images/wp/2024/11/logo-brooks-1400x396.webp" alt="Brooks Construtora">
+            <p>Painel Admin</p>
         </div>
         <ul class="nav flex-column mt-3">
             <li class="nav-item">
@@ -141,13 +158,13 @@
                 </a>
             </li>
             <?php endif; ?>
-            <li class="nav-item mt-3">
+            <li class="nav-item mt-3" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
                 <a class="nav-link" href="/" target="_blank">
                     <i class="bi bi-box-arrow-up-right"></i> Ver Site
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link text-danger" href="/admin/logout">
+                <a class="nav-link" href="/admin/logout" style="color: var(--color-accent);">
                     <i class="bi bi-box-arrow-left"></i> Sair
                 </a>
             </li>
@@ -165,7 +182,7 @@
             </div>
             <div class="d-flex align-items-center gap-3">
                 <span class="text-muted small"><?= htmlspecialchars($user['name'] ?? '') ?></span>
-                <span class="badge bg-success"><?= ucfirst(str_replace('_', ' ', $user['role'] ?? '')) ?></span>
+                <span class="badge bg-primary"><?= ucfirst(str_replace('_', ' ', $user['role'] ?? '')) ?></span>
             </div>
         </div>
 
