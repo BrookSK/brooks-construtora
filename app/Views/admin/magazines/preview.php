@@ -100,7 +100,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
             <span><?= htmlspecialchars(trim(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — SUSTENTÁVEL')[1] ?? 'SUSTENTÁVEL')) ?></span>
         </div>
         <img src="<?= $magazineLogo ?>" class="logo" alt="Brooks">
-        <div class="topic">(<?= htmlspecialchars($magazine['subtitle'] ?? 'tema e assunto da revista') ?>)</div>
+        <div class="topic"><?= htmlspecialchars($magazine['subtitle'] ?? 'tema e assunto da revista') ?></div>
         <div class="foot">
             <span>&copy; <?= $year ?> BROOKS CONSTRUTORA.<br>TODOS OS DIREITOS RESERVADOS.</span>
             <span><?= $siteUrl ?></span>
@@ -124,7 +124,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
             <span><?= htmlspecialchars(trim(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — CONSCIENTE')[1] ?? 'CONSCIENTE')) ?></span>
         </div>
         <div style="flex:1"></div>
-        <div class="topic">(<?= htmlspecialchars($magazine['subtitle'] ?? 'tema e assunto da revista') ?>)</div>
+        <div class="topic"><?= htmlspecialchars($magazine['subtitle'] ?? 'tema e assunto da revista') ?></div>
         <div class="foot">
             <span>&copy; <?= $year ?> BROOKS CONSTRUTORA.<br>TODOS OS DIREITOS RESERVADOS.</span>
             <span><?= $siteUrl ?></span>
@@ -259,4 +259,5 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </div>
 </body>
 </html>
+
 
