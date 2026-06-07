@@ -70,15 +70,19 @@
 
 			<!-- Newsletter Form -->
 			<div class="newsletter-footer" style="margin-top: 20px;">
-				<span class="widget-title">Newsletter</span><div class="is-divider small"></div>
-				<p>Receba novidades e conteúdos exclusivos:</p>
+				<span class="widget-title">Revista Digital</span><div class="is-divider small"></div>
+				<p>Assine gratuitamente nossa revista digital sobre construção, reformas e arquitetura de alto padrão. Receba edições exclusivas diretamente no seu e-mail.</p>
 				<form action="/newsletter/subscribe" method="POST" class="newsletter-form">
+					<div style="margin-bottom: 8px;">
+						<input type="text" name="name" placeholder="Seu nome" class="search-field mb-0" style="width: 100%; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
+					</div>
 					<div class="flex-row" style="gap: 8px;">
-						<input type="email" name="email" placeholder="Seu e-mail" required class="search-field mb-0" style="flex: 1; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
+						<input type="email" name="email" placeholder="Seu melhor e-mail" required class="search-field mb-0" style="flex: 1; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
 						<button type="submit" class="button secondary" style="padding: 8px 16px;">
 							<span>Assinar</span>
 						</button>
 					</div>
+					<p style="font-size: 0.75rem; opacity: 0.6; margin-top: 8px;">Sem spam. Cancele quando quiser.</p>
 				</form>
 			</div>
 		</div>
@@ -90,7 +94,7 @@
 	<div class="container clearfix">
 		<div class="footer-secondary pull-right">
 			<div class="footer-text inline-block small-block">
-				<p>Desenvolvido por <a href="https://www.rededesigner.com.br/" target="_blank" rel="noopener noreferrer">Rede Designer</a></p>
+				<p><a href="/admin/login" style="opacity:0.5;">Área restrita</a> | Desenvolvido por <a href="https://www.brooksconstrutora.com.br" target="_blank" rel="noopener noreferrer">Brooks Construtora</a></p>
 			</div>
 		</div>
 		<div class="footer-primary pull-left">

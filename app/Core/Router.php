@@ -106,6 +106,12 @@ class Router
 
     private function handleSiteRoute(array $segments): void
     {
+        // Redirect /projetos/slug → /projeto/slug
+        if (count($segments) >= 2 && $segments[0] === 'projetos') {
+            header('Location: /projeto/' . $segments[1], true, 301);
+            exit;
+        }
+
         $routes = [
             '' => ['HomeController', 'index'],
             'sobre' => ['HomeController', 'sobre'],

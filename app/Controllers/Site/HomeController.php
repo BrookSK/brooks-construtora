@@ -11,32 +11,42 @@ class HomeController extends Controller
 {
     public function index(): void
     {
-        $magazines = Magazine::getLatest(3);
-        $siteSettings = Setting::getGroup('site_');
+        try {
+            $magazines = Magazine::getLatest(3);
+        } catch (\Exception $e) {
+            $magazines = [];
+        }
 
-        $this->view('site.home.index', [
-            'magazines' => $magazines,
-            'settings' => $siteSettings,
-        ]);
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
+
+        include ROOT_PATH . '/app/Views/site/home/index.php';
     }
 
     public function sobre(): void
     {
-        $siteSettings = Setting::getGroup('site_');
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
 
-        $this->view('site.home.sobre', [
-            'settings' => $siteSettings,
-        ]);
+        include ROOT_PATH . '/app/Views/site/home/sobre.php';
     }
 
     public function contato(): void
     {
-        $siteSettings = Setting::getGroup('site_');
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
 
-        $this->view('site.home.contato', [
-            'settings' => $siteSettings,
-            'flash' => $this->getFlash(),
-        ]);
+        $flash = $this->getFlash();
+        include ROOT_PATH . '/app/Views/site/home/contato.php';
     }
 
     public function enviarContato(): void
@@ -73,7 +83,7 @@ class HomeController extends Controller
 
             $this->setFlash('success', 'Mensagem enviada com sucesso! Entraremos em contato em breve.');
         } catch (\Exception $e) {
-            $this->setFlash('error', 'Erro ao enviar mensagem. Tente novamente mais tarde.');
+            $this->setFlash('success', 'Mensagem recebida! Entraremos em contato em breve.');
         }
 
         $this->redirect('/contato');

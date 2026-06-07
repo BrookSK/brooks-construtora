@@ -21,18 +21,14 @@ class ProjectController extends Controller
 
     public function index(): void
     {
-        $siteSettings = Setting::getGroup('site_');
-
         try {
-            $projects = Database::fetchAll("SELECT * FROM projects WHERE active = 1 ORDER BY sort_order ASC, created_at DESC");
+            $siteSettings = Setting::getGroup('site_');
         } catch (\Exception $e) {
-            $projects = [];
+            $siteSettings = [];
         }
 
-        $this->view('site.projects.index', [
-            'projects' => $projects,
-            'settings' => $siteSettings,
-        ]);
+        $settings = $siteSettings;
+        include ROOT_PATH . '/app/Views/site/projects/index.php';
     }
 
     public function show(string $slug = ''): void

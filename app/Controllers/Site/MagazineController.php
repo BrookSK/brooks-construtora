@@ -10,19 +10,31 @@ class MagazineController extends Controller
 {
     public function index(): void
     {
-        $magazines = Magazine::getPublished();
-        $siteSettings = Setting::getGroup('site_');
+        try {
+            $magazines = Magazine::getPublished();
+        } catch (\Exception $e) {
+            $magazines = [];
+        }
 
-        $this->view('site.magazine.index', [
-            'magazines' => $magazines,
-            'settings' => $siteSettings,
-        ]);
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
+
+        include ROOT_PATH . '/app/Views/site/magazine/index.php';
     }
 
     public function show(string $id = ''): void
     {
         $id = (int) $id;
-        $magazine = Magazine::find($id);
+
+        try {
+            $magazine = Magazine::find($id);
+        } catch (\Exception $e) {
+            $this->redirect('/revista');
+            return;
+        }
 
         if (!$magazine || $magazine['status'] !== 'published') {
             $this->redirect('/revista');
@@ -30,12 +42,13 @@ class MagazineController extends Controller
         }
 
         $pages = Magazine::getPages($id);
-        $siteSettings = Setting::getGroup('site_');
 
-        $this->view('site.magazine.show', [
-            'magazine' => $magazine,
-            'pages' => $pages,
-            'settings' => $siteSettings,
-        ]);
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
+
+        include ROOT_PATH . '/app/Views/site/magazine/show.php';
     }
 }
