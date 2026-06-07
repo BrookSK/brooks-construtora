@@ -267,49 +267,47 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
     </a>
 </div>
 
-<!-- html2pdf.js (client-side PDF generation) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-function generatePDF() {
+async function generatePDF() {
     var btn = document.getElementById('btn-pdf');
     btn.disabled = true;
     btn.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span> Gerando...';
-    
+
     var style = document.createElement('style');
     style.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
     document.head.appendChild(style);
 
-    var element = document.querySelector('.preview');
-    var filename = '<?= preg_replace('/[^a-zA-Z0-9_-]/', '_', $magazine['title']) ?>_Brooks_Construtora.pdf';
-
-    // Esconde toolbar durante geração
     document.getElementById('pdf-toolbar').style.display = 'none';
 
-    var opt = {
-        margin: 0,
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { 
-            scale: 2, 
+    var pages = document.querySelectorAll('.page');
+    var { jsPDF } = window.jspdf;
+    var pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [595, 842] });
+
+    for (var i = 0; i < pages.length; i++) {
+        if (i > 0) pdf.addPage([595, 842]);
+
+        var canvas = await html2canvas(pages[i], {
+            scale: 2,
             useCORS: true,
             allowTaint: true,
+            width: 595,
+            height: 842,
             scrollY: 0,
+            scrollX: 0,
             windowWidth: 595
-        },
-        jsPDF: { 
-            unit: 'px', 
-            format: [595, 842], 
-            orientation: 'portrait',
-            hotfixes: ['px_scaling']
-        },
-        pagebreak: { mode: ['css', 'legacy'], before: '.page' }
-    };
+        });
 
-    html2pdf().set(opt).from(element).save().then(function() {
-        document.getElementById('pdf-toolbar').style.display = 'flex';
-        btn.disabled = false;
-        btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar PDF';
-    });
+        var imgData = canvas.toDataURL('image/jpeg', 0.92);
+        pdf.addImage(imgData, 'JPEG', 0, 0, 595, 842);
+    }
+
+    pdf.save('<?= preg_replace('/[^a-zA-Z0-9_-]/', '_', $magazine['title']) ?>_Brooks_Construtora.pdf');
+
+    document.getElementById('pdf-toolbar').style.display = 'flex';
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar PDF';
 }
 </script>
 
