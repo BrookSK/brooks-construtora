@@ -50,6 +50,23 @@
                 </form>
             </div>
         </div>
+
+        <!-- Gerar Todas as Imagens -->
+        <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0"><i class="bi bi-stars"></i> Geração de Imagens</h6></div>
+            <div class="card-body">
+                <p class="small text-muted mb-2">Gerar automaticamente todas as imagens pendentes desta revista usando IA.</p>
+                <button type="button" class="btn btn-warning btn-sm w-100" id="btn-generate-all-images" data-magazine-id="<?= $magazine['id'] ?>">
+                    <i class="bi bi-images"></i> Gerar Todas as Imagens
+                </button>
+                <div id="gen-all-progress" class="mt-2 d-none">
+                    <div class="progress mb-1" style="height: 18px;">
+                        <div id="gen-all-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%">0%</div>
+                    </div>
+                    <small id="gen-all-status" class="text-muted">Preparando...</small>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Conteúdo -->
@@ -256,6 +273,78 @@ document.querySelectorAll('.generate-img-btn').forEach(btn=>{
             this.disabled=false; this.innerHTML='<i class="bi bi-stars"></i>';
         }).catch(()=>{alert('Erro.');this.disabled=false;this.innerHTML='<i class="bi bi-stars"></i>';});
     });
+});
+
+// Gerar TODAS as imagens pendentes em background
+document.getElementById('btn-generate-all-images').addEventListener('click', async function() {
+    const magazineId = this.dataset.magazineId;
+    
+    if (!confirm('Gerar todas as imagens pendentes com IA?\n\nIsso pode demorar alguns minutos. Você pode continuar usando o sistema normalmente.')) {
+        return;
+    }
+
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando...';
+    
+    const progressDiv = document.getElementById('gen-all-progress');
+    const progressBar = document.getElementById('gen-all-bar');
+    const statusEl = document.getElementById('gen-all-status');
+    progressDiv.classList.remove('d-none');
+
+    try {
+        // Busca imagens pendentes
+        const resp = await fetch('/admin/magazines/pending-images?magazine_id=' + magazineId);
+        const data = await resp.json();
+
+        if (!data.success || !data.images || data.images.length === 0) {
+            statusEl.textContent = 'Nenhuma imagem pendente para gerar.';
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-images"></i> Gerar Todas as Imagens';
+            return;
+        }
+
+        const total = data.images.length;
+        let generated = 0;
+        let failed = 0;
+        statusEl.textContent = '0 de ' + total + ' imagens...';
+
+        for (let i = 0; i < data.images.length; i++) {
+            const img = data.images[i];
+            const label = 'Pág. ' + img.page_number + ' - ' + (img.field === 'image_url_2' ? 'Img 2' : 'Img 1');
+            statusEl.textContent = label + ' (' + (i+1) + '/' + total + ')';
+
+            const fd = new FormData();
+            fd.append('page_id', img.page_id);
+            fd.append('field', img.field);
+            fd.append('description', img.description);
+
+            try {
+                const r = await fetch('/admin/magazines/generate-single-image', {method:'POST', body:fd});
+                const d = await r.json();
+                if (d.success) generated++;
+                else failed++;
+            } catch(e) {
+                failed++;
+            }
+
+            const pct = Math.round(((i+1) / total) * 100);
+            progressBar.style.width = pct + '%';
+            progressBar.textContent = pct + '%';
+        }
+
+        progressBar.classList.remove('progress-bar-animated', 'progress-bar-striped');
+        progressBar.classList.add('bg-success');
+        statusEl.innerHTML = '<strong>Concluído!</strong> ' + generated + ' geradas, ' + failed + ' falhas.';
+        
+        this.innerHTML = '<i class="bi bi-check-circle"></i> Concluído!';
+        
+        setTimeout(() => location.reload(), 2000);
+
+    } catch(e) {
+        statusEl.textContent = 'Erro: ' + e.message;
+        this.disabled = false;
+        this.innerHTML = '<i class="bi bi-images"></i> Gerar Todas as Imagens';
+    }
 });
 </script>
 

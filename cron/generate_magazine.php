@@ -112,8 +112,13 @@ try {
         Magazine::addPage($magazineId, [
             'page_number' => $index + 1,
             'title' => $page['title'] ?? '',
+            'subtitle' => $page['subtitle'] ?? '',
             'content' => $page['content'] ?? '',
-            'image_url' => $page['image_url'] ?? null,
+            'image_url' => null,
+            'image_url_2' => null,
+            'image_suggestion' => $page['image_suggestion'] ?? null,
+            'image_suggestion_2' => $page['image_suggestion_2'] ?? null,
+            'caption' => $page['caption'] ?? null,
             'layout_type' => $page['layout'] ?? 'text_image',
             'created_at' => date('Y-m-d H:i:s'),
         ]);
@@ -123,6 +128,62 @@ try {
     MagazineTopic::markAsUsed($topic['id']);
 
     echo "[" . date('Y-m-d H:i:s') . "] Revista #{$magazineId} gerada com sucesso!\n";
+
+    // Gera imagens automaticamente (no cron não tem timeout de browser)
+    echo "[" . date('Y-m-d H:i:s') . "] Iniciando geração de imagens...\n";
+    $pages = Magazine::getPages($magazineId);
+    $imageCount = 0;
+    $imageErrors = 0;
+
+    foreach ($pages as $page) {
+        if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])) {
+            continue;
+        }
+
+        $suggestion = $page['image_suggestion'] ?? null;
+        $suggestion2 = $page['image_suggestion_2'] ?? null;
+        $oneImageLayouts = ['internal_04', 'internal_07'];
+
+        // Imagem 1
+        if ($suggestion && empty($page['image_url'])) {
+            $orientation = 'landscape';
+            if (in_array($page['layout_type'], ['internal_02', 'internal_07'])) $orientation = 'portrait';
+            if (in_array($page['layout_type'], ['internal_05', 'internal_06'])) $orientation = 'portrait';
+
+            try {
+                $imageUrl = $openai->generateImage($suggestion, $orientation);
+                if ($imageUrl) {
+                    Magazine::updatePage($page['id'], ['image_url' => $imageUrl]);
+                    $imageCount++;
+                    echo "[" . date('Y-m-d H:i:s') . "]   Página {$page['page_number']} - Imagem 1 gerada.\n";
+                }
+            } catch (Exception $e) {
+                $imageErrors++;
+                echo "[" . date('Y-m-d H:i:s') . "]   ERRO Página {$page['page_number']} - Imagem 1: " . $e->getMessage() . "\n";
+            }
+        }
+
+        // Imagem 2
+        if ($suggestion2 && empty($page['image_url_2']) && !in_array($page['layout_type'], $oneImageLayouts)) {
+            $orientation = 'landscape';
+            if ($page['layout_type'] === 'internal_01') $orientation = 'portrait';
+            if (in_array($page['layout_type'], ['internal_05', 'internal_06'])) $orientation = 'portrait';
+
+            try {
+                $imageUrl = $openai->generateImage($suggestion2, $orientation);
+                if ($imageUrl) {
+                    Magazine::updatePage($page['id'], ['image_url_2' => $imageUrl]);
+                    $imageCount++;
+                    echo "[" . date('Y-m-d H:i:s') . "]   Página {$page['page_number']} - Imagem 2 gerada.\n";
+                }
+            } catch (Exception $e) {
+                $imageErrors++;
+                echo "[" . date('Y-m-d H:i:s') . "]   ERRO Página {$page['page_number']} - Imagem 2: " . $e->getMessage() . "\n";
+            }
+        }
+    }
+
+    echo "[" . date('Y-m-d H:i:s') . "] Imagens: {$imageCount} geradas, {$imageErrors} erros.\n";
 
     // Envia notificação
     $emails = Setting::get('notification_emails', '');

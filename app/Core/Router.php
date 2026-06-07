@@ -70,6 +70,8 @@ class Router
             'magazines/upload-cover' => ['MagazineController', 'uploadCover'],
             'magazines/upload-image' => ['MagazineController', 'uploadImage'],
             'magazines/generate-image' => ['MagazineController', 'generatePageImage'],
+            'magazines/pending-images' => ['MagazineController', 'pendingImages'],
+            'magazines/generate-single-image' => ['MagazineController', 'generateSingleImage'],
             'magazines/approve' => ['MagazineController', 'approve'],
             'magazines/publish' => ['MagazineController', 'publish'],
             'magazines/preview' => ['MagazineController', 'preview'],

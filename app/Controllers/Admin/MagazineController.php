@@ -89,8 +89,7 @@ class MagazineController extends Controller
         $topic = MagazineTopic::find($topicId);
 
         if (!$topic) {
-            $this->setFlash('error', 'Tema não encontrado.');
-            $this->redirect('/admin/magazines/topics');
+            $this->json(['error' => 'Tema não encontrado.'], 404);
             return;
         }
 
@@ -111,15 +110,17 @@ class MagazineController extends Controller
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
-            // Cria as páginas
+            // Cria as páginas (salvando image_suggestion para gerar imagens depois)
             foreach ($content['pages'] as $index => $page) {
                 Magazine::addPage($magazineId, [
                     'page_number' => $index + 1,
                     'title' => $page['title'] ?? '',
                     'subtitle' => $page['subtitle'] ?? '',
                     'content' => $page['content'] ?? '',
-                    'image_url' => $page['image_url'] ?? null,
-                    'image_url_2' => $page['image_url_2'] ?? null,
+                    'image_url' => null,
+                    'image_url_2' => null,
+                    'image_suggestion' => $page['image_suggestion'] ?? null,
+                    'image_suggestion_2' => $page['image_suggestion_2'] ?? null,
                     'caption' => $page['caption'] ?? null,
                     'layout_type' => $page['layout'] ?? 'internal_01',
                     'created_at' => date('Y-m-d H:i:s'),
@@ -132,12 +133,139 @@ class MagazineController extends Controller
             // Envia e-mail de notificação
             $this->sendGenerationNotification($magazineId, $content['title']);
 
-            $this->setFlash('success', 'Revista gerada com sucesso! Aguardando revisão.');
+            // Retorna JSON com ID da revista para o frontend iniciar geração de imagens
+            $this->json([
+                'success' => true,
+                'magazine_id' => $magazineId,
+                'title' => $content['title'],
+                'message' => 'Conteúdo da revista gerado com sucesso!',
+            ]);
         } catch (\Exception $e) {
-            $this->setFlash('error', 'Erro ao gerar revista: ' . $e->getMessage());
+            $this->json(['error' => 'Erro ao gerar revista: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Retorna a lista de imagens pendentes para gerar de uma revista
+     */
+    public function pendingImages(): void
+    {
+        $magazineId = (int) $this->input('magazine_id');
+        $magazine = Magazine::find($magazineId);
+
+        if (!$magazine) {
+            $this->json(['error' => 'Revista não encontrada.'], 404);
+            return;
         }
 
-        $this->redirect('/admin/magazines');
+        $pages = Magazine::getPages($magazineId);
+        $pending = [];
+
+        foreach ($pages as $page) {
+            // Pula cover, subcover e backcover (não precisam de imagem gerada)
+            if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])) {
+                continue;
+            }
+
+            $suggestion = $page['image_suggestion'] ?? null;
+            $suggestion2 = $page['image_suggestion_2'] ?? null;
+
+            // Imagem 1 - se tem sugestão e não tem imagem ainda
+            if ($suggestion && empty($page['image_url'])) {
+                $pending[] = [
+                    'page_id' => $page['id'],
+                    'page_number' => $page['page_number'],
+                    'field' => 'image_url',
+                    'description' => $suggestion,
+                    'layout_type' => $page['layout_type'],
+                ];
+            }
+
+            // Imagem 2 - se tem sugestão e não tem imagem ainda
+            // Layouts com 1 imagem apenas: internal_04, internal_07
+            $oneImageLayouts = ['internal_04', 'internal_07'];
+            if ($suggestion2 && empty($page['image_url_2']) && !in_array($page['layout_type'], $oneImageLayouts)) {
+                $pending[] = [
+                    'page_id' => $page['id'],
+                    'page_number' => $page['page_number'],
+                    'field' => 'image_url_2',
+                    'description' => $suggestion2,
+                    'layout_type' => $page['layout_type'],
+                ];
+            }
+        }
+
+        $this->json([
+            'success' => true,
+            'magazine_id' => $magazineId,
+            'title' => $magazine['title'],
+            'total' => count($pending),
+            'images' => $pending,
+        ]);
+    }
+
+    /**
+     * Gera UMA imagem específica para uma página (chamado pelo frontend em sequência)
+     */
+    public function generateSingleImage(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $pageId = (int) $this->input('page_id');
+        $field = $this->input('field', 'image_url');
+        $description = $this->input('description', '');
+
+        $allowedFields = ['image_url', 'image_url_2', 'image_url_3'];
+        if (!in_array($field, $allowedFields)) {
+            $field = 'image_url';
+        }
+
+        $page = Database::fetch("SELECT * FROM magazine_pages WHERE id = ?", [$pageId]);
+
+        if (!$page) {
+            $this->json(['error' => 'Página não encontrada.'], 404);
+            return;
+        }
+
+        if (empty($description)) {
+            $description = $page['title'] ?? 'Construção de alto padrão';
+        }
+
+        // Determina orientação baseado no layout
+        $layout = $page['layout_type'] ?? '';
+        $orientation = 'landscape';
+
+        if (in_array($layout, ['internal_02', 'internal_07'])) {
+            if ($field === 'image_url') $orientation = 'portrait';
+        }
+        if ($layout === 'internal_05' || $layout === 'internal_06') {
+            $orientation = 'portrait';
+        }
+        if ($layout === 'internal_01' && $field === 'image_url_2') {
+            $orientation = 'portrait';
+        }
+
+        try {
+            $openai = new OpenAIService();
+            $imageUrl = $openai->generateImage($description, $orientation);
+
+            if ($imageUrl) {
+                Magazine::updatePage($pageId, [$field => $imageUrl]);
+                $this->json([
+                    'success' => true,
+                    'url' => $imageUrl,
+                    'page_id' => $pageId,
+                    'field' => $field,
+                ]);
+            } else {
+                $this->json(['error' => 'Não foi possível gerar a imagem.'], 500);
+            }
+        } catch (\Exception $e) {
+            $this->json(['error' => 'Erro: ' . $e->getMessage()], 500);
+        }
     }
 
     public function edit(string $id = ''): void
