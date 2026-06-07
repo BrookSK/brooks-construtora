@@ -34,7 +34,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-cover .foot{position:absolute;bottom:20px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.7)}
 
         /* ===== PÁGINA INTERNA BASE ===== */
-        .pg-int{padding:30px 35px}
+        .pg-int{padding:30px 35px;height:842px;overflow:hidden}
         .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
         .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
         .pg-int .logo-sm .ck{color:#2e7d32}
@@ -57,7 +57,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .img-grid img,.img-grid .img-placeholder{width:100%;height:280px;object-fit:cover}
 
         /* ===== INTERNAL_04 - Imagem full com overlay ===== */
-        .overlay-section{position:relative;width:100%;height:480px;overflow:hidden;margin-bottom:18px}
+        .overlay-section{position:relative;width:100%;height:420px;overflow:hidden;margin-bottom:15px}
         .overlay-section img{width:100%;height:100%;object-fit:cover}
         .overlay-section .ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,50,0,0.95));padding:25px 30px 20px}
         .overlay-section .ov h2{font-family:'Playfair Display',serif;font-size:2rem;font-weight:800;font-style:italic;color:#fff}
