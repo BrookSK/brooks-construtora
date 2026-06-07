@@ -222,17 +222,20 @@
 </form>
 
 <script>
-document.getElementById('magazine-logo-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    var fd = new FormData(this);
-    fetch('/admin/settings/upload-magazine-logo', { method: 'POST', body: fd })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) { alert('Logo atualizada!'); location.reload(); }
-        else { alert(data.error || 'Erro ao enviar.'); }
-    })
-    .catch(() => alert('Erro ao enviar.'));
-});
+var logoForm = document.getElementById('magazine-logo-form');
+if (logoForm) {
+    logoForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var fd = new FormData(this);
+        fetch('/admin/settings/upload-magazine-logo', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) { alert('Logo atualizada!'); location.reload(); }
+            else { alert(data.error || 'Erro ao enviar.'); }
+        })
+        .catch(() => alert('Erro ao enviar.'));
+    });
+}
 
 function removeMagazineLogo() {
     if (!confirm('Remover logo customizada e voltar para a padrão?')) return;
