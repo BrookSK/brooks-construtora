@@ -100,54 +100,79 @@
 
                     <!-- Imagens -->
                     <?php if (!in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])): ?>
+                    <?php
+                        // Layouts que usam 3 imagens
+                        $threeImages = in_array($page['layout_type'], ['internal_05', 'internal_06', 'internal_07']);
+                        $colSize = $threeImages ? '4' : '6';
+                    ?>
                     <div class="row g-2">
                         <!-- Imagem 1 -->
-                        <div class="col-md-6">
+                        <div class="col-md-<?= $colSize ?>">
                             <label class="form-label small">Imagem 1</label>
                             <div class="border rounded p-2" style="min-height:80px;background:#f9f9f9;">
                                 <?php if ($page['image_url']): ?>
-                                    <img src="<?= $page['image_url'] ?>" alt="" style="width:100%;max-height:100px;object-fit:cover;border-radius:4px;margin-bottom:5px;">
+                                    <img src="<?= $page['image_url'] ?>" alt="" style="width:100%;max-height:80px;object-fit:cover;border-radius:4px;margin-bottom:5px;">
                                 <?php else: ?>
-                                    <div class="text-center text-muted small py-3"><i class="bi bi-image"></i> Sem imagem</div>
+                                    <div class="text-center text-muted small py-2"><i class="bi bi-image"></i></div>
                                 <?php endif; ?>
                                 <div class="d-flex gap-1 mt-1">
                                     <form class="upload-img-form flex-grow-1" enctype="multipart/form-data" data-page-id="<?= $page['id'] ?>" data-field="image_url">
                                         <input type="hidden" name="page_id" value="<?= $page['id'] ?>">
                                         <div class="input-group input-group-sm">
-                                            <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.7rem;">
-                                            <button type="submit" class="btn btn-outline-primary btn-sm" title="Upload"><i class="bi bi-upload"></i></button>
+                                            <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.65rem;">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-upload"></i></button>
                                         </div>
                                     </form>
-                                    <button type="button" class="btn btn-outline-warning btn-sm generate-img-btn" data-page-id="<?= $page['id'] ?>" data-field="image_url" title="Gerar com IA">
-                                        <i class="bi bi-stars"></i>
-                                    </button>
+                                    <button type="button" class="btn btn-outline-warning btn-sm generate-img-btn" data-page-id="<?= $page['id'] ?>" data-field="image_url" title="Gerar com IA"><i class="bi bi-stars"></i></button>
                                 </div>
                             </div>
                         </div>
                         <!-- Imagem 2 -->
-                        <div class="col-md-6">
+                        <div class="col-md-<?= $colSize ?>">
                             <label class="form-label small">Imagem 2</label>
                             <div class="border rounded p-2" style="min-height:80px;background:#f9f9f9;">
                                 <?php if ($page['image_url_2'] ?? null): ?>
-                                    <img src="<?= $page['image_url_2'] ?>" alt="" style="width:100%;max-height:100px;object-fit:cover;border-radius:4px;margin-bottom:5px;">
+                                    <img src="<?= $page['image_url_2'] ?>" alt="" style="width:100%;max-height:80px;object-fit:cover;border-radius:4px;margin-bottom:5px;">
                                 <?php else: ?>
-                                    <div class="text-center text-muted small py-3"><i class="bi bi-image"></i> Sem imagem</div>
+                                    <div class="text-center text-muted small py-2"><i class="bi bi-image"></i></div>
                                 <?php endif; ?>
                                 <div class="d-flex gap-1 mt-1">
                                     <form class="upload-img-form flex-grow-1" enctype="multipart/form-data" data-page-id="<?= $page['id'] ?>" data-field="image_url_2">
                                         <input type="hidden" name="page_id" value="<?= $page['id'] ?>">
                                         <input type="hidden" name="field" value="image_url_2">
                                         <div class="input-group input-group-sm">
-                                            <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.7rem;">
-                                            <button type="submit" class="btn btn-outline-primary btn-sm" title="Upload"><i class="bi bi-upload"></i></button>
+                                            <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.65rem;">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-upload"></i></button>
                                         </div>
                                     </form>
-                                    <button type="button" class="btn btn-outline-warning btn-sm generate-img-btn" data-page-id="<?= $page['id'] ?>" data-field="image_url_2" title="Gerar com IA">
-                                        <i class="bi bi-stars"></i>
-                                    </button>
+                                    <button type="button" class="btn btn-outline-warning btn-sm generate-img-btn" data-page-id="<?= $page['id'] ?>" data-field="image_url_2" title="Gerar com IA"><i class="bi bi-stars"></i></button>
                                 </div>
                             </div>
                         </div>
+                        <!-- Imagem 3 (para layouts que precisam) -->
+                        <?php if ($threeImages): ?>
+                        <div class="col-md-4">
+                            <label class="form-label small">Imagem 3</label>
+                            <div class="border rounded p-2" style="min-height:80px;background:#f9f9f9;">
+                                <?php if ($page['image_url_3'] ?? null): ?>
+                                    <img src="<?= $page['image_url_3'] ?>" alt="" style="width:100%;max-height:80px;object-fit:cover;border-radius:4px;margin-bottom:5px;">
+                                <?php else: ?>
+                                    <div class="text-center text-muted small py-2"><i class="bi bi-image"></i></div>
+                                <?php endif; ?>
+                                <div class="d-flex gap-1 mt-1">
+                                    <form class="upload-img-form flex-grow-1" enctype="multipart/form-data" data-page-id="<?= $page['id'] ?>" data-field="image_url_3">
+                                        <input type="hidden" name="page_id" value="<?= $page['id'] ?>">
+                                        <input type="hidden" name="field" value="image_url_3">
+                                        <div class="input-group input-group-sm">
+                                            <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.65rem;">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-upload"></i></button>
+                                        </div>
+                                    </form>
+                                    <button type="button" class="btn btn-outline-warning btn-sm generate-img-btn" data-page-id="<?= $page['id'] ?>" data-field="image_url_3" title="Gerar com IA"><i class="bi bi-stars"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
                     </div>
                     <?php endif; ?>
 

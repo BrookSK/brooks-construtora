@@ -292,7 +292,7 @@ class MagazineController extends Controller
         if (move_uploaded_file($file['tmp_name'], $destination)) {
             $imageUrl = '/uploads/magazines/pages/' . $filename;
             $field = $this->input('field', 'image_url');
-            $allowedFields = ['image_url', 'image_url_2'];
+            $allowedFields = ['image_url', 'image_url_2', 'image_url_3'];
             if (!in_array($field, $allowedFields)) $field = 'image_url';
             Magazine::updatePage($pageId, [$field => $imageUrl]);
             $this->json(['success' => true, 'url' => $imageUrl]);
@@ -324,7 +324,7 @@ class MagazineController extends Controller
 
             if ($imageUrl) {
                 $field = $this->input('field', 'image_url');
-                $allowedFields = ['image_url', 'image_url_2'];
+                $allowedFields = ['image_url', 'image_url_2', 'image_url_3'];
                 if (!in_array($field, $allowedFields)) $field = 'image_url';
 
                 Magazine::updatePage($pageId, [$field => $imageUrl]);

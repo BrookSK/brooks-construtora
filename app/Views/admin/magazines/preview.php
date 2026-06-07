@@ -216,7 +216,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         <?php if($img2): ?><img src="<?= $img2 ?>" style="width:50%;height:280px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:280px">IMAGEM 2</div><?php endif; ?>
     </div>
     <div style="display:flex;gap:8px">
-        <?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:280px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:280px">IMAGEM 3</div><?php endif; ?>
+        <?php $img3 = $page['image_url_3'] ?? ''; if($img3): ?><img src="<?= $img3 ?>" style="width:50%;height:280px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:280px">IMAGEM 3</div><?php endif; ?>
         <div style="width:50%;padding:15px 10px"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
     </div>
 </div>
