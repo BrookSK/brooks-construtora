@@ -55,19 +55,20 @@ class EmailTemplate
 HTML;
     }
 
-    public static function magazineGenerated(string $magazineTitle, int $magazineId): string
+    public static function magazineGenerated(string $magazineTitle, int $magazineId, string $topicTitle = ''): string
     {
         $baseUrl = self::baseUrl();
         $editUrl = "{$baseUrl}/admin/magazines/edit/{$magazineId}";
         $date = date('d/m/Y \à\s H:i');
+        $displayTitle = !empty($topicTitle) ? $topicTitle : $magazineTitle;
 
         $body = <<<HTML
 <p style="margin-bottom:15px;">Uma nova edição da revista foi gerada automaticamente pela IA e está aguardando revisão da equipe.</p>
 
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa; border-radius:6px; padding:0; margin-bottom:20px;">
 <tr><td style="padding: 18px 20px;">
-    <p style="margin:0 0 5px; font-size:13px; color:#888; text-transform:uppercase; letter-spacing:0.5px;">Título da Revista</p>
-    <p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">{$magazineTitle}</p>
+    <p style="margin:0 0 5px; font-size:13px; color:#888; text-transform:uppercase; letter-spacing:0.5px;">Tema da Edição</p>
+    <p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">{$displayTitle}</p>
     <p style="margin:10px 0 0; font-size:13px; color:#888;">Gerada em {$date}</p>
 </td></tr>
 </table>
@@ -88,12 +89,13 @@ HTML;
         return self::wrap('Nova Revista Gerada', $body);
     }
 
-    public static function magazinePublished(string $magazineTitle, int $magazineId, string $subscriberName = '', string $subscriberEmail = ''): string
+    public static function magazinePublished(string $magazineTitle, int $magazineId, string $subscriberName = '', string $subscriberEmail = '', string $topicTitle = ''): string
     {
         $baseUrl = self::baseUrl();
         $viewUrl = "{$baseUrl}/revista/ver/{$magazineId}";
         $unsubscribeUrl = "{$baseUrl}/newsletter/unsubscribe?email=" . urlencode($subscriberEmail);
         $greeting = !empty($subscriberName) ? "Olá, {$subscriberName}!" : "Olá!";
+        $displayTitle = !empty($topicTitle) ? $topicTitle : $magazineTitle;
 
         $body = <<<HTML
 <p style="margin-bottom:15px;">{$greeting}</p>
@@ -103,7 +105,7 @@ HTML;
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa; border-radius:6px; margin-bottom:20px;">
 <tr><td style="padding: 18px 20px;">
     <p style="margin:0 0 5px; font-size:13px; color:#888; text-transform:uppercase; letter-spacing:0.5px;">Nova Edição</p>
-    <p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">{$magazineTitle}</p>
+    <p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">{$displayTitle}</p>
 </td></tr>
 </table>
 
@@ -117,7 +119,7 @@ HTML;
 <a href="{$unsubscribeUrl}" style="color:#999; text-decoration:underline;">Não quero mais receber</a></p>
 HTML;
 
-        return self::wrap('Nova Revista: ' . $magazineTitle, $body);
+        return self::wrap('Nova Revista: ' . $displayTitle, $body);
     }
 
     public static function contactReceived(string $name, string $email, string $phone, string $message): string

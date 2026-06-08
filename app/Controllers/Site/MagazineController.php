@@ -11,7 +11,13 @@ class MagazineController extends Controller
     public function index(): void
     {
         try {
-            $magazines = Magazine::getPublished();
+            $magazines = \App\Core\Database::fetchAll(
+                "SELECT m.*, mt.title as topic_title 
+                 FROM magazines m 
+                 LEFT JOIN magazine_topics mt ON m.topic_id = mt.id 
+                 WHERE m.status = 'published' 
+                 ORDER BY m.published_at DESC"
+            );
         } catch (\Exception $e) {
             $magazines = [];
         }

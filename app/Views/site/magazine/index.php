@@ -54,7 +54,7 @@
 												<?php endif; ?>
 											</div>
 											<div class="box-text" style="padding: 15px 5px;">
-												<h5 style="margin: 0 0 5px; font-size: 1rem;"><?= htmlspecialchars($mag['title']) ?></h5>
+												<h5 style="margin: 0 0 5px; font-size: 1rem;"><?= htmlspecialchars($mag['topic_title'] ?? $mag['title']) ?></h5>
 												<p style="margin: 0; font-size: 0.85rem; color: #888;"><?= date('d/m/Y', strtotime($mag['published_at'])) ?></p>
 											</div>
 										</div>

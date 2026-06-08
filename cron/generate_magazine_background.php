@@ -280,7 +280,7 @@ try {
     if (!empty($emails)) {
         $mail = new MailService();
         $emailList = array_map('trim', explode(',', $emails));
-        $htmlBody = \App\Services\EmailTemplate::magazineGenerated($content['title'], $magazineId);
+        $htmlBody = \App\Services\EmailTemplate::magazineGenerated($content['title'], $magazineId, $topic['title']);
 
         foreach ($emailList as $email) {
             if (filter_var($email, FILTER_VALIDATE_EMAIL)) {

@@ -28,7 +28,13 @@ class MagazineController extends Controller
 
     public function index(): void
     {
-        $magazines = Magazine::all('created_at DESC');
+        // Busca revistas com o tema associado
+        $magazines = Database::fetchAll(
+            "SELECT m.*, mt.title as topic_title, mt.description as topic_description 
+             FROM magazines m 
+             LEFT JOIN magazine_topics mt ON m.topic_id = mt.id 
+             ORDER BY m.created_at DESC"
+        );
 
         $this->view('admin.magazines.index', [
             'magazines' => $magazines,
@@ -900,10 +906,10 @@ class MagazineController extends Controller
         ]);
 
         // Envia notificação
-        $this->sendGenerationNotification($magazineId, $content['title']);
+        $this->sendGenerationNotification($magazineId, $content['title'], $topic['title']);
     }
 
-    private function sendGenerationNotification(int $magazineId, string $title): void
+    private function sendGenerationNotification(int $magazineId, string $title, string $topicTitle = ''): void
     {
         $emails = Setting::get('notification_emails', '');
         if (empty($emails)) {
@@ -913,11 +919,11 @@ class MagazineController extends Controller
         try {
             $mail = new MailService();
             $emailList = array_map('trim', explode(',', $emails));
-            $htmlBody = \App\Services\EmailTemplate::magazineGenerated($title, $magazineId);
+            $htmlBody = \App\Services\EmailTemplate::magazineGenerated($title, $magazineId, $topicTitle);
 
             foreach ($emailList as $email) {
                 if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    $mail->send($email, 'Nova Revista Gerada - Brooks Construtora', $htmlBody, true);
+                    $mail->send($email, 'Nova Revista Gerada: ' . ($topicTitle ?: $title) . ' - Brooks Construtora', $htmlBody, true);
                 }
             }
         } catch (\Exception $e) {
@@ -929,20 +935,30 @@ class MagazineController extends Controller
     {
         try {
             $magazine = Magazine::find($magazineId);
+            
+            // Busca o tema da revista
+            $topicTitle = '';
+            if ($magazine['topic_id']) {
+                $topic = MagazineTopic::find($magazine['topic_id']);
+                $topicTitle = $topic['title'] ?? '';
+            }
+            
             $subscribers = \App\Models\Newsletter::getActiveSubscribers();
             $mail = new MailService();
+            $displayTitle = $topicTitle ?: $magazine['title'];
 
             foreach ($subscribers as $subscriber) {
                 $htmlBody = \App\Services\EmailTemplate::magazinePublished(
                     $magazine['title'],
                     $magazineId,
                     $subscriber['name'] ?? '',
-                    $subscriber['email'] ?? ''
+                    $subscriber['email'] ?? '',
+                    $topicTitle
                 );
 
                 $mail->send(
                     $subscriber['email'],
-                    'Nova Revista: ' . $magazine['title'] . ' - Brooks Construtora',
+                    'Nova Revista: ' . $displayTitle . ' - Brooks Construtora',
                     $htmlBody,
                     true
                 );

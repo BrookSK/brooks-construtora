@@ -20,7 +20,7 @@
                     <thead>
                         <tr>
                             <th>Capa</th>
-                            <th>Título</th>
+                            <th>Tema</th>
                             <th>Status</th>
                             <th>Criada em</th>
                             <th>Publicada em</th>
@@ -40,9 +40,9 @@
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <strong><?= htmlspecialchars($mag['title']) ?></strong>
-                                <?php if ($mag['subtitle']): ?>
-                                    <br><small class="text-muted"><?= htmlspecialchars($mag['subtitle']) ?></small>
+                                <strong><?= htmlspecialchars($mag['topic_title'] ?? $mag['title']) ?></strong>
+                                <?php if ($mag['topic_description'] ?? null): ?>
+                                    <br><small class="text-muted"><?= htmlspecialchars(mb_strimwidth($mag['topic_description'], 0, 80, '...')) ?></small>
                                 <?php endif; ?>
                             </td>
                             <td>
