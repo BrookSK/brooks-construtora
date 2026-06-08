@@ -56,8 +56,8 @@ class OpenAIService
 Gere EXATAMENTE 10 páginas em JSON. Cada página tem: layout, title, subtitle (opcional), content (parágrafos separados por \\n\\n), image_suggestion, image_suggestion_2 (opcional), caption (opcional).
 
 Layouts obrigatórios na ordem:
-1. \"cover\" - title: palavra impactante (ex: NÚCLEO), subtitle: \"CONSTRUÇÃO — SUSTENTÁVEL\"
-2. \"subcover\" - title: variação (ex: ECO), subtitle: \"CONSTRUÇÃO — CONSCIENTE\"  
+1. \"cover\" - title: \"NÚCLEO\" (FIXO, sempre este valor), subtitle: \"CONSTRUÇÃO — SUSTENTÁVEL\"
+2. \"subcover\" - title: \"ECO\" (FIXO, sempre este valor), subtitle: \"CONSTRUÇÃO — CONSCIENTE\"  
 3. \"internal_01\" - title: manchete uppercase, content: 2 parágrafos, image_suggestion + image_suggestion_2
 4. \"internal_02\" - title: subtema bold, subtitle: frase curta, content: 2 parágrafos, image_suggestion + image_suggestion_2
 5. \"internal_03\" - title: titulo bold, subtitle: descritivo, content: 2 parágrafos longos, image_suggestion + image_suggestion_2, caption: legenda
@@ -67,10 +67,12 @@ Layouts obrigatórios na ordem:
 9. \"internal_07\" - title: citação grande impactante, content: 2 parágrafos, image_suggestion
 10. \"backcover\" - content: \"Construção consciente do zero ao acabamento. Comprometidos com o meio ambiente, com as pessoas e com o futuro.\"
 
+IMPORTANTE: A cover DEVE ter title=\"NÚCLEO\" e a subcover DEVE ter title=\"ECO\". Nunca altere esses valores.
+
 Textos profissionais sobre construção/reformas alto padrão. Parágrafos com 6-8 linhas cada (textos longos e detalhados para preencher a página). image_suggestion = descrição de foto de construção/arquitetura.
 
 JSON puro sem markdown:
-{\"title\":\"PALAVRA\",\"subtitle\":\"CONSTRUÇÃO — SUSTENTÁVEL\",\"pages\":[...]}";
+{\"title\":\"NÚCLEO\",\"subtitle\":\"CONSTRUÇÃO — SUSTENTÁVEL\",\"pages\":[...]}";
 
         $response = $this->chatCompletion($prompt);
         
