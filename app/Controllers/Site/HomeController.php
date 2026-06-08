@@ -71,14 +71,20 @@ class HomeController extends Controller
             $mailService = new MailService();
             $siteEmail = Setting::get('site_email', '');
 
-            if (!empty($siteEmail)) {
-                $htmlBody = \App\Services\EmailTemplate::contactReceived($name, $email, $phone, nl2br(htmlspecialchars($message)));
-                $mailService->send($siteEmail, 'Novo contato - Site Brooks Construtora', $htmlBody, true);
+            if (empty($siteEmail)) {
+                error_log('[Contato] E-mail de contato (site_email) não configurado nas settings.');
+                $this->setFlash('success', 'Mensagem recebida! Entraremos em contato em breve.');
+                $this->redirect('/contato');
+                return;
             }
+
+            $htmlBody = \App\Services\EmailTemplate::contactReceived($name, $email, $phone, nl2br(htmlspecialchars($message)));
+            $mailService->send($siteEmail, 'Novo contato - Site Brooks Construtora', $htmlBody, true);
 
             $this->setFlash('success', 'Mensagem enviada com sucesso! Entraremos em contato em breve.');
         } catch (\Exception $e) {
-            $this->setFlash('success', 'Mensagem recebida! Entraremos em contato em breve.');
+            error_log('[Contato] Erro ao enviar e-mail: ' . $e->getMessage());
+            $this->setFlash('error', 'Não foi possível enviar sua mensagem. Tente novamente ou entre em contato pelo WhatsApp.');
         }
 
         $this->redirect('/contato');

@@ -108,18 +108,34 @@ class MailService
     private function sendCommand($socket, string $command): string
     {
         fwrite($socket, $command . "\r\n");
-        return $this->getResponse($socket);
+        $response = $this->getResponse($socket);
+        
+        // Verifica se a resposta indica erro (códigos 4xx e 5xx)
+        $code = (int) substr($response, 0, 3);
+        if ($code >= 400) {
+            throw new \Exception("Erro SMTP ({$code}): " . trim($response));
+        }
+        
+        return $response;
     }
 
     private function getResponse($socket): string
     {
         $response = '';
+        $timeout = 10; // segundos
+        stream_set_timeout($socket, $timeout);
+        
         while ($line = fgets($socket, 515)) {
             $response .= $line;
             if (substr($line, 3, 1) === ' ') {
                 break;
             }
         }
+        
+        if (empty($response)) {
+            throw new \Exception('Sem resposta do servidor SMTP (timeout).');
+        }
+        
         return $response;
     }
 }
