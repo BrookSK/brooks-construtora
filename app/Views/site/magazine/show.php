@@ -80,8 +80,7 @@ foreach ($pages as $page):
 ?>
 
 <?php if ($layout === 'cover'): ?>
-<div class="page pg-cover">
-    <?php if ($magazine['cover_image']): ?><img src="<?= $magazine['cover_image'] ?>" class="bg" alt="" crossorigin="anonymous"><?php endif; ?>
+<div class="page pg-cover" <?php if ($magazine['cover_image']): ?>style="background-image:url('<?= $magazine['cover_image'] ?>');background-size:cover;background-position:center;"<?php endif; ?>>
     <div class="overlay"></div>
     <div class="content">
         <div class="title"><?= htmlspecialchars($page['title'] ?? $magazine['title']) ?></div>
@@ -93,8 +92,7 @@ foreach ($pages as $page):
 </div>
 
 <?php elseif ($layout === 'subcover'): ?>
-<div class="page pg-cover">
-    <?php if ($magazine['cover_image']): ?><img src="<?= $magazine['cover_image'] ?>" class="bg" alt="" crossorigin="anonymous"><?php endif; ?>
+<div class="page pg-cover" <?php if ($magazine['cover_image']): ?>style="background-image:url('<?= $magazine['cover_image'] ?>');background-size:cover;background-position:center;"<?php endif; ?>>
     <div class="overlay"></div>
     <div class="content">
         <div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-top:20px;"><span style="font-size:3.5rem;font-weight:900;color:#fff;"><?= htmlspecialchars($page['title'] ?? 'ECO') ?></span><img src="<?= $magazineLogo ?>" style="max-width:180px" alt="Brooks"></div>
