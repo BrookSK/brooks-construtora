@@ -203,27 +203,34 @@ foreach ($pages as $page):
 async function generatePDF() {
     var btn = document.getElementById('btn-pdf');
     btn.disabled = true; btn.textContent = 'Gerando PDF...';
-    var pages = document.querySelectorAll('.mag-preview .page');
+
     var { jsPDF } = window.jspdf;
     var pdf = new jsPDF({ orientation:'portrait', unit:'px', format:[595,842] });
+    var pages = document.querySelectorAll('.mag-preview .page');
 
-    // Força dimensões exatas em todas as páginas para captura
-    var origStyles = [];
-    pages.forEach(function(p) {
-        origStyles.push(p.getAttribute('style') || '');
-        p.style.width = '595px';
-        p.style.height = '842px';
-        p.style.maxWidth = '595px';
-        p.style.minHeight = '842px';
-        p.style.aspectRatio = 'unset';
-        p.style.overflow = 'hidden';
-        p.style.boxShadow = 'none';
-        p.style.margin = '0';
-    });
+    // Cria um container temporário fora da tela com largura fixa de 595px
+    var tempContainer = document.createElement('div');
+    tempContainer.style.cssText = 'position:absolute;left:-9999px;top:0;width:595px;overflow:hidden;';
+    document.body.appendChild(tempContainer);
 
     for (var i = 0; i < pages.length; i++) {
         if (i > 0) pdf.addPage([595, 842]);
-        var canvas = await html2canvas(pages[i], {
+
+        // Clona a página para o container temporário
+        var clone = pages[i].cloneNode(true);
+        clone.style.width = '595px';
+        clone.style.height = '842px';
+        clone.style.maxWidth = '595px';
+        clone.style.minHeight = '842px';
+        clone.style.margin = '0';
+        clone.style.boxShadow = 'none';
+        clone.style.overflow = 'hidden';
+        clone.style.position = 'relative';
+
+        tempContainer.innerHTML = '';
+        tempContainer.appendChild(clone);
+
+        var canvas = await html2canvas(clone, {
             scale: 2,
             useCORS: true,
             allowTaint: true,
@@ -232,15 +239,14 @@ async function generatePDF() {
             scrollY: 0,
             scrollX: 0,
             windowWidth: 595,
-            backgroundColor: null
+            backgroundColor: '#ffffff'
         });
+
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 595, 842);
     }
 
-    // Restaura estilos originais
-    pages.forEach(function(p, i) {
-        p.setAttribute('style', origStyles[i]);
-    });
+    // Remove container temporário
+    document.body.removeChild(tempContainer);
 
     pdf.save('<?php $fn = iconv('UTF-8','ASCII//TRANSLIT', $magazine['title']); $fn = preg_replace('/[^a-zA-Z0-9_-]/', '_', $fn); $fn = preg_replace('/_+/', '_', trim($fn, '_')); echo $fn; ?>_Brooks_Construtora.pdf');
     btn.disabled = false; btn.textContent = 'Baixar PDF';
