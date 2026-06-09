@@ -200,31 +200,6 @@ foreach ($pages as $page):
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-// Converte imagem para base64 para evitar problemas de CORS no html2canvas
-async function imgToBase64(imgElement) {
-    return new Promise(function(resolve) {
-        if (!imgElement || !imgElement.src) { resolve(); return; }
-        // Se já é base64, pula
-        if (imgElement.src.startsWith('data:')) { resolve(); return; }
-        
-        // Usa proxy PHP para buscar a imagem sem CORS
-        var proxyUrl = '/revista/image-proxy?url=' + encodeURIComponent(imgElement.src);
-        
-        fetch(proxyUrl)
-            .then(function(r) { return r.blob(); })
-            .then(function(blob) {
-                var reader = new FileReader();
-                reader.onload = function() {
-                    imgElement.src = reader.result;
-                    resolve();
-                };
-                reader.onerror = function() { resolve(); };
-                reader.readAsDataURL(blob);
-            })
-            .catch(function() { resolve(); });
-    });
-}
-
 async function generatePDF() {
     var btn = document.getElementById('btn-pdf');
     btn.disabled = true; btn.textContent = 'Gerando PDF...';
@@ -241,25 +216,17 @@ async function generatePDF() {
     var actions = document.getElementById('mag-actions');
     if (actions) actions.style.display = 'none';
 
-    // Pré-converte todas as imagens para base64 (evita CORS no html2canvas)
-    var allImages = container.querySelectorAll('img');
-    for (var k = 0; k < allImages.length; k++) {
-        await imgToBase64(allImages[k]);
-    }
-
-    // Pequena pausa para o browser atualizar os src
-    await new Promise(r => setTimeout(r, 200));
-
     for (var i = 0; i < pages.length; i++) {
         if (i > 0) pdf.addPage();
 
         var canvas = await html2canvas(pages[i], {
-            scale: 3,
+            scale: 2,
             useCORS: true,
             allowTaint: true,
             logging: false,
-            imageTimeout: 15000,
-            backgroundColor: null
+            imageTimeout: 30000,
+            backgroundColor: null,
+            foreignObjectRendering: false
         });
 
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, pdfH);
