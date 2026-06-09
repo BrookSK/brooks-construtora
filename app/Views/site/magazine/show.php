@@ -206,47 +206,83 @@ async function generatePDF() {
 
     var { jsPDF } = window.jspdf;
     var pdf = new jsPDF({ orientation:'portrait', unit:'px', format:[595,842] });
-    var pages = document.querySelectorAll('.mag-preview .page');
+    var container = document.querySelector('.mag-preview');
+    var pages = container.querySelectorAll('.page');
 
-    // Cria um container temporário fora da tela com largura fixa de 595px
-    var tempContainer = document.createElement('div');
-    tempContainer.style.cssText = 'position:absolute;left:-9999px;top:0;width:595px;overflow:hidden;';
-    document.body.appendChild(tempContainer);
+    // Salva estilos originais do container
+    var origContainerStyle = container.getAttribute('style') || '';
+    var origContainerClass = container.className;
+
+    // Força o container para ter exatamente 595px (sem responsividade)
+    container.style.maxWidth = '595px';
+    container.style.width = '595px';
+    container.style.padding = '0';
+    container.style.margin = '0';
+
+    // Força cada página para dimensões exatas
+    var origPageStyles = [];
+    pages.forEach(function(p) {
+        origPageStyles.push(p.getAttribute('style') || '');
+        p.style.width = '595px';
+        p.style.height = '842px';
+        p.style.maxWidth = '595px';
+        p.style.minHeight = '842px';
+        p.style.margin = '0';
+        p.style.boxShadow = 'none';
+        p.style.overflow = 'hidden';
+    });
+
+    // Pequena pausa para o browser re-renderizar
+    await new Promise(r => setTimeout(r, 100));
 
     for (var i = 0; i < pages.length; i++) {
         if (i > 0) pdf.addPage([595, 842]);
 
-        // Clona a página para o container temporário
-        var clone = pages[i].cloneNode(true);
-        clone.style.width = '595px';
-        clone.style.height = '842px';
-        clone.style.maxWidth = '595px';
-        clone.style.minHeight = '842px';
-        clone.style.margin = '0';
-        clone.style.boxShadow = 'none';
-        clone.style.overflow = 'hidden';
-        clone.style.position = 'relative';
+        // Scroll o elemento para a viewport para garantir renderização
+        pages[i].scrollIntoView({ block: 'start' });
+        await new Promise(r => setTimeout(r, 50));
 
-        tempContainer.innerHTML = '';
-        tempContainer.appendChild(clone);
-
-        var canvas = await html2canvas(clone, {
+        var canvas = await html2canvas(pages[i], {
             scale: 2,
             useCORS: true,
             allowTaint: true,
             width: 595,
             height: 842,
-            scrollY: 0,
             scrollX: 0,
+            scrollY: -pages[i].getBoundingClientRect().top + window.pageYOffset,
             windowWidth: 595,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            onclone: function(doc) {
+                // No documento clonado internamente pelo html2canvas, força as dimensões
+                var clonedPages = doc.querySelectorAll('.mag-preview .page');
+                clonedPages.forEach(function(p) {
+                    p.style.width = '595px';
+                    p.style.height = '842px';
+                    p.style.maxWidth = '595px';
+                    p.style.minHeight = '842px';
+                    p.style.margin = '0';
+                    p.style.boxShadow = 'none';
+                    p.style.overflow = 'hidden';
+                });
+                var clonedContainer = doc.querySelector('.mag-preview');
+                if (clonedContainer) {
+                    clonedContainer.style.maxWidth = '595px';
+                    clonedContainer.style.width = '595px';
+                    clonedContainer.style.padding = '0';
+                    clonedContainer.style.margin = '0';
+                }
+            }
         });
 
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 595, 842);
     }
 
-    // Remove container temporário
-    document.body.removeChild(tempContainer);
+    // Restaura estilos originais
+    container.setAttribute('style', origContainerStyle);
+    container.className = origContainerClass;
+    pages.forEach(function(p, i) {
+        p.setAttribute('style', origPageStyles[i]);
+    });
 
     pdf.save('<?php $fn = iconv('UTF-8','ASCII//TRANSLIT', $magazine['title']); $fn = preg_replace('/[^a-zA-Z0-9_-]/', '_', $fn); $fn = preg_replace('/_+/', '_', trim($fn, '_')); echo $fn; ?>_Brooks_Construtora.pdf');
     btn.disabled = false; btn.textContent = 'Baixar PDF';
