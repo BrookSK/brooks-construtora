@@ -188,10 +188,18 @@ foreach ($pages as $page):
 }
 #mag-actions button{background:#3a3b4e !important;color:#fff !important;border:2px solid #3a3b4e !important}
 #mag-actions a{background:#fff !important;color:#3a3b4e !important;border:2px solid #3a3b4e !important}
+#pdf-loading{display:none;text-align:center;margin:30px 0 50px;font-family:Inter,sans-serif;}
+#pdf-loading .spinner{display:inline-block;width:24px;height:24px;border:3px solid #ddd;border-top-color:#3a3b4e;border-radius:50%;animation:pdfspin 0.8s linear infinite;margin-bottom:10px;}
+@keyframes pdfspin{to{transform:rotate(360deg)}}
+#pdf-loading p{margin:0;font-size:13px;color:#555;font-weight:500;}
 </style>
 <div id="mag-actions">
     <button onclick="generatePDF()" id="btn-pdf">Baixar PDF</button>
     <a href="/revista">Voltar</a>
+</div>
+<div id="pdf-loading">
+    <div class="spinner"></div>
+    <p>Gerando PDF, aguarde...</p>
 </div>
 </div>
 
@@ -210,9 +218,11 @@ async function generatePDF() {
     var container = document.querySelector('.mag-preview');
     var pages = container.querySelectorAll('.page');
 
-    // Esconde botões
+    // Esconde botões e mostra loading
     var actions = document.getElementById('mag-actions');
+    var loading = document.getElementById('pdf-loading');
     if (actions) actions.style.display = 'none';
+    if (loading) loading.style.display = 'block';
 
     for (var i = 0; i < pages.length; i++) {
         if (i > 0) pdf.addPage();
@@ -231,6 +241,7 @@ async function generatePDF() {
     }
 
     if (actions) actions.style.display = '';
+    if (loading) loading.style.display = 'none';
 
     pdf.save('<?php $fn = iconv('UTF-8','ASCII//TRANSLIT', $magazine['title']); $fn = preg_replace('/[^a-zA-Z0-9_-]/', '_', $fn); $fn = preg_replace('/_+/', '_', trim($fn, '_')); echo $fn; ?>_Brooks_Construtora.pdf');
     btn.disabled = false; btn.textContent = 'Baixar PDF';
