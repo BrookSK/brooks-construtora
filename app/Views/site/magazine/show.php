@@ -218,7 +218,7 @@ async function generatePDF() {
         if (i > 0) pdf.addPage();
 
         var canvas = await html2canvas(pages[i], {
-            scale: 2,
+            scale: 4,
             useCORS: true,
             allowTaint: true,
             logging: false,
@@ -227,7 +227,7 @@ async function generatePDF() {
             foreignObjectRendering: false
         });
 
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, pdfH);
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfW, pdfH);
     }
 
     if (actions) actions.style.display = '';
