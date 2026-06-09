@@ -294,60 +294,31 @@ async function generatePDF() {
 
     var pages = document.querySelectorAll('.page');
     var { jsPDF } = window.jspdf;
-    var pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [595, 842] });
-
-    // Força dimensões em cada página
-    var origPageStyles = [];
-    pages.forEach(function(p) {
-        origPageStyles.push(p.getAttribute('style') || '');
-        p.style.width = '595px';
-        p.style.height = '842px';
-        p.style.maxWidth = '595px';
-        p.style.minHeight = '842px';
-        p.style.margin = '0';
-        p.style.boxShadow = 'none';
-        p.style.overflow = 'hidden';
-    });
-
-    await new Promise(r => setTimeout(r, 100));
+    var pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    var pageW = 210;
+    var pageH = 297;
 
     for (var i = 0; i < pages.length; i++) {
-        if (i > 0) pdf.addPage([595, 842]);
-
-        pages[i].scrollIntoView({ block: 'start' });
-        await new Promise(r => setTimeout(r, 50));
+        if (i > 0) pdf.addPage();
 
         var canvas = await html2canvas(pages[i], {
             scale: 2,
             useCORS: true,
             allowTaint: true,
-            width: 595,
-            height: 842,
-            scrollX: 0,
-            scrollY: -pages[i].getBoundingClientRect().top + window.pageYOffset,
-            windowWidth: 595,
-            backgroundColor: '#ffffff',
-            onclone: function(doc) {
-                var clonedPages = doc.querySelectorAll('.page');
-                clonedPages.forEach(function(p) {
-                    p.style.width = '595px';
-                    p.style.height = '842px';
-                    p.style.maxWidth = '595px';
-                    p.style.minHeight = '842px';
-                    p.style.margin = '0';
-                    p.style.boxShadow = 'none';
-                    p.style.overflow = 'hidden';
-                });
-            }
+            logging: false,
+            backgroundColor: '#ffffff'
         });
 
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 595, 842);
-    }
+        var imgW = canvas.width;
+        var imgH = canvas.height;
+        var ratio = Math.min(pageW / (imgW / 2), pageH / (imgH / 2));
+        var finalW = (imgW / 2) * ratio;
+        var finalH = (imgH / 2) * ratio;
+        var offsetX = (pageW - finalW) / 2;
+        var offsetY = (pageH - finalH) / 2;
 
-    // Restaura
-    pages.forEach(function(p, i) {
-        p.setAttribute('style', origPageStyles[i]);
-    });
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', offsetX, offsetY, finalW, finalH);
+    }
 
     pdf.save('<?php $fn = iconv('UTF-8','ASCII//TRANSLIT', $magazine['title']); $fn = preg_replace('/[^a-zA-Z0-9_-]/', '_', $fn); $fn = preg_replace('/_+/', '_', trim($fn, '_')); echo $fn; ?>_Brooks_Construtora.pdf');
 
