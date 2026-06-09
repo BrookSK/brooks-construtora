@@ -200,12 +200,35 @@ foreach ($pages as $page):
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
+// Converte imagem para base64 para evitar problemas de CORS no html2canvas
+async function imgToBase64(imgElement) {
+    return new Promise(function(resolve) {
+        if (!imgElement || !imgElement.src) { resolve(); return; }
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            try {
+                imgElement.src = canvas.toDataURL('image/jpeg', 0.92);
+            } catch(e) {
+                // Se falhar CORS, tenta sem crossOrigin
+            }
+            resolve();
+        };
+        img.onerror = function() { resolve(); };
+        img.src = imgElement.src;
+    });
+}
+
 async function generatePDF() {
     var btn = document.getElementById('btn-pdf');
     btn.disabled = true; btn.textContent = 'Gerando PDF...';
 
     var { jsPDF } = window.jspdf;
-    // A4 em pontos (595.28 x 841.89) — mesma proporção das páginas (595x842px)
     var pdf = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
     var pdfW = 595.28;
     var pdfH = 841.89;
@@ -216,6 +239,15 @@ async function generatePDF() {
     // Esconde botões
     var actions = document.getElementById('mag-actions');
     if (actions) actions.style.display = 'none';
+
+    // Pré-converte todas as imagens para base64 (evita CORS no html2canvas)
+    var allImages = container.querySelectorAll('img');
+    for (var k = 0; k < allImages.length; k++) {
+        await imgToBase64(allImages[k]);
+    }
+
+    // Pequena pausa para o browser atualizar os src
+    await new Promise(r => setTimeout(r, 200));
 
     for (var i = 0; i < pages.length; i++) {
         if (i > 0) pdf.addPage();
@@ -229,7 +261,6 @@ async function generatePDF() {
             backgroundColor: null
         });
 
-        // Preenche a página toda sem margens
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, pdfH);
     }
 
