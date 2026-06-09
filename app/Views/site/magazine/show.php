@@ -13,8 +13,8 @@ include ROOT_PATH . '/app/Views/site/layouts/header.php';
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
 <style>
 .mag-preview{max-width:595px;margin:30px auto;padding:0 10px}
-.mag-preview .page{background:#fff;width:100%;max-width:595px;height:auto;min-height:auto;aspect-ratio:595/842;margin:0 auto 25px;position:relative;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.12);page-break-before:always}
-.mag-preview .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#1a472a}
+.mag-preview .page{background:#fff;width:100%;max-width:595px;height:842px;min-height:842px;aspect-ratio:unset;margin:0 auto 25px;position:relative;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.12);page-break-before:always}
+.mag-preview .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#1a472a;height:842px}
 .mag-preview .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
 .mag-preview .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.4) 0%,rgba(0,0,0,0.05) 35%,rgba(0,0,0,0.05) 50%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0.8) 90%,rgba(0,0,0,0.92) 100%)}
 .mag-preview .pg-cover .content{position:relative;z-index:2;text-align:center;width:100%;height:100%;display:flex;flex-direction:column;padding:30px 40px}
@@ -45,17 +45,19 @@ include ROOT_PATH . '/app/Views/site/layouts/header.php';
 .mag-preview .overlay-section .ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,50,0,0.95));padding:25px 30px 20px}
 .mag-preview .overlay-section .ov h2{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#fff}
 .mag-preview .overlay-section .ov p{font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.8);margin-top:5px}
-.mag-preview .pg-back{background:#1a3a2a;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.mag-preview .pg-back{background:#1a3a2a;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;height:842px}
 .mag-preview .pg-back .logo{max-width:250px;margin-bottom:35px}
 .mag-preview .pg-back .txt{color:rgba(255,255,255,0.85);font-size:0.9rem;max-width:380px;line-height:1.6}
 .mag-preview .pg-back .bar{position:absolute;bottom:0;left:0;right:0;background:#e53935;padding:12px 25px;display:flex;justify-content:space-between;font-size:0.6rem;color:#fff}
 .mag-preview .img-placeholder{background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;color:#2e7d32;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
 @media(max-width:620px){
-    .mag-preview .page{aspect-ratio:auto;height:auto;min-height:500px}
+    .mag-preview .page{height:auto;min-height:500px}
+    .mag-preview .pg-cover{height:auto}
     .mag-preview .pg-cover .title{font-size:2.5rem}
     .mag-preview .pg-cover .topic{font-size:1rem;margin-bottom:50px}
     .mag-preview .pg-cover .logo{max-width:150px}
     .mag-preview .pg-int{padding:20px 20px;height:auto;overflow:visible}
+    .mag-preview .pg-back{height:auto;min-height:500px}
     .mag-preview .title-big{font-size:1.8rem}
     .mag-preview .title-upper{font-size:0.6rem}
     .mag-preview .text,.mag-preview .text-sm{font-size:0.75rem}
@@ -204,11 +206,42 @@ async function generatePDF() {
     var pages = document.querySelectorAll('.mag-preview .page');
     var { jsPDF } = window.jspdf;
     var pdf = new jsPDF({ orientation:'portrait', unit:'px', format:[595,842] });
+
+    // Força dimensões exatas em todas as páginas para captura
+    var origStyles = [];
+    pages.forEach(function(p) {
+        origStyles.push(p.getAttribute('style') || '');
+        p.style.width = '595px';
+        p.style.height = '842px';
+        p.style.maxWidth = '595px';
+        p.style.minHeight = '842px';
+        p.style.aspectRatio = 'unset';
+        p.style.overflow = 'hidden';
+        p.style.boxShadow = 'none';
+        p.style.margin = '0';
+    });
+
     for (var i = 0; i < pages.length; i++) {
         if (i > 0) pdf.addPage([595, 842]);
-        var canvas = await html2canvas(pages[i], { scale:2, useCORS:true, allowTaint:true, width:595, height:842, scrollY:0, scrollX:0, windowWidth:595 });
-        pdf.addImage(canvas.toDataURL('image/jpeg',0.92), 'JPEG', 0, 0, 595, 842);
+        var canvas = await html2canvas(pages[i], {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            width: 595,
+            height: 842,
+            scrollY: 0,
+            scrollX: 0,
+            windowWidth: 595,
+            backgroundColor: null
+        });
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 595, 842);
     }
+
+    // Restaura estilos originais
+    pages.forEach(function(p, i) {
+        p.setAttribute('style', origStyles[i]);
+    });
+
     pdf.save('<?php $fn = iconv('UTF-8','ASCII//TRANSLIT', $magazine['title']); $fn = preg_replace('/[^a-zA-Z0-9_-]/', '_', $fn); $fn = preg_replace('/_+/', '_', trim($fn, '_')); echo $fn; ?>_Brooks_Construtora.pdf');
     btn.disabled = false; btn.textContent = 'Baixar PDF';
 }
