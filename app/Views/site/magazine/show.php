@@ -204,23 +204,24 @@ foreach ($pages as $page):
 async function imgToBase64(imgElement) {
     return new Promise(function(resolve) {
         if (!imgElement || !imgElement.src) { resolve(); return; }
-        var img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = function() {
-            var canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            var ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            try {
-                imgElement.src = canvas.toDataURL('image/jpeg', 0.92);
-            } catch(e) {
-                // Se falhar CORS, tenta sem crossOrigin
-            }
-            resolve();
-        };
-        img.onerror = function() { resolve(); };
-        img.src = imgElement.src;
+        // Se já é base64, pula
+        if (imgElement.src.startsWith('data:')) { resolve(); return; }
+        
+        // Usa proxy PHP para buscar a imagem sem CORS
+        var proxyUrl = '/revista/image-proxy?url=' + encodeURIComponent(imgElement.src);
+        
+        fetch(proxyUrl)
+            .then(function(r) { return r.blob(); })
+            .then(function(blob) {
+                var reader = new FileReader();
+                reader.onload = function() {
+                    imgElement.src = reader.result;
+                    resolve();
+                };
+                reader.onerror = function() { resolve(); };
+                reader.readAsDataURL(blob);
+            })
+            .catch(function() { resolve(); });
     });
 }
 

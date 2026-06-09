@@ -70,6 +70,7 @@ class Router
             'magazines/upload-cover' => ['MagazineController', 'uploadCover'],
             'magazines/upload-image' => ['MagazineController', 'uploadImage'],
             'magazines/generate-image' => ['MagazineController', 'generatePageImage'],
+            'magazines/image-proxy' => ['MagazineController', 'imageProxy'],
             'magazines/pending-images' => ['MagazineController', 'pendingImages'],
             'magazines/generate-single-image' => ['MagazineController', 'generateSingleImage'],
             'magazines/job-status' => ['MagazineController', 'jobStatus'],
@@ -130,6 +131,7 @@ class Router
             'newsletter/unsubscribe' => ['NewsletterController', 'unsubscribe'],
             'revista' => ['MagazineController', 'index'],
             'revista/ver' => ['MagazineController', 'show'],
+            'revista/image-proxy' => ['MagazineController', 'imageProxy'],
         ];
 
         $path = implode('/', $segments);

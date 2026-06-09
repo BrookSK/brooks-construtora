@@ -8,6 +8,31 @@ use App\Models\Setting;
 
 class MagazineController extends Controller
 {
+    /**
+     * Proxy para servir imagens sem CORS (usado pelo PDF export)
+     */
+    public function imageProxy(): void
+    {
+        $url = $_GET['url'] ?? '';
+        if (empty($url)) { http_response_code(400); exit; }
+
+        $path = parse_url($url, PHP_URL_PATH);
+        if (!$path) { http_response_code(400); exit; }
+
+        $localPath = ROOT_PATH . '/public' . $path;
+        if (!file_exists($localPath)) { http_response_code(404); exit; }
+
+        $ext = strtolower(pathinfo($localPath, PATHINFO_EXTENSION));
+        $mimeTypes = ['jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','gif'=>'image/gif'];
+        $mime = $mimeTypes[$ext] ?? 'image/jpeg';
+
+        header('Content-Type: ' . $mime);
+        header('Cache-Control: public, max-age=86400');
+        header('Access-Control-Allow-Origin: *');
+        readfile($localPath);
+        exit;
+    }
+
     public function index(): void
     {
         try {
