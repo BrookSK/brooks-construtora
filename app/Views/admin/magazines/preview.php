@@ -294,30 +294,23 @@ async function generatePDF() {
 
     var pages = document.querySelectorAll('.page');
     var { jsPDF } = window.jspdf;
-    var pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    var pageW = 210;
-    var pageH = 297;
+    var pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    var pdfW = 595.28;
+    var pdfH = 841.89;
 
     for (var i = 0; i < pages.length; i++) {
         if (i > 0) pdf.addPage();
 
         var canvas = await html2canvas(pages[i], {
-            scale: 2,
+            scale: 3,
             useCORS: true,
             allowTaint: true,
             logging: false,
-            backgroundColor: '#ffffff'
+            imageTimeout: 15000,
+            backgroundColor: null
         });
 
-        var imgW = canvas.width;
-        var imgH = canvas.height;
-        var ratio = Math.min(pageW / (imgW / 2), pageH / (imgH / 2));
-        var finalW = (imgW / 2) * ratio;
-        var finalH = (imgH / 2) * ratio;
-        var offsetX = (pageW - finalW) / 2;
-        var offsetY = (pageH - finalH) / 2;
-
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', offsetX, offsetY, finalW, finalH);
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, pdfH);
     }
 
     pdf.save('<?php $fn = iconv('UTF-8','ASCII//TRANSLIT', $magazine['title']); $fn = preg_replace('/[^a-zA-Z0-9_-]/', '_', $fn); $fn = preg_replace('/_+/', '_', trim($fn, '_')); echo $fn; ?>_Brooks_Construtora.pdf');

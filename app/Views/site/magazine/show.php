@@ -81,7 +81,7 @@ foreach ($pages as $page):
 
 <?php if ($layout === 'cover'): ?>
 <div class="page pg-cover">
-    <?php if ($magazine['cover_image']): ?><img src="<?= $magazine['cover_image'] ?>" class="bg" alt=""><?php endif; ?>
+    <?php if ($magazine['cover_image']): ?><img src="<?= $magazine['cover_image'] ?>" class="bg" alt="" crossorigin="anonymous"><?php endif; ?>
     <div class="overlay"></div>
     <div class="content">
         <div class="title"><?= htmlspecialchars($page['title'] ?? $magazine['title']) ?></div>
@@ -94,7 +94,7 @@ foreach ($pages as $page):
 
 <?php elseif ($layout === 'subcover'): ?>
 <div class="page pg-cover">
-    <?php if ($magazine['cover_image']): ?><img src="<?= $magazine['cover_image'] ?>" class="bg" alt=""><?php endif; ?>
+    <?php if ($magazine['cover_image']): ?><img src="<?= $magazine['cover_image'] ?>" class="bg" alt="" crossorigin="anonymous"><?php endif; ?>
     <div class="overlay"></div>
     <div class="content">
         <div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-top:20px;"><span style="font-size:3.5rem;font-weight:900;color:#fff;"><?= htmlspecialchars($page['title'] ?? 'ECO') ?></span><img src="<?= $magazineLogo ?>" style="max-width:180px" alt="Brooks"></div>
@@ -205,42 +205,32 @@ async function generatePDF() {
     btn.disabled = true; btn.textContent = 'Gerando PDF...';
 
     var { jsPDF } = window.jspdf;
-    // A4 em mm
-    var pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-    var pageW = 210; // A4 width mm
-    var pageH = 297; // A4 height mm
+    // A4 em pontos (595.28 x 841.89) — mesma proporção das páginas (595x842px)
+    var pdf = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
+    var pdfW = 595.28;
+    var pdfH = 841.89;
 
     var container = document.querySelector('.mag-preview');
     var pages = container.querySelectorAll('.page');
 
-    // Esconde botões e margens para captura limpa
+    // Esconde botões
     var actions = document.getElementById('mag-actions');
     if (actions) actions.style.display = 'none';
 
     for (var i = 0; i < pages.length; i++) {
         if (i > 0) pdf.addPage();
 
-        // Captura no tamanho real do elemento (sem forçar width/height no html2canvas)
         var canvas = await html2canvas(pages[i], {
-            scale: 2,
+            scale: 3,
             useCORS: true,
             allowTaint: true,
             logging: false,
-            backgroundColor: '#ffffff'
+            imageTimeout: 15000,
+            backgroundColor: null
         });
 
-        // Calcula proporcional para caber no A4
-        var imgW = canvas.width;
-        var imgH = canvas.height;
-        var ratio = Math.min(pageW / (imgW / 2), pageH / (imgH / 2));
-        var finalW = (imgW / 2) * ratio;
-        var finalH = (imgH / 2) * ratio;
-
-        // Centraliza se necessário
-        var offsetX = (pageW - finalW) / 2;
-        var offsetY = (pageH - finalH) / 2;
-
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', offsetX, offsetY, finalW, finalH);
+        // Preenche a página toda sem margens
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, pdfH);
     }
 
     if (actions) actions.style.display = '';
