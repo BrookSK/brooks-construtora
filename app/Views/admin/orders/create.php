@@ -38,24 +38,22 @@
                         </button>
                     </div>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body" style="overflow:visible;">
                     <!-- Desktop: Tabela -->
                     <div class="d-none d-md-block">
-                        <div class="table-responsive">
-                            <table class="table table-sm mb-0" id="itemsTableDesktop">
-                                <thead>
-                                    <tr class="bg-light">
-                                        <th style="min-width:280px;">Material</th>
-                                        <th style="min-width:120px;">Especificação</th>
-                                        <th style="min-width:100px;">Classificação</th>
-                                        <th style="min-width:90px;">Unidade</th>
-                                        <th style="width:90px;">Qtd</th>
-                                        <th style="width:50px;"></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="itemsBodyDesktop"></tbody>
-                            </table>
-                        </div>
+                        <table class="table table-sm mb-0" id="itemsTableDesktop">
+                            <thead>
+                                <tr class="bg-light">
+                                    <th style="min-width:250px;">Material</th>
+                                    <th style="min-width:120px;">Especificação</th>
+                                    <th style="min-width:100px;">Classificação</th>
+                                    <th style="min-width:90px;">Unidade</th>
+                                    <th style="width:90px;">Qtd</th>
+                                    <th style="width:50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsBodyDesktop"></tbody>
+                        </table>
                         <div class="p-3 text-center text-muted" id="emptyDesktop">
                             <i class="bi bi-inbox"></i> Clique em "Adicionar Item" para começar
                         </div>

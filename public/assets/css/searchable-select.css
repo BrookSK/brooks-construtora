@@ -16,8 +16,8 @@
     border-radius: 0 0 6px 6px;
     max-height: 220px;
     overflow-y: auto;
-    z-index: 1050;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 1060;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 .ss-item {
     padding: 8px 12px;
