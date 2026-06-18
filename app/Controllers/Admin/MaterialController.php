@@ -109,9 +109,16 @@ class MaterialController extends Controller
         }
 
         $id = (int) $this->input('id', 0);
-        Material::updateById($id, ['active' => 0]);
+        $action = $this->input('action', 'deactivate');
 
-        $this->setFlash('success', 'Material desativado com sucesso!');
+        if ($action === 'permanent' && \App\Core\Auth::isSuperAdmin()) {
+            Material::deleteById($id);
+            $this->setFlash('success', 'Material excluído permanentemente!');
+        } else {
+            Material::updateById($id, ['active' => 0]);
+            $this->setFlash('success', 'Material desativado com sucesso!');
+        }
+
         $this->redirect('/admin/materials');
     }
 
