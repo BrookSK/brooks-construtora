@@ -262,6 +262,10 @@ class PurchaseOrderController extends Controller
             return;
         }
 
+        $orderCode = $order['code'];
+        $deletedBy = Auth::user()['name'];
+        $deletedAt = date('d/m/Y H:i');
+
         // Deletar dados relacionados
         Database::delete('purchase_order_item_prices', 'order_id = ?', [$id]);
         Database::delete('purchase_order_history', 'order_id = ?', [$id]);
@@ -270,7 +274,25 @@ class PurchaseOrderController extends Controller
         Database::delete('material_price_history', 'order_id = ?', [$id]);
         PurchaseOrder::deleteById($id);
 
-        $this->setFlash('success', "Pedido {$order['code']} deletado permanentemente.");
+        // Enviar e-mail de notificação de exclusão
+        $emails = Setting::get('orders_completed_emails', '');
+        if (!empty($emails)) {
+            try {
+                $mailService = new MailService();
+                $subject = "Pedido DELETADO - {$orderCode}";
+                $body = EmailTemplate::purchaseOrderDeleted($orderCode, $deletedBy, $deletedAt);
+                $emailList = array_map('trim', explode(',', $emails));
+                foreach ($emailList as $email) {
+                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $mailService->send($email, $subject, $body, true);
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log("Erro ao enviar e-mail de exclusão: " . $e->getMessage());
+            }
+        }
+
+        $this->setFlash('success', "Pedido {$orderCode} deletado permanentemente. Notificação enviada.");
         $this->redirect('/admin/orders');
     }
 

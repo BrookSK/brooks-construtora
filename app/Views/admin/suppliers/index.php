@@ -47,6 +47,12 @@
                             <input type="hidden" name="id" value="<?= $s['id'] ?>">
                             <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                         </form>
+                        <?php elseif (\App\Core\Auth::isSuperAdmin()): ?>
+                        <form method="POST" action="/admin/suppliers/delete" class="d-inline" onsubmit="return confirm('EXCLUIR permanentemente este fornecedor? Não pode ser desfeito.')">
+                            <input type="hidden" name="id" value="<?= $s['id'] ?>">
+                            <input type="hidden" name="action" value="permanent">
+                            <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
+                        </form>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -77,6 +83,12 @@
                 <form method="POST" action="/admin/suppliers/delete" onsubmit="return confirm('Desativar?')">
                     <input type="hidden" name="id" value="<?= $s['id'] ?>">
                     <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                </form>
+                <?php elseif (\App\Core\Auth::isSuperAdmin()): ?>
+                <form method="POST" action="/admin/suppliers/delete" onsubmit="return confirm('EXCLUIR permanentemente?')">
+                    <input type="hidden" name="id" value="<?= $s['id'] ?>">
+                    <input type="hidden" name="action" value="permanent">
+                    <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
                 </form>
                 <?php endif; ?>
             </div>

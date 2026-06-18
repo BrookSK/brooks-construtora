@@ -287,6 +287,26 @@ HTML;
         return self::wrap("Pedido Rejeitado - {$order['code']}", $body);
     }
 
+    public static function purchaseOrderDeleted(string $orderCode, string $deletedBy, string $deletedAt): string
+    {
+        $body = <<<HTML
+<p style="margin-bottom:15px;">Um pedido de materiais foi <strong style="color:#dc3545;">DELETADO permanentemente</strong> do sistema.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#fdeaea; border-radius:6px; margin-bottom:20px; border:1px solid #f5c6cb;">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#721c24; text-transform:uppercase; font-weight:600;">Pedido Excluído</p>
+    <p style="margin:0; font-size:17px; color:#721c24; font-weight:600;">{$orderCode}</p>
+    <p style="margin:8px 0 0; font-size:13px; color:#555;">Deletado por: <strong>{$deletedBy}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Data: {$deletedAt}</p>
+</td></tr>
+</table>
+
+<p style="font-size:13px; color:#666;">Este pedido e todos os seus dados (itens, cotações, histórico) foram removidos permanentemente do banco de dados.</p>
+HTML;
+
+        return self::wrap("Pedido Deletado - {$orderCode}", $body);
+    }
+
     public static function contactReceived(string $name, string $email, string $phone, string $message): string
     {
         $date = date('d/m/Y \à\s H:i');

@@ -134,9 +134,18 @@ class SupplierController extends Controller
         }
 
         $id = (int) $this->input('id', 0);
-        Supplier::updateById($id, ['active' => 0]);
+        $action = $this->input('action', 'deactivate');
 
-        $this->setFlash('success', 'Fornecedor desativado com sucesso!');
+        if ($action === 'permanent' && \App\Core\Auth::isSuperAdmin()) {
+            // Deletar permanentemente
+            Supplier::deleteById($id);
+            $this->setFlash('success', 'Fornecedor excluído permanentemente!');
+        } else {
+            // Apenas desativar
+            Supplier::updateById($id, ['active' => 0]);
+            $this->setFlash('success', 'Fornecedor desativado com sucesso!');
+        }
+
         $this->redirect('/admin/suppliers');
     }
 
