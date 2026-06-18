@@ -234,11 +234,17 @@ class PurchaseOrderController extends Controller
             // Webhook de rejeição
             $webhookUrl = Setting::get('orders_completed_webhook', '');
             if (!empty($webhookUrl)) {
+                $message = "❌ *PEDIDO REJEITADO*\n\n"
+                    . "🔖 *Pedido:* {$order['code']}\n"
+                    . "👤 *Rejeitado por:* {$personName}\n"
+                    . "📝 *Motivo:* {$notes}";
+
                 $this->sendWebhook($webhookUrl, [
                     'event' => 'order_rejected',
                     'order_code' => $order['code'],
                     'rejected_by' => $personName,
                     'reason' => $notes,
+                    'message' => $message,
                 ]);
             }
 
@@ -306,6 +312,15 @@ class PurchaseOrderController extends Controller
 
         $webhookUrl = Setting::get('orders_approval_webhook', '');
         if (!empty($webhookUrl)) {
+            $totalFormatted = 'R$ ' . number_format($order['total_estimated'], 2, ',', '.');
+
+            $message = "⚠️ *PEDIDO AGUARDANDO APROVAÇÃO*\n\n"
+                . "🔖 *Pedido:* {$order['code']}\n"
+                . "🏢 *Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                . "💰 *Valor Total:* {$totalFormatted}\n"
+                . "👤 *Cotado por:* {$order['quoted_by_name']}\n\n"
+                . "🔗 *Link para aprovar/rejeitar:*\n{$approvalUrl}";
+
             $this->sendWebhook($webhookUrl, [
                 'event' => 'approval_requested',
                 'order_code' => $order['code'],
@@ -313,6 +328,7 @@ class PurchaseOrderController extends Controller
                 'total' => $order['total_estimated'],
                 'approval_url' => $approvalUrl,
                 'quoted_by' => $order['quoted_by_name'],
+                'message' => $message,
             ]);
         }
     }
@@ -344,6 +360,15 @@ class PurchaseOrderController extends Controller
 
         $webhookUrl = Setting::get('orders_completed_webhook', '');
         if (!empty($webhookUrl)) {
+            $totalFormatted = 'R$ ' . number_format($order['total_estimated'], 2, ',', '.');
+
+            $message = "✅ *PEDIDO APROVADO*\n\n"
+                . "🔖 *Pedido:* {$order['code']}\n"
+                . "🏢 *Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                . "💰 *Valor Total:* {$totalFormatted}\n"
+                . "👤 *Aprovado por:* {$order['approved_by_name']}\n\n"
+                . "📄 *PDF do pedido:*\n{$pdfUrl}";
+
             $this->sendWebhook($webhookUrl, [
                 'event' => 'order_approved',
                 'order_code' => $order['code'],
@@ -351,6 +376,7 @@ class PurchaseOrderController extends Controller
                 'total' => $order['total_estimated'],
                 'approved_by' => $order['approved_by_name'],
                 'pdf_url' => $pdfUrl,
+                'message' => $message,
             ]);
         }
     }

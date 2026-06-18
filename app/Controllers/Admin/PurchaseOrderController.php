@@ -385,6 +385,23 @@ class PurchaseOrderController extends Controller
         // Webhook
         $webhookUrl = Setting::get('orders_quote_webhook', '');
         if (!empty($webhookUrl)) {
+            $itemsList = '';
+            foreach ($items as $i => $item) {
+                $itemsList .= ($i + 1) . ". {$item['material_name']}";
+                if ($item['classification']) $itemsList .= " ({$item['classification']})";
+                $itemsList .= " - Qtd: {$item['quantity']} {$item['unit']}\n";
+            }
+
+            $message = "📋 *NOVO PEDIDO - COTAÇÃO PENDENTE*\n\n"
+                . "🔖 *Pedido:* {$order['code']}\n"
+                . "🏢 *Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                . "👤 *Solicitado por:* {$order['created_by_name']}\n"
+                . "📅 *Data:* " . date('d/m/Y H:i', strtotime($order['created_at'])) . "\n"
+                . "📦 *Itens:* " . count($items) . "\n\n"
+                . "*Lista de materiais:*\n{$itemsList}\n"
+                . (!empty($order['description']) ? "📝 *Obs:* {$order['description']}\n\n" : "\n")
+                . "🔗 *Link para informar cotação:*\n{$quoteUrl}";
+
             $this->sendWebhook($webhookUrl, [
                 'event' => 'quote_requested',
                 'order_code' => $order['code'],
@@ -394,6 +411,7 @@ class PurchaseOrderController extends Controller
                 'created_by' => $order['created_by_name'],
                 'created_at' => $order['created_at'],
                 'description' => $order['description'],
+                'message' => $message,
             ]);
         }
     }
@@ -427,6 +445,17 @@ class PurchaseOrderController extends Controller
         // Webhook
         $webhookUrl = Setting::get('orders_approval_webhook', '');
         if (!empty($webhookUrl)) {
+            $totalFormatted = 'R$ ' . number_format($order['total_estimated'], 2, ',', '.');
+            
+            $message = "⚠️ *PEDIDO AGUARDANDO APROVAÇÃO*\n\n"
+                . "🔖 *Pedido:* {$order['code']}\n"
+                . "🏢 *Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                . "💰 *Valor Total:* {$totalFormatted}\n"
+                . "📦 *Itens:* " . count($items) . "\n"
+                . "👤 *Cotado por:* {$order['quoted_by_name']}\n"
+                . "📅 *Data cotação:* " . date('d/m/Y H:i', strtotime($order['quoted_at'])) . "\n\n"
+                . "🔗 *Link para aprovar/rejeitar:*\n{$approvalUrl}";
+
             $this->sendWebhook($webhookUrl, [
                 'event' => 'approval_requested',
                 'order_code' => $order['code'],
@@ -436,6 +465,7 @@ class PurchaseOrderController extends Controller
                 'approval_url' => $approvalUrl,
                 'quoted_by' => $order['quoted_by_name'],
                 'quoted_at' => $order['quoted_at'],
+                'message' => $message,
             ]);
         }
     }
@@ -469,6 +499,16 @@ class PurchaseOrderController extends Controller
         // Webhook
         $webhookUrl = Setting::get('orders_completed_webhook', '');
         if (!empty($webhookUrl)) {
+            $totalFormatted = 'R$ ' . number_format($order['total_estimated'], 2, ',', '.');
+
+            $message = "✅ *PEDIDO APROVADO*\n\n"
+                . "🔖 *Pedido:* {$order['code']}\n"
+                . "🏢 *Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                . "💰 *Valor Total:* {$totalFormatted}\n"
+                . "👤 *Aprovado por:* {$order['approved_by_name']}\n"
+                . "📅 *Data:* " . date('d/m/Y H:i', strtotime($order['approved_at'])) . "\n\n"
+                . "📄 *PDF do pedido:*\n{$viewUrl}";
+
             $this->sendWebhook($webhookUrl, [
                 'event' => 'order_approved',
                 'order_code' => $order['code'],
@@ -477,6 +517,7 @@ class PurchaseOrderController extends Controller
                 'approved_by' => $order['approved_by_name'],
                 'approved_at' => $order['approved_at'],
                 'view_url' => $viewUrl,
+                'message' => $message,
             ]);
         }
     }
