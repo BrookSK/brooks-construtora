@@ -174,6 +174,7 @@ class PurchaseOrderController extends Controller
         $this->view('site.orders.quote_success', [
             'order' => $order,
             'total' => $finalTotal,
+            'orderSuppliers' => PurchaseOrderSupplier::getByOrder($order['id']),
         ]);
     }
 
@@ -311,6 +312,7 @@ class PurchaseOrderController extends Controller
             $this->view('site.orders.approval_success', [
                 'order' => $order,
                 'action' => 'approved',
+                'approvedSupplier' => PurchaseOrderSupplier::getApproved($order['id']),
             ]);
         } elseif ($action === 'reject') {
             if (empty($notes)) {
@@ -380,6 +382,7 @@ class PurchaseOrderController extends Controller
             $this->view('site.orders.approval_success', [
                 'order' => $order,
                 'action' => 'rejected',
+                'approvedSupplier' => null,
             ]);
         } else {
             $this->setFlash('error', 'Ação inválida.');
