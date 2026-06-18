@@ -8,8 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
-        .page-header { background: #3a3b4e; color: #fff; padding: 1.5rem 0; }
-        .page-header img { max-width: 180px; }
+        .page-header { background: #3a3b4e; color: #fff; padding: 1rem 0; }
         .main-card { border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         .price-input { font-weight: 600; text-align: right; }
         .item-total { font-weight: 700; color: #28a745; }
@@ -63,7 +62,9 @@
                     </div>
 
                     <h6 class="mb-3"><i class="bi bi-list-check"></i> Itens - Informe o valor unitário</h6>
-                    <div class="table-responsive">
+                    
+                    <!-- Desktop -->
+                    <div class="table-responsive d-none d-md-block">
                         <table class="table table-sm">
                             <thead class="table-light">
                                 <tr>
@@ -105,6 +106,41 @@
                         </table>
                     </div>
 
+                    <!-- Mobile -->
+                    <div class="d-md-none">
+                        <?php foreach ($items as $i => $item): ?>
+                        <div class="border rounded p-3 mb-2 bg-white">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <strong style="font-size:0.9rem;"><?= htmlspecialchars($item['material_name']) ?></strong>
+                                <span class="badge bg-light text-dark">#<?= $i + 1 ?></span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <?php if ($item['specification']): ?><span class="badge bg-light text-muted" style="font-size:0.65rem;"><?= htmlspecialchars($item['specification']) ?></span><?php endif; ?>
+                                <?php if ($item['classification']): ?><span class="badge bg-light text-muted" style="font-size:0.65rem;"><?= htmlspecialchars($item['classification']) ?></span><?php endif; ?>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted small">Qtd: <strong><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></strong> <?= htmlspecialchars($item['unit'] ?? '') ?></span>
+                                <div style="max-width:130px;">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text" style="font-size:0.75rem;">R$</span>
+                                        <input type="text" class="form-control price-input" 
+                                            name="items[<?= $item['id'] ?>][unit_price]" 
+                                            data-qty="<?= $item['quantity'] ?>"
+                                            placeholder="0,00" required style="font-size:0.85rem;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end mt-1">
+                                <small class="item-total text-success fw-bold" id="total-m-<?= $item['id'] ?>">R$ 0,00</small>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                        <div class="border-top pt-2 mt-2 text-end">
+                            <span class="fw-bold">TOTAL: </span>
+                            <span class="grand-total" id="grandTotalMobile">R$ 0,00</span>
+                        </div>
+                    </div>
+
                     <div class="row mt-3">
                         <div class="col-12">
                             <label class="form-label">Observações da Cotação</label>
@@ -128,7 +164,6 @@
     document.querySelectorAll('.price-input').forEach(input => {
         input.addEventListener('input', calculateTotals);
         input.addEventListener('blur', function() {
-            // Formatar como moeda
             let val = this.value.replace(/[^\d,\.]/g, '').replace(',', '.');
             if (val && !isNaN(parseFloat(val))) {
                 this.value = parseFloat(val).toFixed(2).replace('.', ',');
@@ -138,17 +173,36 @@
 
     function calculateTotals() {
         let grandTotal = 0;
+        // Agrupar por item ID (podem ter 2 inputs com mesmo name - desktop e mobile)
+        const totals = {};
         document.querySelectorAll('.price-input').forEach(input => {
             const val = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
             const qty = parseFloat(input.dataset.qty) || 0;
             const total = val * qty;
-            grandTotal += total;
-
+            
             const itemId = input.name.match(/\[(\d+)\]/)[1];
-            document.getElementById('total-' + itemId).textContent = 'R$ ' + total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            totals[itemId] = total;
+
+            // Atualizar ambas as versões (desktop e mobile)
+            const desktopEl = document.getElementById('total-' + itemId);
+            const mobileEl = document.getElementById('total-m-' + itemId);
+            const formatted = 'R$ ' + total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            if (desktopEl) desktopEl.textContent = formatted;
+            if (mobileEl) mobileEl.textContent = formatted;
+
+            // Sincronizar valor entre desktop e mobile inputs
+            document.querySelectorAll(`[name="${input.name}"]`).forEach(other => {
+                if (other !== input) other.value = input.value;
+            });
         });
 
-        document.getElementById('grandTotal').textContent = 'R$ ' + grandTotal.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+        const grandFormatted = 'R$ ' + grandTotal.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        
+        const gtDesktop = document.getElementById('grandTotal');
+        const gtMobile = document.getElementById('grandTotalMobile');
+        if (gtDesktop) gtDesktop.textContent = grandFormatted;
+        if (gtMobile) gtMobile.textContent = grandFormatted;
     }
     </script>
 </body>

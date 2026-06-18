@@ -8,12 +8,15 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
-        .page-header { background: #3a3b4e; color: #fff; padding: 1.5rem 0; }
+        .page-header { background: #3a3b4e; color: #fff; padding: 1rem 0; }
         .main-card { border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         .total-badge { font-size: 1.8rem; font-weight: 700; color: #28a745; }
         @media (max-width: 768px) {
-            .total-badge { font-size: 1.4rem; }
-            .table-responsive table { font-size: 0.8rem; }
+            .total-badge { font-size: 1.3rem; }
+            .table-responsive table { font-size: 0.75rem; }
+            .main-card .card-header { padding: 1rem; }
+            .main-card .card-body { padding: 1rem; }
+            .btn-lg { font-size: 0.9rem; padding: 0.6rem 1.2rem; }
         }
     </style>
 </head>
@@ -126,7 +129,7 @@
                         <textarea class="form-control" name="approval_notes" rows="2" placeholder="Observações sobre a decisão (obrigatório em caso de rejeição)"></textarea>
                     </div>
 
-                    <div class="d-flex flex-wrap gap-3 justify-content-center pt-3">
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center pt-3">
                         <button type="submit" name="action" value="approve" class="btn btn-success btn-lg px-5" onclick="return confirm('Confirma a APROVAÇÃO deste pedido?')">
                             <i class="bi bi-check-circle"></i> Aprovar Pedido
                         </button>

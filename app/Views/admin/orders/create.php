@@ -6,57 +6,42 @@
     <div class="card mb-3">
         <div class="card-header"><i class="bi bi-building"></i> Fornecedor</div>
         <div class="card-body">
-            <div class="row">
-                <div class="col-md-8">
-                    <label class="form-label">Selecionar Fornecedor</label>
-                    <select class="form-select" name="supplier_id" id="supplierSelect">
-                        <option value="">-- Selecione ou cadastre abaixo --</option>
-                        <?php foreach ($suppliers as $s): ?>
-                        <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?> <?= $s['cnpj'] ? '(' . $s['cnpj'] . ')' : '' ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <button type="button" class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#newSupplierModal">
-                        <i class="bi bi-plus"></i> Novo Fornecedor
-                    </button>
-                </div>
-            </div>
+            <label class="form-label">Selecionar Fornecedor</label>
+            <select class="form-select mb-2" name="supplier_id" id="supplierSelect">
+                <option value="">-- Selecione --</option>
+                <?php foreach ($suppliers as $s): ?>
+                <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?> <?= $s['cnpj'] ? '(' . $s['cnpj'] . ')' : '' ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button type="button" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#newSupplierModal">
+                <i class="bi bi-plus"></i> Cadastrar Novo Fornecedor
+            </button>
         </div>
     </div>
 
     <!-- Itens do pedido -->
     <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-list-check"></i> Itens do Pedido</span>
-            <div class="d-flex gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newMaterialModal">
-                    <i class="bi bi-box-seam"></i> Novo Material
-                </button>
-                <button type="button" class="btn btn-sm btn-primary" id="addItemBtn">
-                    <i class="bi bi-plus"></i> Adicionar Item
-                </button>
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-check"></i> Itens</span>
+                <span class="badge bg-primary" id="itemCountBadge">0</span>
             </div>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-sm mb-0" id="itemsTable">
-                    <thead>
-                        <tr class="bg-light">
-                            <th style="min-width:250px;">Material</th>
-                            <th style="min-width:130px;">Especificação</th>
-                            <th style="min-width:100px;">Classificação</th>
-                            <th style="min-width:100px;">Unid. Medida</th>
-                            <th style="width:90px;">Qtd</th>
-                            <th style="width:50px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="itemsBody">
-                    </tbody>
-                </table>
+        <div class="card-body">
+            <div class="d-grid gap-2 mb-3">
+                <button type="button" class="btn btn-primary" id="addItemBtn">
+                    <i class="bi bi-plus-lg"></i> Adicionar Item
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#newMaterialModal">
+                    <i class="bi bi-box-seam"></i> Cadastrar Novo Material
+                </button>
             </div>
-            <div class="p-3 text-center text-muted" id="emptyItemsMsg">
-                <i class="bi bi-inbox"></i> Clique em "Adicionar Item" para começar
+
+            <div id="itemsList">
+                <div class="text-center text-muted py-3" id="emptyItemsMsg">
+                    <i class="bi bi-inbox d-block mb-1" style="font-size:1.5rem;"></i>
+                    Nenhum item adicionado
+                </div>
             </div>
         </div>
     </div>
@@ -70,19 +55,19 @@
     </div>
 
     <!-- Ações -->
-    <div class="d-flex justify-content-between">
-        <a href="/admin/orders" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Voltar
-        </a>
+    <div class="d-grid gap-2 mb-4">
         <button type="submit" class="btn btn-primary btn-lg">
             <i class="bi bi-send"></i> Criar Pedido e Enviar para Cotação
         </button>
+        <a href="/admin/orders" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
     </div>
 </form>
 
 <!-- Modal Novo Fornecedor -->
 <div class="modal fade" id="newSupplierModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Novo Fornecedor</h5>
@@ -112,7 +97,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="saveSupplierBtn">Salvar Fornecedor</button>
+                <button type="button" class="btn btn-primary" id="saveSupplierBtn">Salvar</button>
             </div>
         </div>
     </div>
@@ -120,7 +105,7 @@
 
 <!-- Modal Novo Material -->
 <div class="modal fade" id="newMaterialModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Novo Material</h5>
@@ -140,7 +125,7 @@
                             <option value="<?= htmlspecialchars($cat['name']) ?>" data-id="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <button type="button" class="btn btn-outline-primary" onclick="quickAddCategory()" title="Nova Especificação">
+                        <button type="button" class="btn btn-outline-primary" onclick="quickAddCategory()" title="Nova">
                             <i class="bi bi-plus"></i>
                         </button>
                     </div>
@@ -158,7 +143,7 @@
                             <option value="<?= $u['id'] ?>" data-abbr="<?= htmlspecialchars($u['abbreviation']) ?>"><?= htmlspecialchars($u['name']) ?> (<?= htmlspecialchars($u['abbreviation']) ?>)</option>
                             <?php endforeach; ?>
                         </select>
-                        <button type="button" class="btn btn-outline-primary" onclick="quickAddUnit()" title="Nova Unidade">
+                        <button type="button" class="btn btn-outline-primary" onclick="quickAddUnit()" title="Nova">
                             <i class="bi bi-plus"></i>
                         </button>
                     </div>
@@ -174,14 +159,13 @@
 
 <!-- Modal Cadastro Rápido Especificação -->
 <div class="modal fade" id="quickCategoryModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-sm">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header py-2">
                 <h6 class="modal-title">Nova Especificação</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <label class="form-label">Nome da Especificação *</label>
                 <input type="text" class="form-control" id="quickCatName" placeholder="Ex: mat. Elétrico">
             </div>
             <div class="modal-footer py-2">
@@ -194,7 +178,7 @@
 
 <!-- Modal Cadastro Rápido Unidade -->
 <div class="modal fade" id="quickUnitModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-sm">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header py-2">
                 <h6 class="modal-title">Nova Unidade de Medida</h6>
@@ -202,12 +186,10 @@
             </div>
             <div class="modal-body">
                 <div class="mb-2">
-                    <label class="form-label">Nome *</label>
-                    <input type="text" class="form-control" id="quickUnitName" placeholder="Ex: Galão">
+                    <input type="text" class="form-control" id="quickUnitName" placeholder="Nome (Ex: Galão)">
                 </div>
                 <div>
-                    <label class="form-label">Abreviação *</label>
-                    <input type="text" class="form-control" id="quickUnitAbbr" placeholder="Ex: gal">
+                    <input type="text" class="form-control" id="quickUnitAbbr" placeholder="Abreviação (Ex: gal)">
                 </div>
             </div>
             <div class="modal-footer py-2">
@@ -218,23 +200,61 @@
     </div>
 </div>
 
+<style>
+.item-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #fafbfc;
+    position: relative;
+}
+.item-card .item-number {
+    position: absolute;
+    top: -8px;
+    left: 10px;
+    background: #3a3b4e;
+    color: #fff;
+    font-size: 0.65rem;
+    padding: 1px 8px;
+    border-radius: 10px;
+}
+.item-card .remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+.item-card .item-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+.item-card .item-details .badge {
+    font-weight: 400;
+    font-size: 0.7rem;
+}
+</style>
+
 <script>
 const materials = <?= json_encode($materials) ?>;
-const categories = <?= json_encode($categories) ?>;
-const units = <?= json_encode($units) ?>;
 let itemCount = 0;
 
-// Adicionar item
 document.getElementById('addItemBtn').addEventListener('click', () => addItem());
+
+function updateItemCount() {
+    const count = document.querySelectorAll('.item-card').length;
+    document.getElementById('itemCountBadge').textContent = count;
+}
 
 function addItem(prefill = null) {
     itemCount++;
     document.getElementById('emptyItemsMsg').style.display = 'none';
     
-    // Montar as options do select de materiais
-    let materialOptions = '<option value="">-- Selecione um material --</option>';
+    // Montar options do select
+    let materialOptions = '<option value="">-- Selecione o material --</option>';
     materials.forEach(m => {
-        const label = m.name + (m.classification ? ' - ' + m.classification : '') + (m.specification ? ' (' + m.specification + ')' : '');
+        const label = m.name + (m.classification ? ' - ' + m.classification : '');
         const selected = prefill && prefill.id == m.id ? 'selected' : '';
         materialOptions += `<option value="${m.id}" 
             data-name="${m.name}" 
@@ -244,68 +264,81 @@ function addItem(prefill = null) {
             ${selected}>${label}</option>`;
     });
     
-    const row = document.createElement('tr');
-    row.innerHTML = `
-        <td>
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.innerHTML = `
+        <span class="item-number">#${itemCount}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger remove-btn" onclick="removeItem(this)">
+            <i class="bi bi-x"></i>
+        </button>
+        <div class="mb-2">
             <select class="form-select form-select-sm material-select" onchange="materialSelected(this)">
                 ${materialOptions}
             </select>
             <input type="hidden" name="items[${itemCount}][material_id]" class="material-id" value="${prefill ? (prefill.id || '') : ''}">
             <input type="hidden" name="items[${itemCount}][material_name]" class="material-name" value="${prefill ? (prefill.name || '') : ''}">
-        </td>
-        <td>
-            <input type="text" class="form-control form-control-sm spec-field" name="items[${itemCount}][specification]" placeholder="Tipo" value="${prefill ? (prefill.specification || '') : ''}" readonly>
-        </td>
-        <td>
-            <input type="text" class="form-control form-control-sm class-field" name="items[${itemCount}][classification]" placeholder="Ex: 100mm" value="${prefill ? (prefill.classification || '') : ''}" readonly>
-        </td>
-        <td>
-            <input type="text" class="form-control form-control-sm unit-field" name="items[${itemCount}][unit]" placeholder="unid/mts" value="${prefill ? (prefill.unit || '') : ''}" readonly>
-        </td>
-        <td>
-            <input type="number" class="form-control form-control-sm" name="items[${itemCount}][quantity]" min="0.01" step="0.01" value="${prefill ? (prefill.quantity || 1) : 1}" required>
-        </td>
-        <td>
-            <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" title="Remover">
-                <i class="bi bi-trash"></i>
-            </button>
-        </td>
+            <input type="hidden" name="items[${itemCount}][specification]" class="spec-field" value="${prefill ? (prefill.specification || '') : ''}">
+            <input type="hidden" name="items[${itemCount}][classification]" class="class-field" value="${prefill ? (prefill.classification || '') : ''}">
+            <input type="hidden" name="items[${itemCount}][unit]" class="unit-field" value="${prefill ? (prefill.unit || '') : ''}">
+        </div>
+        <div class="item-details" id="itemDetails${itemCount}">
+            ${prefill ? `
+                <span class="badge bg-light text-dark">${prefill.specification || ''}</span>
+                <span class="badge bg-light text-dark">${prefill.classification || ''}</span>
+                <span class="badge bg-light text-dark">${prefill.unit || ''}</span>
+            ` : '<span class="text-muted" style="font-size:0.75rem;">Selecione um material acima</span>'}
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-2">
+            <label class="form-label mb-0 small fw-bold" style="white-space:nowrap;">Qtd:</label>
+            <input type="number" class="form-control form-control-sm" style="max-width:100px;" 
+                name="items[${itemCount}][quantity]" min="0.01" step="0.01" 
+                value="${prefill ? (prefill.quantity || 1) : 1}" required>
+            <span class="text-muted small unit-label">${prefill ? (prefill.unit || '') : ''}</span>
+        </div>
     `;
     
-    document.getElementById('itemsBody').appendChild(row);
+    document.getElementById('itemsList').appendChild(card);
+    updateItemCount();
 
-    // Remove item
-    row.querySelector('.remove-item-btn').addEventListener('click', function() {
-        row.remove();
-        if (document.getElementById('itemsBody').children.length === 0) {
-            document.getElementById('emptyItemsMsg').style.display = '';
-        }
-    });
-
-    // Se tem prefill, simular seleção
+    // Se tem prefill, garantir select
     if (prefill && prefill.id) {
-        const select = row.querySelector('.material-select');
-        select.value = prefill.id;
+        card.querySelector('.material-select').value = prefill.id;
     }
 }
 
-// Quando seleciona um material no dropdown
+function removeItem(btn) {
+    btn.closest('.item-card').remove();
+    if (document.querySelectorAll('.item-card').length === 0) {
+        document.getElementById('emptyItemsMsg').style.display = '';
+    }
+    updateItemCount();
+}
+
 function materialSelected(selectEl) {
-    const row = selectEl.closest('tr');
+    const card = selectEl.closest('.item-card');
     const option = selectEl.selectedOptions[0];
+    const detailsEl = card.querySelector('.item-details');
     
     if (option && option.value) {
-        row.querySelector('.material-id').value = option.value;
-        row.querySelector('.material-name').value = option.dataset.name || '';
-        row.querySelector('.spec-field').value = option.dataset.spec || '';
-        row.querySelector('.class-field').value = option.dataset.class || '';
-        row.querySelector('.unit-field').value = option.dataset.unit || '';
+        card.querySelector('.material-id').value = option.value;
+        card.querySelector('.material-name').value = option.dataset.name || '';
+        card.querySelector('.spec-field').value = option.dataset.spec || '';
+        card.querySelector('.class-field').value = option.dataset.class || '';
+        card.querySelector('.unit-field').value = option.dataset.unit || '';
+        card.querySelector('.unit-label').textContent = option.dataset.unit || '';
+        
+        detailsEl.innerHTML = '';
+        if (option.dataset.spec) detailsEl.innerHTML += `<span class="badge bg-light text-dark">${option.dataset.spec}</span>`;
+        if (option.dataset.class) detailsEl.innerHTML += `<span class="badge bg-light text-dark">${option.dataset.class}</span>`;
+        if (option.dataset.unit) detailsEl.innerHTML += `<span class="badge bg-info text-white">${option.dataset.unit}</span>`;
     } else {
-        row.querySelector('.material-id').value = '';
-        row.querySelector('.material-name').value = '';
-        row.querySelector('.spec-field').value = '';
-        row.querySelector('.class-field').value = '';
-        row.querySelector('.unit-field').value = '';
+        card.querySelector('.material-id').value = '';
+        card.querySelector('.material-name').value = '';
+        card.querySelector('.spec-field').value = '';
+        card.querySelector('.class-field').value = '';
+        card.querySelector('.unit-field').value = '';
+        card.querySelector('.unit-label').textContent = '';
+        detailsEl.innerHTML = '<span class="text-muted" style="font-size:0.75rem;">Selecione um material acima</span>';
     }
 }
 
@@ -318,27 +351,18 @@ document.getElementById('saveSupplierBtn').addEventListener('click', async funct
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: new URLSearchParams({
-            name: name,
-            cnpj: document.getElementById('newSupplierCnpj').value,
+            name, cnpj: document.getElementById('newSupplierCnpj').value,
             email: document.getElementById('newSupplierEmail').value,
             phone: document.getElementById('newSupplierPhone').value,
             contact_person: document.getElementById('newSupplierContact').value,
         })
     });
-
     const data = await resp.json();
     if (data.success) {
-        const opt = new Option(data.supplier.name, data.supplier.id, true, true);
-        document.getElementById('supplierSelect').add(opt);
+        document.getElementById('supplierSelect').add(new Option(data.supplier.name, data.supplier.id, true, true));
         bootstrap.Modal.getInstance(document.getElementById('newSupplierModal')).hide();
-        document.getElementById('newSupplierName').value = '';
-        document.getElementById('newSupplierCnpj').value = '';
-        document.getElementById('newSupplierEmail').value = '';
-        document.getElementById('newSupplierPhone').value = '';
-        document.getElementById('newSupplierContact').value = '';
-    } else {
-        alert(data.error || 'Erro ao salvar fornecedor');
-    }
+        ['newSupplierName','newSupplierCnpj','newSupplierEmail','newSupplierPhone','newSupplierContact'].forEach(id => document.getElementById(id).value = '');
+    } else { alert(data.error || 'Erro'); }
 });
 
 // Salvar material inline
@@ -348,39 +372,25 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async funct
 
     const specSelect = document.getElementById('newMatSpec');
     const unitSelect = document.getElementById('newMatUnit');
-    const catId = specSelect.selectedOptions[0]?.dataset?.id || '';
-    const unitId = unitSelect.value || '';
 
     const resp = await fetch('/admin/materials/quick-store', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: new URLSearchParams({
-            name: name,
-            specification: specSelect.value,
-            category_id: catId,
-            unit_id: unitId,
+            name, specification: specSelect.value,
+            category_id: specSelect.selectedOptions[0]?.dataset?.id || '',
+            unit_id: unitSelect.value || '',
             classification: document.getElementById('newMatClassification').value,
         })
     });
-
     const data = await resp.json();
     if (data.success) {
         const unitAbbr = unitSelect.selectedOptions[0]?.dataset?.abbr || '';
+        materials.push({ id: data.material.id, name: data.material.name, specification: data.material.specification || specSelect.value, classification: data.material.classification || '', unit_abbr: unitAbbr, unit_name: '', category_name: specSelect.value });
         
-        // Adicionar ao array local de materiais
-        materials.push({
-            id: data.material.id,
-            name: data.material.name,
-            specification: data.material.specification || specSelect.value,
-            classification: data.material.classification || '',
-            unit_abbr: unitAbbr,
-            unit_name: '',
-            category_name: specSelect.value,
-        });
-        
-        // Adicionar a option em todos os selects existentes
+        // Adicionar options nos selects existentes
         document.querySelectorAll('.material-select').forEach(sel => {
-            const label = data.material.name + (data.material.classification ? ' - ' + data.material.classification : '') + (specSelect.value ? ' (' + specSelect.value + ')' : '');
+            const label = data.material.name + (data.material.classification ? ' - ' + data.material.classification : '');
             const opt = new Option(label, data.material.id);
             opt.dataset.name = data.material.name;
             opt.dataset.spec = specSelect.value;
@@ -389,121 +399,51 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async funct
             sel.add(opt);
         });
         
-        // Adicionar como item no pedido automaticamente
-        addItem({
-            id: data.material.id,
-            name: data.material.name,
-            specification: specSelect.value,
-            classification: data.material.classification || '',
-            unit: unitAbbr,
-            quantity: 1,
-        });
-        
+        addItem({ id: data.material.id, name: data.material.name, specification: specSelect.value, classification: data.material.classification || '', unit: unitAbbr, quantity: 1 });
         bootstrap.Modal.getInstance(document.getElementById('newMaterialModal')).hide();
-        document.getElementById('newMatName').value = '';
+        ['newMatName','newMatClassification'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('newMatSpec').value = '';
-        document.getElementById('newMatClassification').value = '';
         document.getElementById('newMatUnit').value = '';
-    } else {
-        alert(data.error || 'Erro ao salvar material');
-    }
+    } else { alert(data.error || 'Erro'); }
 });
 
-// Validação do form
+// Validação
 document.getElementById('orderForm').addEventListener('submit', function(e) {
-    const rows = document.getElementById('itemsBody').children;
-    if (rows.length === 0) {
-        e.preventDefault();
-        alert('Adicione pelo menos um item ao pedido.');
-        return;
-    }
-    
-    // Garantir que cada item tem um material selecionado
+    if (document.querySelectorAll('.item-card').length === 0) { e.preventDefault(); alert('Adicione pelo menos um item.'); return; }
     let valid = true;
     document.querySelectorAll('.material-select').forEach(sel => {
-        if (!sel.value) {
-            valid = false;
-            sel.classList.add('is-invalid');
-        } else {
-            sel.classList.remove('is-invalid');
-        }
+        if (!sel.value) { valid = false; sel.classList.add('is-invalid'); } else { sel.classList.remove('is-invalid'); }
     });
-    
-    if (!valid) {
-        e.preventDefault();
-        alert('Selecione um material para cada item.');
-    }
+    if (!valid) { e.preventDefault(); alert('Selecione um material para cada item.'); }
 });
 
-// Cadastro rápido de especificação (categoria)
-function quickAddCategory() {
-    new bootstrap.Modal(document.getElementById('quickCategoryModal')).show();
-}
-
+// Quick add category/unit
+function quickAddCategory() { new bootstrap.Modal(document.getElementById('quickCategoryModal')).show(); }
 async function saveQuickCategory() {
     const name = document.getElementById('quickCatName').value.trim();
     if (!name) { alert('Nome é obrigatório'); return; }
-
-    const resp = await fetch('/admin/materials/quick-store-category', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({ name: name })
-    });
-
+    const resp = await fetch('/admin/materials/quick-store-category', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name }) });
     const data = await resp.json();
     if (data.success) {
-        // Adicionar ao select de especificação
-        const opt = new Option(data.category.name, data.category.name);
-        opt.dataset.id = data.category.id;
-        document.getElementById('newMatSpec').add(opt);
-        document.getElementById('newMatSpec').value = data.category.name;
-        
-        bootstrap.Modal.getInstance(document.getElementById('quickCategoryModal')).hide();
-        document.getElementById('quickCatName').value = '';
-    } else {
-        alert(data.error || 'Erro ao salvar');
-    }
+        const opt = new Option(data.category.name, data.category.name); opt.dataset.id = data.category.id;
+        document.getElementById('newMatSpec').add(opt); document.getElementById('newMatSpec').value = data.category.name;
+        bootstrap.Modal.getInstance(document.getElementById('quickCategoryModal')).hide(); document.getElementById('quickCatName').value = '';
+    } else { alert(data.error || 'Erro'); }
 }
-
-// Cadastro rápido de unidade de medida
-function quickAddUnit() {
-    new bootstrap.Modal(document.getElementById('quickUnitModal')).show();
-}
-
+function quickAddUnit() { new bootstrap.Modal(document.getElementById('quickUnitModal')).show(); }
 async function saveQuickUnit() {
     const name = document.getElementById('quickUnitName').value.trim();
     const abbr = document.getElementById('quickUnitAbbr').value.trim();
     if (!name || !abbr) { alert('Nome e abreviação são obrigatórios'); return; }
-
-    const resp = await fetch('/admin/materials/quick-store-unit', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({ name: name, abbreviation: abbr })
-    });
-
+    const resp = await fetch('/admin/materials/quick-store-unit', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name, abbreviation: abbr }) });
     const data = await resp.json();
     if (data.success) {
-        const opt = new Option(`${data.unit.name} (${data.unit.abbreviation})`, data.unit.id);
-        opt.dataset.abbr = data.unit.abbreviation;
-        document.getElementById('newMatUnit').add(opt);
-        document.getElementById('newMatUnit').value = data.unit.id;
-        
-        bootstrap.Modal.getInstance(document.getElementById('quickUnitModal')).hide();
-        document.getElementById('quickUnitName').value = '';
-        document.getElementById('quickUnitAbbr').value = '';
-    } else {
-        alert(data.error || 'Erro ao salvar');
-    }
+        const opt = new Option(`${data.unit.name} (${data.unit.abbreviation})`, data.unit.id); opt.dataset.abbr = data.unit.abbreviation;
+        document.getElementById('newMatUnit').add(opt); document.getElementById('newMatUnit').value = data.unit.id;
+        bootstrap.Modal.getInstance(document.getElementById('quickUnitModal')).hide(); document.getElementById('quickUnitName').value = ''; document.getElementById('quickUnitAbbr').value = '';
+    } else { alert(data.error || 'Erro'); }
 }
 </script>
-
-<style>
-@media (max-width: 768px) {
-    #itemsTable { font-size: 0.8rem; }
-    #itemsTable th, #itemsTable td { padding: 0.4rem; }
-    .material-select { font-size: 0.75rem; }
-}
-</style>
 
 <?php $content = ob_get_clean(); ?>
 <?php require ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>

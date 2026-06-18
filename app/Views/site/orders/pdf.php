@@ -72,8 +72,14 @@
             .pdf-container { box-shadow: none; margin: 0; padding: 1rem; }
         }
         @media (max-width: 768px) {
-            .pdf-container { padding: 1.5rem; margin: 1rem; }
-            .info-grid { grid-template-columns: 1fr; }
+            .pdf-container { padding: 1.2rem; margin: 0.5rem; }
+            .info-grid { grid-template-columns: 1fr; gap: 0.5rem; }
+            .pdf-header { flex-direction: column; gap: 0.5rem; text-align: center; }
+            .pdf-header .company-name { font-size: 1.2rem; }
+            .items-table { font-size: 0.7rem; }
+            .items-table th, .items-table td { padding: 5px 4px; }
+            .download-bar .btn-lg { font-size: 0.85rem; padding: 0.5rem 1rem; }
+            .approval-section { padding: 0.8rem; }
         }
     </style>
 </head>

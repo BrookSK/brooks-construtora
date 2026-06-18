@@ -1,9 +1,9 @@
 <?php $pageTitle = 'Materiais'; $currentPage = 'materials'; ?>
 <?php ob_start(); ?>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
     <span class="badge bg-secondary"><?= count($materials) ?> materiais</span>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMaterialModal">
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newMaterialModal">
         <i class="bi bi-plus-lg"></i> Novo Material
     </button>
 </div>
@@ -15,7 +15,8 @@
     </div>
 </div>
 
-<div class="card">
+<!-- Desktop -->
+<div class="card d-none d-md-block">
     <div class="table-responsive">
         <table class="table table-hover table-sm mb-0" id="materialsTable">
             <thead>
@@ -55,11 +56,9 @@
                             <i class="bi bi-pencil"></i>
                         </button>
                         <?php if ($m['active']): ?>
-                        <form method="POST" action="/admin/materials/delete" class="d-inline" onsubmit="return confirm('Desativar este material?')">
+                        <form method="POST" action="/admin/materials/delete" class="d-inline" onsubmit="return confirm('Desativar?')">
                             <input type="hidden" name="id" value="<?= $m['id'] ?>">
-                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Desativar">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                         </form>
                         <?php endif; ?>
                     </td>
@@ -69,6 +68,53 @@
             </tbody>
         </table>
     </div>
+</div>
+
+<!-- Mobile -->
+<div class="d-md-none">
+    <?php if (empty($materials)): ?>
+    <div class="card"><div class="card-body text-center text-muted py-4">Nenhum material cadastrado.</div></div>
+    <?php else: ?>
+    <?php foreach ($materials as $m): ?>
+    <div class="card mb-2 material-row <?= !$m['active'] ? 'opacity-50' : '' ?>">
+        <div class="card-body py-2 px-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong style="font-size:0.9rem;"><?= htmlspecialchars($m['name']) ?></strong>
+                    <div class="d-flex flex-wrap gap-1 mt-1">
+                        <?php if ($m['specification'] ?? $m['category_name'] ?? null): ?>
+                        <span class="badge bg-light text-dark" style="font-size:0.65rem;"><?= htmlspecialchars($m['specification'] ?? $m['category_name']) ?></span>
+                        <?php endif; ?>
+                        <?php if ($m['classification']): ?>
+                        <span class="badge bg-light text-dark" style="font-size:0.65rem;"><?= htmlspecialchars($m['classification']) ?></span>
+                        <?php endif; ?>
+                        <?php if ($m['unit_abbr']): ?>
+                        <span class="badge bg-info text-white" style="font-size:0.65rem;"><?= htmlspecialchars($m['unit_abbr']) ?></span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-primary edit-material-btn" 
+                        data-id="<?= $m['id'] ?>" 
+                        data-name="<?= htmlspecialchars($m['name']) ?>"
+                        data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>"
+                        data-category-id="<?= $m['category_id'] ?? '' ?>"
+                        data-unit-id="<?= $m['unit_id'] ?? '' ?>"
+                        data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <?php if ($m['active']): ?>
+                    <form method="POST" action="/admin/materials/delete" onsubmit="return confirm('Desativar?')">
+                        <input type="hidden" name="id" value="<?= $m['id'] ?>">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endforeach; ?>
+    <?php endif; ?>
 </div>
 
 <!-- Modal Novo Material -->

@@ -4,7 +4,7 @@
 <form method="POST" action="/admin/orders/settings/update">
     <div class="row">
         <!-- Fase 1: Cotação -->
-        <div class="col-lg-4 mb-4">
+        <div class="col-12 col-lg-4 mb-3">
             <div class="card h-100">
                 <div class="card-header bg-warning bg-opacity-10">
                     <i class="bi bi-1-circle text-warning"></i> <strong>Cotação</strong>
@@ -26,7 +26,7 @@
         </div>
 
         <!-- Fase 2: Aprovação -->
-        <div class="col-lg-4 mb-4">
+        <div class="col-12 col-lg-4 mb-3">
             <div class="card h-100">
                 <div class="card-header bg-info bg-opacity-10">
                     <i class="bi bi-2-circle text-info"></i> <strong>Aprovação</strong>
@@ -48,7 +48,7 @@
         </div>
 
         <!-- Fase 3: Conclusão -->
-        <div class="col-lg-4 mb-4">
+        <div class="col-12 col-lg-4 mb-3">
             <div class="card h-100">
                 <div class="card-header bg-success bg-opacity-10">
                     <i class="bi bi-3-circle text-success"></i> <strong>Conclusão (PDF)</strong>

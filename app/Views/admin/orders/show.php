@@ -17,7 +17,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
 
 <div class="row">
     <!-- Coluna principal -->
-    <div class="col-lg-8">
+    <div class="col-lg-8 order-2 order-lg-1">
         <!-- Status card -->
         <div class="card mb-3 border-<?= $statusInfo[1] ?>">
             <div class="card-body d-flex align-items-center gap-3">
@@ -161,7 +161,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
     </div>
 
     <!-- Coluna lateral -->
-    <div class="col-lg-4">
+    <div class="col-lg-4 order-1 order-lg-2 mb-3">
         <!-- Ações -->
         <div class="card mb-3">
             <div class="card-header">Ações</div>

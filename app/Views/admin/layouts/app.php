@@ -103,8 +103,31 @@
         @media (max-width: 768px) {
             .sidebar { transform: translateX(-100%); }
             .sidebar.show { transform: translateX(0); }
-            .main-content { margin-left: 0; }
+            .main-content { margin-left: 0; padding: 0.75rem; }
+            .top-bar { 
+                padding: 0.75rem 1rem; 
+                margin-bottom: 1rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .top-bar h5 { font-size: 1rem; }
+            .stat-card .stat-number { font-size: 1.5rem; }
+            .card-header { padding: 0.6rem 0.8rem; font-size: 0.9rem; }
+            .card-body { padding: 0.8rem; }
+            .table { font-size: 0.8rem; }
+            .table th, .table td { padding: 0.4rem 0.5rem; }
+            .btn-lg { padding: 0.6rem 1rem; font-size: 0.95rem; }
+            .modal-dialog { margin: 0.5rem; }
         }
+        /* Overlay para sidebar mobile */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        .sidebar-overlay.show { display: block; }
     </style>
 </head>
 <body>
@@ -203,17 +226,20 @@
         </ul>
     </nav>
 
+    <!-- Overlay sidebar mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
     <!-- Main Content -->
     <main class="main-content">
         <div class="top-bar">
-            <div>
-                <button class="btn btn-sm btn-outline-secondary d-md-none" onclick="document.getElementById('sidebar').classList.toggle('show')">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-sm btn-outline-secondary d-md-none me-2" onclick="toggleSidebar()">
                     <i class="bi bi-list"></i>
                 </button>
-                <h5 class="d-inline mb-0 ms-2"><?= $pageTitle ?? 'Dashboard' ?></h5>
+                <h5 class="d-inline mb-0"><?= $pageTitle ?? 'Dashboard' ?></h5>
             </div>
-            <div class="d-flex align-items-center gap-3">
-                <span class="text-muted small"><?= htmlspecialchars($user['name'] ?? '') ?></span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted small d-none d-sm-inline"><?= htmlspecialchars($user['name'] ?? '') ?></span>
                 <span class="badge bg-primary"><?= ucfirst(str_replace('_', ' ', $user['role'] ?? '')) ?></span>
             </div>
         </div>
@@ -229,6 +255,18 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('show');
+        document.getElementById('sidebarOverlay').classList.toggle('show');
+    }
+    // Fechar sidebar ao clicar em link no mobile
+    if (window.innerWidth <= 768) {
+        document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+            link.addEventListener('click', () => { toggleSidebar(); });
+        });
+    }
+    </script>
 
     <!-- Indicador global de geração em background -->
     <div id="global-job-indicator" style="display:none; position:fixed; bottom:20px; right:20px; z-index:9999; max-width:380px;">
