@@ -257,6 +257,36 @@ HTML;
         return self::wrap("Pedido Aprovado - {$order['code']}", $body);
     }
 
+    public static function purchaseOrderRejected(array $order, string $rejectedBy, string $reason): string
+    {
+        $totalFormatted = number_format($order['total_estimated'] ?? 0, 2, ',', '.');
+        $date = date('d/m/Y \à\s H:i');
+
+        $body = <<<HTML
+<p style="margin-bottom:15px;">O pedido de materiais foi <strong style="color:#dc3545;">REJEITADO</strong>.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#fdeaea; border-radius:6px; margin-bottom:20px; border:1px solid #f5c6cb;">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#721c24; text-transform:uppercase; font-weight:600;">✗ Pedido Rejeitado</p>
+    <p style="margin:0; font-size:17px; color:#721c24; font-weight:600;">{$order['code']}</p>
+    <p style="margin:8px 0 0; font-size:13px; color:#555;">Fornecedor: <strong>{$order['supplier_name']}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Valor cotado: <strong>R$ {$totalFormatted}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Rejeitado por: <strong>{$rejectedBy}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Data: {$date}</p>
+</td></tr>
+</table>
+
+<p style="margin-bottom:5px;"><strong>Motivo da rejeição:</strong></p>
+<div style="background:#f8f9fa; border-left:3px solid #dc3545; padding:12px 15px; border-radius:0 6px 6px 0; color:#444; font-size:14px; line-height:1.6;">
+    {$reason}
+</div>
+
+<p style="text-align:center; font-size:12px; color:#999; margin-top:20px;">O pedido deverá ser revisado e, se necessário, um novo pedido poderá ser criado.</p>
+HTML;
+
+        return self::wrap("Pedido Rejeitado - {$order['code']}", $body);
+    }
+
     public static function contactReceived(string $name, string $email, string $phone, string $message): string
     {
         $date = date('d/m/Y \à\s H:i');

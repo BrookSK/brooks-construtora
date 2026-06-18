@@ -231,18 +231,43 @@ class PurchaseOrderController extends Controller
                 $personName
             );
 
-            // Webhook de rejeição
+            // E-mail de rejeição (fase 3)
+            $emails = Setting::get('orders_completed_emails', '');
+            if (!empty($emails)) {
+                try {
+                    $mailService = new MailService();
+                    $subject = "Pedido REJEITADO - {$order['code']}";
+                    $body = EmailTemplate::purchaseOrderRejected($order, $personName, $notes);
+                    
+                    $emailList = array_map('trim', explode(',', $emails));
+                    foreach ($emailList as $email) {
+                        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                            $mailService->send($email, $subject, $body, true);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    error_log("Erro ao enviar e-mail de rejeição: " . $e->getMessage());
+                }
+            }
+
+            // Webhook de rejeição (usa os dados da fase 3 - conclusão)
             $webhookUrl = Setting::get('orders_completed_webhook', '');
             if (!empty($webhookUrl)) {
                 $message = "❌ *PEDIDO REJEITADO*\n\n"
                     . "🔖 *Pedido:* {$order['code']}\n"
+                    . "🏢 *Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                    . "💰 *Valor cotado:* R$ " . number_format($order['total_estimated'], 2, ',', '.') . "\n"
                     . "👤 *Rejeitado por:* {$personName}\n"
-                    . "📝 *Motivo:* {$notes}";
+                    . "📅 *Data:* " . date('d/m/Y H:i') . "\n\n"
+                    . "📝 *Motivo da rejeição:*\n{$notes}";
 
                 $this->sendWebhook($webhookUrl, [
                     'event' => 'order_rejected',
                     'order_code' => $order['code'],
+                    'supplier' => $order['supplier_name'] ?? 'N/A',
+                    'total' => $order['total_estimated'],
                     'rejected_by' => $personName,
+                    'rejected_at' => date('Y-m-d H:i:s'),
                     'reason' => $notes,
                     'phone' => Setting::get('orders_completed_phone', ''),
                     'phone_name' => Setting::get('orders_completed_phone_name', ''),

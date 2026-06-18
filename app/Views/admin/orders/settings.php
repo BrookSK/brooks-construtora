@@ -79,8 +79,8 @@
         <div class="col-12 col-lg-4 mb-3">
             <div class="card h-100">
                 <div class="card-header bg-success bg-opacity-10">
-                    <i class="bi bi-3-circle text-success"></i> <strong>Conclusão (PDF)</strong>
-                    <p class="small text-muted mb-0 mt-1">Quem recebe a formalização final em PDF</p>
+                    <i class="bi bi-3-circle text-success"></i> <strong>Conclusão</strong>
+                    <p class="small text-muted mb-0 mt-1">Quem recebe a notificação final (aprovação ou rejeição)</p>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
@@ -130,7 +130,7 @@
             <i class="bi bi-arrow-right text-muted"></i>
             <span class="badge bg-info p-2">3. E-mail + Webhook → Aprovação</span>
             <i class="bi bi-arrow-right text-muted"></i>
-            <span class="badge bg-success p-2">4. E-mail + Webhook + PDF</span>
+            <span class="badge bg-success p-2">4. E-mail + Webhook → Aprovado/Rejeitado</span>
         </div>
         <p class="text-muted small text-center mt-3 mb-0">
             Cada fase envia notificações para os e-mails configurados acima + dispara o webhook correspondente.<br>
