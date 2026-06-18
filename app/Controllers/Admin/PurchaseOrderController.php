@@ -8,6 +8,9 @@ use App\Core\Database;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseOrderHistory;
+use App\Models\PurchaseOrderSupplier;
+use App\Models\PurchaseOrderItemPrice;
+use App\Models\MaterialPriceHistory;
 use App\Models\Supplier;
 use App\Models\Material;
 use App\Models\MaterialCategory;
@@ -75,7 +78,7 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        $supplierId = (int) $this->input('supplier_id', 0);
+        $supplierIds = $_POST['supplier_ids'] ?? [];
         $description = trim($this->input('description', ''));
         $items = $_POST['items'] ?? [];
 
@@ -91,7 +94,7 @@ class PurchaseOrderController extends Controller
 
         $orderId = PurchaseOrder::create([
             'code' => $code,
-            'supplier_id' => $supplierId ?: null,
+            'supplier_id' => null,
             'status' => 'pending_quote',
             'description' => $description,
             'created_by' => Auth::id(),
@@ -100,6 +103,19 @@ class PurchaseOrderController extends Controller
             'approval_token' => $approvalToken,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
+
+        // Salvar fornecedores vinculados
+        foreach ($supplierIds as $sid) {
+            $sid = (int) $sid;
+            if ($sid > 0) {
+                PurchaseOrderSupplier::create([
+                    'order_id' => $orderId,
+                    'supplier_id' => $sid,
+                    'status' => 'pending',
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+            }
+        }
 
         // Salvar itens
         foreach ($items as $item) {
@@ -149,11 +165,15 @@ class PurchaseOrderController extends Controller
 
         $items = PurchaseOrderItem::getByOrder($id);
         $history = PurchaseOrderHistory::getByOrder($id);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($id);
+        $itemPrices = PurchaseOrderItemPrice::getByOrder($id);
 
         $this->view('admin.orders.show', [
             'order' => $order,
             'items' => $items,
             'history' => $history,
+            'orderSuppliers' => $orderSuppliers,
+            'itemPrices' => $itemPrices,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);
@@ -355,6 +375,36 @@ class PurchaseOrderController extends Controller
                 'response' => '',
             ]);
         }
+    }
+
+    /**
+     * Histórico de preços por material/fornecedor
+     */
+    public function priceHistory(): void
+    {
+        $materialId = (int) $this->input('material_id', 0);
+        $supplierId = (int) $this->input('supplier_id', 0);
+
+        if ($materialId) {
+            $records = MaterialPriceHistory::getByMaterial($materialId);
+        } elseif ($supplierId) {
+            $records = MaterialPriceHistory::getBySupplier($supplierId);
+        } else {
+            $records = MaterialPriceHistory::getAllGroupedByMaterial(500);
+        }
+
+        $materials = Material::allActive();
+        $suppliers = Supplier::allActive();
+
+        $this->view('admin.orders.price_history', [
+            'records' => $records,
+            'materials' => $materials,
+            'suppliers' => $suppliers,
+            'filterMaterial' => $materialId,
+            'filterSupplier' => $supplierId,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
     }
 
     // ===============================

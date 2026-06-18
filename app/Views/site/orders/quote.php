@@ -10,12 +10,13 @@
         body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
         .page-header { background: #3a3b4e; color: #fff; padding: 1rem 0; }
         .main-card { border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .supplier-section { border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+        .supplier-section h6 { margin-bottom: 0.75rem; }
         .price-input { font-weight: 600; text-align: right; }
-        .item-total { font-weight: 700; color: #28a745; }
-        .grand-total { font-size: 1.5rem; font-weight: 700; color: #28a745; }
+        .supplier-total { font-weight: 700; font-size: 1.1rem; }
         @media (max-width: 768px) {
-            .table-responsive table { font-size: 0.8rem; }
-            .price-input { font-size: 0.85rem; }
+            .main-card .card-body { padding: 1rem; }
+            .main-card .card-header { padding: 1rem; }
         }
     </style>
 </head>
@@ -61,96 +62,93 @@
                         </div>
                     </div>
 
-                    <h6 class="mb-3"><i class="bi bi-list-check"></i> Itens - Informe o valor unitário</h6>
-                    
-                    <!-- Desktop: Tabela -->
-                    <div class="d-none d-md-block">
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Material</th>
-                                        <th>Espec.</th>
-                                        <th>Class.</th>
-                                        <th>Unid.</th>
-                                        <th class="text-center">Qtd</th>
-                                        <th class="text-end" style="min-width:120px;">Valor Unit. (R$)</th>
-                                        <th class="text-end">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($items as $i => $item): ?>
-                                    <tr>
-                                        <td><?= $i + 1 ?></td>
-                                        <td><strong><?= htmlspecialchars($item['material_name']) ?></strong></td>
-                                        <td class="text-muted"><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
-                                        <td class="text-muted"><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
-                                        <td class="text-center fw-bold"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
-                                        <td>
-                                            <input type="text" inputmode="decimal" class="form-control form-control-sm price-input" 
-                                                id="price-<?= $item['id'] ?>"
-                                                name="items[<?= $item['id'] ?>][unit_price]" 
-                                                data-qty="<?= $item['quantity'] ?>"
-                                                data-id="<?= $item['id'] ?>"
-                                                placeholder="0,00" required>
-                                        </td>
-                                        <td class="text-end item-total" id="total-<?= $item['id'] ?>">R$ 0,00</td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                                <tfoot>
-                                    <tr class="table-light">
-                                        <td colspan="7" class="text-end fw-bold">TOTAL GERAL:</td>
-                                        <td class="text-end grand-total" id="grandTotal">R$ 0,00</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+                    <!-- Lista de itens (referência) -->
+                    <h6 class="mb-2"><i class="bi bi-list-check"></i> Itens do Pedido</h6>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Material</th>
+                                    <th>Espec.</th>
+                                    <th>Class.</th>
+                                    <th>Unid.</th>
+                                    <th class="text-center">Qtd</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($items as $i => $item): ?>
+                                <tr>
+                                    <td><?= $i + 1 ?></td>
+                                    <td><strong><?= htmlspecialchars($item['material_name']) ?></strong></td>
+                                    <td class="text-muted small"><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
+                                    <td class="text-muted small"><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
+                                    <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
+                                    <td class="text-center fw-bold"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     </div>
 
-                    <!-- Mobile: Cards (inputs referenciam os mesmos do desktop via JS) -->
-                    <div class="d-md-none">
-                        <?php foreach ($items as $i => $item): ?>
-                        <div class="border rounded p-3 mb-2 bg-white">
-                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                <strong style="font-size:0.9rem;"><?= htmlspecialchars($item['material_name']) ?></strong>
-                                <span class="badge bg-light text-dark">#<?= $i + 1 ?></span>
-                            </div>
-                            <div class="d-flex flex-wrap gap-1 mb-2">
-                                <?php if ($item['specification']): ?><span class="badge bg-light text-muted" style="font-size:0.65rem;"><?= htmlspecialchars($item['specification']) ?></span><?php endif; ?>
-                                <?php if ($item['classification']): ?><span class="badge bg-light text-muted" style="font-size:0.65rem;"><?= htmlspecialchars($item['classification']) ?></span><?php endif; ?>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted small">Qtd: <strong><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></strong> <?= htmlspecialchars($item['unit'] ?? '') ?></span>
-                                <div style="max-width:140px;">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text" style="font-size:0.75rem;">R$</span>
-                                        <input type="text" inputmode="decimal" class="form-control price-input-mobile" 
-                                            data-target="price-<?= $item['id'] ?>"
-                                            data-qty="<?= $item['quantity'] ?>"
-                                            data-id="<?= $item['id'] ?>"
-                                            placeholder="0,00" style="font-size:0.9rem;">
-                                    </div>
+                    <!-- Preços por fornecedor -->
+                    <?php if (!empty($orderSuppliers)): ?>
+                    <h6 class="mb-3"><i class="bi bi-currency-dollar"></i> Informe os valores por fornecedor</h6>
+
+                    <?php foreach ($orderSuppliers as $os): ?>
+                    <div class="supplier-section">
+                        <h6 class="text-primary"><i class="bi bi-building"></i> <?= htmlspecialchars($os['supplier_name']) ?></h6>
+                        
+                        <?php foreach ($items as $item): ?>
+                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                            <span class="small"><?= htmlspecialchars($item['material_name']) ?> <span class="text-muted">(x<?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?>)</span></span>
+                            <div style="max-width:130px;">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text" style="font-size:0.7rem;">R$</span>
+                                    <input type="text" inputmode="decimal" class="form-control price-input price-supplier-<?= $os['supplier_id'] ?>" 
+                                        name="supplier_prices[<?= $os['supplier_id'] ?>][<?= $item['id'] ?>]" 
+                                        data-qty="<?= $item['quantity'] ?>"
+                                        data-supplier="<?= $os['supplier_id'] ?>"
+                                        placeholder="0,00" required>
                                 </div>
-                            </div>
-                            <div class="text-end mt-1">
-                                <small class="item-total text-success fw-bold" id="total-m-<?= $item['id'] ?>">R$ 0,00</small>
                             </div>
                         </div>
                         <?php endforeach; ?>
-                        <div class="border-top pt-2 mt-2 text-end">
-                            <span class="fw-bold">TOTAL: </span>
-                            <span class="grand-total" id="grandTotalMobile">R$ 0,00</span>
+
+                        <div class="text-end mt-2">
+                            <strong>Total: <span class="supplier-total text-success" id="supplier-total-<?= $os['supplier_id'] ?>">R$ 0,00</span></strong>
                         </div>
                     </div>
+                    <?php endforeach; ?>
 
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <label class="form-label">Observações da Cotação</label>
-                            <textarea class="form-control" name="quote_notes" rows="2" placeholder="Observações sobre preços, prazos de entrega, etc."></textarea>
+                    <?php else: ?>
+                    <!-- Sem fornecedores: preço único por item (legado) -->
+                    <h6 class="mb-3"><i class="bi bi-currency-dollar"></i> Informe os valores unitários</h6>
+                    <?php foreach ($items as $item): ?>
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <strong class="small"><?= htmlspecialchars($item['material_name']) ?></strong>
+                            <span class="text-muted small ms-1">(x<?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?> <?= htmlspecialchars($item['unit'] ?? '') ?>)</span>
                         </div>
+                        <div style="max-width:140px;">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text" style="font-size:0.7rem;">R$</span>
+                                <input type="text" inputmode="decimal" class="form-control price-input price-legacy" 
+                                    name="items[<?= $item['id'] ?>][unit_price]" 
+                                    data-qty="<?= $item['quantity'] ?>"
+                                    placeholder="0,00" required>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                    <div class="text-end mt-2">
+                        <strong>Total: <span class="supplier-total text-success" id="legacy-total">R$ 0,00</span></strong>
+                    </div>
+                    <?php endif; ?>
+
+                    <div class="mt-3">
+                        <label class="form-label">Observações da Cotação</label>
+                        <textarea class="form-control" name="quote_notes" rows="2" placeholder="Observações sobre preços, prazos, etc."></textarea>
                     </div>
                 </div>
 
@@ -166,57 +164,35 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    // Desktop inputs (são os que vão no form)
     document.querySelectorAll('.price-input').forEach(input => {
-        input.addEventListener('input', function() { calculateTotals(); });
-        input.addEventListener('blur', function() { formatPrice(this); });
-    });
-
-    // Mobile inputs (sincronizam com os desktop)
-    document.querySelectorAll('.price-input-mobile').forEach(input => {
-        input.addEventListener('input', function() {
-            const targetId = this.dataset.target;
-            const desktopInput = document.getElementById(targetId);
-            if (desktopInput) desktopInput.value = this.value;
+        input.addEventListener('input', calculateTotals);
+        input.addEventListener('blur', function() {
+            let val = this.value.replace(/[^\d,\.]/g, '').replace(',', '.');
+            if (val && !isNaN(parseFloat(val))) {
+                this.value = parseFloat(val).toFixed(2).replace('.', ',');
+            }
             calculateTotals();
         });
-        input.addEventListener('blur', function() { 
-            formatPrice(this);
-            const targetId = this.dataset.target;
-            const desktopInput = document.getElementById(targetId);
-            if (desktopInput) desktopInput.value = this.value;
-        });
     });
 
-    function formatPrice(el) {
-        let val = el.value.replace(/[^\d,\.]/g, '').replace(',', '.');
-        if (val && !isNaN(parseFloat(val))) {
-            el.value = parseFloat(val).toFixed(2).replace('.', ',');
-        }
-    }
-
     function calculateTotals() {
-        let grandTotal = 0;
-
+        // Por fornecedor
+        const supplierTotals = {};
         document.querySelectorAll('.price-input').forEach(input => {
             const val = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
             const qty = parseFloat(input.dataset.qty) || 0;
             const total = val * qty;
-            const itemId = input.dataset.id;
-            grandTotal += total;
-
-            const formatted = 'R$ ' + total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-            const desktopEl = document.getElementById('total-' + itemId);
-            const mobileEl = document.getElementById('total-m-' + itemId);
-            if (desktopEl) desktopEl.textContent = formatted;
-            if (mobileEl) mobileEl.textContent = formatted;
+            const sid = input.dataset.supplier || 'legacy';
+            
+            if (!supplierTotals[sid]) supplierTotals[sid] = 0;
+            supplierTotals[sid] += total;
         });
 
-        const grandFormatted = 'R$ ' + grandTotal.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        const gtDesktop = document.getElementById('grandTotal');
-        const gtMobile = document.getElementById('grandTotalMobile');
-        if (gtDesktop) gtDesktop.textContent = grandFormatted;
-        if (gtMobile) gtMobile.textContent = grandFormatted;
+        // Atualizar totais exibidos
+        for (const [sid, total] of Object.entries(supplierTotals)) {
+            const el = document.getElementById('supplier-total-' + sid) || document.getElementById('legacy-total');
+            if (el) el.textContent = 'R$ ' + total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
     }
     </script>
 </body>

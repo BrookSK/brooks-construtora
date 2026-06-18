@@ -7,6 +7,10 @@ use App\Core\Database;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseOrderHistory;
+use App\Models\PurchaseOrderSupplier;
+use App\Models\PurchaseOrderItemPrice;
+use App\Models\MaterialPriceHistory;
+use App\Models\Supplier;
 use App\Models\Setting;
 use App\Services\MailService;
 use App\Services\EmailTemplate;
@@ -30,7 +34,6 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        // Verificar se ainda está no status correto
         if (!in_array($order['status'], ['pending_quote'])) {
             $this->view('site.orders.already_processed', [
                 'order' => $order,
@@ -40,10 +43,12 @@ class PurchaseOrderController extends Controller
         }
 
         $items = PurchaseOrderItem::getByOrder($order['id']);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($order['id']);
 
         $this->view('site.orders.quote', [
             'order' => $order,
             'items' => $items,
+            'orderSuppliers' => $orderSuppliers,
             'token' => $token,
             'flash' => $this->getFlash(),
         ]);
@@ -74,30 +79,81 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        $items = $_POST['items'] ?? [];
-        $totalEstimated = 0;
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($order['id']);
+        $items = PurchaseOrderItem::getByOrder($order['id']);
+        $quoteNotes = trim($this->input('quote_notes', ''));
+        $supplierPrices = $_POST['supplier_prices'] ?? [];
+        $lowestTotal = PHP_FLOAT_MAX;
 
-        // Atualizar preços dos itens
-        foreach ($items as $itemId => $itemData) {
-            $unitPrice = (float) str_replace(['.', ','], ['', '.'], $itemData['unit_price'] ?? '0');
-            $item = PurchaseOrderItem::find((int) $itemId);
-            
-            if ($item && $item['order_id'] == $order['id']) {
-                $totalPrice = $unitPrice * $item['quantity'];
-                PurchaseOrderItem::updateById((int) $itemId, [
-                    'unit_price' => $unitPrice,
-                    'total_price' => $totalPrice,
-                ]);
-                $totalEstimated += $totalPrice;
+        // Processar preços por fornecedor
+        foreach ($orderSuppliers as $os) {
+            $sid = $os['supplier_id'];
+            $supplierTotal = 0;
+            $pricesForHistory = [];
+
+            if (isset($supplierPrices[$sid])) {
+                foreach ($supplierPrices[$sid] as $itemId => $priceStr) {
+                    $unitPrice = (float) str_replace(['.', ','], ['', '.'], $priceStr);
+                    $item = PurchaseOrderItem::find((int) $itemId);
+                    
+                    if ($item && $item['order_id'] == $order['id']) {
+                        $totalPrice = $unitPrice * $item['quantity'];
+                        $supplierTotal += $totalPrice;
+
+                        PurchaseOrderItemPrice::create([
+                            'order_id' => $order['id'],
+                            'item_id' => (int) $itemId,
+                            'supplier_id' => $sid,
+                            'unit_price' => $unitPrice,
+                            'total_price' => $totalPrice,
+                            'created_at' => date('Y-m-d H:i:s'),
+                        ]);
+
+                        $pricesForHistory[$item['id']] = $unitPrice;
+                    }
+                }
+            }
+
+            // Atualizar o fornecedor do pedido
+            PurchaseOrderSupplier::updateById($os['id'], [
+                'status' => 'quoted',
+                'total' => $supplierTotal,
+                'quoted_by_name' => $quotedByName,
+                'quoted_at' => date('Y-m-d H:i:s'),
+                'quote_notes' => $quoteNotes,
+            ]);
+
+            // Salvar no histórico de preços
+            MaterialPriceHistory::recordFromQuote($order['id'], $sid, $items, $pricesForHistory);
+
+            if ($supplierTotal < $lowestTotal) {
+                $lowestTotal = $supplierTotal;
             }
         }
 
-        $quoteNotes = trim($this->input('quote_notes', ''));
+        // Se não tem fornecedores vinculados, usar fluxo legado (preços direto nos itens)
+        if (empty($orderSuppliers)) {
+            $itemPrices = $_POST['items'] ?? [];
+            $totalEstimated = 0;
+            foreach ($itemPrices as $itemId => $itemData) {
+                $unitPrice = (float) str_replace(['.', ','], ['', '.'], $itemData['unit_price'] ?? '0');
+                $item = PurchaseOrderItem::find((int) $itemId);
+                if ($item && $item['order_id'] == $order['id']) {
+                    $totalPrice = $unitPrice * $item['quantity'];
+                    PurchaseOrderItem::updateById((int) $itemId, [
+                        'unit_price' => $unitPrice,
+                        'total_price' => $totalPrice,
+                    ]);
+                    $totalEstimated += $totalPrice;
+                }
+            }
+            $lowestTotal = $totalEstimated;
+        }
 
         // Atualizar pedido
         PurchaseOrder::updateById($order['id'], [
             'status' => 'pending_approval',
-            'total_estimated' => $totalEstimated,
+            'total_estimated' => $lowestTotal != PHP_FLOAT_MAX ? $lowestTotal : 0,
             'quoted_by_name' => $quotedByName,
             'quoted_at' => date('Y-m-d H:i:s'),
             'quote_notes' => $quoteNotes,
@@ -146,15 +202,14 @@ class PurchaseOrderController extends Controller
         }
 
         $items = PurchaseOrderItem::getByOrder($order['id']);
-        $supplier = null;
-        if ($order['supplier_id']) {
-            $supplier = \App\Models\Supplier::find($order['supplier_id']);
-        }
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($order['id']);
+        $itemPrices = PurchaseOrderItemPrice::getByOrder($order['id']);
 
         $this->view('site.orders.approval', [
             'order' => $order,
             'items' => $items,
-            'supplier' => $supplier,
+            'orderSuppliers' => $orderSuppliers,
+            'itemPrices' => $itemPrices,
             'token' => $token,
             'flash' => $this->getFlash(),
         ]);
@@ -181,6 +236,7 @@ class PurchaseOrderController extends Controller
         $action = $this->input('action', '');
         $personName = trim($this->input('person_name', ''));
         $notes = trim($this->input('approval_notes', ''));
+        $approvedSupplierId = (int) $this->input('approved_supplier_id', 0);
 
         if (empty($personName)) {
             $this->setFlash('error', 'Informe seu nome para registrar a decisão.');
@@ -189,19 +245,64 @@ class PurchaseOrderController extends Controller
         }
 
         if ($action === 'approve') {
+            $orderSuppliers = PurchaseOrderSupplier::getByOrder($order['id']);
+
+            // Se tem fornecedores vinculados, precisa selecionar qual aprovar
+            if (!empty($orderSuppliers) && $approvedSupplierId <= 0) {
+                $this->setFlash('error', 'Selecione qual fornecedor está aprovando.');
+                $this->redirect('/pedido/aprovacao/' . $token);
+                return;
+            }
+
+            $approvedSupplierName = '';
+            $approvedTotal = $order['total_estimated'];
+
+            if (!empty($orderSuppliers) && $approvedSupplierId > 0) {
+                // Marcar fornecedor aprovado
+                foreach ($orderSuppliers as $os) {
+                    if ($os['supplier_id'] == $approvedSupplierId) {
+                        PurchaseOrderSupplier::updateById($os['id'], ['approved' => 1, 'status' => 'approved']);
+                        $approvedSupplierName = $os['supplier_name'];
+                        $approvedTotal = $os['total'];
+
+                        // Copiar preços do fornecedor aprovado para os itens do pedido
+                        $prices = PurchaseOrderItemPrice::getByOrderAndSupplier($order['id'], $approvedSupplierId);
+                        foreach ($prices as $p) {
+                            PurchaseOrderItem::updateById($p['item_id'], [
+                                'unit_price' => $p['unit_price'],
+                                'total_price' => $p['total_price'],
+                            ]);
+                        }
+
+                        // Marcar no histórico de preços como aprovado
+                        Database::query(
+                            "UPDATE material_price_history SET was_approved = 1 WHERE order_id = ? AND supplier_id = ?",
+                            [$order['id'], $approvedSupplierId]
+                        );
+                    } else {
+                        PurchaseOrderSupplier::updateById($os['id'], ['status' => 'rejected']);
+                    }
+                }
+            }
+
             PurchaseOrder::updateById($order['id'], [
                 'status' => 'approved',
+                'supplier_id' => $approvedSupplierId ?: null,
+                'total_estimated' => $approvedTotal,
                 'approved_by_name' => $personName,
                 'approved_at' => date('Y-m-d H:i:s'),
                 'approval_notes' => $notes,
             ]);
 
-            PurchaseOrderHistory::log(
-                $order['id'],
-                'approved',
-                "Pedido aprovado por {$personName}" . (!empty($notes) ? ". Obs: {$notes}" : ''),
-                $personName
-            );
+            $approvalDesc = "Pedido aprovado por {$personName}";
+            if ($approvedSupplierName) {
+                $approvalDesc .= ". Fornecedor aprovado: {$approvedSupplierName}";
+            }
+            if (!empty($notes)) {
+                $approvalDesc .= ". Obs: {$notes}";
+            }
+
+            PurchaseOrderHistory::log($order['id'], 'approved', $approvalDesc, $personName);
 
             // Enviar notificações de conclusão
             $this->sendCompletedNotifications($order['id']);

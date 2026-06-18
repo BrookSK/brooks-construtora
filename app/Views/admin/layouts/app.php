@@ -199,6 +199,13 @@
                 </a>
             </li>
             <?php endif; ?>
+            <?php if (\App\Core\Auth::hasPermission('orders')): ?>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'price_history' ? 'active' : '' ?>" href="/admin/orders/price-history">
+                    <i class="bi bi-graph-up"></i> Histórico Preços
+                </a>
+            </li>
+            <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('users')): ?>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'users' ? 'active' : '' ?>" href="/admin/users">

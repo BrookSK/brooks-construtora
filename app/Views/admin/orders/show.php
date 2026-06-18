@@ -42,8 +42,8 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
             <div class="card-body">
                 <div class="row">
                     <div class="col-sm-6 mb-2">
-                        <small class="text-muted d-block">Fornecedor</small>
-                        <strong><?= htmlspecialchars($order['supplier_name'] ?? 'N/A') ?></strong>
+                        <small class="text-muted d-block">Fornecedor Aprovado</small>
+                        <strong><?= htmlspecialchars($order['supplier_name'] ?? 'Pendente') ?></strong>
                     </div>
                     <div class="col-sm-6 mb-2">
                         <small class="text-muted d-block">Solicitante</small>
@@ -138,6 +138,41 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 </table>
             </div>
         </div>
+
+        <!-- Fornecedores Cotados -->
+        <?php if (!empty($orderSuppliers)): ?>
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-building"></i> Fornecedores Cotados</div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    <?php foreach ($orderSuppliers as $os): ?>
+                    <div class="list-group-item <?= $os['approved'] ? 'list-group-item-success' : '' ?>">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong><?= htmlspecialchars($os['supplier_name']) ?></strong>
+                                <?php if ($os['approved']): ?>
+                                <span class="badge bg-success ms-1">Aprovado</span>
+                                <?php elseif ($os['status'] === 'rejected'): ?>
+                                <span class="badge bg-danger ms-1">Não selecionado</span>
+                                <?php elseif ($os['status'] === 'quoted'): ?>
+                                <span class="badge bg-info ms-1">Cotado</span>
+                                <?php else: ?>
+                                <span class="badge bg-secondary ms-1">Pendente</span>
+                                <?php endif; ?>
+                            </div>
+                            <strong class="<?= $os['approved'] ? 'text-success' : '' ?>">
+                                <?= $os['total'] ? 'R$ ' . number_format($os['total'], 2, ',', '.') : '-' ?>
+                            </strong>
+                        </div>
+                        <?php if ($os['quoted_by_name']): ?>
+                        <small class="text-muted">Cotado por <?= htmlspecialchars($os['quoted_by_name']) ?> em <?= $os['quoted_at'] ? date('d/m/Y H:i', strtotime($os['quoted_at'])) : '' ?></small>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Histórico -->
         <div class="card mb-3">

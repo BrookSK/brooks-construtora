@@ -4,26 +4,22 @@
 <form method="POST" action="/admin/orders/store" id="orderForm">
     <div class="row">
         <div class="col-lg-9">
-            <!-- Fornecedor -->
+            <!-- Fornecedores -->
             <div class="card mb-3">
-                <div class="card-header"><i class="bi bi-building"></i> Fornecedor</div>
+                <div class="card-header"><i class="bi bi-building"></i> Fornecedores</div>
                 <div class="card-body">
-                    <div class="row align-items-end">
-                        <div class="col-md-8 mb-2 mb-md-0">
-                            <label class="form-label">Selecionar Fornecedor</label>
-                            <select class="form-select" name="supplier_id" id="supplierSelect">
-                                <option value="">-- Selecione --</option>
-                                <?php foreach ($suppliers as $s): ?>
-                                <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?> <?= $s['cnpj'] ? '(' . $s['cnpj'] . ')' : '' ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <button type="button" class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#newSupplierModal">
-                                <i class="bi bi-plus"></i> Novo Fornecedor
-                            </button>
-                        </div>
-                    </div>
+                    <label class="form-label">Selecionar Fornecedores (pode selecionar mais de um)</label>
+                    <select class="form-select mb-2" id="supplierSelect" multiple size="4">
+                        <?php foreach ($suppliers as $s): ?>
+                        <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?> <?= $s['cnpj'] ? '(' . $s['cnpj'] . ')' : '' ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted d-block mb-2">Segure Ctrl (ou Cmd) para selecionar múltiplos. Opcional — pode enviar sem fornecedor.</small>
+                    <div id="selectedSuppliers" class="d-flex flex-wrap gap-1 mb-2"></div>
+                    <input type="hidden" name="supplier_ids_json" id="supplierIdsJson" value="[]">
+                    <button type="button" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#newSupplierModal">
+                        <i class="bi bi-plus"></i> Cadastrar Novo Fornecedor
+                    </button>
                 </div>
             </div>
 
@@ -317,14 +313,49 @@ function updateMobileDetails(idx, opt) {
     }
 }
 
-// Fornecedor inline
+// Fornecedor - multi-select
+const supplierSelect = document.getElementById('supplierSelect');
+const selectedContainer = document.getElementById('selectedSuppliers');
+
+supplierSelect.addEventListener('change', updateSelectedSuppliers);
+
+function updateSelectedSuppliers() {
+    selectedContainer.innerHTML = '';
+    // Remove hidden inputs antigos
+    document.querySelectorAll('input[name="supplier_ids[]"]').forEach(el => el.remove());
+    
+    const selected = Array.from(supplierSelect.selectedOptions);
+    selected.forEach(opt => {
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-primary d-flex align-items-center gap-1';
+        badge.innerHTML = `${opt.text} <button type="button" class="btn-close btn-close-white" style="font-size:0.5rem;" onclick="deselectSupplier(${opt.value})"></button>`;
+        selectedContainer.appendChild(badge);
+        
+        // Hidden input para enviar no form
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'supplier_ids[]';
+        hidden.value = opt.value;
+        selectedContainer.appendChild(hidden);
+    });
+}
+
+function deselectSupplier(id) {
+    const opt = supplierSelect.querySelector(`option[value="${id}"]`);
+    if (opt) opt.selected = false;
+    updateSelectedSuppliers();
+}
+
+// Fornecedor inline save
 document.getElementById('saveSupplierBtn').addEventListener('click', async function() {
     const name = document.getElementById('newSupplierName').value.trim();
     if (!name) { alert('Nome é obrigatório'); return; }
     const resp = await fetch('/admin/suppliers/quick-store', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name, cnpj:document.getElementById('newSupplierCnpj').value, email:document.getElementById('newSupplierEmail').value, phone:document.getElementById('newSupplierPhone').value, contact_person:document.getElementById('newSupplierContact').value }) });
     const data = await resp.json();
     if (data.success) {
-        document.getElementById('supplierSelect').add(new Option(data.supplier.name, data.supplier.id, true, true));
+        const opt = new Option(data.supplier.name, data.supplier.id, true, true);
+        supplierSelect.add(opt);
+        updateSelectedSuppliers();
         bootstrap.Modal.getInstance(document.getElementById('newSupplierModal')).hide();
         ['newSupplierName','newSupplierCnpj','newSupplierEmail','newSupplierPhone','newSupplierContact'].forEach(id => document.getElementById(id).value = '');
     } else { alert(data.error || 'Erro'); }

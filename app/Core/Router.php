@@ -93,6 +93,7 @@ class Router
             'orders/settings' => ['PurchaseOrderController', 'settings'],
             'orders/settings/update' => ['PurchaseOrderController', 'updateSettings'],
             'orders/test-webhook' => ['PurchaseOrderController', 'testWebhook'],
+            'orders/price-history' => ['PurchaseOrderController', 'priceHistory'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],
