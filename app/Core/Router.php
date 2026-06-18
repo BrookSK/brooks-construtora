@@ -90,6 +90,8 @@ class Router
             'orders/resend-quote' => ['PurchaseOrderController', 'resendQuote'],
             'orders/resend-approval' => ['PurchaseOrderController', 'resendApproval'],
             'orders/cancel' => ['PurchaseOrderController', 'cancel'],
+            'orders/delete' => ['PurchaseOrderController', 'delete'],
+            'orders/clear-price-history' => ['PurchaseOrderController', 'clearPriceHistory'],
             'orders/settings' => ['PurchaseOrderController', 'settings'],
             'orders/settings/update' => ['PurchaseOrderController', 'updateSettings'],
             'orders/test-webhook' => ['PurchaseOrderController', 'testWebhook'],

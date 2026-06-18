@@ -244,6 +244,53 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Deletar pedido (apenas super_admin)
+     */
+    public function delete(): void
+    {
+        if (!$this->isPost() || !Auth::isSuperAdmin()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        // Deletar dados relacionados
+        Database::delete('purchase_order_item_prices', 'order_id = ?', [$id]);
+        Database::delete('purchase_order_history', 'order_id = ?', [$id]);
+        Database::delete('purchase_order_suppliers', 'order_id = ?', [$id]);
+        Database::delete('purchase_order_items', 'order_id = ?', [$id]);
+        Database::delete('material_price_history', 'order_id = ?', [$id]);
+        PurchaseOrder::deleteById($id);
+
+        $this->setFlash('success', "Pedido {$order['code']} deletado permanentemente.");
+        $this->redirect('/admin/orders');
+    }
+
+    /**
+     * Limpar histórico de preços (apenas super_admin)
+     */
+    public function clearPriceHistory(): void
+    {
+        if (!$this->isPost() || !Auth::isSuperAdmin()) {
+            $this->redirect('/admin/orders/price-history');
+            return;
+        }
+
+        Database::query("TRUNCATE TABLE material_price_history");
+
+        $this->setFlash('success', 'Histórico de preços limpo com sucesso.');
+        $this->redirect('/admin/orders/price-history');
+    }
+
+    /**
      * Configurações de e-mail e webhook para pedidos
      */
     public function settings(): void

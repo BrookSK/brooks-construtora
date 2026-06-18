@@ -271,6 +271,16 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     </button>
                 </form>
                 <?php endif; ?>
+
+                <?php if (\App\Core\Auth::isSuperAdmin()): ?>
+                <hr>
+                <form method="POST" action="/admin/orders/delete" onsubmit="return confirm('ATENÇÃO: Isso vai DELETAR permanentemente este pedido e todo o histórico relacionado. Esta ação NÃO pode ser desfeita. Confirma?')">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-trash"></i> Deletar Pedido
+                    </button>
+                </form>
+                <?php endif; ?>
             </div>
         </div>
 

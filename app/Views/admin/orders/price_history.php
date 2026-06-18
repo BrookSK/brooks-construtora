@@ -23,11 +23,20 @@
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-2">
                 <button type="submit" class="btn btn-primary btn-sm w-100">
                     <i class="bi bi-search"></i> Filtrar
                 </button>
             </div>
+            <?php if (\App\Core\Auth::isSuperAdmin()): ?>
+            <div class="col-md-2">
+                <form method="POST" action="/admin/orders/clear-price-history" onsubmit="return confirm('ATENÇÃO: Isso vai APAGAR todo o histórico de preços permanentemente. Confirma?')" class="d-inline">
+                    <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                        <i class="bi bi-trash"></i> Limpar
+                    </button>
+                </form>
+            </div>
+            <?php endif; ?>
         </form>
     </div>
 </div>
