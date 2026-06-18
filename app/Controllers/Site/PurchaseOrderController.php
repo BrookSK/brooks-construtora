@@ -93,7 +93,7 @@ class PurchaseOrderController extends Controller
 
             if (isset($supplierPrices[$sid])) {
                 foreach ($supplierPrices[$sid] as $itemId => $priceStr) {
-                    $unitPrice = (float) str_replace(['.', ','], ['', '.'], $priceStr);
+                    $unitPrice = $this->parseMoneyValue($priceStr);
                     $item = PurchaseOrderItem::find((int) $itemId);
                     
                     if ($item && $item['order_id'] == $order['id']) {
@@ -160,10 +160,11 @@ class PurchaseOrderController extends Controller
         ]);
 
         // Log no histórico
+        $finalTotal = $lowestTotal != PHP_FLOAT_MAX ? $lowestTotal : 0;
         PurchaseOrderHistory::log(
             $order['id'],
             'quoted',
-            "Cotação realizada por {$quotedByName}. Total: R$ " . number_format($totalEstimated, 2, ',', '.'),
+            "Cotação realizada por {$quotedByName}. Total: R$ " . number_format($finalTotal, 2, ',', '.'),
             $quotedByName
         );
 
@@ -172,7 +173,7 @@ class PurchaseOrderController extends Controller
 
         $this->view('site.orders.quote_success', [
             'order' => $order,
-            'total' => $totalEstimated,
+            'total' => $finalTotal,
         ]);
     }
 
@@ -401,11 +402,15 @@ class PurchaseOrderController extends Controller
 
         $items = PurchaseOrderItem::getByOrder($orderId);
         $history = PurchaseOrderHistory::getByOrder($orderId);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
+        $approvedSupplier = PurchaseOrderSupplier::getApproved($orderId);
 
         $this->view('site.orders.pdf', [
             'order' => $order,
             'items' => $items,
             'history' => $history,
+            'orderSuppliers' => $orderSuppliers,
+            'approvedSupplier' => $approvedSupplier,
         ]);
     }
 

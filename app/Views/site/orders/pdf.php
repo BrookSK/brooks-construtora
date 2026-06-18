@@ -100,8 +100,8 @@
         <!-- Informações -->
         <div class="info-grid">
             <div class="info-item">
-                <label>Fornecedor</label>
-                <span><?= htmlspecialchars($order['supplier_name'] ?? 'N/A') ?></span>
+                <label>Fornecedor Aprovado</label>
+                <span><?= htmlspecialchars($approvedSupplier ? $approvedSupplier['supplier_name'] : ($order['supplier_name'] ?? 'N/A')) ?></span>
             </div>
             <div class="info-item">
                 <label>Data do Pedido</label>
@@ -126,6 +126,20 @@
                 <span style="color:#28a745; font-size:1.1rem;">R$ <?= number_format($order['total_estimated'], 2, ',', '.') ?></span>
             </div>
         </div>
+
+        <?php if (!empty($orderSuppliers) && count($orderSuppliers) > 1): ?>
+        <div style="background:#f8f9fa; border-radius:6px; padding:10px 14px; margin-bottom:1rem; font-size:0.8rem;">
+            <strong>Comparação de fornecedores:</strong>
+            <div style="margin-top:6px;">
+                <?php foreach ($orderSuppliers as $os): ?>
+                <div class="d-flex justify-content-between py-1 <?= $os['approved'] ? 'fw-bold' : '' ?>" style="border-bottom:1px solid #eee;">
+                    <span><?= htmlspecialchars($os['supplier_name']) ?> <?= $os['approved'] ? '(APROVADO)' : '' ?></span>
+                    <span><?= $os['total'] ? 'R$ ' . number_format($os['total'], 2, ',', '.') : '-' ?></span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <?php if (!empty($order['description'])): ?>
         <div class="mb-3 p-2 bg-light rounded" style="font-size:0.8rem;">

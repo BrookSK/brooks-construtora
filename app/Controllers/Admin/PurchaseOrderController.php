@@ -415,6 +415,7 @@ class PurchaseOrderController extends Controller
     {
         $order = PurchaseOrder::findFull($orderId);
         $items = PurchaseOrderItem::getByOrder($orderId);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
         $baseUrl = $this->getBaseUrl();
         $quoteUrl = "{$baseUrl}/pedido/cotacao/{$token}";
 
@@ -424,7 +425,7 @@ class PurchaseOrderController extends Controller
             try {
                 $mailService = new MailService();
                 $subject = "Cotação Pendente - Pedido {$order['code']}";
-                $body = EmailTemplate::purchaseOrderQuote($order, $items, $quoteUrl);
+                $body = EmailTemplate::purchaseOrderQuote($order, $items, $quoteUrl, $orderSuppliers);
                 
                 $emailList = array_map('trim', explode(',', $emails));
                 foreach ($emailList as $email) {
@@ -433,7 +434,6 @@ class PurchaseOrderController extends Controller
                     }
                 }
             } catch (\Exception $e) {
-                // Log error silenciosamente
                 error_log("Erro ao enviar e-mail de cotação: " . $e->getMessage());
             }
         }
@@ -448,12 +448,20 @@ class PurchaseOrderController extends Controller
                 $itemsList .= " - Qtd: {$item['quantity']} {$item['unit']}\n";
             }
 
+            $suppliersList = '';
+            $suppliersArray = [];
+            if (!empty($orderSuppliers)) {
+                $supplierNames = array_map(fn($s) => $s['supplier_name'], $orderSuppliers);
+                $suppliersList = "*Fornecedores para cotação:*\n" . implode("\n", array_map(fn($n) => "- {$n}", $supplierNames)) . "\n\n";
+                $suppliersArray = array_map(fn($s) => ['id' => $s['supplier_id'], 'name' => $s['supplier_name']], $orderSuppliers);
+            }
+
             $message = "*NOVO PEDIDO - COTAÇÃO PENDENTE*\n\n"
                 . "*Pedido:* {$order['code']}\n"
-                . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
                 . "*Solicitado por:* {$order['created_by_name']}\n"
                 . "*Data:* " . date('d/m/Y H:i', strtotime($order['created_at'])) . "\n"
                 . "*Itens:* " . count($items) . "\n\n"
+                . $suppliersList
                 . "*Lista de materiais:*\n{$itemsList}\n"
                 . (!empty($order['description']) ? "*Obs:* {$order['description']}\n\n" : "\n")
                 . "*Link para informar cotação:*\n{$quoteUrl}";
@@ -461,7 +469,7 @@ class PurchaseOrderController extends Controller
             $this->sendWebhook($webhookUrl, [
                 'event' => 'quote_requested',
                 'order_code' => $order['code'],
-                'supplier' => $order['supplier_name'] ?? 'N/A',
+                'suppliers' => $suppliersArray,
                 'items_count' => count($items),
                 'quote_url' => $quoteUrl,
                 'created_by' => $order['created_by_name'],
@@ -478,6 +486,7 @@ class PurchaseOrderController extends Controller
     {
         $order = PurchaseOrder::findFull($orderId);
         $items = PurchaseOrderItem::getByOrder($orderId);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
         $baseUrl = $this->getBaseUrl();
         $approvalUrl = "{$baseUrl}/pedido/aprovacao/{$token}";
 
@@ -487,7 +496,7 @@ class PurchaseOrderController extends Controller
             try {
                 $mailService = new MailService();
                 $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
-                $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl);
+                $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
                 
                 $emailList = array_map('trim', explode(',', $emails));
                 foreach ($emailList as $email) {
@@ -503,21 +512,30 @@ class PurchaseOrderController extends Controller
         // Webhook
         $webhookUrl = Setting::get('orders_approval_webhook', '');
         if (!empty($webhookUrl)) {
-            $totalFormatted = 'R$ ' . number_format($order['total_estimated'], 2, ',', '.');
-            
+            $supplierComparison = '';
+            $suppliersData = [];
+            if (!empty($orderSuppliers)) {
+                $supplierComparison = "*Cotações por fornecedor:*\n";
+                foreach ($orderSuppliers as $os) {
+                    $totalFmt = $os['total'] ? 'R$ ' . number_format($os['total'], 2, ',', '.') : 'Pendente';
+                    $supplierComparison .= "- {$os['supplier_name']}: {$totalFmt}\n";
+                    $suppliersData[] = ['id' => $os['supplier_id'], 'name' => $os['supplier_name'], 'total' => $os['total']];
+                }
+                $supplierComparison .= "\n";
+            }
+
             $message = "*PEDIDO AGUARDANDO APROVAÇÃO*\n\n"
                 . "*Pedido:* {$order['code']}\n"
-                . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
-                . "*Valor Total:* {$totalFormatted}\n"
                 . "*Itens:* " . count($items) . "\n"
                 . "*Cotado por:* {$order['quoted_by_name']}\n"
                 . "*Data cotação:* " . date('d/m/Y H:i', strtotime($order['quoted_at'])) . "\n\n"
+                . $supplierComparison
                 . "*Link para aprovar/rejeitar:*\n{$approvalUrl}";
 
             $this->sendWebhook($webhookUrl, [
                 'event' => 'approval_requested',
                 'order_code' => $order['code'],
-                'supplier' => $order['supplier_name'] ?? 'N/A',
+                'suppliers' => $suppliersData,
                 'total' => $order['total_estimated'],
                 'items_count' => count($items),
                 'approval_url' => $approvalUrl,
@@ -534,8 +552,10 @@ class PurchaseOrderController extends Controller
     {
         $order = PurchaseOrder::findFull($orderId);
         $items = PurchaseOrderItem::getByOrder($orderId);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
+        $approvedSupplier = PurchaseOrderSupplier::getApproved($orderId);
         $baseUrl = $this->getBaseUrl();
-        $viewUrl = "{$baseUrl}/admin/orders/show/{$orderId}";
+        $viewUrl = "{$baseUrl}/pedido/pdf/{$orderId}";
 
         // E-mail
         $emails = Setting::get('orders_completed_emails', '');
@@ -560,23 +580,36 @@ class PurchaseOrderController extends Controller
         $webhookUrl = Setting::get('orders_completed_webhook', '');
         if (!empty($webhookUrl)) {
             $totalFormatted = 'R$ ' . number_format($order['total_estimated'], 2, ',', '.');
+            $approvedSupplierName = $approvedSupplier ? $approvedSupplier['supplier_name'] : ($order['supplier_name'] ?? 'N/A');
+
+            $suppliersComparison = '';
+            if (!empty($orderSuppliers) && count($orderSuppliers) > 1) {
+                $suppliersComparison = "\n*Comparação de fornecedores:*\n";
+                foreach ($orderSuppliers as $os) {
+                    $mark = $os['approved'] ? ' [APROVADO]' : '';
+                    $osFmt = $os['total'] ? 'R$ ' . number_format($os['total'], 2, ',', '.') : '-';
+                    $suppliersComparison .= "- {$os['supplier_name']}: {$osFmt}{$mark}\n";
+                }
+            }
 
             $message = "*PEDIDO APROVADO*\n\n"
                 . "*Pedido:* {$order['code']}\n"
-                . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                . "*Fornecedor aprovado:* {$approvedSupplierName}\n"
                 . "*Valor Total:* {$totalFormatted}\n"
                 . "*Aprovado por:* {$order['approved_by_name']}\n"
-                . "*Data:* " . date('d/m/Y H:i', strtotime($order['approved_at'])) . "\n\n"
+                . "*Data:* " . date('d/m/Y H:i', strtotime($order['approved_at'])) . "\n"
+                . $suppliersComparison . "\n"
                 . "*PDF do pedido:*\n{$viewUrl}";
 
             $this->sendWebhook($webhookUrl, [
                 'event' => 'order_approved',
                 'order_code' => $order['code'],
-                'supplier' => $order['supplier_name'] ?? 'N/A',
+                'approved_supplier' => $approvedSupplierName,
+                'suppliers' => array_map(fn($s) => ['name' => $s['supplier_name'], 'total' => $s['total'], 'approved' => (bool)$s['approved']], $orderSuppliers),
                 'total' => $order['total_estimated'],
                 'approved_by' => $order['approved_by_name'],
                 'approved_at' => $order['approved_at'],
-                'view_url' => $viewUrl,
+                'pdf_url' => $viewUrl,
                 'phone' => Setting::get('orders_completed_phone', ''),
                 'phone_name' => Setting::get('orders_completed_phone_name', ''),
                 'message' => $message,
