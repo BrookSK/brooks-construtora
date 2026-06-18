@@ -204,7 +204,7 @@ async function testWebhook(type) {
             description: 'Pedido de teste para validar webhook.',
             phone: quotePhone,
             phone_name: quotePhoneName,
-            message: '📋 *NOVO PEDIDO - COTAÇÃO PENDENTE*\n\n🔖 *Pedido:* PED-TESTE-001\n🏢 *Fornecedor:* Fornecedor de Teste LTDA\n👤 *Solicitado por:* Usuário Teste\n📅 *Data:* ' + new Date().toLocaleDateString('pt-BR') + '\n📦 *Itens:* 5\n\n*Lista de materiais:*\n1. Cano - Esgoto (100mm) - Qtd: 10 unid\n2. Joelho - Esgoto (40mm) - Qtd: 20 unid\n3. Caixa D\'Água (500L) - Qtd: 1 unid\n4. Brita 01 - Qtd: 6 mts\n5. Prancha Cedrinho (15x5) - Qtd: 32 mts\n\n📝 *Obs:* Pedido de teste para validar webhook.\n\n🔗 *Link para informar cotação:*\n' + window.location.origin + '/pedido/cotacao/token-de-teste-abc123'
+            message: '*NOVO PEDIDO - COTAÇÃO PENDENTE*\n\n*Pedido:* PED-TESTE-001\n*Fornecedor:* Fornecedor de Teste LTDA\n*Solicitado por:* Usuário Teste\n*Data:* ' + new Date().toLocaleDateString('pt-BR') + '\n*Itens:* 5\n\n*Lista de materiais:*\n1. Cano - Esgoto (100mm) - Qtd: 10 unid\n2. Joelho - Esgoto (40mm) - Qtd: 20 unid\n3. Caixa D\'Água (500L) - Qtd: 1 unid\n4. Brita 01 - Qtd: 6 mts\n5. Prancha Cedrinho (15x5) - Qtd: 32 mts\n\n*Obs:* Pedido de teste para validar webhook.\n\n*Link para informar cotação:*\n' + window.location.origin + '/pedido/cotacao/token-de-teste-abc123'
         },
         approval: {
             event: 'approval_requested',
@@ -218,7 +218,7 @@ async function testWebhook(type) {
             quoted_at: new Date().toISOString(),
             phone: approvalPhone,
             phone_name: approvalPhoneName,
-            message: '⚠️ *PEDIDO AGUARDANDO APROVAÇÃO*\n\n🔖 *Pedido:* PED-TESTE-001\n🏢 *Fornecedor:* Fornecedor de Teste LTDA\n💰 *Valor Total:* R$ 4.750,00\n📦 *Itens:* 5\n👤 *Cotado por:* Cotador Teste\n📅 *Data cotação:* ' + new Date().toLocaleDateString('pt-BR') + '\n\n🔗 *Link para aprovar/rejeitar:*\n' + window.location.origin + '/pedido/aprovacao/token-de-teste-xyz789'
+            message: '*PEDIDO AGUARDANDO APROVAÇÃO*\n\n*Pedido:* PED-TESTE-001\n*Fornecedor:* Fornecedor de Teste LTDA\n*Valor Total:* R$ 4.750,00\n*Itens:* 5\n*Cotado por:* Cotador Teste\n*Data cotação:* ' + new Date().toLocaleDateString('pt-BR') + '\n\n*Link para aprovar/rejeitar:*\n' + window.location.origin + '/pedido/aprovacao/token-de-teste-xyz789'
         },
         completed: {
             event: 'order_approved',
@@ -231,7 +231,7 @@ async function testWebhook(type) {
             pdf_url: window.location.origin + '/pedido/pdf/999',
             phone: completedPhone,
             phone_name: completedPhoneName,
-            message: '✅ *PEDIDO APROVADO*\n\n🔖 *Pedido:* PED-TESTE-001\n🏢 *Fornecedor:* Fornecedor de Teste LTDA\n💰 *Valor Total:* R$ 4.750,00\n👤 *Aprovado por:* Aprovador Teste\n📅 *Data:* ' + new Date().toLocaleDateString('pt-BR') + '\n\n📄 *PDF do pedido:*\n' + window.location.origin + '/pedido/pdf/999'
+            message: '*PEDIDO APROVADO*\n\n*Pedido:* PED-TESTE-001\n*Fornecedor:* Fornecedor de Teste LTDA\n*Valor Total:* R$ 4.750,00\n*Aprovado por:* Aprovador Teste\n*Data:* ' + new Date().toLocaleDateString('pt-BR') + '\n\n*PDF do pedido:*\n' + window.location.origin + '/pedido/pdf/999'
         }
     };
 
