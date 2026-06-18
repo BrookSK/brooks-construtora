@@ -103,6 +103,34 @@
                                 <i class="bi bi-plus"></i> Adicionar
                             </button>
                         </div>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="document.getElementById('newSupplierSection').style.display = document.getElementById('newSupplierSection').style.display === 'none' ? 'block' : 'none'">
+                                <i class="bi bi-building"></i> Cadastrar Novo Fornecedor
+                            </button>
+                        </div>
+                        <!-- Cadastro rápido de fornecedor inline -->
+                        <div id="newSupplierSection" style="display:none;" class="mt-2 p-3 border rounded bg-light">
+                            <h6 class="mb-2 small">Novo Fornecedor</h6>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <input type="text" class="form-control form-control-sm" id="newSupName" placeholder="Nome do fornecedor *">
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control form-control-sm" id="newSupCnpj" placeholder="CNPJ">
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control form-control-sm" id="newSupPhone" placeholder="Telefone">
+                                </div>
+                                <div class="col-12">
+                                    <input type="email" class="form-control form-control-sm" id="newSupEmail" placeholder="E-mail">
+                                </div>
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-primary btn-sm w-100" onclick="saveNewSupplier()">
+                                        <i class="bi bi-check"></i> Salvar Fornecedor e Adicionar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="suppliersContainer"></div>
@@ -155,6 +183,41 @@
         sel.dataset.selectedId = '';
         sel.dataset.selectedName = '';
         document.getElementById('submitBtn').disabled = false;
+    }
+
+    async function saveNewSupplier() {
+        const name = document.getElementById('newSupName').value.trim();
+        if (!name) { alert('Nome é obrigatório'); return; }
+
+        const resp = await fetch('/admin/suppliers/quick-store', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({
+                name: name,
+                cnpj: document.getElementById('newSupCnpj').value,
+                email: document.getElementById('newSupEmail').value,
+                phone: document.getElementById('newSupPhone').value,
+            })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            // Adicionar no SearchableSelect
+            supplierSS.addOption(data.supplier.id, data.supplier.name, { name: data.supplier.name });
+            
+            // Adicionar direto como bloco
+            addedSuppliers.push(String(data.supplier.id));
+            addSupplierBlock(data.supplier.id, data.supplier.name);
+            document.getElementById('submitBtn').disabled = false;
+
+            // Limpar e fechar o formulário
+            document.getElementById('newSupName').value = '';
+            document.getElementById('newSupCnpj').value = '';
+            document.getElementById('newSupPhone').value = '';
+            document.getElementById('newSupEmail').value = '';
+            document.getElementById('newSupplierSection').style.display = 'none';
+        } else {
+            alert(data.error || 'Erro ao salvar fornecedor');
+        }
     }
 
     function addSupplierBlock(sid, name) {
