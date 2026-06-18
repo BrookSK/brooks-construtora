@@ -173,6 +173,7 @@ class Router
             // Pedidos - Links públicos
             'pedido/cotacao' => ['PurchaseOrderController', 'quote'],
             'pedido/cotacao/enviar' => ['PurchaseOrderController', 'submitQuote'],
+            'pedido/cotacao/novo-fornecedor' => ['PurchaseOrderController', 'quickStoreSupplier'],
             'pedido/aprovacao' => ['PurchaseOrderController', 'approval'],
             'pedido/aprovacao/enviar' => ['PurchaseOrderController', 'submitApproval'],
             'pedido/pdf' => ['PurchaseOrderController', 'pdf'],

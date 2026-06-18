@@ -479,6 +479,35 @@ class PurchaseOrderController extends Controller
     // ============================
 
     /**
+     * Cadastro rápido de fornecedor (rota pública para a tela de cotação)
+     */
+    public function quickStoreSupplier(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $name = trim($this->input('name', ''));
+        if (empty($name)) {
+            $this->json(['error' => 'Nome é obrigatório.'], 400);
+            return;
+        }
+
+        $id = Supplier::create([
+            'name' => $name,
+            'cnpj' => trim($this->input('cnpj', '')),
+            'email' => trim($this->input('email', '')),
+            'phone' => trim($this->input('phone', '')),
+            'active' => 1,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $supplier = Supplier::find($id);
+        $this->json(['success' => true, 'supplier' => $supplier]);
+    }
+
+    /**
      * Painel de pedidos - redireciona pro admin se autenticado por PIN
      */
     public function pinPanel(): void

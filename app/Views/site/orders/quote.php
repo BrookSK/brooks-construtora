@@ -189,7 +189,7 @@
         const name = document.getElementById('newSupName').value.trim();
         if (!name) { alert('Nome é obrigatório'); return; }
 
-        const resp = await fetch('/admin/suppliers/quick-store', {
+        const resp = await fetch('/pedido/cotacao/novo-fornecedor', {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: new URLSearchParams({
