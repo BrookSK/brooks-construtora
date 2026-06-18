@@ -78,7 +78,6 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        $supplierIds = $_POST['supplier_ids'] ?? [];
         $description = trim($this->input('description', ''));
         $items = $_POST['items'] ?? [];
 
@@ -103,19 +102,6 @@ class PurchaseOrderController extends Controller
             'approval_token' => $approvalToken,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
-
-        // Salvar fornecedores vinculados
-        foreach ($supplierIds as $sid) {
-            $sid = (int) $sid;
-            if ($sid > 0) {
-                PurchaseOrderSupplier::create([
-                    'order_id' => $orderId,
-                    'supplier_id' => $sid,
-                    'status' => 'pending',
-                    'created_at' => date('Y-m-d H:i:s'),
-                ]);
-            }
-        }
 
         // Salvar itens
         foreach ($items as $item) {

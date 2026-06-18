@@ -44,11 +44,25 @@ class PurchaseOrderController extends Controller
 
         $items = PurchaseOrderItem::getByOrder($order['id']);
         $orderSuppliers = PurchaseOrderSupplier::getByOrder($order['id']);
+        $suppliers = Supplier::allActive();
+        
+        // Buscar histórico de preços para os materiais deste pedido
+        $materialIds = array_filter(array_column($items, 'material_id'));
+        $priceHistory = [];
+        if (!empty($materialIds)) {
+            $placeholders = implode(',', array_fill(0, count($materialIds), '?'));
+            $priceHistory = Database::fetchAll(
+                "SELECT * FROM material_price_history WHERE material_id IN ({$placeholders}) ORDER BY created_at DESC",
+                $materialIds
+            );
+        }
 
         $this->view('site.orders.quote', [
             'order' => $order,
             'items' => $items,
             'orderSuppliers' => $orderSuppliers,
+            'suppliers' => $suppliers,
+            'priceHistory' => $priceHistory,
             'token' => $token,
             'flash' => $this->getFlash(),
         ]);
@@ -83,56 +97,102 @@ class PurchaseOrderController extends Controller
         $items = PurchaseOrderItem::getByOrder($order['id']);
         $quoteNotes = trim($this->input('quote_notes', ''));
         $supplierPrices = $_POST['supplier_prices'] ?? [];
+        $supplierFinancials = $_POST['supplier_financials'] ?? [];
+        $supplierIds = $_POST['supplier_ids'] ?? [];
         $lowestTotal = PHP_FLOAT_MAX;
 
-        // Processar preços por fornecedor
-        foreach ($orderSuppliers as $os) {
-            $sid = $os['supplier_id'];
-            $supplierTotal = 0;
-            $pricesForHistory = [];
+        // Se fornecedores foram adicionados na cotação (novo fluxo)
+        if (!empty($supplierIds)) {
+            foreach ($supplierIds as $sid) {
+                $sid = (int) $sid;
+                if ($sid <= 0) continue;
 
-            if (isset($supplierPrices[$sid])) {
-                foreach ($supplierPrices[$sid] as $itemId => $priceStr) {
-                    $unitPrice = (float) str_replace(['.', ','], ['', '.'], $priceStr);
-                    $item = PurchaseOrderItem::find((int) $itemId);
-                    
-                    if ($item && $item['order_id'] == $order['id']) {
-                        $totalPrice = $unitPrice * $item['quantity'];
-                        $supplierTotal += $totalPrice;
+                // Criar registro de fornecedor no pedido (se não existe)
+                $existing = PurchaseOrderSupplier::findByOrderAndSupplier($order['id'], $sid);
+                if (!$existing) {
+                    $posId = PurchaseOrderSupplier::create([
+                        'order_id' => $order['id'],
+                        'supplier_id' => $sid,
+                        'status' => 'quoted',
+                        'quoted_by_name' => $quotedByName,
+                        'quoted_at' => date('Y-m-d H:i:s'),
+                        'quote_notes' => $quoteNotes,
+                        'created_at' => date('Y-m-d H:i:s'),
+                    ]);
+                } else {
+                    $posId = $existing['id'];
+                    PurchaseOrderSupplier::updateById($posId, [
+                        'status' => 'quoted',
+                        'quoted_by_name' => $quotedByName,
+                        'quoted_at' => date('Y-m-d H:i:s'),
+                        'quote_notes' => $quoteNotes,
+                    ]);
+                }
 
-                        PurchaseOrderItemPrice::create([
-                            'order_id' => $order['id'],
-                            'item_id' => (int) $itemId,
-                            'supplier_id' => $sid,
-                            'unit_price' => $unitPrice,
-                            'total_price' => $totalPrice,
-                            'created_at' => date('Y-m-d H:i:s'),
-                        ]);
-
-                        $pricesForHistory[$item['id']] = $unitPrice;
+                // Salvar preços por item
+                $supplierTotal = 0;
+                $pricesForHistory = [];
+                if (isset($supplierPrices[$sid])) {
+                    foreach ($supplierPrices[$sid] as $itemId => $priceStr) {
+                        $unitPrice = (float) str_replace(['.', ','], ['', '.'], $priceStr);
+                        $item = PurchaseOrderItem::find((int) $itemId);
+                        if ($item && $item['order_id'] == $order['id']) {
+                            $totalPrice = $unitPrice * $item['quantity'];
+                            $supplierTotal += $totalPrice;
+                            PurchaseOrderItemPrice::create([
+                                'order_id' => $order['id'],
+                                'item_id' => (int) $itemId,
+                                'supplier_id' => $sid,
+                                'unit_price' => $unitPrice,
+                                'total_price' => $totalPrice,
+                                'created_at' => date('Y-m-d H:i:s'),
+                            ]);
+                            $pricesForHistory[$item['id']] = $unitPrice;
+                        }
                     }
                 }
+
+                // Financeiros
+                $fin = $supplierFinancials[$sid] ?? [];
+                $discountType = $fin['discount_type'] ?? 'percent';
+                $discountValue = (float) str_replace(['.', ','], ['', '.'], $fin['discount_value'] ?? '0');
+                $surchargeType = $fin['surcharge_type'] ?? 'percent';
+                $surchargeValue = (float) str_replace(['.', ','], ['', '.'], $fin['surcharge_value'] ?? '0');
+                $ipiPercent = (float) str_replace(',', '.', $fin['ipi_percent'] ?? '0');
+                $icmsPercent = (float) str_replace(',', '.', $fin['icms_percent'] ?? '0');
+                $freight = (float) str_replace(['.', ','], ['', '.'], $fin['freight'] ?? '0');
+
+                // Calcular total final
+                $finalTotal = $supplierTotal;
+                if ($discountType === 'percent') $finalTotal -= $supplierTotal * ($discountValue / 100);
+                else $finalTotal -= $discountValue;
+                if ($surchargeType === 'percent') $finalTotal += $supplierTotal * ($surchargeValue / 100);
+                else $finalTotal += $surchargeValue;
+                $finalTotal += $supplierTotal * ($ipiPercent / 100);
+                $finalTotal += $supplierTotal * ($icmsPercent / 100);
+                $finalTotal += $freight;
+
+                // Atualizar fornecedor com totais e financeiros
+                PurchaseOrderSupplier::updateById($posId, [
+                    'total' => $finalTotal,
+                    'subtotal_items' => $supplierTotal,
+                    'subtotal_final' => $finalTotal,
+                    'discount_type' => $discountType,
+                    'discount_value' => $discountValue,
+                    'surcharge_type' => $surchargeType,
+                    'surcharge_value' => $surchargeValue,
+                    'ipi_percent' => $ipiPercent,
+                    'icms_percent' => $icmsPercent,
+                    'freight' => $freight,
+                ]);
+
+                // Registrar histórico de preços
+                MaterialPriceHistory::recordFromQuote($order['id'], $sid, $items, $pricesForHistory);
+
+                if ($finalTotal < $lowestTotal) $lowestTotal = $finalTotal;
             }
-
-            // Atualizar o fornecedor do pedido
-            PurchaseOrderSupplier::updateById($os['id'], [
-                'status' => 'quoted',
-                'total' => $supplierTotal,
-                'quoted_by_name' => $quotedByName,
-                'quoted_at' => date('Y-m-d H:i:s'),
-                'quote_notes' => $quoteNotes,
-            ]);
-
-            // Salvar no histórico de preços
-            MaterialPriceHistory::recordFromQuote($order['id'], $sid, $items, $pricesForHistory);
-
-            if ($supplierTotal < $lowestTotal) {
-                $lowestTotal = $supplierTotal;
-            }
-        }
-
-        // Se não tem fornecedores vinculados, usar fluxo legado (preços direto nos itens)
-        if (empty($orderSuppliers)) {
+        } else {
+            // Fluxo legado (sem fornecedores)
             $itemPrices = $_POST['items'] ?? [];
             $totalEstimated = 0;
             foreach ($itemPrices as $itemId => $itemData) {
@@ -140,10 +200,7 @@ class PurchaseOrderController extends Controller
                 $item = PurchaseOrderItem::find((int) $itemId);
                 if ($item && $item['order_id'] == $order['id']) {
                     $totalPrice = $unitPrice * $item['quantity'];
-                    PurchaseOrderItem::updateById((int) $itemId, [
-                        'unit_price' => $unitPrice,
-                        'total_price' => $totalPrice,
-                    ]);
+                    PurchaseOrderItem::updateById((int) $itemId, ['unit_price' => $unitPrice, 'total_price' => $totalPrice]);
                     $totalEstimated += $totalPrice;
                 }
             }

@@ -6,25 +6,6 @@
 <form method="POST" action="/admin/orders/store" id="orderForm">
     <div class="row">
         <div class="col-lg-9">
-            <!-- Fornecedores -->
-            <div class="card mb-3">
-                <div class="card-header"><i class="bi bi-building"></i> Fornecedores</div>
-                <div class="card-body">
-                    <label class="form-label">Selecionar Fornecedores (pode selecionar mais de um)</label>
-                    <select id="supplierSelect" multiple style="display:none;">
-                        <?php foreach ($suppliers as $s): ?>
-                        <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?> <?= $s['cnpj'] ? '(' . $s['cnpj'] . ')' : '' ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <div id="supplierSearchContainer"></div>
-                    <div id="supplierHiddenInputs"></div>
-                    <small class="text-muted d-block mt-1 mb-2">Opcional — pode enviar sem fornecedor.</small>
-                    <button type="button" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#newSupplierModal">
-                        <i class="bi bi-plus"></i> Cadastrar Novo Fornecedor
-                    </button>
-                </div>
-            </div>
-
             <!-- Itens do pedido -->
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -102,29 +83,6 @@
     <div class="d-md-none" style="height:80px;"></div>
 </form>
 
-<!-- Modal Novo Fornecedor -->
-<div class="modal fade" id="newSupplierModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Novo Fornecedor</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3"><label class="form-label">Nome *</label><input type="text" class="form-control" id="newSupplierName" required></div>
-                <div class="mb-3"><label class="form-label">CNPJ</label><input type="text" class="form-control" id="newSupplierCnpj"></div>
-                <div class="mb-3"><label class="form-label">E-mail</label><input type="email" class="form-control" id="newSupplierEmail"></div>
-                <div class="mb-3"><label class="form-label">Telefone</label><input type="text" class="form-control" id="newSupplierPhone"></div>
-                <div class="mb-3"><label class="form-label">Contato</label><input type="text" class="form-control" id="newSupplierContact"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="saveSupplierBtn">Salvar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Modal Novo Material (com steps internos) -->
 <div class="modal fade" id="newMaterialModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -200,25 +158,6 @@
 <script>
 const materials = <?= json_encode($materials) ?>;
 let itemCount = 0;
-
-// --- Fornecedor com busca (múltiplo) ---
-const supplierSS = new SearchableSelect(document.getElementById('supplierSelect'), {
-    placeholder: 'Buscar fornecedor...',
-    multiple: true,
-    onSelect: function(value, text) {
-        // Criar hidden input
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'supplier_ids[]';
-        input.value = value;
-        input.id = 'supplier-hidden-' + value;
-        document.getElementById('supplierHiddenInputs').appendChild(input);
-    },
-    onDeselect: function(value) {
-        const el = document.getElementById('supplier-hidden-' + value);
-        if (el) el.remove();
-    }
-});
 
 document.getElementById('addItemBtn').addEventListener('click', () => addItem());
 
@@ -342,20 +281,6 @@ function updateMobileDetails(idx, opt) {
         el.innerHTML = '<span class="text-muted" style="font-size:0.75rem;">Busque um material acima</span>';
     }
 }
-
-// Fornecedor inline save
-document.getElementById('saveSupplierBtn').addEventListener('click', async function() {
-    const name = document.getElementById('newSupplierName').value.trim();
-    if (!name) { alert('Nome é obrigatório'); return; }
-    const resp = await fetch('/admin/suppliers/quick-store', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name, cnpj:document.getElementById('newSupplierCnpj').value, email:document.getElementById('newSupplierEmail').value, phone:document.getElementById('newSupplierPhone').value, contact_person:document.getElementById('newSupplierContact').value }) });
-    const data = await resp.json();
-    if (data.success) {
-        supplierSS.addOption(data.supplier.id, data.supplier.name);
-        supplierSS.setValue(data.supplier.id);
-        bootstrap.Modal.getInstance(document.getElementById('newSupplierModal')).hide();
-        ['newSupplierName','newSupplierCnpj','newSupplierEmail','newSupplierPhone','newSupplierContact'].forEach(id => document.getElementById(id).value = '');
-    } else { alert(data.error || 'Erro'); }
-});
 
 // Material inline
 document.getElementById('saveMaterialBtn').addEventListener('click', async function() {

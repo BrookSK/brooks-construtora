@@ -6,17 +6,20 @@
     <title>Cotação - Pedido <?= htmlspecialchars($order['code']) ?> | Brooks Construtora</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/assets/css/searchable-select.css" rel="stylesheet">
     <style>
         body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
         .page-header { background: #3a3b4e; color: #fff; padding: 1rem 0; }
         .main-card { border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        .supplier-section { border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
-        .supplier-section h6 { margin-bottom: 0.75rem; }
-        .price-input { font-weight: 600; text-align: right; }
-        .supplier-total { font-weight: 700; font-size: 1.1rem; }
+        .supplier-block { border: 2px solid #dee2e6; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+        .supplier-block h6 { color: #3a3b4e; }
+        .financial-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .history-hint { font-size: 0.7rem; color: #888; margin-top: 2px; }
+        .history-hint strong { color: #28a745; }
         @media (max-width: 768px) {
-            .main-card .card-body { padding: 1rem; }
-            .main-card .card-header { padding: 1rem; }
+            .main-card .card-body, .main-card .card-header { padding: 1rem; }
+            .financial-row { grid-template-columns: 1fr; }
+            input, select, textarea { font-size: 16px !important; }
         }
     </style>
 </head>
@@ -24,7 +27,7 @@
     <div class="page-header text-center">
         <div class="container">
             <h4 class="mb-1">BROOKS CONSTRUTORA</h4>
-            <p class="mb-0 opacity-75 small">Cotação de Materiais</p>
+            <p class="mb-0 opacity-75 small">Mapa de Cotação</p>
         </div>
     </div>
 
@@ -37,7 +40,7 @@
         <?php endif; ?>
 
         <div class="card main-card">
-            <div class="card-header bg-warning bg-opacity-10 border-0 p-4">
+            <div class="card-header bg-warning bg-opacity-10 border-0 p-3 p-md-4">
                 <div class="d-flex flex-wrap justify-content-between align-items-center">
                     <div>
                         <h5 class="mb-1">Pedido <strong><?= htmlspecialchars($order['code']) ?></strong></h5>
@@ -53,7 +56,8 @@
             </div>
 
             <form method="POST" action="/pedido/cotacao/enviar/<?= $token ?>" id="quoteForm">
-                <div class="card-body p-4">
+                <div class="card-body p-3 p-md-4">
+                    <!-- Identificação -->
                     <h6 class="mb-3"><i class="bi bi-person"></i> Identificação</h6>
                     <div class="row mb-4">
                         <div class="col-md-6">
@@ -62,19 +66,12 @@
                         </div>
                     </div>
 
-                    <!-- Lista de itens (referência) -->
+                    <!-- Itens do pedido (referência) -->
                     <h6 class="mb-2"><i class="bi bi-list-check"></i> Itens do Pedido</h6>
                     <div class="table-responsive mb-4">
                         <table class="table table-sm table-bordered">
                             <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Material</th>
-                                    <th>Espec.</th>
-                                    <th>Class.</th>
-                                    <th>Unid.</th>
-                                    <th class="text-center">Qtd</th>
-                                </tr>
+                                <tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th class="text-center">Qtd</th></tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($items as $i => $item): ?>
@@ -91,108 +88,226 @@
                         </table>
                     </div>
 
-                    <!-- Preços por fornecedor -->
-                    <?php if (!empty($orderSuppliers)): ?>
-                    <h6 class="mb-3"><i class="bi bi-currency-dollar"></i> Informe os valores por fornecedor</h6>
-
-                    <?php foreach ($orderSuppliers as $os): ?>
-                    <div class="supplier-section">
-                        <h6 class="text-primary"><i class="bi bi-building"></i> <?= htmlspecialchars($os['supplier_name']) ?></h6>
-                        
-                        <?php foreach ($items as $item): ?>
-                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
-                            <span class="small"><?= htmlspecialchars($item['material_name']) ?> <span class="text-muted">(x<?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?>)</span></span>
-                            <div style="max-width:130px;">
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text" style="font-size:0.7rem;">R$</span>
-                                    <input type="text" inputmode="decimal" class="form-control price-input price-supplier-<?= $os['supplier_id'] ?>" 
-                                        name="supplier_prices[<?= $os['supplier_id'] ?>][<?= $item['id'] ?>]" 
-                                        data-qty="<?= $item['quantity'] ?>"
-                                        data-supplier="<?= $os['supplier_id'] ?>"
-                                        placeholder="0,00" required>
-                                </div>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-
-                        <div class="text-end mt-2">
-                            <strong>Total: <span class="supplier-total text-success" id="supplier-total-<?= $os['supplier_id'] ?>">R$ 0,00</span></strong>
+                    <!-- Fornecedores para cotação -->
+                    <h6 class="mb-3"><i class="bi bi-building"></i> Fornecedores</h6>
+                    <p class="text-muted small mb-2">Adicione os fornecedores e informe os valores de cada um.</p>
+                    
+                    <div class="mb-3">
+                        <select id="addSupplierSelect" style="display:none;">
+                            <?php foreach ($suppliers as $s): ?>
+                            <option value="<?= $s['id'] ?>" data-name="<?= htmlspecialchars($s['name']) ?>"><?= htmlspecialchars($s['name']) ?> <?= $s['cnpj'] ? '(' . $s['cnpj'] . ')' : '' ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="d-flex gap-2">
+                            <div class="flex-grow-1" id="supplierSearchWrap"></div>
+                            <button type="button" class="btn btn-primary btn-sm flex-shrink-0" onclick="addSelectedSupplier()">
+                                <i class="bi bi-plus"></i> Adicionar
+                            </button>
                         </div>
                     </div>
-                    <?php endforeach; ?>
 
-                    <?php else: ?>
-                    <!-- Sem fornecedores: preço único por item (legado) -->
-                    <h6 class="mb-3"><i class="bi bi-currency-dollar"></i> Informe os valores unitários</h6>
-                    <?php foreach ($items as $item): ?>
-                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                        <div>
-                            <strong class="small"><?= htmlspecialchars($item['material_name']) ?></strong>
-                            <span class="text-muted small ms-1">(x<?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?> <?= htmlspecialchars($item['unit'] ?? '') ?>)</span>
-                        </div>
-                        <div style="max-width:140px;">
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text" style="font-size:0.7rem;">R$</span>
-                                <input type="text" inputmode="decimal" class="form-control price-input price-legacy" 
-                                    name="items[<?= $item['id'] ?>][unit_price]" 
-                                    data-qty="<?= $item['quantity'] ?>"
-                                    placeholder="0,00" required>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                    <div class="text-end mt-2">
-                        <strong>Total: <span class="supplier-total text-success" id="legacy-total">R$ 0,00</span></strong>
-                    </div>
-                    <?php endif; ?>
+                    <div id="suppliersContainer"></div>
 
+                    <!-- Observações -->
                     <div class="mt-3">
                         <label class="form-label">Observações da Cotação</label>
-                        <textarea class="form-control" name="quote_notes" rows="2" placeholder="Observações sobre preços, prazos, etc."></textarea>
+                        <textarea class="form-control" name="quote_notes" rows="2" placeholder="Observações sobre preços, prazos, condições de pagamento, etc."></textarea>
                     </div>
                 </div>
 
-                <div class="card-footer p-4 text-center">
-                    <button type="submit" class="btn btn-success btn-lg px-5">
+                <div class="card-footer p-3 p-md-4 text-center">
+                    <button type="submit" class="btn btn-success btn-lg px-5" id="submitBtn" disabled>
                         <i class="bi bi-check-lg"></i> Enviar Cotação
                     </button>
-                    <p class="text-muted small mt-2 mb-0">Ao enviar, os valores serão registrados e encaminhados para aprovação.</p>
+                    <p class="text-muted small mt-2 mb-0">Adicione pelo menos um fornecedor para enviar.</p>
                 </div>
             </form>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/searchable-select.js"></script>
     <script>
-    document.querySelectorAll('.price-input').forEach(input => {
-        input.addEventListener('input', calculateTotals);
-        input.addEventListener('blur', function() {
-            let val = this.value.replace(/[^\d,\.]/g, '').replace(',', '.');
-            if (val && !isNaN(parseFloat(val))) {
-                this.value = parseFloat(val).toFixed(2).replace('.', ',');
-            }
-            calculateTotals();
-        });
+    const items = <?= json_encode($items) ?>;
+    const priceHistory = <?= json_encode($priceHistory ?? []) ?>;
+    let supplierCount = 0;
+    let addedSuppliers = [];
+
+    // SearchableSelect para adicionar fornecedor
+    const supplierSS = new SearchableSelect(document.getElementById('addSupplierSelect'), {
+        placeholder: 'Buscar fornecedor...',
+        onSelect: function(value, text, dataset) {
+            // Guardamos temporariamente; o botão "Adicionar" confirma
+            document.getElementById('addSupplierSelect').dataset.selectedId = value;
+            document.getElementById('addSupplierSelect').dataset.selectedName = dataset.name || text;
+        }
     });
 
-    function calculateTotals() {
-        // Por fornecedor
-        const supplierTotals = {};
-        document.querySelectorAll('.price-input').forEach(input => {
-            const val = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
-            const qty = parseFloat(input.dataset.qty) || 0;
-            const total = val * qty;
-            const sid = input.dataset.supplier || 'legacy';
+    function addSelectedSupplier() {
+        const sel = document.getElementById('addSupplierSelect');
+        const sid = sel.dataset.selectedId;
+        const sname = sel.dataset.selectedName;
+        if (!sid) { alert('Selecione um fornecedor primeiro.'); return; }
+        if (addedSuppliers.includes(sid)) { alert('Fornecedor já adicionado.'); return; }
+        
+        addedSuppliers.push(sid);
+        addSupplierBlock(sid, sname);
+        supplierSS.clear();
+        sel.dataset.selectedId = '';
+        sel.dataset.selectedName = '';
+        document.getElementById('submitBtn').disabled = false;
+    }
+
+    function addSupplierBlock(sid, name) {
+        supplierCount++;
+        const block = document.createElement('div');
+        block.className = 'supplier-block';
+        block.id = 'supplier-block-' + sid;
+        
+        let itemsHtml = '';
+        items.forEach(item => {
+            // Buscar histórico de preço deste material com este fornecedor
+            const hist = priceHistory.filter(h => h.material_id == item.material_id && h.supplier_id == sid);
+            const lastPrice = hist.length > 0 ? hist[0] : null;
+            const bestPrice = hist.length > 0 ? hist.reduce((a, b) => a.unit_price < b.unit_price ? a : b) : null;
             
-            if (!supplierTotals[sid]) supplierTotals[sid] = 0;
-            supplierTotals[sid] += total;
+            let histHint = '';
+            if (lastPrice) {
+                histHint = `<span class="history-hint">Último: <strong>R$ ${parseFloat(lastPrice.unit_price).toFixed(2).replace('.', ',')}</strong>`;
+                if (bestPrice && bestPrice.unit_price != lastPrice.unit_price) {
+                    histHint += ` | Melhor: <strong>R$ ${parseFloat(bestPrice.unit_price).toFixed(2).replace('.', ',')}</strong>`;
+                }
+                histHint += '</span>';
+            }
+            
+            itemsHtml += `
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div class="flex-grow-1">
+                        <span class="small">${item.material_name}</span>
+                        <span class="text-muted small">(x${item.quantity} ${item.unit || ''})</span>
+                        ${histHint}
+                    </div>
+                    <div style="min-width:120px;">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">R$</span>
+                            <input type="text" inputmode="decimal" class="form-control price-input" 
+                                name="supplier_prices[${sid}][${item.id}]" placeholder="0,00" required
+                                data-qty="${item.quantity}" data-sid="${sid}">
+                        </div>
+                    </div>
+                </div>`;
         });
 
-        // Atualizar totais exibidos
-        for (const [sid, total] of Object.entries(supplierTotals)) {
-            const el = document.getElementById('supplier-total-' + sid) || document.getElementById('legacy-total');
-            if (el) el.textContent = 'R$ ' + total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        }
+        block.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0"><i class="bi bi-building"></i> ${name}</h6>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSupplierBlock('${sid}')"><i class="bi bi-x"></i></button>
+            </div>
+            <input type="hidden" name="supplier_ids[]" value="${sid}">
+            ${itemsHtml}
+            <div class="mt-3 p-2 bg-light rounded">
+                <strong class="small">Ajustes financeiros:</strong>
+                <div class="financial-row mt-2">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text" style="font-size:0.7rem;">Desconto</span>
+                        <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][discount_value]" placeholder="0" data-sid="${sid}">
+                        <select class="form-select" name="supplier_financials[${sid}][discount_type]" style="max-width:60px;">
+                            <option value="percent">%</option>
+                            <option value="fixed">R$</option>
+                        </select>
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text" style="font-size:0.7rem;">Acréscimo</span>
+                        <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][surcharge_value]" placeholder="0" data-sid="${sid}">
+                        <select class="form-select" name="supplier_financials[${sid}][surcharge_type]" style="max-width:60px;">
+                            <option value="percent">%</option>
+                            <option value="fixed">R$</option>
+                        </select>
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text" style="font-size:0.7rem;">IPI</span>
+                        <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][ipi_percent]" placeholder="0">
+                        <span class="input-group-text">%</span>
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text" style="font-size:0.7rem;">ICMS</span>
+                        <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][icms_percent]" placeholder="0">
+                        <span class="input-group-text">%</span>
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text" style="font-size:0.7rem;">Frete</span>
+                        <span class="input-group-text">R$</span>
+                        <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][freight]" placeholder="0,00">
+                    </div>
+                </div>
+                <div class="text-end mt-2">
+                    <small class="text-muted">Subtotal insumos: </small><strong class="text-dark" id="subtotal-items-${sid}">R$ 0,00</strong><br>
+                    <small class="text-muted">Total final: </small><strong class="text-success" id="subtotal-final-${sid}">R$ 0,00</strong>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('suppliersContainer').appendChild(block);
+
+        // Bind events para calcular
+        block.querySelectorAll('.price-input, input[name*="financials"]').forEach(input => {
+            input.addEventListener('input', () => calculateSupplierTotal(sid));
+            input.addEventListener('blur', function() {
+                let val = this.value.replace(/[^\d,\.]/g, '').replace(',', '.');
+                if (val && !isNaN(parseFloat(val))) this.value = parseFloat(val).toFixed(2).replace('.', ',');
+                calculateSupplierTotal(sid);
+            });
+        });
+    }
+
+    function removeSupplierBlock(sid) {
+        document.getElementById('supplier-block-' + sid)?.remove();
+        addedSuppliers = addedSuppliers.filter(s => s !== sid);
+        if (addedSuppliers.length === 0) document.getElementById('submitBtn').disabled = true;
+    }
+
+    function calculateSupplierTotal(sid) {
+        const block = document.getElementById('supplier-block-' + sid);
+        if (!block) return;
+
+        let subtotalItems = 0;
+        block.querySelectorAll('.price-input').forEach(input => {
+            const val = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
+            const qty = parseFloat(input.dataset.qty) || 0;
+            subtotalItems += val * qty;
+        });
+
+        // Financeiros
+        const getVal = (name) => parseFloat((block.querySelector(`[name="supplier_financials[${sid}][${name}]"]`)?.value || '0').replace(/\./g, '').replace(',', '.')) || 0;
+        const getType = (name) => block.querySelector(`[name="supplier_financials[${sid}][${name}]"]`)?.value || 'percent';
+        
+        const discountVal = getVal('discount_value');
+        const discountType = getType('discount_type');
+        const surchargeVal = getVal('surcharge_value');
+        const surchargeType = getType('surcharge_type');
+        const ipi = getVal('ipi_percent');
+        const icms = getVal('icms_percent');
+        const freight = getVal('freight');
+
+        let total = subtotalItems;
+        
+        // Desconto
+        if (discountType === 'percent') total -= subtotalItems * (discountVal / 100);
+        else total -= discountVal;
+        
+        // Acréscimo
+        if (surchargeType === 'percent') total += subtotalItems * (surchargeVal / 100);
+        else total += surchargeVal;
+        
+        // IPI e ICMS
+        total += subtotalItems * (ipi / 100);
+        total += subtotalItems * (icms / 100);
+        
+        // Frete
+        total += freight;
+
+        document.getElementById('subtotal-items-' + sid).textContent = 'R$ ' + subtotalItems.toFixed(2).replace('.', ',');
+        document.getElementById('subtotal-final-' + sid).textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
     }
     </script>
 </body>
