@@ -103,98 +103,91 @@
     </div>
 </div>
 
-<!-- Modal Novo Material -->
+<!-- Modal Novo Material (com steps internos) -->
 <div class="modal fade" id="newMaterialModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Novo Material</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Nome do Material *</label>
-                    <input type="text" class="form-control" id="newMatName" required>
+            <!-- Step 1: Formulário do material -->
+            <div id="matStep1">
+                <div class="modal-header">
+                    <h5 class="modal-title">Novo Material</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Especificação (Tipo)</label>
-                    <div class="input-group">
-                        <select class="form-select" id="newMatSpec">
-                            <option value="">-- Selecione --</option>
-                            <?php foreach ($categories as $cat): ?>
-                            <option value="<?= htmlspecialchars($cat['name']) ?>" data-id="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <button type="button" class="btn btn-outline-primary" onclick="quickAddCategory()" title="Nova">
-                            <i class="bi bi-plus"></i>
-                        </button>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome do Material *</label>
+                        <input type="text" class="form-control" id="newMatName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Especificação (Tipo)</label>
+                        <div class="input-group">
+                            <select class="form-select" id="newMatSpec">
+                                <option value="">-- Selecione --</option>
+                                <?php foreach ($categories as $cat): ?>
+                                <option value="<?= htmlspecialchars($cat['name']) ?>" data-id="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="button" class="btn btn-outline-primary" onclick="showQuickAdd('category')" title="Nova">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Classificação</label>
+                        <input type="text" class="form-control" id="newMatClassification" placeholder="Ex: 100mm, 3/4&quot;, 50x40">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Unidade de Medida</label>
+                        <div class="input-group">
+                            <select class="form-select" id="newMatUnit">
+                                <option value="">-- Selecione --</option>
+                                <?php foreach ($units as $u): ?>
+                                <option value="<?= $u['id'] ?>" data-abbr="<?= htmlspecialchars($u['abbreviation']) ?>"><?= htmlspecialchars($u['name']) ?> (<?= htmlspecialchars($u['abbreviation']) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="button" class="btn btn-outline-primary" onclick="showQuickAdd('unit')" title="Nova">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Classificação</label>
-                    <input type="text" class="form-control" id="newMatClassification" placeholder="Ex: 100mm, 3/4&quot;, 50x40">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="saveMaterialBtn">Salvar Material</button>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Unidade de Medida</label>
-                    <div class="input-group">
-                        <select class="form-select" id="newMatUnit">
-                            <option value="">-- Selecione --</option>
-                            <?php foreach ($units as $u): ?>
-                            <option value="<?= $u['id'] ?>" data-abbr="<?= htmlspecialchars($u['abbreviation']) ?>"><?= htmlspecialchars($u['name']) ?> (<?= htmlspecialchars($u['abbreviation']) ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
-                        <button type="button" class="btn btn-outline-primary" onclick="quickAddUnit()" title="Nova">
-                            <i class="bi bi-plus"></i>
-                        </button>
+            </div>
+
+            <!-- Step 2: Cadastro rápido (especificação ou unidade) -->
+            <div id="matStep2" style="display:none;">
+                <div class="modal-header">
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="backToMatStep1()">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+                    <h6 class="modal-title" id="quickAddTitle">Nova Especificação</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Campos para categoria -->
+                    <div id="quickCatFields">
+                        <label class="form-label">Nome da Especificação *</label>
+                        <input type="text" class="form-control" id="quickCatName" placeholder="Ex: mat. Elétrico">
+                    </div>
+                    <!-- Campos para unidade -->
+                    <div id="quickUnitFields" style="display:none;">
+                        <div class="mb-3">
+                            <label class="form-label">Nome *</label>
+                            <input type="text" class="form-control" id="quickUnitName" placeholder="Ex: Galão">
+                        </div>
+                        <div>
+                            <label class="form-label">Abreviação *</label>
+                            <input type="text" class="form-control" id="quickUnitAbbr" placeholder="Ex: gal">
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="saveMaterialBtn">Salvar Material</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Cadastro Rápido Especificação -->
-<div class="modal fade" id="quickCategoryModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header py-2">
-                <h6 class="modal-title">Nova Especificação</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <input type="text" class="form-control" id="quickCatName" placeholder="Ex: mat. Elétrico">
-            </div>
-            <div class="modal-footer py-2">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="saveQuickCategory()">Salvar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Cadastro Rápido Unidade -->
-<div class="modal fade" id="quickUnitModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header py-2">
-                <h6 class="modal-title">Nova Unidade de Medida</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-2">
-                    <input type="text" class="form-control" id="quickUnitName" placeholder="Nome (Ex: Galão)">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="backToMatStep1()">Voltar</button>
+                    <button type="button" class="btn btn-primary" id="quickSaveBtn" onclick="saveQuickAdd()">Salvar</button>
                 </div>
-                <div>
-                    <input type="text" class="form-control" id="quickUnitAbbr" placeholder="Abreviação (Ex: gal)">
-                </div>
-            </div>
-            <div class="modal-footer py-2">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="saveQuickUnit()">Salvar</button>
             </div>
         </div>
     </div>
@@ -414,32 +407,67 @@ document.getElementById('orderForm').addEventListener('submit', function(e) {
     if (!valid) { e.preventDefault(); alert('Selecione um material para cada item.'); }
 });
 
-// Quick add category/unit
-function quickAddCategory() { new bootstrap.Modal(document.getElementById('quickCategoryModal')).show(); }
-async function saveQuickCategory() {
-    const name = document.getElementById('quickCatName').value.trim();
-    if (!name) { alert('Nome é obrigatório'); return; }
-    const resp = await fetch('/admin/materials/quick-store-category', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name }) });
-    const data = await resp.json();
-    if (data.success) {
-        const opt = new Option(data.category.name, data.category.name); opt.dataset.id = data.category.id;
-        document.getElementById('newMatSpec').add(opt); document.getElementById('newMatSpec').value = data.category.name;
-        bootstrap.Modal.getInstance(document.getElementById('quickCategoryModal')).hide(); document.getElementById('quickCatName').value = '';
-    } else { alert(data.error || 'Erro'); }
+// Quick add - sistema de steps dentro do modal
+let quickAddMode = ''; // 'category' ou 'unit'
+
+function showQuickAdd(mode) {
+    quickAddMode = mode;
+    document.getElementById('matStep1').style.display = 'none';
+    document.getElementById('matStep2').style.display = 'block';
+    
+    if (mode === 'category') {
+        document.getElementById('quickAddTitle').textContent = 'Nova Especificação';
+        document.getElementById('quickCatFields').style.display = '';
+        document.getElementById('quickUnitFields').style.display = 'none';
+        setTimeout(() => document.getElementById('quickCatName').focus(), 100);
+    } else {
+        document.getElementById('quickAddTitle').textContent = 'Nova Unidade de Medida';
+        document.getElementById('quickCatFields').style.display = 'none';
+        document.getElementById('quickUnitFields').style.display = '';
+        setTimeout(() => document.getElementById('quickUnitName').focus(), 100);
+    }
 }
-function quickAddUnit() { new bootstrap.Modal(document.getElementById('quickUnitModal')).show(); }
-async function saveQuickUnit() {
-    const name = document.getElementById('quickUnitName').value.trim();
-    const abbr = document.getElementById('quickUnitAbbr').value.trim();
-    if (!name || !abbr) { alert('Nome e abreviação são obrigatórios'); return; }
-    const resp = await fetch('/admin/materials/quick-store-unit', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name, abbreviation: abbr }) });
-    const data = await resp.json();
-    if (data.success) {
-        const opt = new Option(`${data.unit.name} (${data.unit.abbreviation})`, data.unit.id); opt.dataset.abbr = data.unit.abbreviation;
-        document.getElementById('newMatUnit').add(opt); document.getElementById('newMatUnit').value = data.unit.id;
-        bootstrap.Modal.getInstance(document.getElementById('quickUnitModal')).hide(); document.getElementById('quickUnitName').value = ''; document.getElementById('quickUnitAbbr').value = '';
-    } else { alert(data.error || 'Erro'); }
+
+function backToMatStep1() {
+    document.getElementById('matStep2').style.display = 'none';
+    document.getElementById('matStep1').style.display = 'block';
 }
+
+async function saveQuickAdd() {
+    if (quickAddMode === 'category') {
+        const name = document.getElementById('quickCatName').value.trim();
+        if (!name) { alert('Nome é obrigatório'); return; }
+        const resp = await fetch('/admin/materials/quick-store-category', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name }) });
+        const data = await resp.json();
+        if (data.success) {
+            const opt = new Option(data.category.name, data.category.name); opt.dataset.id = data.category.id;
+            document.getElementById('newMatSpec').add(opt); document.getElementById('newMatSpec').value = data.category.name;
+            document.getElementById('quickCatName').value = '';
+            backToMatStep1();
+        } else { alert(data.error || 'Erro'); }
+    } else {
+        const name = document.getElementById('quickUnitName').value.trim();
+        const abbr = document.getElementById('quickUnitAbbr').value.trim();
+        if (!name || !abbr) { alert('Nome e abreviação são obrigatórios'); return; }
+        const resp = await fetch('/admin/materials/quick-store-unit', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name, abbreviation: abbr }) });
+        const data = await resp.json();
+        if (data.success) {
+            const opt = new Option(`${data.unit.name} (${data.unit.abbreviation})`, data.unit.id); opt.dataset.abbr = data.unit.abbreviation;
+            document.getElementById('newMatUnit').add(opt); document.getElementById('newMatUnit').value = data.unit.id;
+            document.getElementById('quickUnitName').value = ''; document.getElementById('quickUnitAbbr').value = '';
+            backToMatStep1();
+        } else { alert(data.error || 'Erro'); }
+    }
+}
+
+// Reset modal de material ao fechar
+document.getElementById('newMaterialModal').addEventListener('hidden.bs.modal', function() {
+    backToMatStep1();
+    document.getElementById('newMatName').value = '';
+    document.getElementById('newMatSpec').value = '';
+    document.getElementById('newMatClassification').value = '';
+    document.getElementById('newMatUnit').value = '';
+});
 </script>
 
 <?php $content = ob_get_clean(); ?>
