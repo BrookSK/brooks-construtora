@@ -171,24 +171,34 @@ HTML;
         return self::wrap("Cotação Pendente - {$order['code']}", $body);
     }
 
-    public static function purchaseOrderApproval(array $order, array $items, string $approvalUrl): string
+    public static function purchaseOrderApproval(array $order, array $items, string $approvalUrl, array $orderSuppliers = []): string
     {
-        $itemsHtml = '';
-        $total = 0;
-        foreach ($items as $i => $item) {
-            $itemTotal = ($item['total_price'] ?? 0);
-            $total += $itemTotal;
-            $itemsHtml .= '<tr>';
-            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . ($i + 1) . '</td>';
-            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($item['material_name']) . '</td>';
-            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($item['unit'] ?? '-') . '</td>';
-            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px; text-align:center;">' . number_format($item['quantity'], 0) . '</td>';
-            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px; text-align:right;">R$ ' . number_format($item['unit_price'] ?? 0, 2, ',', '.') . '</td>';
-            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px; text-align:right; font-weight:600;">R$ ' . number_format($itemTotal, 2, ',', '.') . '</td>';
-            $itemsHtml .= '</tr>';
+        $totalFormatted = number_format($order['total_estimated'] ?? 0, 2, ',', '.');
+
+        // Seção de fornecedores cotados
+        $suppliersHtml = '';
+        if (!empty($orderSuppliers)) {
+            $suppliersHtml = '<p style="margin-bottom:10px;"><strong>Fornecedores cotados:</strong></p>';
+            $suppliersHtml .= '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">';
+            $suppliersHtml .= '<tr style="background:#f8f9fa;"><th style="padding:8px 12px; font-size:12px; text-align:left;">Fornecedor</th><th style="padding:8px 12px; font-size:12px; text-align:right;">Total</th></tr>';
+            foreach ($orderSuppliers as $os) {
+                $osFmt = ($os['subtotal_final'] ?? $os['total'] ?? 0) > 0 ? 'R$ ' . number_format($os['subtotal_final'] ?? $os['total'], 2, ',', '.') : 'Pendente';
+                $suppliersHtml .= '<tr><td style="padding:8px 12px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($os['supplier_name']) . '</td>';
+                $suppliersHtml .= '<td style="padding:8px 12px; border-bottom:1px solid #eee; font-size:13px; text-align:right; font-weight:600;">' . $osFmt . '</td></tr>';
+            }
+            $suppliersHtml .= '</table>';
         }
 
-        $totalFormatted = number_format($total, 2, ',', '.');
+        // Itens do pedido
+        $itemsHtml = '';
+        foreach ($items as $i => $item) {
+            $itemsHtml .= '<tr>';
+            $itemsHtml .= '<td style="padding:6px 8px; border-bottom:1px solid #eee; font-size:12px;">' . ($i + 1) . '</td>';
+            $itemsHtml .= '<td style="padding:6px 8px; border-bottom:1px solid #eee; font-size:12px;">' . htmlspecialchars($item['material_name']) . '</td>';
+            $itemsHtml .= '<td style="padding:6px 8px; border-bottom:1px solid #eee; font-size:12px;">' . htmlspecialchars($item['unit'] ?? '-') . '</td>';
+            $itemsHtml .= '<td style="padding:6px 8px; border-bottom:1px solid #eee; font-size:12px; text-align:center;">' . number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) . '</td>';
+            $itemsHtml .= '</tr>';
+        }
 
         $body = <<<HTML
 <p style="margin-bottom:15px;">Um pedido de materiais foi cotado e aguarda sua aprovação.</p>
@@ -199,29 +209,24 @@ HTML;
     <p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">{$order['code']}</p>
     <p style="margin:8px 0 0; font-size:13px; color:#666;">Cotado por: <strong>{$order['quoted_by_name']}</strong></p>
     <p style="margin:4px 0 0; font-size:13px; color:#666;">Solicitado por: {$order['created_by_name']}</p>
-    <p style="margin:10px 0 0; font-size:20px; color:#28a745; font-weight:700;">Total: R$ {$totalFormatted}</p>
 </td></tr>
 </table>
 
-<p style="margin-bottom:10px;"><strong>Itens cotados:</strong></p>
+{$suppliersHtml}
+
+<p style="margin-bottom:8px;"><strong style="font-size:12px;">Itens do pedido:</strong></p>
 <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">
 <tr style="background:#f8f9fa;">
-    <th style="padding:8px; font-size:12px; text-align:left;">#</th>
-    <th style="padding:8px; font-size:12px; text-align:left;">Material</th>
-    <th style="padding:8px; font-size:12px; text-align:left;">Unid.</th>
-    <th style="padding:8px; font-size:12px; text-align:center;">Qtd</th>
-    <th style="padding:8px; font-size:12px; text-align:right;">Unit.</th>
-    <th style="padding:8px; font-size:12px; text-align:right;">Total</th>
+    <th style="padding:6px 8px; font-size:11px; text-align:left;">#</th>
+    <th style="padding:6px 8px; font-size:11px; text-align:left;">Material</th>
+    <th style="padding:6px 8px; font-size:11px; text-align:left;">Unid.</th>
+    <th style="padding:6px 8px; font-size:11px; text-align:center;">Qtd</th>
 </tr>
 {$itemsHtml}
-<tr style="background:#f8f9fa;">
-    <td colspan="5" style="padding:10px 8px; font-weight:700; text-align:right;">TOTAL:</td>
-    <td style="padding:10px 8px; font-weight:700; text-align:right; color:#28a745;">R$ {$totalFormatted}</td>
-</tr>
 </table>
 
 <p style="text-align:center; margin: 25px 0 10px;">
-    <a href="{$approvalUrl}" style="display:inline-block; background-color:#28a745; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Analisar e Decidir</a>
+    <a href="{$approvalUrl}" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Analisar e Decidir</a>
 </p>
 
 <p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique no botão acima para aprovar ou rejeitar este pedido.</p>
