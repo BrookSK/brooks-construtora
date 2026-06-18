@@ -59,12 +59,12 @@
             </div>
         </div>
 
-        <!-- Sidebar desktop -->
-        <div class="col-lg-3">
+        <!-- Sidebar desktop (esconde no mobile) -->
+        <div class="col-lg-3 d-none d-lg-block">
             <div class="card sticky-top" style="top:1.5rem;">
                 <div class="card-body d-grid gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-send"></i> Criar Pedido e Enviar para Cotação
+                    <button type="button" class="btn btn-primary" onclick="showReview()">
+                        <i class="bi bi-eye"></i> Revisar e Enviar
                     </button>
                     <a href="/admin/orders" class="btn btn-outline-secondary btn-sm">
                         <i class="bi bi-arrow-left"></i> Voltar
@@ -74,14 +74,42 @@
         </div>
     </div>
 
-    <!-- Mobile: Botão fixo inferior -->
-    <div class="d-md-none position-fixed bottom-0 start-0 end-0 p-3 bg-white border-top shadow" style="z-index:100;">
-        <button type="submit" class="btn btn-primary w-100">
-            <i class="bi bi-send"></i> Criar Pedido e Enviar para Cotação
-        </button>
+    <!-- Mobile: Botões fixos inferiores -->
+    <div class="d-lg-none position-fixed bottom-0 start-0 end-0 bg-white border-top shadow" style="z-index:1100;">
+        <div class="d-flex gap-2 p-2">
+            <button type="button" class="btn btn-outline-primary flex-grow-1" id="addItemBtnMobile">
+                <i class="bi bi-plus"></i> Item
+            </button>
+            <button type="button" class="btn btn-primary flex-grow-1" onclick="showReview()">
+                <i class="bi bi-eye"></i> Revisar e Enviar
+            </button>
+        </div>
     </div>
-    <div class="d-md-none" style="height:80px;"></div>
+    <div class="d-lg-none" style="height:70px;"></div>
 </form>
+
+<!-- Modal de Revisão do Pedido -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Revisão do Pedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="reviewBody">
+                <!-- Preenchido via JS -->
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-pencil"></i> Voltar e Editar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="confirmSubmit()">
+                    <i class="bi bi-send"></i> Confirmar e Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal Novo Material (com steps internos) -->
 <div class="modal fade" id="newMaterialModal" tabindex="-1">
@@ -308,6 +336,51 @@ document.getElementById('orderForm').addEventListener('submit', function(e) {
     });
     if (!valid) { e.preventDefault(); alert('Selecione um material para cada item.'); }
 });
+
+// Botão mobile de adicionar item
+document.getElementById('addItemBtnMobile')?.addEventListener('click', () => addItem());
+
+// Revisão do pedido
+function showReview() {
+    const rows = document.querySelectorAll('#itemsBodyDesktop tr');
+    if (rows.length === 0) { alert('Adicione pelo menos um item.'); return; }
+    
+    // Validar que todos têm material selecionado
+    let valid = true;
+    document.querySelectorAll('[id^="mid-"]').forEach(input => { if (!input.value) valid = false; });
+    if (!valid) { alert('Selecione um material para cada item.'); return; }
+
+    // Montar resumo
+    let html = '<h6 class="mb-3">Itens do pedido:</h6>';
+    html += '<table class="table table-sm table-bordered"><thead><tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th class="text-center">Qtd</th></tr></thead><tbody>';
+    
+    let count = 0;
+    rows.forEach(row => {
+        count++;
+        const name = row.querySelector('[id^="mname-"]')?.value || '-';
+        const spec = row.querySelector('[id^="spec-"]')?.value || '-';
+        const cls = row.querySelector('[id^="class-"]')?.value || '-';
+        const unit = row.querySelector('[id^="unit-"]')?.value || '-';
+        const qty = row.querySelector('[name*="[quantity]"]')?.value || '1';
+        html += `<tr><td>${count}</td><td><strong>${name}</strong></td><td>${spec}</td><td>${cls}</td><td>${unit}</td><td class="text-center">${qty}</td></tr>`;
+    });
+    html += '</tbody></table>';
+
+    const obs = document.querySelector('[name="description"]')?.value;
+    if (obs) {
+        html += `<div class="alert alert-light mt-3"><strong>Observações:</strong> ${obs}</div>`;
+    }
+
+    html += `<div class="alert alert-info mt-3 small"><i class="bi bi-info-circle"></i> Ao confirmar, o pedido será criado e enviado para cotação. Os responsáveis serão notificados.</div>`;
+
+    document.getElementById('reviewBody').innerHTML = html;
+    new bootstrap.Modal(document.getElementById('reviewModal')).show();
+}
+
+function confirmSubmit() {
+    bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+    document.getElementById('orderForm').submit();
+}
 
 // Quick add steps
 let quickAddMode = '';

@@ -482,6 +482,7 @@ class PurchaseOrderController extends Controller
     {
         $order = PurchaseOrder::findFull($orderId);
         $items = PurchaseOrderItem::getByOrder($orderId);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
         $baseUrl = $this->getBaseUrl();
         $approvalUrl = "{$baseUrl}/pedido/aprovacao/{$token}";
 
@@ -490,7 +491,7 @@ class PurchaseOrderController extends Controller
             try {
                 $mailService = new MailService();
                 $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
-                $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl);
+                $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
                 
                 $emailList = array_map('trim', explode(',', $emails));
                 foreach ($emailList as $email) {
@@ -505,20 +506,32 @@ class PurchaseOrderController extends Controller
 
         $webhookUrl = Setting::get('orders_approval_webhook', '');
         if (!empty($webhookUrl)) {
-            $totalFormatted = 'R$ ' . number_format($order['total_estimated'], 2, ',', '.');
+            $supplierComparison = '';
+            $suppliersData = [];
+            if (!empty($orderSuppliers)) {
+                $supplierComparison = "*Cotações por fornecedor:*\n";
+                foreach ($orderSuppliers as $os) {
+                    $totalFmt = $os['total'] ? 'R$ ' . number_format($os['total'], 2, ',', '.') : 'Pendente';
+                    $supplierComparison .= "- {$os['supplier_name']}: {$totalFmt}\n";
+                    $suppliersData[] = ['id' => $os['supplier_id'], 'name' => $os['supplier_name'], 'total' => $os['total']];
+                }
+                $supplierComparison .= "\n";
+            }
 
             $message = "*PEDIDO AGUARDANDO APROVAÇÃO*\n\n"
                 . "*Pedido:* {$order['code']}\n"
-                . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
-                . "*Valor Total:* {$totalFormatted}\n"
-                . "*Cotado por:* {$order['quoted_by_name']}\n\n"
+                . "*Itens:* " . count($items) . "\n"
+                . "*Cotado por:* {$order['quoted_by_name']}\n"
+                . "*Data cotação:* " . date('d/m/Y H:i', strtotime($order['quoted_at'])) . "\n\n"
+                . $supplierComparison
                 . "*Link para aprovar/rejeitar:*\n{$approvalUrl}";
 
             $this->sendWebhook($webhookUrl, [
                 'event' => 'approval_requested',
                 'order_code' => $order['code'],
-                'supplier' => $order['supplier_name'] ?? 'N/A',
+                'suppliers' => $suppliersData,
                 'total' => $order['total_estimated'],
+                'items_count' => count($items),
                 'approval_url' => $approvalUrl,
                 'quoted_by' => $order['quoted_by_name'],
                 'phone' => Setting::get('orders_approval_phone', ''),

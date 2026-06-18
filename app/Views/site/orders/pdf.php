@@ -133,12 +133,39 @@
             <div style="margin-top:6px;">
                 <?php foreach ($orderSuppliers as $os): ?>
                 <div class="d-flex justify-content-between py-1 <?= $os['approved'] ? 'fw-bold' : '' ?>" style="border-bottom:1px solid #eee;">
-                    <span><?= htmlspecialchars($os['supplier_name']) ?> <?= $os['approved'] ? '(APROVADO)' : '' ?></span>
-                    <span><?= $os['total'] ? 'R$ ' . number_format($os['total'], 2, ',', '.') : '-' ?></span>
+                    <span>
+                        <?= htmlspecialchars($os['supplier_name']) ?> <?= $os['approved'] ? '(APROVADO)' : '' ?>
+                        <?php if ($os['subtotal_items'] > 0 && ($os['discount_value'] > 0 || $os['ipi_percent'] > 0 || $os['icms_percent'] > 0 || $os['freight'] > 0)): ?>
+                        <br><small class="text-muted fw-normal">
+                            Insumos: R$ <?= number_format($os['subtotal_items'], 2, ',', '.') ?>
+                            <?= $os['discount_value'] > 0 ? ' | Desc: ' . $os['discount_value'] . ($os['discount_type'] === 'percent' ? '%' : 'R$') : '' ?>
+                            <?= $os['surcharge_value'] > 0 ? ' | Acrés: ' . $os['surcharge_value'] . ($os['surcharge_type'] === 'percent' ? '%' : 'R$') : '' ?>
+                            <?= $os['ipi_percent'] > 0 ? ' | IPI: ' . $os['ipi_percent'] . '%' : '' ?>
+                            <?= $os['icms_percent'] > 0 ? ' | ICMS: ' . $os['icms_percent'] . '%' : '' ?>
+                            <?= $os['freight'] > 0 ? ' | Frete: R$ ' . number_format($os['freight'], 2, ',', '.') : '' ?>
+                        </small>
+                        <?php endif; ?>
+                    </span>
+                    <span><?= $os['subtotal_final'] ? 'R$ ' . number_format($os['subtotal_final'], 2, ',', '.') : ($os['total'] ? 'R$ ' . number_format($os['total'], 2, ',', '.') : '-') ?></span>
                 </div>
                 <?php endforeach; ?>
             </div>
         </div>
+        <?php elseif (!empty($orderSuppliers) && count($orderSuppliers) == 1): ?>
+        <?php $os = $orderSuppliers[0]; ?>
+        <?php if ($os['subtotal_items'] > 0 && ($os['discount_value'] > 0 || $os['ipi_percent'] > 0 || $os['icms_percent'] > 0 || $os['freight'] > 0)): ?>
+        <div style="background:#f8f9fa; border-radius:6px; padding:10px 14px; margin-bottom:1rem; font-size:0.8rem;">
+            <strong>Detalhamento financeiro:</strong>
+            <div class="d-flex flex-wrap gap-3 mt-1">
+                <span>Insumos: <strong>R$ <?= number_format($os['subtotal_items'], 2, ',', '.') ?></strong></span>
+                <?= $os['discount_value'] > 0 ? '<span>Desconto: <strong>' . $os['discount_value'] . ($os['discount_type'] === 'percent' ? '%' : ' R$') . '</strong></span>' : '' ?>
+                <?= $os['surcharge_value'] > 0 ? '<span>Acréscimo: <strong>' . $os['surcharge_value'] . ($os['surcharge_type'] === 'percent' ? '%' : ' R$') . '</strong></span>' : '' ?>
+                <?= $os['ipi_percent'] > 0 ? '<span>IPI: <strong>' . $os['ipi_percent'] . '%</strong></span>' : '' ?>
+                <?= $os['icms_percent'] > 0 ? '<span>ICMS: <strong>' . $os['icms_percent'] . '%</strong></span>' : '' ?>
+                <?= $os['freight'] > 0 ? '<span>Frete: <strong>R$ ' . number_format($os['freight'], 2, ',', '.') . '</strong></span>' : '' ?>
+            </div>
+        </div>
+        <?php endif; ?>
         <?php endif; ?>
 
         <?php if (!empty($order['description'])): ?>

@@ -144,32 +144,69 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
         <div class="card mb-3">
             <div class="card-header"><i class="bi bi-building"></i> Fornecedores Cotados</div>
             <div class="card-body p-0">
-                <div class="list-group list-group-flush">
-                    <?php foreach ($orderSuppliers as $os): ?>
-                    <div class="list-group-item <?= $os['approved'] ? 'list-group-item-success' : '' ?>">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong><?= htmlspecialchars($os['supplier_name']) ?></strong>
-                                <?php if ($os['approved']): ?>
-                                <span class="badge bg-success ms-1">Aprovado</span>
-                                <?php elseif ($os['status'] === 'rejected'): ?>
-                                <span class="badge bg-danger ms-1">Não selecionado</span>
-                                <?php elseif ($os['status'] === 'quoted'): ?>
-                                <span class="badge bg-info ms-1">Cotado</span>
-                                <?php else: ?>
-                                <span class="badge bg-secondary ms-1">Pendente</span>
-                                <?php endif; ?>
-                            </div>
-                            <strong class="<?= $os['approved'] ? 'text-success' : '' ?>">
-                                <?= $os['total'] ? 'R$ ' . number_format($os['total'], 2, ',', '.') : '-' ?>
-                            </strong>
+                <?php foreach ($orderSuppliers as $os): ?>
+                <div class="p-3 <?= $os['approved'] ? 'bg-success bg-opacity-10' : '' ?> <?= !$loop ?? '' ?>border-bottom">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong><?= htmlspecialchars($os['supplier_name']) ?></strong>
+                            <?php if ($os['approved']): ?>
+                            <span class="badge bg-success ms-1">Aprovado</span>
+                            <?php elseif ($os['status'] === 'rejected'): ?>
+                            <span class="badge bg-danger ms-1">Não selecionado</span>
+                            <?php elseif ($os['status'] === 'quoted'): ?>
+                            <span class="badge bg-info ms-1">Cotado</span>
+                            <?php else: ?>
+                            <span class="badge bg-secondary ms-1">Pendente</span>
+                            <?php endif; ?>
                         </div>
-                        <?php if ($os['quoted_by_name']): ?>
-                        <small class="text-muted">Cotado por <?= htmlspecialchars($os['quoted_by_name']) ?> em <?= $os['quoted_at'] ? date('d/m/Y H:i', strtotime($os['quoted_at'])) : '' ?></small>
+                        <strong class="<?= $os['approved'] ? 'text-success' : '' ?> fs-6">
+                            <?= $os['subtotal_final'] ? 'R$ ' . number_format($os['subtotal_final'], 2, ',', '.') : ($os['total'] ? 'R$ ' . number_format($os['total'], 2, ',', '.') : '-') ?>
+                        </strong>
+                    </div>
+                    <?php if ($os['quoted_by_name']): ?>
+                    <small class="text-muted d-block mb-2">Cotado por <?= htmlspecialchars($os['quoted_by_name']) ?> em <?= $os['quoted_at'] ? date('d/m/Y H:i', strtotime($os['quoted_at'])) : '' ?></small>
+                    <?php endif; ?>
+                    
+                    <?php if ($os['subtotal_items'] > 0): ?>
+                    <div class="row small mt-2">
+                        <div class="col-6 col-md-3 mb-1">
+                            <span class="text-muted">Subtotal insumos:</span><br>
+                            <strong>R$ <?= number_format($os['subtotal_items'], 2, ',', '.') ?></strong>
+                        </div>
+                        <?php if ($os['discount_value'] > 0): ?>
+                        <div class="col-6 col-md-2 mb-1">
+                            <span class="text-muted">Desconto:</span><br>
+                            <strong><?= $os['discount_value'] ?><?= $os['discount_type'] === 'percent' ? '%' : ' R$' ?></strong>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($os['surcharge_value'] > 0): ?>
+                        <div class="col-6 col-md-2 mb-1">
+                            <span class="text-muted">Acréscimo:</span><br>
+                            <strong><?= $os['surcharge_value'] ?><?= $os['surcharge_type'] === 'percent' ? '%' : ' R$' ?></strong>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($os['ipi_percent'] > 0): ?>
+                        <div class="col-4 col-md-1 mb-1">
+                            <span class="text-muted">IPI:</span><br>
+                            <strong><?= $os['ipi_percent'] ?>%</strong>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($os['icms_percent'] > 0): ?>
+                        <div class="col-4 col-md-1 mb-1">
+                            <span class="text-muted">ICMS:</span><br>
+                            <strong><?= $os['icms_percent'] ?>%</strong>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($os['freight'] > 0): ?>
+                        <div class="col-4 col-md-2 mb-1">
+                            <span class="text-muted">Frete:</span><br>
+                            <strong>R$ <?= number_format($os['freight'], 2, ',', '.') ?></strong>
+                        </div>
                         <?php endif; ?>
                     </div>
-                    <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
+                <?php endforeach; ?>
             </div>
         </div>
         <?php endif; ?>
