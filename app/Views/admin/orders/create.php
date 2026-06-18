@@ -46,6 +46,10 @@
                             <i class="bi bi-inbox d-block mb-1" style="font-size:1.5rem;"></i>
                             Nenhum item adicionado
                         </div>
+                        <!-- Botão adicionar item inline (sempre visível abaixo dos itens) -->
+                        <button type="button" class="btn btn-outline-primary w-100 mt-2 addItemInline" id="addItemBtnInline">
+                            <i class="bi bi-plus-lg"></i> Adicionar Item
+                        </button>
                     </div>
                 </div>
             </div>
@@ -74,18 +78,15 @@
         </div>
     </div>
 
-    <!-- Mobile: Botões fixos inferiores -->
+    <!-- Mobile: Botão fixo inferior -->
     <div class="d-lg-none position-fixed bottom-0 start-0 end-0 bg-white border-top shadow" style="z-index:1100;">
-        <div class="d-flex gap-2 p-2">
-            <button type="button" class="btn btn-outline-primary flex-grow-1" id="addItemBtnMobile">
-                <i class="bi bi-plus"></i> Item
-            </button>
-            <button type="button" class="btn btn-primary flex-grow-1" onclick="showReview()">
-                <i class="bi bi-eye"></i> Revisar e Enviar
+        <div class="p-2">
+            <button type="button" class="btn btn-primary w-100 py-2" onclick="showReview()" style="font-size:1rem;">
+                <i class="bi bi-eye"></i> Revisar e Enviar Pedido
             </button>
         </div>
     </div>
-    <div class="d-lg-none" style="height:70px;"></div>
+    <div class="d-lg-none" style="height:65px;"></div>
 </form>
 
 <!-- Modal de Revisão do Pedido -->
@@ -337,8 +338,8 @@ document.getElementById('orderForm').addEventListener('submit', function(e) {
     if (!valid) { e.preventDefault(); alert('Selecione um material para cada item.'); }
 });
 
-// Botão mobile de adicionar item
-document.getElementById('addItemBtnMobile')?.addEventListener('click', () => addItem());
+// Botão inline de adicionar item (mobile)
+document.getElementById('addItemBtnInline')?.addEventListener('click', () => addItem());
 
 // Revisão do pedido
 function showReview() {
