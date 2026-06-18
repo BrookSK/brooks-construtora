@@ -475,6 +475,118 @@ class PurchaseOrderController extends Controller
     }
 
     // ============================
+    // PAINEL COM PIN (ACESSO RÁPIDO)
+    // ============================
+
+    /**
+     * Painel de pedidos - redireciona pro admin se autenticado por PIN
+     */
+    public function pinPanel(): void
+    {
+        if (!$this->isPinAuthenticated()) {
+            $this->redirect('/pedidos/login');
+            return;
+        }
+        // Redireciona pro admin de pedidos (a sessão do PIN simula um user comprador)
+        $this->redirect('/admin/orders');
+    }
+
+    /**
+     * Tela de login por PIN
+     */
+    public function pinLogin(): void
+    {
+        if ($this->isPinAuthenticated()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $flash = $this->getFlash();
+        $this->view('site.orders.pin_login', ['flash' => $flash]);
+    }
+
+    /**
+     * Processar autenticação por PIN
+     */
+    public function pinAuth(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/pedidos/login');
+            return;
+        }
+
+        $pin = trim($this->input('pin', ''));
+        $correctPin = Setting::get('orders_pin_code', '');
+
+        if (empty($correctPin)) {
+            $this->setFlash('error', 'PIN não configurado. Contate o administrador.');
+            $this->redirect('/pedidos/login');
+            return;
+        }
+
+        if ($pin !== $correctPin) {
+            $this->setFlash('error', 'PIN incorreto.');
+            $this->redirect('/pedidos/login');
+            return;
+        }
+
+        // Autenticar como "comprador" via sessão
+        $_SESSION['user_id'] = 0;
+        $_SESSION['user_name'] = 'Comprador';
+        $_SESSION['user_email'] = 'comprador@pin';
+        $_SESSION['user_role'] = 'comprador';
+        $_SESSION['pin_auth'] = true;
+        $_SESSION['pin_auth_time'] = time();
+
+        // Cookie de 30 dias para manter logado
+        setcookie('pin_session', hash('sha256', $correctPin . 'brooks_pin_salt'), time() + (30 * 24 * 60 * 60), '/');
+
+        $this->redirect('/admin/orders');
+    }
+
+    /**
+     * Logout do PIN
+     */
+    public function pinLogout(): void
+    {
+        unset($_SESSION['pin_auth']);
+        unset($_SESSION['user_id']);
+        unset($_SESSION['user_name']);
+        unset($_SESSION['user_email']);
+        unset($_SESSION['user_role']);
+        setcookie('pin_session', '', time() - 3600, '/');
+        $this->redirect('/pedidos/login');
+    }
+
+    /**
+     * Verifica se está autenticado por PIN
+     */
+    private function isPinAuthenticated(): bool
+    {
+        // Já tem sessão ativa
+        if (!empty($_SESSION['pin_auth'])) {
+            return true;
+        }
+
+        // Verificar cookie de 30 dias
+        $cookie = $_COOKIE['pin_session'] ?? '';
+        if (!empty($cookie)) {
+            $correctPin = Setting::get('orders_pin_code', '');
+            if (!empty($correctPin) && $cookie === hash('sha256', $correctPin . 'brooks_pin_salt')) {
+                // Restaurar sessão
+                $_SESSION['user_id'] = 0;
+                $_SESSION['user_name'] = 'Comprador';
+                $_SESSION['user_email'] = 'comprador@pin';
+                $_SESSION['user_role'] = 'comprador';
+                $_SESSION['pin_auth'] = true;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // ============================
     // MÉTODOS PRIVADOS
     // ============================
 

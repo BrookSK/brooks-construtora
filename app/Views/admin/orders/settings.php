@@ -2,6 +2,25 @@
 <?php ob_start(); ?>
 
 <form method="POST" action="/admin/orders/settings/update">
+    <!-- PIN de acesso rápido -->
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-key"></i> <strong>Acesso Rápido (PIN)</strong></div>
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Senha de 4 dígitos</label>
+                    <input type="text" class="form-control" name="orders_pin_code" value="<?= htmlspecialchars($settings['orders_pin_code'] ?? '') ?>" maxlength="4" pattern="\d{4}" placeholder="0000" style="font-size:1.5rem; text-align:center; letter-spacing:8px; max-width:180px;">
+                </div>
+                <div class="col-md-8">
+                    <p class="text-muted small mb-0">
+                        Esta senha permite acesso ao painel de pedidos sem login/email.<br>
+                        Acesso via: <strong><a href="/pedidos" target="_blank">/pedidos</a></strong> — sessão mantida por 30 dias.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Fase 1: Cotação -->
         <div class="col-12 col-lg-4 mb-3">

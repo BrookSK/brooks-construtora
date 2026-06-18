@@ -174,6 +174,12 @@ class Router
             'pedido/aprovacao' => ['PurchaseOrderController', 'approval'],
             'pedido/aprovacao/enviar' => ['PurchaseOrderController', 'submitApproval'],
             'pedido/pdf' => ['PurchaseOrderController', 'pdf'],
+
+            // Painel de pedidos com PIN
+            'pedidos' => ['PurchaseOrderController', 'pinPanel'],
+            'pedidos/login' => ['PurchaseOrderController', 'pinLogin'],
+            'pedidos/auth' => ['PurchaseOrderController', 'pinAuth'],
+            'pedidos/logout' => ['PurchaseOrderController', 'pinLogout'],
         ];
 
         $path = implode('/', $segments);

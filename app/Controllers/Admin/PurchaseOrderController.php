@@ -285,6 +285,7 @@ class PurchaseOrderController extends Controller
             'orders_completed_webhook',
             'orders_completed_phone',
             'orders_completed_phone_name',
+            'orders_pin_code',
         ];
 
         $data = [];
