@@ -1,0 +1,73 @@
+.ss-container {
+    position: relative;
+    width: 100%;
+}
+.ss-input {
+    width: 100%;
+}
+.ss-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 1050;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.ss-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #f5f5f5;
+    transition: background 0.1s;
+}
+.ss-item:hover {
+    background: #f0f4ff;
+}
+.ss-item:last-child {
+    border-bottom: none;
+}
+.ss-item.ss-empty,
+.ss-item.ss-more {
+    color: #999;
+    font-style: italic;
+    cursor: default;
+}
+.ss-item.ss-more:hover {
+    background: transparent;
+}
+.ss-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+.ss-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #3a3b4e;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+}
+.ss-tag-remove {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+    margin-left: 2px;
+    cursor: pointer;
+    opacity: 0.7;
+}
+.ss-tag-remove:hover {
+    opacity: 1;
+}

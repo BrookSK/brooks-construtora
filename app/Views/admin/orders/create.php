@@ -1,6 +1,8 @@
 <?php $pageTitle = 'Novo Pedido de Materiais'; $currentPage = 'orders'; ?>
 <?php ob_start(); ?>
 
+<link rel="stylesheet" href="/assets/css/searchable-select.css">
+
 <form method="POST" action="/admin/orders/store" id="orderForm">
     <div class="row">
         <div class="col-lg-9">
@@ -9,14 +11,14 @@
                 <div class="card-header"><i class="bi bi-building"></i> Fornecedores</div>
                 <div class="card-body">
                     <label class="form-label">Selecionar Fornecedores (pode selecionar mais de um)</label>
-                    <select class="form-select mb-2" id="supplierSelect" multiple size="4">
+                    <select id="supplierSelect" multiple style="display:none;">
                         <?php foreach ($suppliers as $s): ?>
                         <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?> <?= $s['cnpj'] ? '(' . $s['cnpj'] . ')' : '' ?></option>
                         <?php endforeach; ?>
                     </select>
-                    <small class="text-muted d-block mb-2">Segure Ctrl (ou Cmd) para selecionar múltiplos. Opcional — pode enviar sem fornecedor.</small>
-                    <div id="selectedSuppliers" class="d-flex flex-wrap gap-1 mb-2"></div>
-                    <input type="hidden" name="supplier_ids_json" id="supplierIdsJson" value="[]">
+                    <div id="supplierSearchContainer"></div>
+                    <div id="supplierHiddenInputs"></div>
+                    <small class="text-muted d-block mt-1 mb-2">Opcional — pode enviar sem fornecedor.</small>
                     <button type="button" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#newSupplierModal">
                         <i class="bi bi-plus"></i> Cadastrar Novo Fornecedor
                     </button>
@@ -196,9 +198,29 @@
 .item-card .item-details .badge { font-weight:400; font-size:0.7rem; }
 </style>
 
+<script src="/assets/js/searchable-select.js"></script>
 <script>
 const materials = <?= json_encode($materials) ?>;
 let itemCount = 0;
+
+// --- Fornecedor com busca (múltiplo) ---
+const supplierSS = new SearchableSelect(document.getElementById('supplierSelect'), {
+    placeholder: 'Buscar fornecedor...',
+    multiple: true,
+    onSelect: function(value, text) {
+        // Criar hidden input
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'supplier_ids[]';
+        input.value = value;
+        input.id = 'supplier-hidden-' + value;
+        document.getElementById('supplierHiddenInputs').appendChild(input);
+    },
+    onDeselect: function(value) {
+        const el = document.getElementById('supplier-hidden-' + value);
+        if (el) el.remove();
+    }
+});
 
 document.getElementById('addItemBtn').addEventListener('click', () => addItem());
 
@@ -226,19 +248,40 @@ function addItem(prefill = null) {
     // Desktop row
     const tr = document.createElement('tr');
     tr.id = 'item-row-' + itemCount;
+    const idx = itemCount;
     tr.innerHTML = `
         <td>
-            <select class="form-select form-select-sm material-select" onchange="materialSelected(this, ${itemCount})">${opts}</select>
-            <input type="hidden" name="items[${itemCount}][material_id]" id="mid-${itemCount}" value="${prefill?.id || ''}">
-            <input type="hidden" name="items[${itemCount}][material_name]" id="mname-${itemCount}" value="${prefill?.name || ''}">
+            <select class="material-select-raw" id="mat-select-${idx}" style="display:none;">${opts}</select>
+            <div id="mat-ss-${idx}"></div>
+            <input type="hidden" name="items[${idx}][material_id]" id="mid-${idx}" value="${prefill?.id || ''}">
+            <input type="hidden" name="items[${idx}][material_name]" id="mname-${idx}" value="${prefill?.name || ''}">
         </td>
-        <td><input type="text" class="form-control form-control-sm" name="items[${itemCount}][specification]" id="spec-${itemCount}" value="${prefill?.specification || ''}" readonly></td>
-        <td><input type="text" class="form-control form-control-sm" name="items[${itemCount}][classification]" id="class-${itemCount}" value="${prefill?.classification || ''}" readonly></td>
-        <td><input type="text" class="form-control form-control-sm" name="items[${itemCount}][unit]" id="unit-${itemCount}" value="${prefill?.unit || ''}" readonly></td>
-        <td><input type="number" class="form-control form-control-sm" name="items[${itemCount}][quantity]" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required></td>
-        <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(${itemCount})"><i class="bi bi-trash"></i></button></td>
+        <td><input type="text" class="form-control form-control-sm" name="items[${idx}][specification]" id="spec-${idx}" value="${prefill?.specification || ''}" readonly></td>
+        <td><input type="text" class="form-control form-control-sm" name="items[${idx}][classification]" id="class-${idx}" value="${prefill?.classification || ''}" readonly></td>
+        <td><input type="text" class="form-control form-control-sm" name="items[${idx}][unit]" id="unit-${idx}" value="${prefill?.unit || ''}" readonly></td>
+        <td><input type="number" class="form-control form-control-sm" name="items[${idx}][quantity]" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required></td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(${idx})"><i class="bi bi-trash"></i></button></td>
     `;
     document.getElementById('itemsBodyDesktop').appendChild(tr);
+
+    // Inicializar SearchableSelect para o material
+    const matSS = new SearchableSelect(document.getElementById('mat-select-' + idx), {
+        placeholder: 'Buscar material...',
+        onSelect: function(value, text, dataset) {
+            document.getElementById('mid-' + idx).value = value;
+            document.getElementById('mname-' + idx).value = dataset.name || '';
+            document.getElementById('spec-' + idx).value = dataset.spec || '';
+            document.getElementById('class-' + idx).value = dataset.class || '';
+            document.getElementById('unit-' + idx).value = dataset.unit || '';
+            // Sync mobile
+            updateMobileDetails(idx, { dataset });
+        }
+    });
+
+    // Se tem prefill, setar valor
+    if (prefill?.id) {
+        matSS.setValue(prefill.id);
+    }
 
     // Mobile card
     const card = document.createElement('div');
@@ -247,24 +290,38 @@ function addItem(prefill = null) {
     card.innerHTML = `
         <span class="item-number">#${itemCount}</span>
         <div class="d-flex gap-2 align-items-center mb-2">
-            <select class="form-select form-select-sm flex-grow-1 material-select-m" onchange="materialSelectedMobile(this, ${itemCount})">${opts}</select>
-            <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="removeItem(${itemCount})"><i class="bi bi-trash"></i></button>
+            <select class="material-select-raw-m" id="mat-select-m-${idx}" style="display:none;">${opts}</select>
+            <div class="flex-grow-1" id="mat-ss-m-${idx}"></div>
+            <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="removeItem(${idx})"><i class="bi bi-trash"></i></button>
         </div>
-        <div class="item-details" id="details-m-${itemCount}">
-            ${prefill ? `<span class="badge bg-light text-dark">${prefill.specification||''}</span><span class="badge bg-light text-dark">${prefill.classification||''}</span><span class="badge bg-info text-white">${prefill.unit||''}</span>` : '<span class="text-muted" style="font-size:0.75rem;">Selecione um material</span>'}
+        <div class="item-details" id="details-m-${idx}">
+            ${prefill ? `<span class="badge bg-light text-dark">${prefill.specification||''}</span><span class="badge bg-light text-dark">${prefill.classification||''}</span><span class="badge bg-info text-white">${prefill.unit||''}</span>` : '<span class="text-muted" style="font-size:0.75rem;">Busque um material acima</span>'}
         </div>
         <div class="d-flex align-items-center gap-2 mt-2">
             <label class="form-label mb-0 small fw-bold">Qtd:</label>
-            <input type="number" class="form-control form-control-sm" style="max-width:100px;" name="items[${itemCount}][quantity]" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required>
+            <input type="number" class="form-control form-control-sm" style="max-width:100px;" name="items[${idx}][quantity]" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required>
             <span class="text-muted small">${prefill?.unit || ''}</span>
         </div>
     `;
     document.getElementById('itemsBodyMobile').appendChild(card);
 
+    // SearchableSelect para mobile
+    const matSSM = new SearchableSelect(document.getElementById('mat-select-m-' + idx), {
+        placeholder: 'Buscar material...',
+        onSelect: function(value, text, dataset) {
+            document.getElementById('mid-' + idx).value = value;
+            document.getElementById('mname-' + idx).value = dataset.name || '';
+            document.getElementById('spec-' + idx).value = dataset.spec || '';
+            document.getElementById('class-' + idx).value = dataset.class || '';
+            document.getElementById('unit-' + idx).value = dataset.unit || '';
+            updateMobileDetails(idx, { dataset });
+        }
+    });
+
     if (prefill?.id) {
-        tr.querySelector('.material-select').value = prefill.id;
-        card.querySelector('.material-select-m').value = prefill.id;
+        matSSM.setValue(prefill.id);
     }
+
     updateItemCount();
 }
 
@@ -274,76 +331,18 @@ function removeItem(idx) {
     updateItemCount();
 }
 
-function materialSelected(sel, idx) {
-    const opt = sel.selectedOptions[0];
-    document.getElementById('mid-' + idx).value = opt?.value || '';
-    document.getElementById('mname-' + idx).value = opt?.dataset?.name || '';
-    document.getElementById('spec-' + idx).value = opt?.dataset?.spec || '';
-    document.getElementById('class-' + idx).value = opt?.dataset?.class || '';
-    document.getElementById('unit-' + idx).value = opt?.dataset?.unit || '';
-    // Sync mobile
-    const mSel = document.querySelector('#item-card-' + idx + ' .material-select-m');
-    if (mSel) mSel.value = opt?.value || '';
-    updateMobileDetails(idx, opt);
-}
-
-function materialSelectedMobile(sel, idx) {
-    const opt = sel.selectedOptions[0];
-    document.getElementById('mid-' + idx).value = opt?.value || '';
-    document.getElementById('mname-' + idx).value = opt?.dataset?.name || '';
-    document.getElementById('spec-' + idx).value = opt?.dataset?.spec || '';
-    document.getElementById('class-' + idx).value = opt?.dataset?.class || '';
-    document.getElementById('unit-' + idx).value = opt?.dataset?.unit || '';
-    // Sync desktop
-    const dSel = document.querySelector('#item-row-' + idx + ' .material-select');
-    if (dSel) dSel.value = opt?.value || '';
-    updateMobileDetails(idx, opt);
-}
-
 function updateMobileDetails(idx, opt) {
     const el = document.getElementById('details-m-' + idx);
     if (!el) return;
-    if (opt?.value) {
+    const ds = opt?.dataset || {};
+    if (ds.spec || ds.class || ds.unit) {
         el.innerHTML = '';
-        if (opt.dataset.spec) el.innerHTML += `<span class="badge bg-light text-dark">${opt.dataset.spec}</span>`;
-        if (opt.dataset.class) el.innerHTML += `<span class="badge bg-light text-dark">${opt.dataset.class}</span>`;
-        if (opt.dataset.unit) el.innerHTML += `<span class="badge bg-info text-white">${opt.dataset.unit}</span>`;
+        if (ds.spec) el.innerHTML += `<span class="badge bg-light text-dark">${ds.spec}</span>`;
+        if (ds.class) el.innerHTML += `<span class="badge bg-light text-dark">${ds.class}</span>`;
+        if (ds.unit) el.innerHTML += `<span class="badge bg-info text-white">${ds.unit}</span>`;
     } else {
-        el.innerHTML = '<span class="text-muted" style="font-size:0.75rem;">Selecione um material</span>';
+        el.innerHTML = '<span class="text-muted" style="font-size:0.75rem;">Busque um material acima</span>';
     }
-}
-
-// Fornecedor - multi-select
-const supplierSelect = document.getElementById('supplierSelect');
-const selectedContainer = document.getElementById('selectedSuppliers');
-
-supplierSelect.addEventListener('change', updateSelectedSuppliers);
-
-function updateSelectedSuppliers() {
-    selectedContainer.innerHTML = '';
-    // Remove hidden inputs antigos
-    document.querySelectorAll('input[name="supplier_ids[]"]').forEach(el => el.remove());
-    
-    const selected = Array.from(supplierSelect.selectedOptions);
-    selected.forEach(opt => {
-        const badge = document.createElement('span');
-        badge.className = 'badge bg-primary d-flex align-items-center gap-1';
-        badge.innerHTML = `${opt.text} <button type="button" class="btn-close btn-close-white" style="font-size:0.5rem;" onclick="deselectSupplier(${opt.value})"></button>`;
-        selectedContainer.appendChild(badge);
-        
-        // Hidden input para enviar no form
-        const hidden = document.createElement('input');
-        hidden.type = 'hidden';
-        hidden.name = 'supplier_ids[]';
-        hidden.value = opt.value;
-        selectedContainer.appendChild(hidden);
-    });
-}
-
-function deselectSupplier(id) {
-    const opt = supplierSelect.querySelector(`option[value="${id}"]`);
-    if (opt) opt.selected = false;
-    updateSelectedSuppliers();
 }
 
 // Fornecedor inline save
@@ -353,9 +352,8 @@ document.getElementById('saveSupplierBtn').addEventListener('click', async funct
     const resp = await fetch('/admin/suppliers/quick-store', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name, cnpj:document.getElementById('newSupplierCnpj').value, email:document.getElementById('newSupplierEmail').value, phone:document.getElementById('newSupplierPhone').value, contact_person:document.getElementById('newSupplierContact').value }) });
     const data = await resp.json();
     if (data.success) {
-        const opt = new Option(data.supplier.name, data.supplier.id, true, true);
-        supplierSelect.add(opt);
-        updateSelectedSuppliers();
+        supplierSS.addOption(data.supplier.id, data.supplier.name);
+        supplierSS.setValue(data.supplier.id);
         bootstrap.Modal.getInstance(document.getElementById('newSupplierModal')).hide();
         ['newSupplierName','newSupplierCnpj','newSupplierEmail','newSupplierPhone','newSupplierContact'].forEach(id => document.getElementById(id).value = '');
     } else { alert(data.error || 'Erro'); }
@@ -382,8 +380,8 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async funct
 document.getElementById('orderForm').addEventListener('submit', function(e) {
     if (!document.querySelectorAll('#itemsBodyDesktop tr').length) { e.preventDefault(); alert('Adicione pelo menos um item.'); return; }
     let valid = true;
-    document.querySelectorAll('#itemsBodyDesktop .material-select').forEach(sel => {
-        if (!sel.value) { valid=false; sel.classList.add('is-invalid'); } else { sel.classList.remove('is-invalid'); }
+    document.querySelectorAll('[id^="mid-"]').forEach(input => {
+        if (!input.value) { valid = false; }
     });
     if (!valid) { e.preventDefault(); alert('Selecione um material para cada item.'); }
 });
