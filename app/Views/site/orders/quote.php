@@ -11,14 +11,13 @@
         body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
         .page-header { background: #3a3b4e; color: #fff; padding: 1rem 0; }
         .main-card { border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        .supplier-block { border: 2px solid #dee2e6; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+        .supplier-block { border: 2px solid #dee2e6; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem; background: #fff; }
         .supplier-block h6 { color: #3a3b4e; }
-        .financial-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .history-hint { font-size: 0.7rem; color: #888; margin-top: 2px; }
         .history-hint strong { color: #28a745; }
         @media (max-width: 768px) {
             .main-card .card-body, .main-card .card-header { padding: 1rem; }
-            .financial-row { grid-template-columns: 1fr; }
+            .supplier-block { padding: 1rem; }
             input, select, textarea { font-size: 16px !important; }
         }
     </style>
@@ -199,50 +198,61 @@
         });
 
         block.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="mb-0"><i class="bi bi-building"></i> ${name}</h6>
                 <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSupplierBlock('${sid}')"><i class="bi bi-x"></i></button>
             </div>
             <input type="hidden" name="supplier_ids[]" value="${sid}">
+            
+            <!-- Preços por item -->
             ${itemsHtml}
-            <div class="mt-3 p-2 bg-light rounded">
-                <strong class="small">Ajustes financeiros:</strong>
-                <div class="financial-row mt-2">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text" style="font-size:0.7rem;">Desconto</span>
-                        <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][discount_value]" placeholder="0" data-sid="${sid}">
-                        <select class="form-select" name="supplier_financials[${sid}][discount_type]" style="max-width:60px;">
-                            <option value="percent">%</option>
-                            <option value="fixed">R$</option>
-                        </select>
+            
+            <!-- Ajustes financeiros -->
+            <div class="mt-3 pt-3 border-top">
+                <div class="row g-2">
+                    <div class="col-6 col-md-4">
+                        <label class="form-label small text-muted mb-0">Desconto</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][discount_value]" placeholder="0" data-sid="${sid}">
+                            <select class="form-select" name="supplier_financials[${sid}][discount_type]" style="max-width:55px;">
+                                <option value="percent">%</option>
+                                <option value="fixed">R$</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text" style="font-size:0.7rem;">Acréscimo</span>
-                        <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][surcharge_value]" placeholder="0" data-sid="${sid}">
-                        <select class="form-select" name="supplier_financials[${sid}][surcharge_type]" style="max-width:60px;">
-                            <option value="percent">%</option>
-                            <option value="fixed">R$</option>
-                        </select>
+                    <div class="col-6 col-md-4">
+                        <label class="form-label small text-muted mb-0">Acréscimo</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][surcharge_value]" placeholder="0" data-sid="${sid}">
+                            <select class="form-select" name="supplier_financials[${sid}][surcharge_type]" style="max-width:55px;">
+                                <option value="percent">%</option>
+                                <option value="fixed">R$</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text" style="font-size:0.7rem;">IPI</span>
-                        <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][ipi_percent]" placeholder="0">
-                        <span class="input-group-text">%</span>
+                    <div class="col-4 col-md-4 d-none d-md-block"></div>
+                    <div class="col-4 col-md-2">
+                        <label class="form-label small text-muted mb-0">IPI %</label>
+                        <input type="text" inputmode="decimal" class="form-control form-control-sm" name="supplier_financials[${sid}][ipi_percent]" placeholder="0">
                     </div>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text" style="font-size:0.7rem;">ICMS</span>
-                        <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][icms_percent]" placeholder="0">
-                        <span class="input-group-text">%</span>
+                    <div class="col-4 col-md-2">
+                        <label class="form-label small text-muted mb-0">ICMS %</label>
+                        <input type="text" inputmode="decimal" class="form-control form-control-sm" name="supplier_financials[${sid}][icms_percent]" placeholder="0">
                     </div>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text" style="font-size:0.7rem;">Frete</span>
-                        <span class="input-group-text">R$</span>
-                        <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][freight]" placeholder="0,00">
+                    <div class="col-4 col-md-3">
+                        <label class="form-label small text-muted mb-0">Frete (R$)</label>
+                        <input type="text" inputmode="decimal" class="form-control form-control-sm" name="supplier_financials[${sid}][freight]" placeholder="0,00">
                     </div>
                 </div>
-                <div class="text-end mt-2">
-                    <small class="text-muted">Subtotal insumos: </small><strong class="text-dark" id="subtotal-items-${sid}">R$ 0,00</strong><br>
-                    <small class="text-muted">Total final: </small><strong class="text-success" id="subtotal-final-${sid}">R$ 0,00</strong>
+                <div class="d-flex justify-content-end gap-4 mt-3 pt-2 border-top">
+                    <div class="text-end">
+                        <small class="text-muted d-block">Subtotal insumos</small>
+                        <strong id="subtotal-items-${sid}">R$ 0,00</strong>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted d-block">Total final</small>
+                        <strong class="text-success fs-6" id="subtotal-final-${sid}">R$ 0,00</strong>
+                    </div>
                 </div>
             </div>
         `;
