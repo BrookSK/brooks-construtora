@@ -88,12 +88,17 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Especificação (Tipo)</label>
-                        <select class="form-select" name="category_id" id="matCategoryId">
-                            <option value="">-- Selecione --</option>
-                            <?php foreach ($categories as $cat): ?>
-                            <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                        <div class="input-group">
+                            <select class="form-select" name="category_id" id="matCategoryId">
+                                <option value="">-- Selecione --</option>
+                                <?php foreach ($categories as $cat): ?>
+                                <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="button" class="btn btn-outline-primary" onclick="quickAddCategoryMat()" title="Nova Especificação">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
                         <input type="hidden" name="specification" id="matSpecification">
                     </div>
                     <div class="mb-3">
@@ -102,12 +107,17 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Unidade de Medida</label>
-                        <select class="form-select" name="unit_id" id="matUnitId">
-                            <option value="">-- Selecione --</option>
-                            <?php foreach ($units as $u): ?>
-                            <option value="<?= $u['id'] ?>"><?= htmlspecialchars($u['name']) ?> (<?= htmlspecialchars($u['abbreviation']) ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
+                        <div class="input-group">
+                            <select class="form-select" name="unit_id" id="matUnitId">
+                                <option value="">-- Selecione --</option>
+                                <?php foreach ($units as $u): ?>
+                                <option value="<?= $u['id'] ?>"><?= htmlspecialchars($u['name']) ?> (<?= htmlspecialchars($u['abbreviation']) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="button" class="btn btn-outline-primary" onclick="quickAddUnitMat()" title="Nova Unidade">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -115,6 +125,52 @@
                     <button type="submit" class="btn btn-primary" id="matSubmitBtn">Cadastrar</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cadastro Rápido Especificação -->
+<div class="modal fade" id="quickCategoryMatModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title">Nova Especificação</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label">Nome *</label>
+                <input type="text" class="form-control" id="quickCatMatName" placeholder="Ex: mat. Elétrico">
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="saveQuickCategoryMat()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cadastro Rápido Unidade -->
+<div class="modal fade" id="quickUnitMatModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title">Nova Unidade de Medida</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label class="form-label">Nome *</label>
+                    <input type="text" class="form-control" id="quickUnitMatName" placeholder="Ex: Galão">
+                </div>
+                <div>
+                    <label class="form-label">Abreviação *</label>
+                    <input type="text" class="form-control" id="quickUnitMatAbbr" placeholder="Ex: gal">
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="saveQuickUnitMat()">Salvar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -158,6 +214,65 @@ document.getElementById('matCategoryId').addEventListener('change', function() {
     const selected = this.options[this.selectedIndex];
     document.getElementById('matSpecification').value = selected.textContent.trim() !== '-- Selecione --' ? selected.textContent.trim() : '';
 });
+
+// Cadastro rápido de especificação na tela de materiais
+function quickAddCategoryMat() {
+    new bootstrap.Modal(document.getElementById('quickCategoryMatModal')).show();
+}
+
+async function saveQuickCategoryMat() {
+    const name = document.getElementById('quickCatMatName').value.trim();
+    if (!name) { alert('Nome é obrigatório'); return; }
+
+    const resp = await fetch('/admin/materials/quick-store-category', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({ name: name })
+    });
+
+    const data = await resp.json();
+    if (data.success) {
+        const opt = new Option(data.category.name, data.category.id);
+        document.getElementById('matCategoryId').add(opt);
+        document.getElementById('matCategoryId').value = data.category.id;
+        document.getElementById('matSpecification').value = data.category.name;
+        
+        bootstrap.Modal.getInstance(document.getElementById('quickCategoryMatModal')).hide();
+        document.getElementById('quickCatMatName').value = '';
+    } else {
+        alert(data.error || 'Erro ao salvar');
+    }
+}
+
+// Cadastro rápido de unidade na tela de materiais
+function quickAddUnitMat() {
+    new bootstrap.Modal(document.getElementById('quickUnitMatModal')).show();
+}
+
+async function saveQuickUnitMat() {
+    const name = document.getElementById('quickUnitMatName').value.trim();
+    const abbr = document.getElementById('quickUnitMatAbbr').value.trim();
+    if (!name || !abbr) { alert('Nome e abreviação são obrigatórios'); return; }
+
+    const resp = await fetch('/admin/materials/quick-store-unit', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({ name: name, abbreviation: abbr })
+    });
+
+    const data = await resp.json();
+    if (data.success) {
+        const opt = new Option(`${data.unit.name} (${data.unit.abbreviation})`, data.unit.id);
+        document.getElementById('matUnitId').add(opt);
+        document.getElementById('matUnitId').value = data.unit.id;
+        
+        bootstrap.Modal.getInstance(document.getElementById('quickUnitMatModal')).hide();
+        document.getElementById('quickUnitMatName').value = '';
+        document.getElementById('quickUnitMatAbbr').value = '';
+    } else {
+        alert(data.error || 'Erro ao salvar');
+    }
+}
 </script>
 
 <?php $content = ob_get_clean(); ?>

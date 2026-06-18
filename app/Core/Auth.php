@@ -91,7 +91,8 @@ class Auth
                 'suppliers', 'materials', 'orders.settings'
             ],
             'designer' => ['dashboard', 'magazines', 'magazines.edit'],
-            'editor' => ['dashboard', 'magazines', 'orders', 'orders.create', 'suppliers', 'materials'],
+            'editor' => ['dashboard', 'magazines', 'orders', 'suppliers', 'materials'],
+            'comprador' => ['dashboard', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials'],
         ];
 
         if (!isset($permissions[$role])) {

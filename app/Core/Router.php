@@ -112,6 +112,8 @@ class Router
             'materials/quick-store' => ['MaterialController', 'quickStore'],
             'materials/categories' => ['MaterialController', 'categories'],
             'materials/units' => ['MaterialController', 'units'],
+            'materials/quick-store-category' => ['MaterialController', 'quickStoreCategory'],
+            'materials/quick-store-unit' => ['MaterialController', 'quickStoreUnit'],
         ];
 
         $path = implode('/', $segments);

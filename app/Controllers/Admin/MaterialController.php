@@ -172,4 +172,57 @@ class MaterialController extends Controller
         $units = MeasurementUnit::all('name ASC');
         $this->json(['units' => $units]);
     }
+
+    /**
+     * API para cadastro rápido de categoria/especificação (AJAX)
+     */
+    public function quickStoreCategory(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $name = trim($this->input('name', ''));
+        if (empty($name)) {
+            $this->json(['error' => 'Nome é obrigatório.'], 400);
+            return;
+        }
+
+        $id = MaterialCategory::create([
+            'name' => $name,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $category = MaterialCategory::find($id);
+        $this->json(['success' => true, 'category' => $category]);
+    }
+
+    /**
+     * API para cadastro rápido de unidade de medida (AJAX)
+     */
+    public function quickStoreUnit(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $name = trim($this->input('name', ''));
+        $abbreviation = trim($this->input('abbreviation', ''));
+
+        if (empty($name) || empty($abbreviation)) {
+            $this->json(['error' => 'Nome e abreviação são obrigatórios.'], 400);
+            return;
+        }
+
+        $id = MeasurementUnit::create([
+            'name' => $name,
+            'abbreviation' => $abbreviation,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $unit = MeasurementUnit::find($id);
+        $this->json(['success' => true, 'unit' => $unit]);
+    }
 }
