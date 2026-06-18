@@ -244,6 +244,8 @@ class PurchaseOrderController extends Controller
                     'order_code' => $order['code'],
                     'rejected_by' => $personName,
                     'reason' => $notes,
+                    'phone' => Setting::get('orders_completed_phone', ''),
+                    'phone_name' => Setting::get('orders_completed_phone_name', ''),
                     'message' => $message,
                 ]);
             }
@@ -328,6 +330,8 @@ class PurchaseOrderController extends Controller
                 'total' => $order['total_estimated'],
                 'approval_url' => $approvalUrl,
                 'quoted_by' => $order['quoted_by_name'],
+                'phone' => Setting::get('orders_approval_phone', ''),
+                'phone_name' => Setting::get('orders_approval_phone_name', ''),
                 'message' => $message,
             ]);
         }
@@ -376,6 +380,8 @@ class PurchaseOrderController extends Controller
                 'total' => $order['total_estimated'],
                 'approved_by' => $order['approved_by_name'],
                 'pdf_url' => $pdfUrl,
+                'phone' => Setting::get('orders_completed_phone', ''),
+                'phone_name' => Setting::get('orders_completed_phone_name', ''),
                 'message' => $message,
             ]);
         }

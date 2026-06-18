@@ -269,10 +269,16 @@ class PurchaseOrderController extends Controller
         $keys = [
             'orders_quote_emails',
             'orders_quote_webhook',
+            'orders_quote_phone',
+            'orders_quote_phone_name',
             'orders_approval_emails',
             'orders_approval_webhook',
+            'orders_approval_phone',
+            'orders_approval_phone_name',
             'orders_completed_emails',
             'orders_completed_webhook',
+            'orders_completed_phone',
+            'orders_completed_phone_name',
         ];
 
         $data = [];
@@ -411,6 +417,8 @@ class PurchaseOrderController extends Controller
                 'created_by' => $order['created_by_name'],
                 'created_at' => $order['created_at'],
                 'description' => $order['description'],
+                'phone' => Setting::get('orders_quote_phone', ''),
+                'phone_name' => Setting::get('orders_quote_phone_name', ''),
                 'message' => $message,
             ]);
         }
@@ -465,6 +473,8 @@ class PurchaseOrderController extends Controller
                 'approval_url' => $approvalUrl,
                 'quoted_by' => $order['quoted_by_name'],
                 'quoted_at' => $order['quoted_at'],
+                'phone' => Setting::get('orders_approval_phone', ''),
+                'phone_name' => Setting::get('orders_approval_phone_name', ''),
                 'message' => $message,
             ]);
         }
@@ -517,6 +527,8 @@ class PurchaseOrderController extends Controller
                 'approved_by' => $order['approved_by_name'],
                 'approved_at' => $order['approved_at'],
                 'view_url' => $viewUrl,
+                'phone' => Setting::get('orders_completed_phone', ''),
+                'phone_name' => Setting::get('orders_completed_phone_name', ''),
                 'message' => $message,
             ]);
         }

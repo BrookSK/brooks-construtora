@@ -13,8 +13,17 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">E-mails para Cotação</label>
-                        <textarea class="form-control" name="orders_quote_emails" rows="3" placeholder="email1@empresa.com, email2@empresa.com"><?= htmlspecialchars($settings['orders_quote_emails'] ?? '') ?></textarea>
+                        <textarea class="form-control" name="orders_quote_emails" rows="2" placeholder="email1@empresa.com, email2@empresa.com"><?= htmlspecialchars($settings['orders_quote_emails'] ?? '') ?></textarea>
                         <small class="text-muted">Separe múltiplos e-mails por vírgula</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nome (Webhook)</label>
+                        <input type="text" class="form-control" name="orders_quote_phone_name" placeholder="Ex: João da Compras" value="<?= htmlspecialchars($settings['orders_quote_phone_name'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telefone (Webhook)</label>
+                        <input type="text" class="form-control" name="orders_quote_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_quote_phone'] ?? '') ?>">
+                        <small class="text-muted">Com DDI+DDD, sem espaços</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Webhook de Cotação</label>
@@ -40,8 +49,17 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">E-mails para Aprovação</label>
-                        <textarea class="form-control" name="orders_approval_emails" rows="3" placeholder="gestor1@empresa.com, gestor2@empresa.com"><?= htmlspecialchars($settings['orders_approval_emails'] ?? '') ?></textarea>
+                        <textarea class="form-control" name="orders_approval_emails" rows="2" placeholder="gestor1@empresa.com, gestor2@empresa.com"><?= htmlspecialchars($settings['orders_approval_emails'] ?? '') ?></textarea>
                         <small class="text-muted">Separe múltiplos e-mails por vírgula</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nome (Webhook)</label>
+                        <input type="text" class="form-control" name="orders_approval_phone_name" placeholder="Ex: Gestor Carlos" value="<?= htmlspecialchars($settings['orders_approval_phone_name'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telefone (Webhook)</label>
+                        <input type="text" class="form-control" name="orders_approval_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_approval_phone'] ?? '') ?>">
+                        <small class="text-muted">Com DDI+DDD, sem espaços</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Webhook de Aprovação</label>
@@ -67,8 +85,17 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">E-mails para Formalização</label>
-                        <textarea class="form-control" name="orders_completed_emails" rows="3" placeholder="admin@empresa.com"><?= htmlspecialchars($settings['orders_completed_emails'] ?? '') ?></textarea>
+                        <textarea class="form-control" name="orders_completed_emails" rows="2" placeholder="admin@empresa.com"><?= htmlspecialchars($settings['orders_completed_emails'] ?? '') ?></textarea>
                         <small class="text-muted">Separe múltiplos e-mails por vírgula</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nome (Webhook)</label>
+                        <input type="text" class="form-control" name="orders_completed_phone_name" placeholder="Ex: Diretor Paulo" value="<?= htmlspecialchars($settings['orders_completed_phone_name'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telefone (Webhook)</label>
+                        <input type="text" class="form-control" name="orders_completed_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_completed_phone'] ?? '') ?>">
+                        <small class="text-muted">Com DDI+DDD, sem espaços</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Webhook de Conclusão</label>
@@ -157,6 +184,13 @@ async function testWebhook(type) {
     }
 
     // Payloads de teste para cada fase
+    const quotePhone = document.querySelector('[name="orders_quote_phone"]').value;
+    const quotePhoneName = document.querySelector('[name="orders_quote_phone_name"]').value;
+    const approvalPhone = document.querySelector('[name="orders_approval_phone"]').value;
+    const approvalPhoneName = document.querySelector('[name="orders_approval_phone_name"]').value;
+    const completedPhone = document.querySelector('[name="orders_completed_phone"]').value;
+    const completedPhoneName = document.querySelector('[name="orders_completed_phone_name"]').value;
+
     const payloads = {
         quote: {
             event: 'quote_requested',
@@ -168,6 +202,8 @@ async function testWebhook(type) {
             created_by: 'Usuário Teste',
             created_at: new Date().toISOString(),
             description: 'Pedido de teste para validar webhook.',
+            phone: quotePhone,
+            phone_name: quotePhoneName,
             message: '📋 *NOVO PEDIDO - COTAÇÃO PENDENTE*\n\n🔖 *Pedido:* PED-TESTE-001\n🏢 *Fornecedor:* Fornecedor de Teste LTDA\n👤 *Solicitado por:* Usuário Teste\n📅 *Data:* ' + new Date().toLocaleDateString('pt-BR') + '\n📦 *Itens:* 5\n\n*Lista de materiais:*\n1. Cano - Esgoto (100mm) - Qtd: 10 unid\n2. Joelho - Esgoto (40mm) - Qtd: 20 unid\n3. Caixa D\'Água (500L) - Qtd: 1 unid\n4. Brita 01 - Qtd: 6 mts\n5. Prancha Cedrinho (15x5) - Qtd: 32 mts\n\n📝 *Obs:* Pedido de teste para validar webhook.\n\n🔗 *Link para informar cotação:*\n' + window.location.origin + '/pedido/cotacao/token-de-teste-abc123'
         },
         approval: {
@@ -180,6 +216,8 @@ async function testWebhook(type) {
             approval_url: window.location.origin + '/pedido/aprovacao/token-de-teste-xyz789',
             quoted_by: 'Cotador Teste',
             quoted_at: new Date().toISOString(),
+            phone: approvalPhone,
+            phone_name: approvalPhoneName,
             message: '⚠️ *PEDIDO AGUARDANDO APROVAÇÃO*\n\n🔖 *Pedido:* PED-TESTE-001\n🏢 *Fornecedor:* Fornecedor de Teste LTDA\n💰 *Valor Total:* R$ 4.750,00\n📦 *Itens:* 5\n👤 *Cotado por:* Cotador Teste\n📅 *Data cotação:* ' + new Date().toLocaleDateString('pt-BR') + '\n\n🔗 *Link para aprovar/rejeitar:*\n' + window.location.origin + '/pedido/aprovacao/token-de-teste-xyz789'
         },
         completed: {
@@ -191,6 +229,8 @@ async function testWebhook(type) {
             approved_by: 'Aprovador Teste',
             approved_at: new Date().toISOString(),
             pdf_url: window.location.origin + '/pedido/pdf/999',
+            phone: completedPhone,
+            phone_name: completedPhoneName,
             message: '✅ *PEDIDO APROVADO*\n\n🔖 *Pedido:* PED-TESTE-001\n🏢 *Fornecedor:* Fornecedor de Teste LTDA\n💰 *Valor Total:* R$ 4.750,00\n👤 *Aprovado por:* Aprovador Teste\n📅 *Data:* ' + new Date().toLocaleDateString('pt-BR') + '\n\n📄 *PDF do pedido:*\n' + window.location.origin + '/pedido/pdf/999'
         }
     };
