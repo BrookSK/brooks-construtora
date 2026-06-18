@@ -122,6 +122,141 @@ HTML;
         return self::wrap('Nova Revista: ' . $displayTitle, $body);
     }
 
+    public static function purchaseOrderQuote(array $order, array $items, string $quoteUrl): string
+    {
+        $itemsHtml = '';
+        foreach ($items as $i => $item) {
+            $itemsHtml .= '<tr>';
+            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . ($i + 1) . '</td>';
+            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($item['material_name']) . '</td>';
+            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($item['specification'] ?? '-') . '</td>';
+            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($item['classification'] ?? '-') . '</td>';
+            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($item['unit'] ?? '-') . '</td>';
+            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px; text-align:center;">' . number_format($item['quantity'], 0) . '</td>';
+            $itemsHtml .= '</tr>';
+        }
+
+        $body = <<<HTML
+<p style="margin-bottom:15px;">Um novo pedido de materiais foi criado e aguarda cotação de preços.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa; border-radius:6px; margin-bottom:20px;">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#888; text-transform:uppercase;">Pedido</p>
+    <p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">{$order['code']}</p>
+    <p style="margin:8px 0 0; font-size:13px; color:#666;">Solicitado por: <strong>{$order['created_by_name']}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#666;">Data: {$order['created_at']}</p>
+</td></tr>
+</table>
+
+<p style="margin-bottom:10px;"><strong>Itens do pedido:</strong></p>
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">
+<tr style="background:#f8f9fa;">
+    <th style="padding:8px; font-size:12px; text-align:left;">#</th>
+    <th style="padding:8px; font-size:12px; text-align:left;">Material</th>
+    <th style="padding:8px; font-size:12px; text-align:left;">Especificação</th>
+    <th style="padding:8px; font-size:12px; text-align:left;">Classificação</th>
+    <th style="padding:8px; font-size:12px; text-align:left;">Unid.</th>
+    <th style="padding:8px; font-size:12px; text-align:center;">Qtd</th>
+</tr>
+{$itemsHtml}
+</table>
+
+<p style="text-align:center; margin: 25px 0 10px;">
+    <a href="{$quoteUrl}" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Informar Cotação</a>
+</p>
+
+<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique no botão acima para acessar o formulário de cotação e informar os valores.</p>
+HTML;
+
+        return self::wrap("Cotação Pendente - {$order['code']}", $body);
+    }
+
+    public static function purchaseOrderApproval(array $order, array $items, string $approvalUrl): string
+    {
+        $itemsHtml = '';
+        $total = 0;
+        foreach ($items as $i => $item) {
+            $itemTotal = ($item['total_price'] ?? 0);
+            $total += $itemTotal;
+            $itemsHtml .= '<tr>';
+            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . ($i + 1) . '</td>';
+            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($item['material_name']) . '</td>';
+            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($item['unit'] ?? '-') . '</td>';
+            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px; text-align:center;">' . number_format($item['quantity'], 0) . '</td>';
+            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px; text-align:right;">R$ ' . number_format($item['unit_price'] ?? 0, 2, ',', '.') . '</td>';
+            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px; text-align:right; font-weight:600;">R$ ' . number_format($itemTotal, 2, ',', '.') . '</td>';
+            $itemsHtml .= '</tr>';
+        }
+
+        $totalFormatted = number_format($total, 2, ',', '.');
+
+        $body = <<<HTML
+<p style="margin-bottom:15px;">Um pedido de materiais foi cotado e aguarda sua aprovação.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa; border-radius:6px; margin-bottom:20px;">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#888; text-transform:uppercase;">Pedido</p>
+    <p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">{$order['code']}</p>
+    <p style="margin:8px 0 0; font-size:13px; color:#666;">Cotado por: <strong>{$order['quoted_by_name']}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#666;">Solicitado por: {$order['created_by_name']}</p>
+    <p style="margin:10px 0 0; font-size:20px; color:#28a745; font-weight:700;">Total: R$ {$totalFormatted}</p>
+</td></tr>
+</table>
+
+<p style="margin-bottom:10px;"><strong>Itens cotados:</strong></p>
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">
+<tr style="background:#f8f9fa;">
+    <th style="padding:8px; font-size:12px; text-align:left;">#</th>
+    <th style="padding:8px; font-size:12px; text-align:left;">Material</th>
+    <th style="padding:8px; font-size:12px; text-align:left;">Unid.</th>
+    <th style="padding:8px; font-size:12px; text-align:center;">Qtd</th>
+    <th style="padding:8px; font-size:12px; text-align:right;">Unit.</th>
+    <th style="padding:8px; font-size:12px; text-align:right;">Total</th>
+</tr>
+{$itemsHtml}
+<tr style="background:#f8f9fa;">
+    <td colspan="5" style="padding:10px 8px; font-weight:700; text-align:right;">TOTAL:</td>
+    <td style="padding:10px 8px; font-weight:700; text-align:right; color:#28a745;">R$ {$totalFormatted}</td>
+</tr>
+</table>
+
+<p style="text-align:center; margin: 25px 0 10px;">
+    <a href="{$approvalUrl}" style="display:inline-block; background-color:#28a745; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Analisar e Decidir</a>
+</p>
+
+<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique no botão acima para aprovar ou rejeitar este pedido.</p>
+HTML;
+
+        return self::wrap("Aprovação Pendente - {$order['code']}", $body);
+    }
+
+    public static function purchaseOrderCompleted(array $order, array $items, string $pdfUrl): string
+    {
+        $totalFormatted = number_format($order['total_estimated'] ?? 0, 2, ',', '.');
+
+        $body = <<<HTML
+<p style="margin-bottom:15px;">O pedido de materiais foi <strong style="color:#28a745;">APROVADO</strong> com sucesso!</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e8f5e9; border-radius:6px; margin-bottom:20px; border:1px solid #c8e6c9;">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#388e3c; text-transform:uppercase; font-weight:600;">✓ Pedido Aprovado</p>
+    <p style="margin:0; font-size:17px; color:#2e7d32; font-weight:600;">{$order['code']}</p>
+    <p style="margin:8px 0 0; font-size:13px; color:#555;">Aprovado por: <strong>{$order['approved_by_name']}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Data: {$order['approved_at']}</p>
+    <p style="margin:10px 0 0; font-size:20px; color:#2e7d32; font-weight:700;">Total: R$ {$totalFormatted}</p>
+</td></tr>
+</table>
+
+<p style="text-align:center; margin: 25px 0 10px;">
+    <a href="{$pdfUrl}" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Ver PDF do Pedido</a>
+</p>
+
+<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique acima para visualizar e baixar o PDF formalizado do pedido.</p>
+HTML;
+
+        return self::wrap("Pedido Aprovado - {$order['code']}", $body);
+    }
+
     public static function contactReceived(string $name, string $email, string $phone, string $message): string
     {
         $date = date('d/m/Y \à\s H:i');

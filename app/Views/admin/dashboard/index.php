@@ -27,6 +27,35 @@
     </div>
 </div>
 
+<?php if (isset($totalOrders)): ?>
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card p-3" style="border-left-color: #ffc107;">
+            <div class="stat-number"><?= $totalOrders ?? 0 ?></div>
+            <div class="text-muted">Total Pedidos</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3" style="border-left-color: #fd7e14;">
+            <div class="stat-number"><?= $pendingQuoteOrders ?? 0 ?></div>
+            <div class="text-muted">Aguard. Cotação</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3" style="border-left-color: #0dcaf0;">
+            <div class="stat-number"><?= $pendingApprovalOrders ?? 0 ?></div>
+            <div class="text-muted">Aguard. Aprovação</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3" style="border-left-color: #28a745;">
+            <div class="stat-number"><?= $approvedOrders ?? 0 ?></div>
+            <div class="text-muted">Aprovados</div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <div class="row g-4">
     <div class="col-md-8">
         <div class="card">
@@ -80,6 +109,14 @@
                     <a href="/admin/magazines" class="btn btn-outline-primary">
                         <i class="bi bi-journal-richtext"></i> Ver Revistas
                     </a>
+                    <?php if (\App\Core\Auth::hasPermission('orders')): ?>
+                    <a href="/admin/orders/create" class="btn btn-outline-warning">
+                        <i class="bi bi-cart-plus"></i> Novo Pedido
+                    </a>
+                    <a href="/admin/orders" class="btn btn-outline-warning">
+                        <i class="bi bi-cart3"></i> Ver Pedidos
+                    </a>
+                    <?php endif; ?>
                     <a href="/admin/newsletter" class="btn btn-outline-primary">
                         <i class="bi bi-envelope-paper"></i> Newsletter
                     </a>

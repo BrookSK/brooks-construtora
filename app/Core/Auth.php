@@ -84,9 +84,14 @@ class Auth
 
         $permissions = [
             'super_admin' => ['all'],
-            'admin' => ['dashboard', 'settings', 'newsletter', 'users', 'magazines', 'magazines.edit', 'magazines.publish'],
+            'admin' => [
+                'dashboard', 'settings', 'newsletter', 'users', 
+                'magazines', 'magazines.edit', 'magazines.publish',
+                'orders', 'orders.create', 'orders.approve', 'orders.quote',
+                'suppliers', 'materials', 'orders.settings'
+            ],
             'designer' => ['dashboard', 'magazines', 'magazines.edit'],
-            'editor' => ['dashboard', 'magazines'],
+            'editor' => ['dashboard', 'magazines', 'orders', 'orders.create', 'suppliers', 'materials'],
         ];
 
         if (!isset($permissions[$role])) {

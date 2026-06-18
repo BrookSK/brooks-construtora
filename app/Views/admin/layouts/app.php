@@ -144,6 +144,38 @@
                 </a>
             </li>
             <?php endif; ?>
+
+            <?php if (\App\Core\Auth::hasPermission('orders')): ?>
+            <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
+                <small class="text-uppercase px-3 opacity-50" style="font-size:0.65rem; letter-spacing:1px;">Pedidos</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'orders' ? 'active' : '' ?>" href="/admin/orders">
+                    <i class="bi bi-cart3"></i> Pedidos
+                </a>
+            </li>
+            <?php endif; ?>
+            <?php if (\App\Core\Auth::hasPermission('suppliers')): ?>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'suppliers' ? 'active' : '' ?>" href="/admin/suppliers">
+                    <i class="bi bi-building"></i> Fornecedores
+                </a>
+            </li>
+            <?php endif; ?>
+            <?php if (\App\Core\Auth::hasPermission('materials')): ?>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'materials' ? 'active' : '' ?>" href="/admin/materials">
+                    <i class="bi bi-box-seam"></i> Materiais
+                </a>
+            </li>
+            <?php endif; ?>
+            <?php if (\App\Core\Auth::hasPermission('orders.settings')): ?>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'orders_settings' ? 'active' : '' ?>" href="/admin/orders/settings">
+                    <i class="bi bi-sliders"></i> Config. Pedidos
+                </a>
+            </li>
+            <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('users')): ?>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'users' ? 'active' : '' ?>" href="/admin/users">

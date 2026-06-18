@@ -7,6 +7,7 @@ use App\Core\Auth;
 use App\Models\Newsletter;
 use App\Models\Magazine;
 use App\Models\User;
+use App\Models\PurchaseOrder;
 
 class DashboardController extends Controller
 {
@@ -30,6 +31,14 @@ class DashboardController extends Controller
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ];
+
+        // Dados de pedidos (se tiver permissão)
+        if (Auth::hasPermission('orders')) {
+            $data['totalOrders'] = PurchaseOrder::count();
+            $data['pendingQuoteOrders'] = PurchaseOrder::countByStatus('pending_quote');
+            $data['pendingApprovalOrders'] = PurchaseOrder::countByStatus('pending_approval');
+            $data['approvedOrders'] = PurchaseOrder::countByStatus('approved');
+        }
 
         $this->view('admin.dashboard.index', $data);
     }

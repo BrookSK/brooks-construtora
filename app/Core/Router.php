@@ -81,6 +81,37 @@ class Router
             'magazines/delete' => ['MagazineController', 'delete'],
             'magazines/schedule' => ['MagazineController', 'schedule'],
             'magazines/schedule/update' => ['MagazineController', 'updateSchedule'],
+
+            // Pedidos de materiais
+            'orders' => ['PurchaseOrderController', 'index'],
+            'orders/create' => ['PurchaseOrderController', 'create'],
+            'orders/store' => ['PurchaseOrderController', 'store'],
+            'orders/show' => ['PurchaseOrderController', 'show'],
+            'orders/resend-quote' => ['PurchaseOrderController', 'resendQuote'],
+            'orders/resend-approval' => ['PurchaseOrderController', 'resendApproval'],
+            'orders/cancel' => ['PurchaseOrderController', 'cancel'],
+            'orders/settings' => ['PurchaseOrderController', 'settings'],
+            'orders/settings/update' => ['PurchaseOrderController', 'updateSettings'],
+
+            // Fornecedores
+            'suppliers' => ['SupplierController', 'index'],
+            'suppliers/create' => ['SupplierController', 'create'],
+            'suppliers/store' => ['SupplierController', 'store'],
+            'suppliers/edit' => ['SupplierController', 'edit'],
+            'suppliers/update' => ['SupplierController', 'update'],
+            'suppliers/delete' => ['SupplierController', 'delete'],
+            'suppliers/search' => ['SupplierController', 'search'],
+            'suppliers/quick-store' => ['SupplierController', 'quickStore'],
+
+            // Materiais
+            'materials' => ['MaterialController', 'index'],
+            'materials/store' => ['MaterialController', 'store'],
+            'materials/update' => ['MaterialController', 'update'],
+            'materials/delete' => ['MaterialController', 'delete'],
+            'materials/search' => ['MaterialController', 'search'],
+            'materials/quick-store' => ['MaterialController', 'quickStore'],
+            'materials/categories' => ['MaterialController', 'categories'],
+            'materials/units' => ['MaterialController', 'units'],
         ];
 
         $path = implode('/', $segments);
@@ -132,6 +163,13 @@ class Router
             'revista' => ['MagazineController', 'index'],
             'revista/ver' => ['MagazineController', 'show'],
             'revista/image-proxy' => ['MagazineController', 'imageProxy'],
+
+            // Pedidos - Links públicos
+            'pedido/cotacao' => ['PurchaseOrderController', 'quote'],
+            'pedido/cotacao/enviar' => ['PurchaseOrderController', 'submitQuote'],
+            'pedido/aprovacao' => ['PurchaseOrderController', 'approval'],
+            'pedido/aprovacao/enviar' => ['PurchaseOrderController', 'submitApproval'],
+            'pedido/pdf' => ['PurchaseOrderController', 'pdf'],
         ];
 
         $path = implode('/', $segments);
