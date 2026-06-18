@@ -167,47 +167,19 @@
     document.querySelectorAll('.price-input').forEach(input => {
         input.addEventListener('input', calculateTotals);
         input.addEventListener('blur', function() {
-            let val = parseBRL(this.value);
-            if (!isNaN(val) && val > 0) {
-                this.value = formatBRL(val);
+            let val = this.value.replace(/[^\d,\.]/g, '').replace(',', '.');
+            if (val && !isNaN(parseFloat(val))) {
+                this.value = parseFloat(val).toFixed(2).replace('.', ',');
             }
             calculateTotals();
         });
     });
 
-    /**
-     * Converte string em formato BR para float
-     * Aceita: 1500 | 1500,00 | 1.500,00 | 1500.00
-     */
-    function parseBRL(str) {
-        if (!str) return 0;
-        str = str.trim();
-        
-        // Se tem vírgula E ponto: formato BR completo (1.500,00)
-        if (str.includes(',') && str.includes('.')) {
-            // Ponto é milhar, vírgula é decimal
-            str = str.replace(/\./g, '').replace(',', '.');
-        } else if (str.includes(',')) {
-            // Só vírgula: é decimal (1500,00)
-            str = str.replace(',', '.');
-        }
-        // Se só tem ponto: pode ser decimal (150.00) - manter como está
-        
-        return parseFloat(str) || 0;
-    }
-
-    function formatBRL(val) {
-        return val.toFixed(2).replace('.', ',');
-    }
-
-    function formatBRLFull(val) {
-        return val.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    }
-
     function calculateTotals() {
+        // Por fornecedor
         const supplierTotals = {};
         document.querySelectorAll('.price-input').forEach(input => {
-            const val = parseBRL(input.value);
+            const val = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
             const qty = parseFloat(input.dataset.qty) || 0;
             const total = val * qty;
             const sid = input.dataset.supplier || 'legacy';
@@ -216,9 +188,10 @@
             supplierTotals[sid] += total;
         });
 
+        // Atualizar totais exibidos
         for (const [sid, total] of Object.entries(supplierTotals)) {
             const el = document.getElementById('supplier-total-' + sid) || document.getElementById('legacy-total');
-            if (el) el.textContent = 'R$ ' + formatBRLFull(total);
+            if (el) el.textContent = 'R$ ' + total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         }
     }
     </script>

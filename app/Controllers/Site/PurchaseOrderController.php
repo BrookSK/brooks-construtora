@@ -93,7 +93,7 @@ class PurchaseOrderController extends Controller
 
             if (isset($supplierPrices[$sid])) {
                 foreach ($supplierPrices[$sid] as $itemId => $priceStr) {
-                    $unitPrice = $this->parseMoneyValue($priceStr);
+                    $unitPrice = (float) str_replace(['.', ','], ['', '.'], $priceStr);
                     $item = PurchaseOrderItem::find((int) $itemId);
                     
                     if ($item && $item['order_id'] == $order['id']) {
