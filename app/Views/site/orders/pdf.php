@@ -14,95 +14,86 @@
             background: #fff;
             max-width: 800px;
             margin: 2rem auto;
-            padding: 3rem;
+            padding: 2.5rem;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             border-radius: 8px;
         }
         .pdf-header {
             border-bottom: 3px solid #3a3b4e;
-            padding-bottom: 1.5rem;
+            padding-bottom: 1.2rem;
             margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
         }
-        .pdf-header .company-name {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: #3a3b4e;
-            letter-spacing: 1px;
-        }
-        .pdf-header .doc-title {
-            font-size: 1rem;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.8rem;
-            margin-bottom: 1.5rem;
-        }
-        .info-grid .info-item label {
-            font-size: 0.7rem;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0;
-        }
-        .info-grid .info-item span {
-            display: block;
-            font-weight: 600;
-            color: #333;
-        }
-        .items-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.85rem; }
-        .items-table th { background: #3a3b4e; color: #fff; padding: 8px 10px; text-align: left; font-size: 0.75rem; text-transform: uppercase; }
-        .items-table td { padding: 8px 10px; border-bottom: 1px solid #eee; }
-        .items-table tr:last-child td { border-bottom: none; }
-        .items-table .total-row { background: #f8f9fa; font-weight: 700; }
-        .items-table .total-row td { border-top: 2px solid #3a3b4e; }
-        .approval-section { background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 6px; padding: 1.2rem; margin-top: 1.5rem; }
-        .approval-section h6 { color: #2e7d32; margin-bottom: 0.5rem; }
-        .history-section { margin-top: 1.5rem; font-size: 0.8rem; }
-        .history-section .timeline-item { padding: 0.5rem 0; border-left: 2px solid #ddd; padding-left: 1rem; margin-left: 0.5rem; }
-        .history-section .timeline-item:last-child { border-left-color: #28a745; }
-        .pdf-footer { border-top: 1px solid #ddd; padding-top: 1rem; margin-top: 2rem; text-align: center; font-size: 0.7rem; color: #999; }
-        .download-bar { text-align: center; margin: 1rem 0 2rem; }
+        .pdf-header .company-name { font-size: 1.4rem; font-weight: 700; color: #3a3b4e; letter-spacing: 1px; }
+        .pdf-header .doc-title { font-size: 0.8rem; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1.5rem; }
+        .info-grid .info-item label { font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0; display: block; }
+        .info-grid .info-item span { display: block; font-weight: 600; color: #333; font-size: 0.9rem; }
+        
+        /* Tabela de itens - apenas desktop */
+        .items-table-desktop { width:100%; border-collapse:collapse; margin:1.5rem 0; font-size:0.82rem; }
+        .items-table-desktop th { background:#3a3b4e; color:#fff; padding:7px 8px; text-align:left; font-size:0.7rem; text-transform:uppercase; }
+        .items-table-desktop td { padding:7px 8px; border-bottom:1px solid #eee; }
+        .items-table-desktop .total-row { background:#f8f9fa; font-weight:700; }
+        .items-table-desktop .total-row td { border-top:2px solid #3a3b4e; }
+        
+        /* Itens mobile - cards */
+        .item-card-pdf { border:1px solid #e8e8e8; border-radius:6px; padding:10px 12px; margin-bottom:8px; }
+        .item-card-pdf .item-name { font-weight:600; font-size:0.85rem; color:#333; }
+        .item-card-pdf .item-meta { font-size:0.7rem; color:#888; margin-top:2px; }
+        .item-card-pdf .item-price { text-align:right; font-weight:700; color:#333; font-size:0.85rem; }
+        
+        .approval-section { background:#e8f5e9; border:1px solid #c8e6c9; border-radius:6px; padding:1rem; margin-top:1.5rem; }
+        .approval-section h6 { color:#2e7d32; margin-bottom:0.5rem; font-size:0.9rem; }
+        .history-section { margin-top:1.5rem; font-size:0.75rem; }
+        .history-section .timeline-item { padding:0.4rem 0; border-left:2px solid #ddd; padding-left:0.8rem; margin-left:0.5rem; }
+        .history-section .timeline-item:last-child { border-left-color:#28a745; }
+        .pdf-footer { border-top:1px solid #ddd; padding-top:1rem; margin-top:2rem; text-align:center; font-size:0.65rem; color:#999; }
+        .download-bar { text-align:center; margin:1rem 0 2rem; }
+        
         @media print {
-            .download-bar { display: none; }
-            body { background: #fff; }
-            .pdf-container { box-shadow: none; margin: 0; padding: 1rem; }
+            .download-bar { display:none; }
+            body { background:#fff; }
+            .pdf-container { box-shadow:none; margin:0; padding:1.5rem; max-width:100%; }
         }
         @media (max-width: 768px) {
-            .pdf-container { padding: 1.2rem; margin: 0.5rem; }
-            .info-grid { grid-template-columns: 1fr; gap: 0.5rem; }
-            .pdf-header { flex-direction: column; gap: 0.5rem; text-align: center; }
-            .pdf-header .company-name { font-size: 1.2rem; }
-            .items-table { font-size: 0.7rem; }
-            .items-table th, .items-table td { padding: 5px 4px; }
-            .download-bar .btn-lg { font-size: 0.85rem; padding: 0.5rem 1rem; }
-            .approval-section { padding: 0.8rem; }
+            .pdf-container { padding:1rem; margin:0.5rem; border-radius:6px; }
+            .info-grid { grid-template-columns:1fr; gap:0.5rem; }
+            .pdf-header { text-align:center; justify-content:center; flex-direction:column; }
+            .pdf-header .company-name { font-size:1.1rem; }
+            .items-table-desktop { display:none; }
+            .download-bar { margin:0.5rem 0 1rem; }
+            .download-bar .btn { font-size:0.85rem; padding:0.5rem 1rem; }
+        }
+        @media (min-width: 769px) {
+            .items-mobile-only { display:none; }
         }
     </style>
 </head>
 <body>
     <div class="download-bar">
-        <button class="btn btn-primary btn-lg" id="downloadPdfBtn">
+        <button class="btn btn-primary" id="downloadPdfBtn">
             <i class="bi bi-download"></i> Baixar PDF
         </button>
-        <button class="btn btn-outline-secondary btn-lg ms-2" onclick="window.print()">
+        <button class="btn btn-outline-secondary ms-2" onclick="window.print()">
             <i class="bi bi-printer"></i> Imprimir
         </button>
     </div>
 
     <div class="pdf-container" id="pdfContent">
         <!-- Header -->
-        <div class="pdf-header d-flex justify-content-between align-items-center">
+        <div class="pdf-header">
             <div>
                 <div class="company-name">BROOKS CONSTRUTORA</div>
                 <div class="doc-title">Formalização de Pedido de Materiais</div>
             </div>
             <div class="text-end">
-                <div style="font-size:1.4rem; font-weight:700; color:#3a3b4e;"><?= htmlspecialchars($order['code']) ?></div>
-                <div style="font-size:0.8rem; color:#28a745; font-weight:600;">✓ APROVADO</div>
+                <div style="font-size:1.3rem; font-weight:700; color:#3a3b4e;"><?= htmlspecialchars($order['code']) ?></div>
+                <div style="font-size:0.75rem; color:#28a745; font-weight:600;">✓ APROVADO</div>
             </div>
         </div>
 
@@ -137,13 +128,13 @@
         </div>
 
         <?php if (!empty($order['description'])): ?>
-        <div class="mb-3 p-2 bg-light rounded" style="font-size:0.85rem;">
-            <strong>Observações:</strong> <?= nl2br(htmlspecialchars($order['description'])) ?>
+        <div class="mb-3 p-2 bg-light rounded" style="font-size:0.8rem;">
+            <strong>Obs:</strong> <?= nl2br(htmlspecialchars($order['description'])) ?>
         </div>
         <?php endif; ?>
 
-        <!-- Itens -->
-        <table class="items-table">
+        <!-- Itens: Desktop (tabela completa) -->
+        <table class="items-table-desktop">
             <thead>
                 <tr>
                     <th>#</th>
@@ -152,7 +143,7 @@
                     <th>Class.</th>
                     <th>Unid.</th>
                     <th style="text-align:center;">Qtd</th>
-                    <th style="text-align:right;">Valor Unit.</th>
+                    <th style="text-align:right;">Unit.</th>
                     <th style="text-align:right;">Total</th>
                 </tr>
             </thead>
@@ -176,34 +167,57 @@
             </tbody>
         </table>
 
+        <!-- Itens: Mobile (cards) -->
+        <div class="items-mobile-only" style="margin:1rem 0;">
+            <?php foreach ($items as $i => $item): ?>
+            <div class="item-card-pdf">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="item-name"><?= htmlspecialchars($item['material_name']) ?></div>
+                        <div class="item-meta">
+                            <?= htmlspecialchars($item['specification'] ?? '') ?>
+                            <?= $item['classification'] ? ' · ' . htmlspecialchars($item['classification']) : '' ?>
+                        </div>
+                    </div>
+                    <div class="item-price">R$ <?= number_format($item['total_price'] ?? 0, 2, ',', '.') ?></div>
+                </div>
+                <div class="d-flex justify-content-between mt-1" style="font-size:0.7rem; color:#666;">
+                    <span><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?> <?= htmlspecialchars($item['unit'] ?? '') ?> × R$ <?= number_format($item['unit_price'] ?? 0, 2, ',', '.') ?></span>
+                </div>
+            </div>
+            <?php endforeach; ?>
+            <div style="border-top:2px solid #3a3b4e; padding-top:8px; margin-top:8px; text-align:right;">
+                <strong style="font-size:1rem;">TOTAL: <span style="color:#28a745;">R$ <?= number_format($order['total_estimated'], 2, ',', '.') ?></span></strong>
+            </div>
+        </div>
+
         <!-- Aprovação -->
         <div class="approval-section">
             <h6><i class="bi bi-check-circle-fill"></i> Aprovação</h6>
             <div class="row">
-                <div class="col-sm-6">
-                    <small class="text-muted">Aprovado por:</small><br>
-                    <strong><?= htmlspecialchars($order['approved_by_name'] ?? '-') ?></strong>
+                <div class="col-6">
+                    <small class="text-muted" style="font-size:0.65rem;">Aprovado por:</small><br>
+                    <strong style="font-size:0.85rem;"><?= htmlspecialchars($order['approved_by_name'] ?? '-') ?></strong>
                 </div>
-                <div class="col-sm-6">
-                    <small class="text-muted">Data da Aprovação:</small><br>
-                    <strong><?= $order['approved_at'] ? date('d/m/Y \à\s H:i', strtotime($order['approved_at'])) : '-' ?></strong>
+                <div class="col-6">
+                    <small class="text-muted" style="font-size:0.65rem;">Data:</small><br>
+                    <strong style="font-size:0.85rem;"><?= $order['approved_at'] ? date('d/m/Y H:i', strtotime($order['approved_at'])) : '-' ?></strong>
                 </div>
             </div>
             <?php if (!empty($order['approval_notes'])): ?>
-            <div class="mt-2">
-                <small class="text-muted">Observações:</small><br>
-                <?= nl2br(htmlspecialchars($order['approval_notes'])) ?>
+            <div class="mt-2" style="font-size:0.8rem;">
+                <small class="text-muted">Obs:</small> <?= nl2br(htmlspecialchars($order['approval_notes'])) ?>
             </div>
             <?php endif; ?>
         </div>
 
         <!-- Histórico -->
         <div class="history-section">
-            <h6><i class="bi bi-clock-history"></i> Histórico</h6>
+            <h6 style="font-size:0.8rem;"><i class="bi bi-clock-history"></i> Histórico</h6>
             <?php foreach ($history as $entry): ?>
             <div class="timeline-item">
                 <strong><?= htmlspecialchars($entry['performed_by_name'] ?? 'Sistema') ?></strong>
-                <span class="text-muted ms-2"><?= date('d/m/Y H:i', strtotime($entry['created_at'])) ?></span><br>
+                <span class="text-muted ms-1"><?= date('d/m/Y H:i', strtotime($entry['created_at'])) ?></span><br>
                 <small><?= htmlspecialchars($entry['description']) ?></small>
             </div>
             <?php endforeach; ?>
@@ -211,8 +225,8 @@
 
         <!-- Footer -->
         <div class="pdf-footer">
-            <p>Brooks Construtora — Av. Brigadeiro Faria Lima, 1811 — São Paulo/SP</p>
-            <p>Documento gerado em <?= date('d/m/Y \à\s H:i') ?> | www.brooksconstrutora.com.br</p>
+            <p class="mb-1">Brooks Construtora — Av. Brigadeiro Faria Lima, 1811 — São Paulo/SP</p>
+            <p class="mb-0">Documento gerado em <?= date('d/m/Y \à\s H:i') ?> | www.brooksconstrutora.com.br</p>
         </div>
     </div>
 
@@ -220,23 +234,24 @@
     document.getElementById('downloadPdfBtn').addEventListener('click', async function() {
         const btn = this;
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando PDF...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando...';
 
         try {
             const element = document.getElementById('pdfContent');
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-            });
+            
+            // Forçar largura fixa para o PDF ficar bonito (simula desktop)
+            const originalWidth = element.style.width;
+            element.style.width = '800px';
+            
+            const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false, windowWidth: 900 });
+            
+            element.style.width = originalWidth;
 
             const { jsPDF } = window.jspdf;
-            const imgWidth = 210; // A4 width in mm
+            const imgWidth = 210;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            
             const pdf = new jsPDF('p', 'mm', 'a4');
             
-            // Se o conteúdo for maior que uma página A4
             const pageHeight = 297;
             let heightLeft = imgHeight;
             let position = 0;
