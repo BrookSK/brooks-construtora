@@ -119,6 +119,21 @@
             .table th, .table td { padding: 0.4rem 0.5rem; }
             .btn-lg { padding: 0.6rem 1rem; font-size: 0.95rem; }
             .modal-dialog { margin: 0.5rem; }
+            /* Prevenir zoom no iOS ao focar inputs */
+            input[type="text"],
+            input[type="email"],
+            input[type="number"],
+            input[type="url"],
+            input[type="tel"],
+            input[type="password"],
+            input[type="search"],
+            textarea,
+            select,
+            .ss-input,
+            .form-control,
+            .form-select {
+                font-size: 16px !important;
+            }
         }
         /* Overlay para sidebar mobile */
         .sidebar-overlay {
