@@ -2,67 +2,108 @@
 <?php ob_start(); ?>
 
 <form method="POST" action="/admin/orders/store" id="orderForm">
-    <!-- Fornecedor -->
-    <div class="card mb-3">
-        <div class="card-header"><i class="bi bi-building"></i> Fornecedor</div>
-        <div class="card-body">
-            <label class="form-label">Selecionar Fornecedor</label>
-            <select class="form-select mb-2" name="supplier_id" id="supplierSelect">
-                <option value="">-- Selecione --</option>
-                <?php foreach ($suppliers as $s): ?>
-                <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?> <?= $s['cnpj'] ? '(' . $s['cnpj'] . ')' : '' ?></option>
-                <?php endforeach; ?>
-            </select>
-            <button type="button" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#newSupplierModal">
-                <i class="bi bi-plus"></i> Cadastrar Novo Fornecedor
-            </button>
-        </div>
-    </div>
-
-    <!-- Itens do pedido -->
-    <div class="card mb-3">
-        <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-list-check"></i> Itens</span>
-                <span class="badge bg-primary" id="itemCountBadge">0</span>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="d-grid gap-2 mb-3">
-                <button type="button" class="btn btn-primary" id="addItemBtn">
-                    <i class="bi bi-plus-lg"></i> Adicionar Item
-                </button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#newMaterialModal">
-                    <i class="bi bi-box-seam"></i> Cadastrar Novo Material
-                </button>
+    <div class="row">
+        <div class="col-lg-9">
+            <!-- Fornecedor -->
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-building"></i> Fornecedor</div>
+                <div class="card-body">
+                    <div class="row align-items-end">
+                        <div class="col-md-8 mb-2 mb-md-0">
+                            <label class="form-label">Selecionar Fornecedor</label>
+                            <select class="form-select" name="supplier_id" id="supplierSelect">
+                                <option value="">-- Selecione --</option>
+                                <?php foreach ($suppliers as $s): ?>
+                                <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?> <?= $s['cnpj'] ? '(' . $s['cnpj'] . ')' : '' ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#newSupplierModal">
+                                <i class="bi bi-plus"></i> Novo Fornecedor
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div id="itemsList">
-                <div class="text-center text-muted py-3" id="emptyItemsMsg">
-                    <i class="bi bi-inbox d-block mb-1" style="font-size:1.5rem;"></i>
-                    Nenhum item adicionado
+            <!-- Itens do pedido -->
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-check"></i> Itens do Pedido <span class="badge bg-primary ms-1" id="itemCountBadge">0</span></span>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newMaterialModal">
+                            <i class="bi bi-box-seam"></i> <span class="d-none d-sm-inline">Novo Material</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary" id="addItemBtn">
+                            <i class="bi bi-plus"></i> Adicionar Item
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <!-- Desktop: Tabela -->
+                    <div class="d-none d-md-block">
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0" id="itemsTableDesktop">
+                                <thead>
+                                    <tr class="bg-light">
+                                        <th style="min-width:280px;">Material</th>
+                                        <th style="min-width:120px;">Especificação</th>
+                                        <th style="min-width:100px;">Classificação</th>
+                                        <th style="min-width:90px;">Unidade</th>
+                                        <th style="width:90px;">Qtd</th>
+                                        <th style="width:50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsBodyDesktop"></tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 text-center text-muted" id="emptyDesktop">
+                            <i class="bi bi-inbox"></i> Clique em "Adicionar Item" para começar
+                        </div>
+                    </div>
+                    <!-- Mobile: Cards -->
+                    <div class="d-md-none p-3">
+                        <div id="itemsBodyMobile"></div>
+                        <div class="text-center text-muted py-2" id="emptyMobile">
+                            <i class="bi bi-inbox d-block mb-1" style="font-size:1.5rem;"></i>
+                            Nenhum item adicionado
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Observações -->
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-chat-left-text"></i> Observações</div>
+                <div class="card-body">
+                    <textarea class="form-control" name="description" rows="3" placeholder="Observações adicionais sobre o pedido..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar desktop -->
+        <div class="col-lg-3">
+            <div class="card sticky-top" style="top:1.5rem;">
+                <div class="card-body d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> Criar Pedido e Enviar para Cotação
+                    </button>
+                    <a href="/admin/orders" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left"></i> Voltar
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Observações -->
-    <div class="card mb-3">
-        <div class="card-header"><i class="bi bi-chat-left-text"></i> Observações</div>
-        <div class="card-body">
-            <textarea class="form-control" name="description" rows="3" placeholder="Observações adicionais sobre o pedido..."></textarea>
-        </div>
-    </div>
-
-    <!-- Ações -->
-    <div class="d-grid gap-2 mb-4">
-        <button type="submit" class="btn btn-primary btn-lg">
+    <!-- Mobile: Botão fixo inferior -->
+    <div class="d-md-none position-fixed bottom-0 start-0 end-0 p-3 bg-white border-top shadow" style="z-index:100;">
+        <button type="submit" class="btn btn-primary w-100">
             <i class="bi bi-send"></i> Criar Pedido e Enviar para Cotação
         </button>
-        <a href="/admin/orders" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Voltar
-        </a>
     </div>
+    <div class="d-md-none" style="height:80px;"></div>
 </form>
 
 <!-- Modal Novo Fornecedor -->
@@ -74,26 +115,11 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Nome *</label>
-                    <input type="text" class="form-control" id="newSupplierName" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">CNPJ</label>
-                    <input type="text" class="form-control" id="newSupplierCnpj">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">E-mail</label>
-                    <input type="email" class="form-control" id="newSupplierEmail">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Telefone</label>
-                    <input type="text" class="form-control" id="newSupplierPhone">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Contato</label>
-                    <input type="text" class="form-control" id="newSupplierContact">
-                </div>
+                <div class="mb-3"><label class="form-label">Nome *</label><input type="text" class="form-control" id="newSupplierName" required></div>
+                <div class="mb-3"><label class="form-label">CNPJ</label><input type="text" class="form-control" id="newSupplierCnpj"></div>
+                <div class="mb-3"><label class="form-label">E-mail</label><input type="email" class="form-control" id="newSupplierEmail"></div>
+                <div class="mb-3"><label class="form-label">Telefone</label><input type="text" class="form-control" id="newSupplierPhone"></div>
+                <div class="mb-3"><label class="form-label">Contato</label><input type="text" class="form-control" id="newSupplierContact"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -107,17 +133,13 @@
 <div class="modal fade" id="newMaterialModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <!-- Step 1: Formulário do material -->
             <div id="matStep1">
                 <div class="modal-header">
                     <h5 class="modal-title">Novo Material</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Nome do Material *</label>
-                        <input type="text" class="form-control" id="newMatName" required>
-                    </div>
+                    <div class="mb-3"><label class="form-label">Nome do Material *</label><input type="text" class="form-control" id="newMatName" required></div>
                     <div class="mb-3">
                         <label class="form-label">Especificação (Tipo)</label>
                         <div class="input-group">
@@ -127,15 +149,10 @@
                                 <option value="<?= htmlspecialchars($cat['name']) ?>" data-id="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
-                            <button type="button" class="btn btn-outline-primary" onclick="showQuickAdd('category')" title="Nova">
-                                <i class="bi bi-plus"></i>
-                            </button>
+                            <button type="button" class="btn btn-outline-primary" onclick="showQuickAdd('category')"><i class="bi bi-plus"></i></button>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Classificação</label>
-                        <input type="text" class="form-control" id="newMatClassification" placeholder="Ex: 100mm, 3/4&quot;, 50x40">
-                    </div>
+                    <div class="mb-3"><label class="form-label">Classificação</label><input type="text" class="form-control" id="newMatClassification" placeholder="Ex: 100mm, 3/4&quot;, 50x40"></div>
                     <div class="mb-3">
                         <label class="form-label">Unidade de Medida</label>
                         <div class="input-group">
@@ -145,9 +162,7 @@
                                 <option value="<?= $u['id'] ?>" data-abbr="<?= htmlspecialchars($u['abbreviation']) ?>"><?= htmlspecialchars($u['name']) ?> (<?= htmlspecialchars($u['abbreviation']) ?>)</option>
                                 <?php endforeach; ?>
                             </select>
-                            <button type="button" class="btn btn-outline-primary" onclick="showQuickAdd('unit')" title="Nova">
-                                <i class="bi bi-plus"></i>
-                            </button>
+                            <button type="button" class="btn btn-outline-primary" onclick="showQuickAdd('unit')"><i class="bi bi-plus"></i></button>
                         </div>
                     </div>
                 </div>
@@ -156,37 +171,22 @@
                     <button type="button" class="btn btn-primary" id="saveMaterialBtn">Salvar Material</button>
                 </div>
             </div>
-
-            <!-- Step 2: Cadastro rápido (especificação ou unidade) -->
             <div id="matStep2" style="display:none;">
                 <div class="modal-header">
-                    <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="backToMatStep1()">
-                        <i class="bi bi-arrow-left"></i>
-                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="backToMatStep1()"><i class="bi bi-arrow-left"></i></button>
                     <h6 class="modal-title" id="quickAddTitle">Nova Especificação</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Campos para categoria -->
-                    <div id="quickCatFields">
-                        <label class="form-label">Nome da Especificação *</label>
-                        <input type="text" class="form-control" id="quickCatName" placeholder="Ex: mat. Elétrico">
-                    </div>
-                    <!-- Campos para unidade -->
+                    <div id="quickCatFields"><label class="form-label">Nome da Especificação *</label><input type="text" class="form-control" id="quickCatName" placeholder="Ex: mat. Elétrico"></div>
                     <div id="quickUnitFields" style="display:none;">
-                        <div class="mb-3">
-                            <label class="form-label">Nome *</label>
-                            <input type="text" class="form-control" id="quickUnitName" placeholder="Ex: Galão">
-                        </div>
-                        <div>
-                            <label class="form-label">Abreviação *</label>
-                            <input type="text" class="form-control" id="quickUnitAbbr" placeholder="Ex: gal">
-                        </div>
+                        <div class="mb-3"><label class="form-label">Nome *</label><input type="text" class="form-control" id="quickUnitName" placeholder="Ex: Galão"></div>
+                        <div><label class="form-label">Abreviação *</label><input type="text" class="form-control" id="quickUnitAbbr" placeholder="Ex: gal"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="backToMatStep1()">Voltar</button>
-                    <button type="button" class="btn btn-primary" id="quickSaveBtn" onclick="saveQuickAdd()">Salvar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveQuickAdd()">Salvar</button>
                 </div>
             </div>
         </div>
@@ -194,34 +194,10 @@
 </div>
 
 <style>
-.item-card {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 10px;
-    background: #fafbfc;
-    position: relative;
-}
-.item-card .item-number {
-    position: absolute;
-    top: -8px;
-    left: 10px;
-    background: #3a3b4e;
-    color: #fff;
-    font-size: 0.65rem;
-    padding: 1px 8px;
-    border-radius: 10px;
-}
-.item-card .item-details {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 6px;
-}
-.item-card .item-details .badge {
-    font-weight: 400;
-    font-size: 0.7rem;
-}
+.item-card { border:1px solid #e0e0e0; border-radius:8px; padding:12px; margin-bottom:10px; background:#fafbfc; position:relative; }
+.item-card .item-number { position:absolute; top:-8px; left:10px; background:#3a3b4e; color:#fff; font-size:0.65rem; padding:1px 8px; border-radius:10px; }
+.item-card .item-details { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.item-card .item-details .badge { font-weight:400; font-size:0.7rem; }
 </style>
 
 <script>
@@ -231,122 +207,121 @@ let itemCount = 0;
 document.getElementById('addItemBtn').addEventListener('click', () => addItem());
 
 function updateItemCount() {
-    const count = document.querySelectorAll('.item-card').length;
+    const count = document.querySelectorAll('#itemsBodyDesktop tr').length;
     document.getElementById('itemCountBadge').textContent = count;
+    document.getElementById('emptyDesktop').style.display = count ? 'none' : '';
+    document.getElementById('emptyMobile').style.display = count ? 'none' : '';
+}
+
+function buildMaterialOptions(prefill) {
+    let opts = '<option value="">-- Selecione --</option>';
+    materials.forEach(m => {
+        const label = m.name + (m.classification ? ' - ' + m.classification : '') + (m.specification ? ' (' + m.specification + ')' : '');
+        const selected = prefill && prefill.id == m.id ? 'selected' : '';
+        opts += `<option value="${m.id}" data-name="${m.name}" data-spec="${m.specification || m.category_name || ''}" data-class="${m.classification || ''}" data-unit="${m.unit_abbr || m.unit_name || ''}" ${selected}>${label}</option>`;
+    });
+    return opts;
 }
 
 function addItem(prefill = null) {
     itemCount++;
-    document.getElementById('emptyItemsMsg').style.display = 'none';
-    
-    // Montar options do select
-    let materialOptions = '<option value="">-- Selecione o material --</option>';
-    materials.forEach(m => {
-        const label = m.name + (m.classification ? ' - ' + m.classification : '');
-        const selected = prefill && prefill.id == m.id ? 'selected' : '';
-        materialOptions += `<option value="${m.id}" 
-            data-name="${m.name}" 
-            data-spec="${m.specification || m.category_name || ''}" 
-            data-class="${m.classification || ''}" 
-            data-unit="${m.unit_abbr || m.unit_name || ''}"
-            ${selected}>${label}</option>`;
-    });
-    
+    const opts = buildMaterialOptions(prefill);
+
+    // Desktop row
+    const tr = document.createElement('tr');
+    tr.id = 'item-row-' + itemCount;
+    tr.innerHTML = `
+        <td>
+            <select class="form-select form-select-sm material-select" onchange="materialSelected(this, ${itemCount})">${opts}</select>
+            <input type="hidden" name="items[${itemCount}][material_id]" id="mid-${itemCount}" value="${prefill?.id || ''}">
+            <input type="hidden" name="items[${itemCount}][material_name]" id="mname-${itemCount}" value="${prefill?.name || ''}">
+        </td>
+        <td><input type="text" class="form-control form-control-sm" name="items[${itemCount}][specification]" id="spec-${itemCount}" value="${prefill?.specification || ''}" readonly></td>
+        <td><input type="text" class="form-control form-control-sm" name="items[${itemCount}][classification]" id="class-${itemCount}" value="${prefill?.classification || ''}" readonly></td>
+        <td><input type="text" class="form-control form-control-sm" name="items[${itemCount}][unit]" id="unit-${itemCount}" value="${prefill?.unit || ''}" readonly></td>
+        <td><input type="number" class="form-control form-control-sm" name="items[${itemCount}][quantity]" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required></td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(${itemCount})"><i class="bi bi-trash"></i></button></td>
+    `;
+    document.getElementById('itemsBodyDesktop').appendChild(tr);
+
+    // Mobile card
     const card = document.createElement('div');
     card.className = 'item-card';
+    card.id = 'item-card-' + itemCount;
     card.innerHTML = `
         <span class="item-number">#${itemCount}</span>
-        <div class="mb-2">
-            <div class="d-flex gap-2 align-items-center">
-                <select class="form-select form-select-sm material-select flex-grow-1" onchange="materialSelected(this)">
-                    ${materialOptions}
-                </select>
-                <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="removeItem(this)" title="Remover item">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </div>
-            <input type="hidden" name="items[${itemCount}][material_id]" class="material-id" value="${prefill ? (prefill.id || '') : ''}">
-            <input type="hidden" name="items[${itemCount}][material_name]" class="material-name" value="${prefill ? (prefill.name || '') : ''}">
-            <input type="hidden" name="items[${itemCount}][specification]" class="spec-field" value="${prefill ? (prefill.specification || '') : ''}">
-            <input type="hidden" name="items[${itemCount}][classification]" class="class-field" value="${prefill ? (prefill.classification || '') : ''}">
-            <input type="hidden" name="items[${itemCount}][unit]" class="unit-field" value="${prefill ? (prefill.unit || '') : ''}">
+        <div class="d-flex gap-2 align-items-center mb-2">
+            <select class="form-select form-select-sm flex-grow-1 material-select-m" onchange="materialSelectedMobile(this, ${itemCount})">${opts}</select>
+            <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="removeItem(${itemCount})"><i class="bi bi-trash"></i></button>
         </div>
-        <div class="item-details" id="itemDetails${itemCount}">
-            ${prefill ? `
-                <span class="badge bg-light text-dark">${prefill.specification || ''}</span>
-                <span class="badge bg-light text-dark">${prefill.classification || ''}</span>
-                <span class="badge bg-light text-dark">${prefill.unit || ''}</span>
-            ` : '<span class="text-muted" style="font-size:0.75rem;">Selecione um material acima</span>'}
+        <div class="item-details" id="details-m-${itemCount}">
+            ${prefill ? `<span class="badge bg-light text-dark">${prefill.specification||''}</span><span class="badge bg-light text-dark">${prefill.classification||''}</span><span class="badge bg-info text-white">${prefill.unit||''}</span>` : '<span class="text-muted" style="font-size:0.75rem;">Selecione um material</span>'}
         </div>
         <div class="d-flex align-items-center gap-2 mt-2">
-            <label class="form-label mb-0 small fw-bold" style="white-space:nowrap;">Qtd:</label>
-            <input type="number" class="form-control form-control-sm" style="max-width:100px;" 
-                name="items[${itemCount}][quantity]" min="0.01" step="0.01" 
-                value="${prefill ? (prefill.quantity || 1) : 1}" required>
-            <span class="text-muted small unit-label">${prefill ? (prefill.unit || '') : ''}</span>
+            <label class="form-label mb-0 small fw-bold">Qtd:</label>
+            <input type="number" class="form-control form-control-sm" style="max-width:100px;" name="items[${itemCount}][quantity]" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required>
+            <span class="text-muted small">${prefill?.unit || ''}</span>
         </div>
     `;
-    
-    document.getElementById('itemsList').appendChild(card);
-    updateItemCount();
+    document.getElementById('itemsBodyMobile').appendChild(card);
 
-    // Se tem prefill, garantir select
-    if (prefill && prefill.id) {
-        card.querySelector('.material-select').value = prefill.id;
-    }
-}
-
-function removeItem(btn) {
-    btn.closest('.item-card').remove();
-    if (document.querySelectorAll('.item-card').length === 0) {
-        document.getElementById('emptyItemsMsg').style.display = '';
+    if (prefill?.id) {
+        tr.querySelector('.material-select').value = prefill.id;
+        card.querySelector('.material-select-m').value = prefill.id;
     }
     updateItemCount();
 }
 
-function materialSelected(selectEl) {
-    const card = selectEl.closest('.item-card');
-    const option = selectEl.selectedOptions[0];
-    const detailsEl = card.querySelector('.item-details');
-    
-    if (option && option.value) {
-        card.querySelector('.material-id').value = option.value;
-        card.querySelector('.material-name').value = option.dataset.name || '';
-        card.querySelector('.spec-field').value = option.dataset.spec || '';
-        card.querySelector('.class-field').value = option.dataset.class || '';
-        card.querySelector('.unit-field').value = option.dataset.unit || '';
-        card.querySelector('.unit-label').textContent = option.dataset.unit || '';
-        
-        detailsEl.innerHTML = '';
-        if (option.dataset.spec) detailsEl.innerHTML += `<span class="badge bg-light text-dark">${option.dataset.spec}</span>`;
-        if (option.dataset.class) detailsEl.innerHTML += `<span class="badge bg-light text-dark">${option.dataset.class}</span>`;
-        if (option.dataset.unit) detailsEl.innerHTML += `<span class="badge bg-info text-white">${option.dataset.unit}</span>`;
+function removeItem(idx) {
+    document.getElementById('item-row-' + idx)?.remove();
+    document.getElementById('item-card-' + idx)?.remove();
+    updateItemCount();
+}
+
+function materialSelected(sel, idx) {
+    const opt = sel.selectedOptions[0];
+    document.getElementById('mid-' + idx).value = opt?.value || '';
+    document.getElementById('mname-' + idx).value = opt?.dataset?.name || '';
+    document.getElementById('spec-' + idx).value = opt?.dataset?.spec || '';
+    document.getElementById('class-' + idx).value = opt?.dataset?.class || '';
+    document.getElementById('unit-' + idx).value = opt?.dataset?.unit || '';
+    // Sync mobile
+    const mSel = document.querySelector('#item-card-' + idx + ' .material-select-m');
+    if (mSel) mSel.value = opt?.value || '';
+    updateMobileDetails(idx, opt);
+}
+
+function materialSelectedMobile(sel, idx) {
+    const opt = sel.selectedOptions[0];
+    document.getElementById('mid-' + idx).value = opt?.value || '';
+    document.getElementById('mname-' + idx).value = opt?.dataset?.name || '';
+    document.getElementById('spec-' + idx).value = opt?.dataset?.spec || '';
+    document.getElementById('class-' + idx).value = opt?.dataset?.class || '';
+    document.getElementById('unit-' + idx).value = opt?.dataset?.unit || '';
+    // Sync desktop
+    const dSel = document.querySelector('#item-row-' + idx + ' .material-select');
+    if (dSel) dSel.value = opt?.value || '';
+    updateMobileDetails(idx, opt);
+}
+
+function updateMobileDetails(idx, opt) {
+    const el = document.getElementById('details-m-' + idx);
+    if (!el) return;
+    if (opt?.value) {
+        el.innerHTML = '';
+        if (opt.dataset.spec) el.innerHTML += `<span class="badge bg-light text-dark">${opt.dataset.spec}</span>`;
+        if (opt.dataset.class) el.innerHTML += `<span class="badge bg-light text-dark">${opt.dataset.class}</span>`;
+        if (opt.dataset.unit) el.innerHTML += `<span class="badge bg-info text-white">${opt.dataset.unit}</span>`;
     } else {
-        card.querySelector('.material-id').value = '';
-        card.querySelector('.material-name').value = '';
-        card.querySelector('.spec-field').value = '';
-        card.querySelector('.class-field').value = '';
-        card.querySelector('.unit-field').value = '';
-        card.querySelector('.unit-label').textContent = '';
-        detailsEl.innerHTML = '<span class="text-muted" style="font-size:0.75rem;">Selecione um material acima</span>';
+        el.innerHTML = '<span class="text-muted" style="font-size:0.75rem;">Selecione um material</span>';
     }
 }
 
-// Salvar fornecedor inline
+// Fornecedor inline
 document.getElementById('saveSupplierBtn').addEventListener('click', async function() {
     const name = document.getElementById('newSupplierName').value.trim();
     if (!name) { alert('Nome é obrigatório'); return; }
-
-    const resp = await fetch('/admin/suppliers/quick-store', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({
-            name, cnpj: document.getElementById('newSupplierCnpj').value,
-            email: document.getElementById('newSupplierEmail').value,
-            phone: document.getElementById('newSupplierPhone').value,
-            contact_person: document.getElementById('newSupplierContact').value,
-        })
-    });
+    const resp = await fetch('/admin/suppliers/quick-store', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name, cnpj:document.getElementById('newSupplierCnpj').value, email:document.getElementById('newSupplierEmail').value, phone:document.getElementById('newSupplierPhone').value, contact_person:document.getElementById('newSupplierContact').value }) });
     const data = await resp.json();
     if (data.success) {
         document.getElementById('supplierSelect').add(new Option(data.supplier.name, data.supplier.id, true, true));
@@ -355,119 +330,55 @@ document.getElementById('saveSupplierBtn').addEventListener('click', async funct
     } else { alert(data.error || 'Erro'); }
 });
 
-// Salvar material inline
+// Material inline
 document.getElementById('saveMaterialBtn').addEventListener('click', async function() {
     const name = document.getElementById('newMatName').value.trim();
     if (!name) { alert('Nome é obrigatório'); return; }
-
-    const specSelect = document.getElementById('newMatSpec');
-    const unitSelect = document.getElementById('newMatUnit');
-
-    const resp = await fetch('/admin/materials/quick-store', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({
-            name, specification: specSelect.value,
-            category_id: specSelect.selectedOptions[0]?.dataset?.id || '',
-            unit_id: unitSelect.value || '',
-            classification: document.getElementById('newMatClassification').value,
-        })
-    });
+    const specSelect = document.getElementById('newMatSpec'), unitSelect = document.getElementById('newMatUnit');
+    const resp = await fetch('/admin/materials/quick-store', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name, specification:specSelect.value, category_id:specSelect.selectedOptions[0]?.dataset?.id||'', unit_id:unitSelect.value||'', classification:document.getElementById('newMatClassification').value }) });
     const data = await resp.json();
     if (data.success) {
         const unitAbbr = unitSelect.selectedOptions[0]?.dataset?.abbr || '';
-        materials.push({ id: data.material.id, name: data.material.name, specification: data.material.specification || specSelect.value, classification: data.material.classification || '', unit_abbr: unitAbbr, unit_name: '', category_name: specSelect.value });
-        
-        // Adicionar options nos selects existentes
-        document.querySelectorAll('.material-select').forEach(sel => {
-            const label = data.material.name + (data.material.classification ? ' - ' + data.material.classification : '');
-            const opt = new Option(label, data.material.id);
-            opt.dataset.name = data.material.name;
-            opt.dataset.spec = specSelect.value;
-            opt.dataset.class = data.material.classification || '';
-            opt.dataset.unit = unitAbbr;
-            sel.add(opt);
-        });
-        
-        addItem({ id: data.material.id, name: data.material.name, specification: specSelect.value, classification: data.material.classification || '', unit: unitAbbr, quantity: 1 });
+        materials.push({ id:data.material.id, name:data.material.name, specification:data.material.specification||specSelect.value, classification:data.material.classification||'', unit_abbr:unitAbbr, unit_name:'', category_name:specSelect.value });
+        addItem({ id:data.material.id, name:data.material.name, specification:specSelect.value, classification:data.material.classification||'', unit:unitAbbr, quantity:1 });
         bootstrap.Modal.getInstance(document.getElementById('newMaterialModal')).hide();
-        ['newMatName','newMatClassification'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('newMatSpec').value = '';
-        document.getElementById('newMatUnit').value = '';
-    } else { alert(data.error || 'Erro'); }
+        ['newMatName','newMatClassification'].forEach(id => document.getElementById(id).value='');
+        document.getElementById('newMatSpec').value=''; document.getElementById('newMatUnit').value='';
+    } else { alert(data.error||'Erro'); }
 });
 
 // Validação
 document.getElementById('orderForm').addEventListener('submit', function(e) {
-    if (document.querySelectorAll('.item-card').length === 0) { e.preventDefault(); alert('Adicione pelo menos um item.'); return; }
+    if (!document.querySelectorAll('#itemsBodyDesktop tr').length) { e.preventDefault(); alert('Adicione pelo menos um item.'); return; }
     let valid = true;
-    document.querySelectorAll('.material-select').forEach(sel => {
-        if (!sel.value) { valid = false; sel.classList.add('is-invalid'); } else { sel.classList.remove('is-invalid'); }
+    document.querySelectorAll('#itemsBodyDesktop .material-select').forEach(sel => {
+        if (!sel.value) { valid=false; sel.classList.add('is-invalid'); } else { sel.classList.remove('is-invalid'); }
     });
     if (!valid) { e.preventDefault(); alert('Selecione um material para cada item.'); }
 });
 
-// Quick add - sistema de steps dentro do modal
-let quickAddMode = ''; // 'category' ou 'unit'
-
+// Quick add steps
+let quickAddMode = '';
 function showQuickAdd(mode) {
     quickAddMode = mode;
     document.getElementById('matStep1').style.display = 'none';
     document.getElementById('matStep2').style.display = 'block';
-    
-    if (mode === 'category') {
-        document.getElementById('quickAddTitle').textContent = 'Nova Especificação';
-        document.getElementById('quickCatFields').style.display = '';
-        document.getElementById('quickUnitFields').style.display = 'none';
-        setTimeout(() => document.getElementById('quickCatName').focus(), 100);
-    } else {
-        document.getElementById('quickAddTitle').textContent = 'Nova Unidade de Medida';
-        document.getElementById('quickCatFields').style.display = 'none';
-        document.getElementById('quickUnitFields').style.display = '';
-        setTimeout(() => document.getElementById('quickUnitName').focus(), 100);
-    }
+    if (mode === 'category') { document.getElementById('quickAddTitle').textContent='Nova Especificação'; document.getElementById('quickCatFields').style.display=''; document.getElementById('quickUnitFields').style.display='none'; setTimeout(()=>document.getElementById('quickCatName').focus(),100); }
+    else { document.getElementById('quickAddTitle').textContent='Nova Unidade de Medida'; document.getElementById('quickCatFields').style.display='none'; document.getElementById('quickUnitFields').style.display=''; setTimeout(()=>document.getElementById('quickUnitName').focus(),100); }
 }
-
-function backToMatStep1() {
-    document.getElementById('matStep2').style.display = 'none';
-    document.getElementById('matStep1').style.display = 'block';
-}
-
+function backToMatStep1() { document.getElementById('matStep2').style.display='none'; document.getElementById('matStep1').style.display='block'; }
 async function saveQuickAdd() {
-    if (quickAddMode === 'category') {
-        const name = document.getElementById('quickCatName').value.trim();
-        if (!name) { alert('Nome é obrigatório'); return; }
-        const resp = await fetch('/admin/materials/quick-store-category', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name }) });
-        const data = await resp.json();
-        if (data.success) {
-            const opt = new Option(data.category.name, data.category.name); opt.dataset.id = data.category.id;
-            document.getElementById('newMatSpec').add(opt); document.getElementById('newMatSpec').value = data.category.name;
-            document.getElementById('quickCatName').value = '';
-            backToMatStep1();
-        } else { alert(data.error || 'Erro'); }
+    if (quickAddMode==='category') {
+        const name=document.getElementById('quickCatName').value.trim(); if(!name){alert('Nome é obrigatório');return;}
+        const r=await fetch('/admin/materials/quick-store-category',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({name})});
+        const d=await r.json(); if(d.success){const o=new Option(d.category.name,d.category.name);o.dataset.id=d.category.id;document.getElementById('newMatSpec').add(o);document.getElementById('newMatSpec').value=d.category.name;document.getElementById('quickCatName').value='';backToMatStep1();}else{alert(d.error||'Erro');}
     } else {
-        const name = document.getElementById('quickUnitName').value.trim();
-        const abbr = document.getElementById('quickUnitAbbr').value.trim();
-        if (!name || !abbr) { alert('Nome e abreviação são obrigatórios'); return; }
-        const resp = await fetch('/admin/materials/quick-store-unit', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: new URLSearchParams({ name, abbreviation: abbr }) });
-        const data = await resp.json();
-        if (data.success) {
-            const opt = new Option(`${data.unit.name} (${data.unit.abbreviation})`, data.unit.id); opt.dataset.abbr = data.unit.abbreviation;
-            document.getElementById('newMatUnit').add(opt); document.getElementById('newMatUnit').value = data.unit.id;
-            document.getElementById('quickUnitName').value = ''; document.getElementById('quickUnitAbbr').value = '';
-            backToMatStep1();
-        } else { alert(data.error || 'Erro'); }
+        const name=document.getElementById('quickUnitName').value.trim(),abbr=document.getElementById('quickUnitAbbr').value.trim(); if(!name||!abbr){alert('Preencha nome e abreviação');return;}
+        const r=await fetch('/admin/materials/quick-store-unit',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({name,abbreviation:abbr})});
+        const d=await r.json(); if(d.success){const o=new Option(`${d.unit.name} (${d.unit.abbreviation})`,d.unit.id);o.dataset.abbr=d.unit.abbreviation;document.getElementById('newMatUnit').add(o);document.getElementById('newMatUnit').value=d.unit.id;document.getElementById('quickUnitName').value='';document.getElementById('quickUnitAbbr').value='';backToMatStep1();}else{alert(d.error||'Erro');}
     }
 }
-
-// Reset modal de material ao fechar
-document.getElementById('newMaterialModal').addEventListener('hidden.bs.modal', function() {
-    backToMatStep1();
-    document.getElementById('newMatName').value = '';
-    document.getElementById('newMatSpec').value = '';
-    document.getElementById('newMatClassification').value = '';
-    document.getElementById('newMatUnit').value = '';
-});
+document.getElementById('newMaterialModal').addEventListener('hidden.bs.modal', function(){backToMatStep1();['newMatName','newMatClassification'].forEach(id=>document.getElementById(id).value='');document.getElementById('newMatSpec').value='';document.getElementById('newMatUnit').value='';});
 </script>
 
 <?php $content = ob_get_clean(); ?>
