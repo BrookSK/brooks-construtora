@@ -63,50 +63,54 @@
 
                     <h6 class="mb-3"><i class="bi bi-list-check"></i> Itens - Informe o valor unitário</h6>
                     
-                    <!-- Desktop -->
-                    <div class="table-responsive d-none d-md-block">
-                        <table class="table table-sm">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Material</th>
-                                    <th>Espec.</th>
-                                    <th>Class.</th>
-                                    <th>Unid.</th>
-                                    <th class="text-center">Qtd</th>
-                                    <th class="text-end" style="min-width:120px;">Valor Unit. (R$)</th>
-                                    <th class="text-end">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($items as $i => $item): ?>
-                                <tr>
-                                    <td><?= $i + 1 ?></td>
-                                    <td><strong><?= htmlspecialchars($item['material_name']) ?></strong></td>
-                                    <td class="text-muted"><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
-                                    <td class="text-muted"><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
-                                    <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
-                                    <td class="text-center fw-bold"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
-                                    <td>
-                                        <input type="text" class="form-control form-control-sm price-input" 
-                                            name="items[<?= $item['id'] ?>][unit_price]" 
-                                            data-qty="<?= $item['quantity'] ?>"
-                                            placeholder="0,00" required>
-                                    </td>
-                                    <td class="text-end item-total" id="total-<?= $item['id'] ?>">R$ 0,00</td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                            <tfoot>
-                                <tr class="table-light">
-                                    <td colspan="7" class="text-end fw-bold">TOTAL GERAL:</td>
-                                    <td class="text-end grand-total" id="grandTotal">R$ 0,00</td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                    <!-- Desktop: Tabela -->
+                    <div class="d-none d-md-block">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Material</th>
+                                        <th>Espec.</th>
+                                        <th>Class.</th>
+                                        <th>Unid.</th>
+                                        <th class="text-center">Qtd</th>
+                                        <th class="text-end" style="min-width:120px;">Valor Unit. (R$)</th>
+                                        <th class="text-end">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($items as $i => $item): ?>
+                                    <tr>
+                                        <td><?= $i + 1 ?></td>
+                                        <td><strong><?= htmlspecialchars($item['material_name']) ?></strong></td>
+                                        <td class="text-muted"><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
+                                        <td class="text-muted"><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
+                                        <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
+                                        <td class="text-center fw-bold"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
+                                        <td>
+                                            <input type="text" inputmode="decimal" class="form-control form-control-sm price-input" 
+                                                id="price-<?= $item['id'] ?>"
+                                                name="items[<?= $item['id'] ?>][unit_price]" 
+                                                data-qty="<?= $item['quantity'] ?>"
+                                                data-id="<?= $item['id'] ?>"
+                                                placeholder="0,00" required>
+                                        </td>
+                                        <td class="text-end item-total" id="total-<?= $item['id'] ?>">R$ 0,00</td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-light">
+                                        <td colspan="7" class="text-end fw-bold">TOTAL GERAL:</td>
+                                        <td class="text-end grand-total" id="grandTotal">R$ 0,00</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
 
-                    <!-- Mobile -->
+                    <!-- Mobile: Cards (inputs referenciam os mesmos do desktop via JS) -->
                     <div class="d-md-none">
                         <?php foreach ($items as $i => $item): ?>
                         <div class="border rounded p-3 mb-2 bg-white">
@@ -120,13 +124,14 @@
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted small">Qtd: <strong><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></strong> <?= htmlspecialchars($item['unit'] ?? '') ?></span>
-                                <div style="max-width:130px;">
+                                <div style="max-width:140px;">
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text" style="font-size:0.75rem;">R$</span>
-                                        <input type="text" class="form-control price-input" 
-                                            name="items[<?= $item['id'] ?>][unit_price]" 
+                                        <input type="text" inputmode="decimal" class="form-control price-input-mobile" 
+                                            data-target="price-<?= $item['id'] ?>"
                                             data-qty="<?= $item['quantity'] ?>"
-                                            placeholder="0,00" required style="font-size:0.85rem;">
+                                            data-id="<?= $item['id'] ?>"
+                                            placeholder="0,00" style="font-size:0.9rem;">
                                     </div>
                                 </div>
                             </div>
@@ -161,44 +166,53 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+    // Desktop inputs (são os que vão no form)
     document.querySelectorAll('.price-input').forEach(input => {
-        input.addEventListener('input', calculateTotals);
-        input.addEventListener('blur', function() {
-            let val = this.value.replace(/[^\d,\.]/g, '').replace(',', '.');
-            if (val && !isNaN(parseFloat(val))) {
-                this.value = parseFloat(val).toFixed(2).replace('.', ',');
-            }
+        input.addEventListener('input', function() { calculateTotals(); });
+        input.addEventListener('blur', function() { formatPrice(this); });
+    });
+
+    // Mobile inputs (sincronizam com os desktop)
+    document.querySelectorAll('.price-input-mobile').forEach(input => {
+        input.addEventListener('input', function() {
+            const targetId = this.dataset.target;
+            const desktopInput = document.getElementById(targetId);
+            if (desktopInput) desktopInput.value = this.value;
+            calculateTotals();
+        });
+        input.addEventListener('blur', function() { 
+            formatPrice(this);
+            const targetId = this.dataset.target;
+            const desktopInput = document.getElementById(targetId);
+            if (desktopInput) desktopInput.value = this.value;
         });
     });
 
+    function formatPrice(el) {
+        let val = el.value.replace(/[^\d,\.]/g, '').replace(',', '.');
+        if (val && !isNaN(parseFloat(val))) {
+            el.value = parseFloat(val).toFixed(2).replace('.', ',');
+        }
+    }
+
     function calculateTotals() {
         let grandTotal = 0;
-        // Agrupar por item ID (podem ter 2 inputs com mesmo name - desktop e mobile)
-        const totals = {};
+
         document.querySelectorAll('.price-input').forEach(input => {
             const val = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
             const qty = parseFloat(input.dataset.qty) || 0;
             const total = val * qty;
-            
-            const itemId = input.name.match(/\[(\d+)\]/)[1];
-            totals[itemId] = total;
+            const itemId = input.dataset.id;
+            grandTotal += total;
 
-            // Atualizar ambas as versões (desktop e mobile)
+            const formatted = 'R$ ' + total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             const desktopEl = document.getElementById('total-' + itemId);
             const mobileEl = document.getElementById('total-m-' + itemId);
-            const formatted = 'R$ ' + total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             if (desktopEl) desktopEl.textContent = formatted;
             if (mobileEl) mobileEl.textContent = formatted;
-
-            // Sincronizar valor entre desktop e mobile inputs
-            document.querySelectorAll(`[name="${input.name}"]`).forEach(other => {
-                if (other !== input) other.value = input.value;
-            });
         });
 
-        grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
         const grandFormatted = 'R$ ' + grandTotal.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        
         const gtDesktop = document.getElementById('grandTotal');
         const gtMobile = document.getElementById('grandTotalMobile');
         if (gtDesktop) gtDesktop.textContent = grandFormatted;
