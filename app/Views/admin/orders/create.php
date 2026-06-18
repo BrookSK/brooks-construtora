@@ -219,11 +219,6 @@
     padding: 1px 8px;
     border-radius: 10px;
 }
-.item-card .remove-btn {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-}
 .item-card .item-details {
     display: flex;
     flex-wrap: wrap;
@@ -268,13 +263,15 @@ function addItem(prefill = null) {
     card.className = 'item-card';
     card.innerHTML = `
         <span class="item-number">#${itemCount}</span>
-        <button type="button" class="btn btn-sm btn-outline-danger remove-btn" onclick="removeItem(this)">
-            <i class="bi bi-x"></i>
-        </button>
         <div class="mb-2">
-            <select class="form-select form-select-sm material-select" onchange="materialSelected(this)">
-                ${materialOptions}
-            </select>
+            <div class="d-flex gap-2 align-items-center">
+                <select class="form-select form-select-sm material-select flex-grow-1" onchange="materialSelected(this)">
+                    ${materialOptions}
+                </select>
+                <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="removeItem(this)" title="Remover item">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
             <input type="hidden" name="items[${itemCount}][material_id]" class="material-id" value="${prefill ? (prefill.id || '') : ''}">
             <input type="hidden" name="items[${itemCount}][material_name]" class="material-name" value="${prefill ? (prefill.name || '') : ''}">
             <input type="hidden" name="items[${itemCount}][specification]" class="spec-field" value="${prefill ? (prefill.specification || '') : ''}">
