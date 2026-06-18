@@ -29,20 +29,25 @@
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span><i class="bi bi-list-check"></i> Itens do Pedido</span>
-            <button type="button" class="btn btn-sm btn-primary" id="addItemBtn">
-                <i class="bi bi-plus"></i> Adicionar Item
-            </button>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newMaterialModal">
+                    <i class="bi bi-box-seam"></i> Novo Material
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" id="addItemBtn">
+                    <i class="bi bi-plus"></i> Adicionar Item
+                </button>
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-sm mb-0" id="itemsTable">
                     <thead>
                         <tr class="bg-light">
-                            <th style="min-width:200px;">Material</th>
+                            <th style="min-width:250px;">Material</th>
                             <th style="min-width:130px;">Especificação</th>
                             <th style="min-width:100px;">Classificação</th>
                             <th style="min-width:100px;">Unid. Medida</th>
-                            <th style="width:80px;">Qtd</th>
+                            <th style="width:90px;">Qtd</th>
                             <th style="width:50px;"></th>
                         </tr>
                     </thead>
@@ -113,7 +118,7 @@
     </div>
 </div>
 
-<!-- Modal Novo Material (inline) -->
+<!-- Modal Novo Material -->
 <div class="modal fade" id="newMaterialModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -164,38 +169,42 @@ const units = <?= json_encode($units) ?>;
 let itemCount = 0;
 
 // Adicionar item
-document.getElementById('addItemBtn').addEventListener('click', addItem);
+document.getElementById('addItemBtn').addEventListener('click', () => addItem());
 
 function addItem(prefill = null) {
     itemCount++;
     document.getElementById('emptyItemsMsg').style.display = 'none';
     
+    // Montar as options do select de materiais
+    let materialOptions = '<option value="">-- Selecione um material --</option>';
+    materials.forEach(m => {
+        const label = m.name + (m.classification ? ' - ' + m.classification : '') + (m.specification ? ' (' + m.specification + ')' : '');
+        const selected = prefill && prefill.id == m.id ? 'selected' : '';
+        materialOptions += `<option value="${m.id}" 
+            data-name="${m.name}" 
+            data-spec="${m.specification || m.category_name || ''}" 
+            data-class="${m.classification || ''}" 
+            data-unit="${m.unit_abbr || m.unit_name || ''}"
+            ${selected}>${label}</option>`;
+    });
+    
     const row = document.createElement('tr');
     row.innerHTML = `
         <td>
-            <div class="input-group input-group-sm">
-                <input type="text" class="form-control material-search" 
-                    name="items[${itemCount}][material_name]" 
-                    placeholder="Buscar material..." 
-                    list="materialsList${itemCount}" 
-                    value="${prefill ? prefill.name : ''}" required autocomplete="off">
-                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newMaterialModal" title="Novo material">
-                    <i class="bi bi-plus"></i>
-                </button>
-            </div>
+            <select class="form-select form-select-sm material-select" onchange="materialSelected(this)">
+                ${materialOptions}
+            </select>
             <input type="hidden" name="items[${itemCount}][material_id]" class="material-id" value="${prefill ? (prefill.id || '') : ''}">
-            <datalist id="materialsList${itemCount}">
-                ${materials.map(m => `<option value="${m.name} ${m.classification ? '- ' + m.classification : ''}" data-id="${m.id}" data-spec="${m.specification || ''}" data-class="${m.classification || ''}" data-unit="${m.unit_abbr || m.unit_name || ''}">`).join('')}
-            </datalist>
+            <input type="hidden" name="items[${itemCount}][material_name]" class="material-name" value="${prefill ? (prefill.name || '') : ''}">
         </td>
         <td>
-            <input type="text" class="form-control form-control-sm" name="items[${itemCount}][specification]" placeholder="Tipo" value="${prefill ? (prefill.specification || '') : ''}">
+            <input type="text" class="form-control form-control-sm spec-field" name="items[${itemCount}][specification]" placeholder="Tipo" value="${prefill ? (prefill.specification || '') : ''}" readonly>
         </td>
         <td>
-            <input type="text" class="form-control form-control-sm" name="items[${itemCount}][classification]" placeholder="Ex: 100mm" value="${prefill ? (prefill.classification || '') : ''}">
+            <input type="text" class="form-control form-control-sm class-field" name="items[${itemCount}][classification]" placeholder="Ex: 100mm" value="${prefill ? (prefill.classification || '') : ''}" readonly>
         </td>
         <td>
-            <input type="text" class="form-control form-control-sm" name="items[${itemCount}][unit]" placeholder="unid/mts" value="${prefill ? (prefill.unit || '') : ''}">
+            <input type="text" class="form-control form-control-sm unit-field" name="items[${itemCount}][unit]" placeholder="unid/mts" value="${prefill ? (prefill.unit || '') : ''}" readonly>
         </td>
         <td>
             <input type="number" class="form-control form-control-sm" name="items[${itemCount}][quantity]" min="0.01" step="0.01" value="${prefill ? (prefill.quantity || 1) : 1}" required>
@@ -209,19 +218,6 @@ function addItem(prefill = null) {
     
     document.getElementById('itemsBody').appendChild(row);
 
-    // Material search auto-fill
-    const searchInput = row.querySelector('.material-search');
-    searchInput.addEventListener('change', function() {
-        const val = this.value;
-        const match = materials.find(m => `${m.name} ${m.classification ? '- ' + m.classification : ''}` === val || m.name === val);
-        if (match) {
-            row.querySelector('.material-id').value = match.id;
-            row.querySelector('[name*="[specification]"]').value = match.specification || match.category_name || '';
-            row.querySelector('[name*="[classification]"]').value = match.classification || '';
-            row.querySelector('[name*="[unit]"]').value = match.unit_abbr || match.unit_name || '';
-        }
-    });
-
     // Remove item
     row.querySelector('.remove-item-btn').addEventListener('click', function() {
         row.remove();
@@ -229,6 +225,32 @@ function addItem(prefill = null) {
             document.getElementById('emptyItemsMsg').style.display = '';
         }
     });
+
+    // Se tem prefill, simular seleção
+    if (prefill && prefill.id) {
+        const select = row.querySelector('.material-select');
+        select.value = prefill.id;
+    }
+}
+
+// Quando seleciona um material no dropdown
+function materialSelected(selectEl) {
+    const row = selectEl.closest('tr');
+    const option = selectEl.selectedOptions[0];
+    
+    if (option && option.value) {
+        row.querySelector('.material-id').value = option.value;
+        row.querySelector('.material-name').value = option.dataset.name || '';
+        row.querySelector('.spec-field').value = option.dataset.spec || '';
+        row.querySelector('.class-field').value = option.dataset.class || '';
+        row.querySelector('.unit-field').value = option.dataset.unit || '';
+    } else {
+        row.querySelector('.material-id').value = '';
+        row.querySelector('.material-name').value = '';
+        row.querySelector('.spec-field').value = '';
+        row.querySelector('.class-field').value = '';
+        row.querySelector('.unit-field').value = '';
+    }
 }
 
 // Salvar fornecedor inline
@@ -253,7 +275,6 @@ document.getElementById('saveSupplierBtn').addEventListener('click', async funct
         const opt = new Option(data.supplier.name, data.supplier.id, true, true);
         document.getElementById('supplierSelect').add(opt);
         bootstrap.Modal.getInstance(document.getElementById('newSupplierModal')).hide();
-        // Limpar form
         document.getElementById('newSupplierName').value = '';
         document.getElementById('newSupplierCnpj').value = '';
         document.getElementById('newSupplierEmail').value = '';
@@ -288,22 +309,35 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async funct
 
     const data = await resp.json();
     if (data.success) {
-        // Adicionar ao array local
         const unitAbbr = unitSelect.selectedOptions[0]?.dataset?.abbr || '';
+        
+        // Adicionar ao array local de materiais
         materials.push({
             id: data.material.id,
             name: data.material.name,
-            specification: data.material.specification,
-            classification: data.material.classification,
+            specification: data.material.specification || specSelect.value,
+            classification: data.material.classification || '',
             unit_abbr: unitAbbr,
             unit_name: '',
+            category_name: specSelect.value,
         });
         
-        // Adicionar como item na lista
+        // Adicionar a option em todos os selects existentes
+        document.querySelectorAll('.material-select').forEach(sel => {
+            const label = data.material.name + (data.material.classification ? ' - ' + data.material.classification : '') + (specSelect.value ? ' (' + specSelect.value + ')' : '');
+            const opt = new Option(label, data.material.id);
+            opt.dataset.name = data.material.name;
+            opt.dataset.spec = specSelect.value;
+            opt.dataset.class = data.material.classification || '';
+            opt.dataset.unit = unitAbbr;
+            sel.add(opt);
+        });
+        
+        // Adicionar como item no pedido automaticamente
         addItem({
             id: data.material.id,
             name: data.material.name,
-            specification: data.material.specification || '',
+            specification: specSelect.value,
             classification: data.material.classification || '',
             unit: unitAbbr,
             quantity: 1,
@@ -321,9 +355,27 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async funct
 
 // Validação do form
 document.getElementById('orderForm').addEventListener('submit', function(e) {
-    if (document.getElementById('itemsBody').children.length === 0) {
+    const rows = document.getElementById('itemsBody').children;
+    if (rows.length === 0) {
         e.preventDefault();
         alert('Adicione pelo menos um item ao pedido.');
+        return;
+    }
+    
+    // Garantir que cada item tem um material selecionado
+    let valid = true;
+    document.querySelectorAll('.material-select').forEach(sel => {
+        if (!sel.value) {
+            valid = false;
+            sel.classList.add('is-invalid');
+        } else {
+            sel.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!valid) {
+        e.preventDefault();
+        alert('Selecione um material para cada item.');
     }
 });
 </script>
@@ -332,6 +384,7 @@ document.getElementById('orderForm').addEventListener('submit', function(e) {
 @media (max-width: 768px) {
     #itemsTable { font-size: 0.8rem; }
     #itemsTable th, #itemsTable td { padding: 0.4rem; }
+    .material-select { font-size: 0.75rem; }
 }
 </style>
 
