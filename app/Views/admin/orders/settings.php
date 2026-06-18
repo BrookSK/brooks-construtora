@@ -18,7 +18,12 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Webhook de Cotação</label>
-                        <input type="url" class="form-control" name="orders_quote_webhook" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_quote_webhook'] ?? '') ?>">
+                        <div class="input-group">
+                            <input type="url" class="form-control" name="orders_quote_webhook" id="webhook_quote" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_quote_webhook'] ?? '') ?>">
+                            <button type="button" class="btn btn-outline-warning" onclick="testWebhook('quote')" title="Testar">
+                                <i class="bi bi-lightning"></i>
+                            </button>
+                        </div>
                         <small class="text-muted">URL para envio de webhook (JSON POST)</small>
                     </div>
                 </div>
@@ -40,7 +45,12 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Webhook de Aprovação</label>
-                        <input type="url" class="form-control" name="orders_approval_webhook" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_approval_webhook'] ?? '') ?>">
+                        <div class="input-group">
+                            <input type="url" class="form-control" name="orders_approval_webhook" id="webhook_approval" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_approval_webhook'] ?? '') ?>">
+                            <button type="button" class="btn btn-outline-info" onclick="testWebhook('approval')" title="Testar">
+                                <i class="bi bi-lightning"></i>
+                            </button>
+                        </div>
                         <small class="text-muted">URL para envio de webhook (JSON POST)</small>
                     </div>
                 </div>
@@ -62,7 +72,12 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Webhook de Conclusão</label>
-                        <input type="url" class="form-control" name="orders_completed_webhook" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_completed_webhook'] ?? '') ?>">
+                        <div class="input-group">
+                            <input type="url" class="form-control" name="orders_completed_webhook" id="webhook_completed" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_completed_webhook'] ?? '') ?>">
+                            <button type="button" class="btn btn-outline-success" onclick="testWebhook('completed')" title="Testar">
+                                <i class="bi bi-lightning"></i>
+                            </button>
+                        </div>
                         <small class="text-muted">URL para envio de webhook (JSON POST)</small>
                     </div>
                 </div>
@@ -96,6 +111,132 @@
         </p>
     </div>
 </div>
+
+<!-- Modal de resultado do teste -->
+<div class="modal fade" id="testResultModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title" id="testResultTitle">Resultado do Teste</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="testResultLoading" class="text-center py-3">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="mt-2 mb-0">Enviando webhook de teste...</p>
+                </div>
+                <div id="testResultContent" style="display:none;">
+                    <div id="testResultStatus" class="alert mb-3"></div>
+                    <div class="mb-2">
+                        <strong class="small">Payload enviado:</strong>
+                        <pre class="bg-dark text-light p-2 rounded mt-1 mb-0" style="font-size:0.7rem; max-height:200px; overflow-y:auto;"><code id="testPayload"></code></pre>
+                    </div>
+                    <div>
+                        <strong class="small">Resposta:</strong>
+                        <pre class="bg-light p-2 rounded mt-1 mb-0" style="font-size:0.7rem; max-height:150px; overflow-y:auto;"><code id="testResponse"></code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function testWebhook(type) {
+    const inputId = 'webhook_' + type;
+    const url = document.getElementById(inputId).value.trim();
+    
+    if (!url) {
+        alert('Preencha a URL do webhook antes de testar.');
+        return;
+    }
+    
+    if (!url.startsWith('http')) {
+        alert('URL inválida. Use uma URL começando com http:// ou https://');
+        return;
+    }
+
+    // Payloads de teste para cada fase
+    const payloads = {
+        quote: {
+            event: 'quote_requested',
+            test: true,
+            order_code: 'PED-TESTE-001',
+            supplier: 'Fornecedor de Teste LTDA',
+            items_count: 5,
+            quote_url: window.location.origin + '/pedido/cotacao/token-de-teste-abc123',
+            created_by: 'Usuário Teste',
+            created_at: new Date().toISOString(),
+            description: 'Este é um pedido de TESTE para validar o webhook de cotação.'
+        },
+        approval: {
+            event: 'approval_requested',
+            test: true,
+            order_code: 'PED-TESTE-001',
+            supplier: 'Fornecedor de Teste LTDA',
+            total: 4750.00,
+            items_count: 5,
+            approval_url: window.location.origin + '/pedido/aprovacao/token-de-teste-xyz789',
+            quoted_by: 'Cotador Teste',
+            quoted_at: new Date().toISOString()
+        },
+        completed: {
+            event: 'order_approved',
+            test: true,
+            order_code: 'PED-TESTE-001',
+            supplier: 'Fornecedor de Teste LTDA',
+            total: 4750.00,
+            approved_by: 'Aprovador Teste',
+            approved_at: new Date().toISOString(),
+            pdf_url: window.location.origin + '/pedido/pdf/999'
+        }
+    };
+
+    const payload = payloads[type];
+    const labels = { quote: 'Cotação', approval: 'Aprovação', completed: 'Conclusão' };
+
+    // Mostrar modal
+    document.getElementById('testResultTitle').textContent = 'Teste Webhook - ' + labels[type];
+    document.getElementById('testResultLoading').style.display = '';
+    document.getElementById('testResultContent').style.display = 'none';
+    document.getElementById('testPayload').textContent = JSON.stringify(payload, null, 2);
+    
+    const modal = new bootstrap.Modal(document.getElementById('testResultModal'));
+    modal.show();
+
+    try {
+        const resp = await fetch('/admin/orders/test-webhook', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                url: url,
+                payload: JSON.stringify(payload)
+            })
+        });
+
+        const data = await resp.json();
+        
+        document.getElementById('testResultLoading').style.display = 'none';
+        document.getElementById('testResultContent').style.display = '';
+        
+        if (data.success) {
+            document.getElementById('testResultStatus').className = 'alert alert-success';
+            document.getElementById('testResultStatus').innerHTML = '<i class="bi bi-check-circle"></i> <strong>Sucesso!</strong> Webhook respondeu com HTTP ' + (data.http_code || '200');
+        } else {
+            document.getElementById('testResultStatus').className = 'alert alert-danger';
+            document.getElementById('testResultStatus').innerHTML = '<i class="bi bi-x-circle"></i> <strong>Erro!</strong> ' + (data.error || 'Falha na conexão');
+        }
+        
+        document.getElementById('testResponse').textContent = data.response || '(sem corpo na resposta)';
+    } catch (e) {
+        document.getElementById('testResultLoading').style.display = 'none';
+        document.getElementById('testResultContent').style.display = '';
+        document.getElementById('testResultStatus').className = 'alert alert-danger';
+        document.getElementById('testResultStatus').innerHTML = '<i class="bi bi-x-circle"></i> <strong>Erro de conexão:</strong> ' + e.message;
+        document.getElementById('testResponse').textContent = '';
+    }
+}
+</script>
 
 <?php $content = ob_get_clean(); ?>
 <?php require ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>

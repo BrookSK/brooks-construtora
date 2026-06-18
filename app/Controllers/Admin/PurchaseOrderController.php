@@ -288,6 +288,69 @@ class PurchaseOrderController extends Controller
         $this->redirect('/admin/orders/settings');
     }
 
+    /**
+     * Testar webhook (AJAX)
+     */
+    public function testWebhook(): void
+    {
+        if (!$this->isPost() || !Auth::hasPermission('orders.settings')) {
+            $this->json(['error' => 'Sem permissão.'], 403);
+            return;
+        }
+
+        $url = trim($this->input('url', ''));
+        $payload = trim($this->input('payload', '{}'));
+
+        if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
+            $this->json(['error' => 'URL inválida.'], 400);
+            return;
+        }
+
+        try {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $payload,
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json',
+                    'X-Test: true',
+                    'User-Agent: Brooks-Construtora-Webhook/1.0',
+                ],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 15,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_FOLLOWLOCATION => true,
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+
+            if ($error) {
+                $this->json([
+                    'success' => false,
+                    'error' => 'Erro cURL: ' . $error,
+                    'response' => '',
+                    'http_code' => 0,
+                ]);
+            } else {
+                $this->json([
+                    'success' => $httpCode >= 200 && $httpCode < 400,
+                    'http_code' => $httpCode,
+                    'response' => mb_substr($response, 0, 2000),
+                    'error' => $httpCode >= 400 ? "HTTP {$httpCode}" : null,
+                ]);
+            }
+        } catch (\Exception $e) {
+            $this->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'response' => '',
+            ]);
+        }
+    }
+
     // ===============================
     // MÉTODOS PRIVADOS
     // ===============================

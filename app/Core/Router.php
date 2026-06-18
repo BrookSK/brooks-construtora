@@ -92,6 +92,7 @@ class Router
             'orders/cancel' => ['PurchaseOrderController', 'cancel'],
             'orders/settings' => ['PurchaseOrderController', 'settings'],
             'orders/settings/update' => ['PurchaseOrderController', 'updateSettings'],
+            'orders/test-webhook' => ['PurchaseOrderController', 'testWebhook'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],
