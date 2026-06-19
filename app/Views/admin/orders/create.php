@@ -380,24 +380,63 @@ async function parsePdfFile() {
             let found = 0;
             let notFound = 0;
             let notFoundList = [];
+            let notFoundItems = [];
 
             data.materials.forEach(m => {
-                // Tentar encontrar material existente pelo nome
-                const existing = materials.find(mat => 
-                    mat.name.toLowerCase().includes(m.name.toLowerCase()) || 
-                    m.name.toLowerCase().includes(mat.name.toLowerCase())
-                );
+                // Matching inteligente: normaliza texto (remove acentos, lowercase)
+                const normalize = (str) => (str || '').toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9\s]/g, ' ')
+                    .replace(/\s+/g, ' ').trim();
+                
+                const mNorm = normalize(m.name);
+                const mWords = mNorm.split(' ').filter(w => w.length > 2);
+                
+                // Buscar melhor match por pontuação de palavras em comum
+                let bestMatch = null;
+                let bestScore = 0;
+                
+                materials.forEach(mat => {
+                    const matNorm = normalize(mat.name);
+                    
+                    // Match exato normalizado
+                    if (matNorm === mNorm) {
+                        bestMatch = mat;
+                        bestScore = 100;
+                        return;
+                    }
+                    
+                    // Match por contains normalizado
+                    if (matNorm.includes(mNorm) || mNorm.includes(matNorm)) {
+                        if (bestScore < 80) { bestMatch = mat; bestScore = 80; }
+                        return;
+                    }
+                    
+                    // Match por palavras em comum (fuzzy)
+                    const matWords = matNorm.split(' ').filter(w => w.length > 2);
+                    let commonWords = 0;
+                    mWords.forEach(w => { if (matWords.includes(w)) commonWords++; });
+                    
+                    const score = mWords.length > 0 ? (commonWords / mWords.length) * 70 : 0;
+                    if (score > bestScore && score >= 40) { // pelo menos 40% das palavras em comum
+                        bestMatch = mat;
+                        bestScore = score;
+                    }
+                });
+
+                const existing = bestMatch;
                 
                 if (existing) {
                     found++;
                 } else {
                     notFound++;
                     notFoundList.push(m.name);
+                    notFoundItems.push(m);
                 }
 
                 addItem({
                     id: existing ? existing.id : '',
-                    name: m.name || '',
+                    name: existing ? existing.name : (m.name || ''),
                     specification: m.specification || (existing ? existing.specification : ''),
                     classification: m.classification || (existing ? existing.classification : ''),
                     unit: m.unit || (existing ? (existing.unit_abbr || existing.unit_name) : ''),
@@ -405,15 +444,31 @@ async function parsePdfFile() {
                 });
             });
             
-            let resultHtml = `<div class="alert alert-success small py-2 mb-0"><i class="bi bi-check-circle"></i> <strong>${data.materials.length} materiais</strong> identificados pela IA e adicionados ao pedido.`;
-            if (found > 0) resultHtml += `<br><span class="text-success">${found} encontrados</span> no cadastro (vinculados).`;
-            if (notFound > 0) {
-                resultHtml += `<br><span class="text-warning">${notFound} não encontrados</span> no cadastro (adicionados sem vínculo — selecione manualmente ou cadastre).`;
-                resultHtml += `<details class="mt-1"><summary class="small text-muted" style="cursor:pointer;">Ver materiais não encontrados</summary><ul class="small mt-1 mb-0">`;
-                notFoundList.forEach(n => resultHtml += `<li>${n}</li>`);
-                resultHtml += `</ul></details>`;
-            }
+            let resultHtml = `<div class="alert alert-success small py-2 mb-2"><i class="bi bi-check-circle"></i> <strong>${data.materials.length} materiais</strong> identificados pela IA.`;
+            if (found > 0) resultHtml += ` <span class="text-success">${found} vinculados</span> ao cadastro.`;
+            if (notFound > 0) resultHtml += ` <span class="text-warning">${notFound} não encontrados</span>.`;
             resultHtml += `</div>`;
+
+            if (notFound > 0) {
+                resultHtml += `<div class="card border-warning mb-3"><div class="card-header bg-warning bg-opacity-10 py-2"><strong class="small">Materiais não encontrados no cadastro (${notFound})</strong><br><small class="text-muted">Revise e cadastre os que precisar:</small></div>`;
+                resultHtml += `<div class="card-body p-0"><div class="table-responsive"><table class="table table-sm mb-0" style="font-size:0.8rem;">`;
+                resultHtml += `<thead><tr><th>Nome</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th>Qtd</th><th></th></tr></thead><tbody>`;
+                
+                notFoundItems.forEach((m, idx) => {
+                    resultHtml += `<tr id="nf-row-${idx}">`;
+                    resultHtml += `<td><input type="text" class="form-control form-control-sm" value="${m.name}" id="nf-name-${idx}"></td>`;
+                    resultHtml += `<td><input type="text" class="form-control form-control-sm" value="${m.specification || ''}" id="nf-spec-${idx}" style="width:100px;"></td>`;
+                    resultHtml += `<td><input type="text" class="form-control form-control-sm" value="${m.classification || ''}" id="nf-class-${idx}" style="width:80px;"></td>`;
+                    resultHtml += `<td><input type="text" class="form-control form-control-sm" value="${m.unit || ''}" id="nf-unit-${idx}" style="width:60px;"></td>`;
+                    resultHtml += `<td><input type="number" class="form-control form-control-sm" value="${m.quantity || 1}" id="nf-qty-${idx}" style="width:60px;"></td>`;
+                    resultHtml += `<td><button type="button" class="btn btn-sm btn-outline-success" onclick="quickRegisterFromPdf(${idx})" title="Cadastrar material"><i class="bi bi-plus-circle"></i></button></td>`;
+                    resultHtml += `</tr>`;
+                });
+                
+                resultHtml += `</tbody></table></div></div>`;
+                resultHtml += `<div class="card-footer py-2 text-end"><button type="button" class="btn btn-sm btn-success" onclick="quickRegisterAllFromPdf()"><i class="bi bi-check-all"></i> Cadastrar Todos</button></div></div>`;
+            }
+
             statusEl.innerHTML = resultHtml;
         } else {
             statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ${data.error || 'Erro ao analisar'}</div>`;
@@ -425,6 +480,54 @@ async function parsePdfFile() {
     btn.disabled = false;
     btn.innerHTML = '<i class="bi bi-magic"></i> <span class="d-none d-sm-inline">Analisar</span>';
     fileInput.value = '';
+}
+
+// Cadastro rápido de material identificado pelo PDF
+async function quickRegisterFromPdf(idx) {
+    const name = document.getElementById('nf-name-' + idx)?.value?.trim();
+    const spec = document.getElementById('nf-spec-' + idx)?.value?.trim();
+    const cls = document.getElementById('nf-class-' + idx)?.value?.trim();
+    const unit = document.getElementById('nf-unit-' + idx)?.value?.trim();
+    
+    if (!name) { alert('Nome é obrigatório'); return; }
+
+    const resp = await fetch('/admin/materials/quick-store', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({ name, specification: spec, classification: cls, unit_id: '', category_id: '' })
+    });
+    const data = await resp.json();
+    
+    if (data.success) {
+        // Adicionar ao array local
+        materials.push({ id: data.material.id, name: data.material.name, specification: spec, classification: cls, unit_abbr: unit, unit_name: '', category_name: spec });
+        
+        // Marcar linha como cadastrado
+        const row = document.getElementById('nf-row-' + idx);
+        if (row) {
+            row.style.opacity = '0.5';
+            row.querySelector('button').innerHTML = '<i class="bi bi-check text-success"></i>';
+            row.querySelector('button').disabled = true;
+        }
+    } else {
+        alert(data.error || 'Erro ao cadastrar');
+    }
+}
+
+async function quickRegisterAllFromPdf() {
+    const rows = document.querySelectorAll('[id^="nf-row-"]');
+    let registered = 0;
+    
+    for (const row of rows) {
+        const btn = row.querySelector('button');
+        if (btn && !btn.disabled) {
+            const idx = row.id.replace('nf-row-', '');
+            await quickRegisterFromPdf(parseInt(idx));
+            registered++;
+        }
+    }
+    
+    if (registered > 0) alert(`${registered} materiais cadastrados com sucesso!`);
 }
 
 // Revisão do pedido
