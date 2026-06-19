@@ -20,11 +20,25 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
     <div class="col-lg-8 order-2 order-lg-1">
         <!-- Status card -->
         <div class="card mb-3 border-<?= $statusInfo[1] ?>">
-            <div class="card-body d-flex align-items-center gap-3">
+            <div class="card-body d-flex align-items-center gap-3 flex-wrap">
                 <i class="bi <?= $statusInfo[2] ?> text-<?= $statusInfo[1] ?>" style="font-size:2rem;"></i>
                 <div>
                     <h5 class="mb-0"><?= $statusInfo[0] ?></h5>
                     <small class="text-muted">Código: <strong><?= $order['code'] ?></strong></small>
+                    <?php if ($order['status'] === 'approved'): ?>
+                        <?php
+                        $totalPayments = count($payments ?? []);
+                        $paidPayments = count(array_filter($payments ?? [], fn($p) => $p['paid']));
+                        $pendingPayments = $totalPayments - $paidPayments;
+                        ?>
+                        <?php if ($totalPayments === 0): ?>
+                        <span class="badge bg-secondary ms-2">Sem NF/Boleto</span>
+                        <?php elseif ($pendingPayments > 0): ?>
+                        <span class="badge bg-warning ms-2"><?= $pendingPayments ?> pgto pendente</span>
+                        <?php else: ?>
+                        <span class="badge bg-success ms-2">Pagamentos OK</span>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </div>
                 <div class="ms-auto">
                     <?php if ($order['status'] === 'approved'): ?>

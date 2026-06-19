@@ -346,4 +346,38 @@ HTML;
 
         return self::wrap('Novo Contato do Site', $body);
     }
+
+    /**
+     * Template de e-mail para envio de NF/Boleto (Fase 4)
+     */
+    public static function purchaseOrderPayment(array $order, string $typeLabel, array $docData, string $uploadedBy, string $panelUrl): string
+    {
+        $amountFmt = $docData['amount'] ? 'R$ ' . number_format($docData['amount'], 2, ',', '.') : 'N/A';
+        $dueDateFmt = !empty($docData['due_date']) ? date('d/m/Y', strtotime($docData['due_date'])) : 'N/A';
+        $numberText = !empty($docData['number']) ? $docData['number'] : 'N/A';
+
+        $body = <<<HTML
+<p style="margin-bottom:15px;">Um novo documento foi registrado no pedido de materiais.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e3f2fd; border-radius:6px; margin-bottom:20px; border:1px solid #bbdefb;">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#1565c0; text-transform:uppercase; font-weight:600;">{$typeLabel} Registrado</p>
+    <p style="margin:0; font-size:17px; color:#1565c0; font-weight:600;">{$order['code']}</p>
+    <p style="margin:8px 0 0; font-size:13px; color:#555;">Fornecedor: <strong>{$order['supplier_name']}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Numero: <strong>{$numberText}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Valor: <strong>{$amountFmt}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Vencimento: <strong>{$dueDateFmt}</strong></p>
+    <p style="margin:8px 0 0; font-size:13px; color:#555;">Enviado por: <strong>{$uploadedBy}</strong></p>
+</td></tr>
+</table>
+
+<p style="text-align:center; margin: 25px 0 10px;">
+    <a href="{$panelUrl}" style="display:inline-block; background-color:#1565c0; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Acessar Painel de Pedidos</a>
+</p>
+
+<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Acesse o painel para visualizar o documento, marcar como pago ou conferir os detalhes.</p>
+HTML;
+
+        return self::wrap("{$typeLabel} Enviado - {$order['code']}", $body);
+    }
 }

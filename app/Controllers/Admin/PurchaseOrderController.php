@@ -476,6 +476,10 @@ class PurchaseOrderController extends Controller
             'orders_completed_webhook',
             'orders_completed_phone',
             'orders_completed_phone_name',
+            'orders_payment_emails',
+            'orders_payment_webhook',
+            'orders_payment_phone',
+            'orders_payment_phone_name',
             'orders_pin_code',
         ];
 
@@ -786,6 +790,13 @@ class PurchaseOrderController extends Controller
 
         PurchaseOrderHistory::log($orderId, 'payment_uploaded', ucfirst($type) . ' registrado' . ($fileName ? " ({$fileName})" : ''), Auth::user()['name'] ?? 'Sistema', Auth::id());
 
+        // Enviar notificações da Fase 4 (Pagamento/NF)
+        $this->sendPaymentNotifications($orderId, $type, [
+            'number' => trim($this->input('number', '')),
+            'amount' => !empty($this->input('amount')) ? (float) str_replace(['.', ','], ['', '.'], $this->input('amount')) : null,
+            'due_date' => $this->input('due_date') ?: null,
+        ]);
+
         $this->setFlash('success', ucfirst($type) . ' registrado com sucesso!');
         $this->redirect('/admin/orders/show/' . $orderId);
     }
@@ -1075,6 +1086,59 @@ class PurchaseOrderController extends Controller
         NotificationService::queueWebhook($url, $data);
         // Tentar processar imediatamente em background
         NotificationService::processImmediate();
+    }
+
+    private function sendPaymentNotifications(int $orderId, string $type, array $docData): void
+    {
+        $order = PurchaseOrder::findFull($orderId);
+        if (!$order) return;
+
+        $baseUrl = $this->getBaseUrl();
+        $panelUrl = "{$baseUrl}/pedidos";
+        $orderUrl = "{$baseUrl}/admin/orders/show/{$orderId}";
+        $typeLabel = strtoupper($type);
+        $uploadedBy = Auth::user()['name'] ?? 'Sistema';
+        $amountFmt = $docData['amount'] ? 'R$ ' . number_format($docData['amount'], 2, ',', '.') : 'N/A';
+        $dueDateFmt = $docData['due_date'] ? date('d/m/Y', strtotime($docData['due_date'])) : 'N/A';
+
+        // E-mail
+        $emails = Setting::get('orders_payment_emails', '');
+        if (!empty($emails)) {
+            $subject = "{$typeLabel} Enviado - Pedido {$order['code']}";
+            $body = EmailTemplate::purchaseOrderPayment($order, $typeLabel, $docData, $uploadedBy, $panelUrl);
+            NotificationService::queueEmails($emails, $subject, $body);
+        }
+
+        // Webhook
+        $webhookUrl = Setting::get('orders_payment_webhook', '');
+        if (!empty($webhookUrl)) {
+            $message = "*{$typeLabel} ENVIADO*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                . "*Tipo:* {$typeLabel}\n"
+                . ($docData['number'] ? "*Numero:* {$docData['number']}\n" : '')
+                . "*Valor:* {$amountFmt}\n"
+                . ($docData['due_date'] ? "*Vencimento:* {$dueDateFmt}\n" : '')
+                . "*Enviado por:* {$uploadedBy}\n"
+                . "*Data:* " . date('d/m/Y H:i') . "\n\n"
+                . "*Acesse o painel para conferir:*\n{$panelUrl}";
+
+            $this->sendWebhook($webhookUrl, [
+                'event' => 'payment_uploaded',
+                'order_code' => $order['code'],
+                'supplier' => $order['supplier_name'] ?? 'N/A',
+                'total' => $order['total_estimated'],
+                'document_type' => $typeLabel,
+                'document_number' => $docData['number'] ?? '',
+                'amount' => $docData['amount'],
+                'due_date' => $docData['due_date'],
+                'uploaded_by' => $uploadedBy,
+                'panel_url' => $panelUrl,
+                'phone' => Setting::get('orders_payment_phone', ''),
+                'phone_name' => Setting::get('orders_payment_phone_name', ''),
+                'message' => $message,
+            ]);
+        }
     }
 
     private function getBaseUrl(): string

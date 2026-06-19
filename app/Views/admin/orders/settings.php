@@ -56,7 +56,7 @@
 
     <div class="row">
         <!-- Fase 1: Cotação -->
-        <div class="col-12 col-lg-4 mb-3">
+        <div class="col-12 col-lg-3 mb-3">
             <div class="card h-100">
                 <div class="card-header bg-warning bg-opacity-10">
                     <i class="bi bi-1-circle text-warning"></i> <strong>Cotação</strong>
@@ -64,100 +64,116 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">E-mails para Cotação</label>
-                        <textarea class="form-control" name="orders_quote_emails" rows="2" placeholder="email1@empresa.com, email2@empresa.com"><?= htmlspecialchars($settings['orders_quote_emails'] ?? '') ?></textarea>
-                        <small class="text-muted">Separe múltiplos e-mails por vírgula</small>
+                        <label class="form-label small">E-mails</label>
+                        <textarea class="form-control form-control-sm" name="orders_quote_emails" rows="2" placeholder="email1@empresa.com"><?= htmlspecialchars($settings['orders_quote_emails'] ?? '') ?></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Nome (Webhook)</label>
-                        <input type="text" class="form-control" name="orders_quote_phone_name" placeholder="Ex: João da Compras" value="<?= htmlspecialchars($settings['orders_quote_phone_name'] ?? '') ?>">
+                        <label class="form-label small">Nome (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_quote_phone_name" placeholder="Ex: João" value="<?= htmlspecialchars($settings['orders_quote_phone_name'] ?? '') ?>">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Telefone (Webhook)</label>
-                        <input type="text" class="form-control" name="orders_quote_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_quote_phone'] ?? '') ?>">
-                        <small class="text-muted">Com DDI+DDD, sem espaços</small>
+                        <label class="form-label small">Telefone (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_quote_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_quote_phone'] ?? '') ?>">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Webhook de Cotação</label>
-                        <div class="input-group">
+                        <label class="form-label small">URL Webhook</label>
+                        <div class="input-group input-group-sm">
                             <input type="url" class="form-control" name="orders_quote_webhook" id="webhook_quote" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_quote_webhook'] ?? '') ?>">
-                            <button type="button" class="btn btn-outline-warning" onclick="testWebhook('quote')" title="Testar">
-                                <i class="bi bi-lightning"></i>
-                            </button>
+                            <button type="button" class="btn btn-outline-warning" onclick="testWebhook('quote')" title="Testar"><i class="bi bi-lightning"></i></button>
                         </div>
-                        <small class="text-muted">URL para envio de webhook (JSON POST)</small>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Fase 2: Aprovação -->
-        <div class="col-12 col-lg-4 mb-3">
+        <div class="col-12 col-lg-3 mb-3">
             <div class="card h-100">
                 <div class="card-header bg-info bg-opacity-10">
                     <i class="bi bi-2-circle text-info"></i> <strong>Aprovação</strong>
-                    <p class="small text-muted mb-0 mt-1">Quem recebe a notificação para aprovar ou negar</p>
+                    <p class="small text-muted mb-0 mt-1">Quem recebe para aprovar ou rejeitar</p>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">E-mails para Aprovação</label>
-                        <textarea class="form-control" name="orders_approval_emails" rows="2" placeholder="gestor1@empresa.com, gestor2@empresa.com"><?= htmlspecialchars($settings['orders_approval_emails'] ?? '') ?></textarea>
-                        <small class="text-muted">Separe múltiplos e-mails por vírgula</small>
+                        <label class="form-label small">E-mails</label>
+                        <textarea class="form-control form-control-sm" name="orders_approval_emails" rows="2" placeholder="gestor@empresa.com"><?= htmlspecialchars($settings['orders_approval_emails'] ?? '') ?></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Nome (Webhook)</label>
-                        <input type="text" class="form-control" name="orders_approval_phone_name" placeholder="Ex: Gestor Carlos" value="<?= htmlspecialchars($settings['orders_approval_phone_name'] ?? '') ?>">
+                        <label class="form-label small">Nome (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_approval_phone_name" placeholder="Ex: Carlos" value="<?= htmlspecialchars($settings['orders_approval_phone_name'] ?? '') ?>">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Telefone (Webhook)</label>
-                        <input type="text" class="form-control" name="orders_approval_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_approval_phone'] ?? '') ?>">
-                        <small class="text-muted">Com DDI+DDD, sem espaços</small>
+                        <label class="form-label small">Telefone (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_approval_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_approval_phone'] ?? '') ?>">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Webhook de Aprovação</label>
-                        <div class="input-group">
+                        <label class="form-label small">URL Webhook</label>
+                        <div class="input-group input-group-sm">
                             <input type="url" class="form-control" name="orders_approval_webhook" id="webhook_approval" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_approval_webhook'] ?? '') ?>">
-                            <button type="button" class="btn btn-outline-info" onclick="testWebhook('approval')" title="Testar">
-                                <i class="bi bi-lightning"></i>
-                            </button>
+                            <button type="button" class="btn btn-outline-info" onclick="testWebhook('approval')" title="Testar"><i class="bi bi-lightning"></i></button>
                         </div>
-                        <small class="text-muted">URL para envio de webhook (JSON POST)</small>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Fase 3: Conclusão -->
-        <div class="col-12 col-lg-4 mb-3">
+        <div class="col-12 col-lg-3 mb-3">
             <div class="card h-100">
                 <div class="card-header bg-success bg-opacity-10">
                     <i class="bi bi-3-circle text-success"></i> <strong>Conclusão</strong>
-                    <p class="small text-muted mb-0 mt-1">Quem recebe a notificação final (aprovação ou rejeição)</p>
+                    <p class="small text-muted mb-0 mt-1">Quem recebe quando aprovado ou rejeitado</p>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">E-mails para Formalização</label>
-                        <textarea class="form-control" name="orders_completed_emails" rows="2" placeholder="admin@empresa.com"><?= htmlspecialchars($settings['orders_completed_emails'] ?? '') ?></textarea>
-                        <small class="text-muted">Separe múltiplos e-mails por vírgula</small>
+                        <label class="form-label small">E-mails</label>
+                        <textarea class="form-control form-control-sm" name="orders_completed_emails" rows="2" placeholder="admin@empresa.com"><?= htmlspecialchars($settings['orders_completed_emails'] ?? '') ?></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Nome (Webhook)</label>
-                        <input type="text" class="form-control" name="orders_completed_phone_name" placeholder="Ex: Diretor Paulo" value="<?= htmlspecialchars($settings['orders_completed_phone_name'] ?? '') ?>">
+                        <label class="form-label small">Nome (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_completed_phone_name" placeholder="Ex: Paulo" value="<?= htmlspecialchars($settings['orders_completed_phone_name'] ?? '') ?>">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Telefone (Webhook)</label>
-                        <input type="text" class="form-control" name="orders_completed_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_completed_phone'] ?? '') ?>">
-                        <small class="text-muted">Com DDI+DDD, sem espaços</small>
+                        <label class="form-label small">Telefone (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_completed_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_completed_phone'] ?? '') ?>">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Webhook de Conclusão</label>
-                        <div class="input-group">
+                        <label class="form-label small">URL Webhook</label>
+                        <div class="input-group input-group-sm">
                             <input type="url" class="form-control" name="orders_completed_webhook" id="webhook_completed" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_completed_webhook'] ?? '') ?>">
-                            <button type="button" class="btn btn-outline-success" onclick="testWebhook('completed')" title="Testar">
-                                <i class="bi bi-lightning"></i>
-                            </button>
+                            <button type="button" class="btn btn-outline-success" onclick="testWebhook('completed')" title="Testar"><i class="bi bi-lightning"></i></button>
                         </div>
-                        <small class="text-muted">URL para envio de webhook (JSON POST)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fase 4: Pagamento / NF -->
+        <div class="col-12 col-lg-3 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-primary bg-opacity-10">
+                    <i class="bi bi-4-circle text-primary"></i> <strong>Pagamento / NF</strong>
+                    <p class="small text-muted mb-0 mt-1">Quem recebe quando NF ou boleto é enviado</p>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label small">E-mails</label>
+                        <textarea class="form-control form-control-sm" name="orders_payment_emails" rows="2" placeholder="financeiro@empresa.com"><?= htmlspecialchars($settings['orders_payment_emails'] ?? '') ?></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Nome (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_payment_phone_name" placeholder="Ex: Financeiro" value="<?= htmlspecialchars($settings['orders_payment_phone_name'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Telefone (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_payment_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_payment_phone'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">URL Webhook</label>
+                        <div class="input-group input-group-sm">
+                            <input type="url" class="form-control" name="orders_payment_webhook" id="webhook_payment" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_payment_webhook'] ?? '') ?>">
+                            <button type="button" class="btn btn-outline-primary" onclick="testWebhook('payment')" title="Testar"><i class="bi bi-lightning"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -178,15 +194,17 @@
         <div class="d-flex flex-wrap align-items-center gap-2 justify-content-center">
             <span class="badge bg-secondary p-2">1. Pedido Criado</span>
             <i class="bi bi-arrow-right text-muted"></i>
-            <span class="badge bg-warning p-2">2. E-mail + Webhook → Cotação</span>
+            <span class="badge bg-warning p-2">2. Cotação</span>
             <i class="bi bi-arrow-right text-muted"></i>
-            <span class="badge bg-info p-2">3. E-mail + Webhook → Aprovação</span>
+            <span class="badge bg-info p-2">3. Aprovação</span>
             <i class="bi bi-arrow-right text-muted"></i>
-            <span class="badge bg-success p-2">4. E-mail + Webhook → Aprovado/Rejeitado</span>
+            <span class="badge bg-success p-2">4. Aprovado/Rejeitado</span>
+            <i class="bi bi-arrow-right text-muted"></i>
+            <span class="badge bg-primary p-2">5. NF/Boleto Enviado</span>
         </div>
         <p class="text-muted small text-center mt-3 mb-0">
-            Cada fase envia notificações para os e-mails configurados acima + dispara o webhook correspondente.<br>
-            Os webhooks enviam um JSON POST com os dados do pedido e o link de acesso.
+            Cada fase envia notificações (e-mail + webhook) para os responsáveis configurados.<br>
+            Na fase 4, o link enviado direciona para o painel de acesso rápido (PIN) onde é possível enviar NF/boleto.
         </p>
     </div>
 </div>
@@ -284,11 +302,27 @@ async function testWebhook(type) {
             phone: completedPhone,
             phone_name: completedPhoneName,
             message: '*PEDIDO APROVADO*\n\n*Pedido:* PED-TESTE-001\n*Fornecedor:* Fornecedor de Teste LTDA\n*Valor Total:* R$ 4.750,00\n*Aprovado por:* Aprovador Teste\n*Data:* ' + new Date().toLocaleDateString('pt-BR') + '\n\n*PDF do pedido:*\n' + window.location.origin + '/pedido/pdf/999'
+        },
+        payment: {
+            event: 'payment_uploaded',
+            test: true,
+            order_code: 'PED-TESTE-001',
+            supplier: 'Fornecedor de Teste LTDA',
+            total: 4750.00,
+            document_type: 'NF',
+            document_number: '12345',
+            amount: 4750.00,
+            due_date: '2026-07-15',
+            uploaded_by: 'Comprador Teste',
+            panel_url: window.location.origin + '/pedidos',
+            phone: document.querySelector('[name="orders_payment_phone"]')?.value || '',
+            phone_name: document.querySelector('[name="orders_payment_phone_name"]')?.value || '',
+            message: '*NF/BOLETO ENVIADO*\n\n*Pedido:* PED-TESTE-001\n*Fornecedor:* Fornecedor de Teste LTDA\n*Tipo:* NF\n*Numero:* 12345\n*Valor:* R$ 4.750,00\n*Vencimento:* 15/07/2026\n\n*Acesse o painel para conferir:*\n' + window.location.origin + '/pedidos'
         }
     };
 
     const payload = payloads[type];
-    const labels = { quote: 'Cotação', approval: 'Aprovação', completed: 'Conclusão' };
+    const labels = { quote: 'Cotação', approval: 'Aprovação', completed: 'Conclusão', payment: 'Pagamento/NF' };
 
     // Mostrar modal
     document.getElementById('testResultTitle').textContent = 'Teste Webhook - ' + labels[type];
