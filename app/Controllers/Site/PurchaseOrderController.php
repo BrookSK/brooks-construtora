@@ -14,6 +14,7 @@ use App\Models\Supplier;
 use App\Models\Setting;
 use App\Services\MailService;
 use App\Services\EmailTemplate;
+use App\Services\NotificationService;
 
 class PurchaseOrderController extends Controller
 {
@@ -98,6 +99,7 @@ class PurchaseOrderController extends Controller
         $quoteNotes = trim($this->input('quote_notes', ''));
         $supplierPrices = $_POST['supplier_prices'] ?? [];
         $supplierFinancials = $_POST['supplier_financials'] ?? [];
+        $supplierVendor = $_POST['supplier_vendor'] ?? [];
         $supplierIds = $_POST['supplier_ids'] ?? [];
         $lowestTotal = PHP_FLOAT_MAX;
 
@@ -173,6 +175,7 @@ class PurchaseOrderController extends Controller
                 $finalTotal += $freight;
 
                 // Atualizar fornecedor com totais e financeiros
+                $vendor = $supplierVendor[$sid] ?? [];
                 PurchaseOrderSupplier::updateById($posId, [
                     'total' => $finalTotal,
                     'subtotal_items' => $supplierTotal,
@@ -184,6 +187,10 @@ class PurchaseOrderController extends Controller
                     'ipi_percent' => $ipiPercent,
                     'icms_percent' => $icmsPercent,
                     'freight' => $freight,
+                    'vendor_name' => trim($vendor['name'] ?? ''),
+                    'vendor_phone' => trim($vendor['phone'] ?? ''),
+                    'vendor_email' => trim($vendor['email'] ?? ''),
+                    'delivery_days' => !empty($vendor['delivery_days']) ? (int) $vendor['delivery_days'] : null,
                 ]);
 
                 // Registrar histórico de preços
@@ -392,23 +399,12 @@ class PurchaseOrderController extends Controller
                 $personName
             );
 
-            // E-mail de rejeição (fase 3)
+            // E-mail de rejeição (fase 3) - via fila
             $emails = Setting::get('orders_completed_emails', '');
             if (!empty($emails)) {
-                try {
-                    $mailService = new MailService();
-                    $subject = "Pedido REJEITADO - {$order['code']}";
-                    $body = EmailTemplate::purchaseOrderRejected($order, $personName, $notes);
-                    
-                    $emailList = array_map('trim', explode(',', $emails));
-                    foreach ($emailList as $email) {
-                        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                            $mailService->send($email, $subject, $body, true);
-                        }
-                    }
-                } catch (\Exception $e) {
-                    error_log("Erro ao enviar e-mail de rejeição: " . $e->getMessage());
-                }
+                $subject = "Pedido REJEITADO - {$order['code']}";
+                $body = EmailTemplate::purchaseOrderRejected($order, $personName, $notes);
+                NotificationService::queueEmails($emails, $subject, $body);
             }
 
             // Webhook de rejeição (usa os dados da fase 3 - conclusão)
@@ -629,20 +625,9 @@ class PurchaseOrderController extends Controller
 
         $emails = Setting::get('orders_approval_emails', '');
         if (!empty($emails)) {
-            try {
-                $mailService = new MailService();
-                $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
-                $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
-                
-                $emailList = array_map('trim', explode(',', $emails));
-                foreach ($emailList as $email) {
-                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        $mailService->send($email, $subject, $body, true);
-                    }
-                }
-            } catch (\Exception $e) {
-                error_log("Erro ao enviar e-mail de aprovação: " . $e->getMessage());
-            }
+            $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
+            $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
+            NotificationService::queueEmails($emails, $subject, $body);
         }
 
         $webhookUrl = Setting::get('orders_approval_webhook', '');
@@ -691,20 +676,9 @@ class PurchaseOrderController extends Controller
 
         $emails = Setting::get('orders_completed_emails', '');
         if (!empty($emails)) {
-            try {
-                $mailService = new MailService();
-                $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
-                $body = EmailTemplate::purchaseOrderCompleted($order, $items, $pdfUrl);
-                
-                $emailList = array_map('trim', explode(',', $emails));
-                foreach ($emailList as $email) {
-                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        $mailService->send($email, $subject, $body, true);
-                    }
-                }
-            } catch (\Exception $e) {
-                error_log("Erro ao enviar e-mail de conclusão: " . $e->getMessage());
-            }
+            $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
+            $body = EmailTemplate::purchaseOrderCompleted($order, $items, $pdfUrl);
+            NotificationService::queueEmails($emails, $subject, $body);
         }
 
         $webhookUrl = Setting::get('orders_completed_webhook', '');
@@ -734,21 +708,8 @@ class PurchaseOrderController extends Controller
 
     private function sendWebhook(string $url, array $data): void
     {
-        try {
-            $ch = curl_init($url);
-            curl_setopt_array($ch, [
-                CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => json_encode($data),
-                CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 10,
-                CURLOPT_SSL_VERIFYPEER => false,
-            ]);
-            curl_exec($ch);
-            curl_close($ch);
-        } catch (\Exception $e) {
-            error_log("Erro ao enviar webhook: " . $e->getMessage());
-        }
+        NotificationService::queueWebhook($url, $data);
+        NotificationService::processImmediate();
     }
 
     private function getBaseUrl(): string

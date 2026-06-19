@@ -10,6 +10,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseOrderHistory;
 use App\Models\PurchaseOrderSupplier;
 use App\Models\PurchaseOrderItemPrice;
+use App\Models\PurchaseOrderPayment;
 use App\Models\MaterialPriceHistory;
 use App\Models\Supplier;
 use App\Models\Material;
@@ -18,6 +19,7 @@ use App\Models\MeasurementUnit;
 use App\Models\Setting;
 use App\Services\MailService;
 use App\Services\EmailTemplate;
+use App\Services\NotificationService;
 
 class PurchaseOrderController extends Controller
 {
@@ -136,6 +138,106 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Parsear PDF de materiais via IA (AJAX)
+     */
+    public function parsePdf(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        if (!isset($_FILES['pdf']) || $_FILES['pdf']['error'] !== UPLOAD_ERR_OK) {
+            $this->json(['error' => 'Erro no upload do arquivo.'], 400);
+            return;
+        }
+
+        $file = $_FILES['pdf'];
+        $allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+        
+        if (!in_array($file['type'], $allowedTypes)) {
+            $this->json(['error' => 'Tipo não permitido. Use PDF, JPG, PNG ou WEBP.'], 400);
+            return;
+        }
+
+        // Extrair texto do PDF ou usar imagem
+        $content = '';
+        if ($file['type'] === 'application/pdf') {
+            // Ler conteúdo bruto para enviar como base64
+            $content = base64_encode(file_get_contents($file['tmp_name']));
+            $mediaType = 'application/pdf';
+        } else {
+            $content = base64_encode(file_get_contents($file['tmp_name']));
+            $mediaType = $file['type'];
+        }
+
+        // Chamar OpenAI para analisar
+        try {
+            $openaiKey = Setting::get('openai_api_key', '');
+            $model = Setting::get('openai_model', 'gpt-4o');
+
+            if (empty($openaiKey)) {
+                $this->json(['error' => 'Chave API OpenAI não configurada.'], 400);
+                return;
+            }
+
+            $messages = [
+                ['role' => 'system', 'content' => 'Você é um assistente que analisa documentos de listagem de materiais de construção. Extraia todos os materiais listados e retorne APENAS um JSON array. Cada item deve ter: name (nome do material), specification (tipo/especificação como "mat. Hidraulica", "mat. Civil", "madeira", etc), classification (medida como "100mm", "3/4", "50x40", etc), unit (unidade de medida como "unid", "mts", "m²", "kg", etc), quantity (quantidade numérica). Se não conseguir identificar algum campo, use string vazia. Retorne APENAS o JSON, sem markdown, sem explicação.'],
+                ['role' => 'user', 'content' => [
+                    ['type' => 'text', 'text' => 'Analise este documento e extraia a lista de materiais com quantidades:'],
+                    ['type' => 'image_url', 'image_url' => ['url' => "data:{$mediaType};base64,{$content}"]]
+                ]]
+            ];
+
+            $ch = curl_init('https://api.openai.com/v1/chat/completions');
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode([
+                    'model' => $model,
+                    'messages' => $messages,
+                    'max_tokens' => 4000,
+                    'temperature' => 0.1,
+                ]),
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json',
+                    'Authorization: Bearer ' . $openaiKey,
+                ],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 60,
+                CURLOPT_SSL_VERIFYPEER => false,
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
+                $this->json(['error' => 'Erro na API OpenAI (HTTP ' . $httpCode . ')'], 500);
+                return;
+            }
+
+            $result = json_decode($response, true);
+            $text = $result['choices'][0]['message']['content'] ?? '';
+
+            // Limpar possível markdown do response
+            $text = preg_replace('/```json\s*/', '', $text);
+            $text = preg_replace('/```\s*/', '', $text);
+            $text = trim($text);
+
+            $materials = json_decode($text, true);
+
+            if (!is_array($materials)) {
+                $this->json(['error' => 'Não foi possível interpretar o documento. Tente uma imagem mais nítida.'], 400);
+                return;
+            }
+
+            $this->json(['success' => true, 'materials' => $materials]);
+        } catch (\Exception $e) {
+            $this->json(['error' => 'Erro: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Ver detalhes do pedido
      */
     public function show(int $id = 0): void
@@ -153,6 +255,7 @@ class PurchaseOrderController extends Controller
         $history = PurchaseOrderHistory::getByOrder($id);
         $orderSuppliers = PurchaseOrderSupplier::getByOrder($id);
         $itemPrices = PurchaseOrderItemPrice::getByOrder($id);
+        $payments = PurchaseOrderPayment::getByOrder($id);
 
         $this->view('admin.orders.show', [
             'order' => $order,
@@ -160,6 +263,7 @@ class PurchaseOrderController extends Controller
             'history' => $history,
             'orderSuppliers' => $orderSuppliers,
             'itemPrices' => $itemPrices,
+            'payments' => $payments,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);
@@ -434,6 +538,177 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Exportar planilha CSV
+     */
+    public function export(): void
+    {
+        $orders = PurchaseOrder::allWithSupplier();
+        
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="pedidos_' . date('Y-m-d') . '.csv"');
+        
+        $output = fopen('php://output', 'w');
+        // BOM para UTF-8 no Excel
+        fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
+        
+        // Header
+        fputcsv($output, ['ID Pedido', 'Data Solicitação', 'Item/Serviço', 'Fornecedor', 'Valor Orçado', 'Valor Final', 'Solicitado Por', 'Status', 'Data Aprovação', 'Observações'], ';');
+        
+        foreach ($orders as $order) {
+            $items = PurchaseOrderItem::getByOrder($order['id']);
+            $statusLabels = [
+                'draft' => 'Rascunho', 'pending_quote' => 'Aguard. Cotação',
+                'quoted' => 'Cotado', 'pending_approval' => 'Aguard. Aprovação',
+                'approved' => 'Aprovado', 'rejected' => 'Rejeitado', 'cancelled' => 'Cancelado',
+            ];
+            
+            foreach ($items as $item) {
+                fputcsv($output, [
+                    $order['code'],
+                    date('d/m/Y', strtotime($order['created_at'])),
+                    $item['material_name'] . ($item['classification'] ? ' - ' . $item['classification'] : ''),
+                    $order['supplier_name'] ?? '',
+                    $item['unit_price'] ? number_format($item['unit_price'], 2, ',', '.') : '',
+                    $item['total_price'] ? number_format($item['total_price'], 2, ',', '.') : '',
+                    $order['created_by_name'] ?? '',
+                    $statusLabels[$order['status']] ?? $order['status'],
+                    $order['approved_at'] ? date('d/m/Y', strtotime($order['approved_at'])) : '',
+                    $order['description'] ?? '',
+                ], ';');
+            }
+        }
+        
+        fclose($output);
+        exit;
+    }
+
+    /**
+     * Upload de NF ou Boleto
+     */
+    public function uploadPayment(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $orderId = (int) $this->input('order_id', 0);
+        $type = $this->input('type', '');
+        
+        if (!in_array($type, ['nf', 'boleto'])) {
+            $this->json(['error' => 'Tipo inválido.'], 400);
+            return;
+        }
+
+        $filePath = null;
+        $fileName = null;
+        if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+            $ext = pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION);
+            $fileName = $_FILES['file']['name'];
+            $newName = "payment_{$orderId}_{$type}_" . time() . '.' . $ext;
+            $uploadDir = ROOT_PATH . '/public/uploads/payments/';
+            
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+            
+            $destination = $uploadDir . $newName;
+            if (move_uploaded_file($_FILES['file']['tmp_name'], $destination)) {
+                $filePath = '/uploads/payments/' . $newName;
+            }
+        }
+
+        $id = PurchaseOrderPayment::create([
+            'order_id' => $orderId,
+            'type' => $type,
+            'file_path' => $filePath,
+            'file_name' => $fileName,
+            'number' => trim($this->input('number', '')),
+            'amount' => !empty($this->input('amount')) ? (float) str_replace(['.', ','], ['', '.'], $this->input('amount')) : null,
+            'due_date' => $this->input('due_date') ?: null,
+            'notes' => trim($this->input('notes', '')),
+            'uploaded_by' => Auth::user()['name'] ?? 'Sistema',
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        PurchaseOrderHistory::log($orderId, 'payment_uploaded', ucfirst($type) . ' registrado' . ($fileName ? " ({$fileName})" : ''), Auth::user()['name'] ?? 'Sistema', Auth::id());
+
+        $this->setFlash('success', ucfirst($type) . ' registrado com sucesso!');
+        $this->redirect('/admin/orders/show/' . $orderId);
+    }
+
+    /**
+     * Marcar pagamento como pago
+     */
+    public function markPaid(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $payment = PurchaseOrderPayment::find($id);
+        
+        if (!$payment) {
+            $this->setFlash('error', 'Registro não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        PurchaseOrderPayment::updateById($id, [
+            'paid' => 1,
+            'paid_at' => date('Y-m-d'),
+        ]);
+
+        PurchaseOrderHistory::log($payment['order_id'], 'payment_paid', ucfirst($payment['type']) . ' marcado como pago', Auth::user()['name'] ?? 'Sistema', Auth::id());
+
+        $this->setFlash('success', 'Pagamento confirmado!');
+        $this->redirect('/admin/orders/show/' . $payment['order_id']);
+    }
+
+    /**
+     * Deletar pagamento (super_admin)
+     */
+    public function deletePayment(): void
+    {
+        if (!$this->isPost() || !Auth::isSuperAdmin()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $payment = PurchaseOrderPayment::find($id);
+        
+        if ($payment) {
+            if ($payment['file_path'] && file_exists(ROOT_PATH . '/public' . $payment['file_path'])) {
+                unlink(ROOT_PATH . '/public' . $payment['file_path']);
+            }
+            PurchaseOrderPayment::deleteById($id);
+            $this->setFlash('success', 'Registro removido.');
+            $this->redirect('/admin/orders/show/' . $payment['order_id']);
+        } else {
+            $this->redirect('/admin/orders');
+        }
+    }
+
+    /**
+     * Tela de pendências de NF/Boleto
+     */
+    public function payments(): void
+    {
+        $pending = PurchaseOrderPayment::getPending();
+        $allNf = PurchaseOrderPayment::getByType('nf');
+        $allBoleto = PurchaseOrderPayment::getByType('boleto');
+
+        $this->view('admin.orders.payments', [
+            'pending' => $pending,
+            'allNf' => $allNf,
+            'allBoleto' => $allBoleto,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
+    }
+
+    /**
      * Histórico de preços por material/fornecedor
      */
     public function priceHistory(): void
@@ -475,23 +750,12 @@ class PurchaseOrderController extends Controller
         $baseUrl = $this->getBaseUrl();
         $quoteUrl = "{$baseUrl}/pedido/cotacao/{$token}";
 
-        // E-mail
+        // E-mail (via fila)
         $emails = Setting::get('orders_quote_emails', '');
         if (!empty($emails)) {
-            try {
-                $mailService = new MailService();
-                $subject = "Cotação Pendente - Pedido {$order['code']}";
-                $body = EmailTemplate::purchaseOrderQuote($order, $items, $quoteUrl, $orderSuppliers);
-                
-                $emailList = array_map('trim', explode(',', $emails));
-                foreach ($emailList as $email) {
-                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        $mailService->send($email, $subject, $body, true);
-                    }
-                }
-            } catch (\Exception $e) {
-                error_log("Erro ao enviar e-mail de cotação: " . $e->getMessage());
-            }
+            $subject = "Cotação Pendente - Pedido {$order['code']}";
+            $body = EmailTemplate::purchaseOrderQuote($order, $items, $quoteUrl, $orderSuppliers);
+            NotificationService::queueEmails($emails, $subject, $body);
         }
 
         // Webhook
@@ -549,20 +813,9 @@ class PurchaseOrderController extends Controller
         // E-mail
         $emails = Setting::get('orders_approval_emails', '');
         if (!empty($emails)) {
-            try {
-                $mailService = new MailService();
-                $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
-                $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
-                
-                $emailList = array_map('trim', explode(',', $emails));
-                foreach ($emailList as $email) {
-                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        $mailService->send($email, $subject, $body, true);
-                    }
-                }
-            } catch (\Exception $e) {
-                error_log("Erro ao enviar e-mail de aprovação: " . $e->getMessage());
-            }
+            $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
+            $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
+            NotificationService::queueEmails($emails, $subject, $body);
         }
 
         // Webhook
@@ -616,20 +869,9 @@ class PurchaseOrderController extends Controller
         // E-mail
         $emails = Setting::get('orders_completed_emails', '');
         if (!empty($emails)) {
-            try {
-                $mailService = new MailService();
-                $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
-                $body = EmailTemplate::purchaseOrderCompleted($order, $items, $viewUrl);
-                
-                $emailList = array_map('trim', explode(',', $emails));
-                foreach ($emailList as $email) {
-                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        $mailService->send($email, $subject, $body, true);
-                    }
-                }
-            } catch (\Exception $e) {
-                error_log("Erro ao enviar e-mail de conclusão: " . $e->getMessage());
-            }
+            $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
+            $body = EmailTemplate::purchaseOrderCompleted($order, $items, $viewUrl);
+            NotificationService::queueEmails($emails, $subject, $body);
         }
 
         // Webhook
@@ -675,21 +917,9 @@ class PurchaseOrderController extends Controller
 
     private function sendWebhook(string $url, array $data): void
     {
-        try {
-            $ch = curl_init($url);
-            curl_setopt_array($ch, [
-                CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => json_encode($data),
-                CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 10,
-                CURLOPT_SSL_VERIFYPEER => false,
-            ]);
-            curl_exec($ch);
-            curl_close($ch);
-        } catch (\Exception $e) {
-            error_log("Erro ao enviar webhook: " . $e->getMessage());
-        }
+        NotificationService::queueWebhook($url, $data);
+        // Tentar processar imediatamente em background
+        NotificationService::processImmediate();
     }
 
     private function getBaseUrl(): string

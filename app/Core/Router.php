@@ -86,6 +86,7 @@ class Router
             'orders' => ['PurchaseOrderController', 'index'],
             'orders/create' => ['PurchaseOrderController', 'create'],
             'orders/store' => ['PurchaseOrderController', 'store'],
+            'orders/parse-pdf' => ['PurchaseOrderController', 'parsePdf'],
             'orders/show' => ['PurchaseOrderController', 'show'],
             'orders/resend-quote' => ['PurchaseOrderController', 'resendQuote'],
             'orders/resend-approval' => ['PurchaseOrderController', 'resendApproval'],
@@ -96,6 +97,11 @@ class Router
             'orders/settings/update' => ['PurchaseOrderController', 'updateSettings'],
             'orders/test-webhook' => ['PurchaseOrderController', 'testWebhook'],
             'orders/price-history' => ['PurchaseOrderController', 'priceHistory'],
+            'orders/export' => ['PurchaseOrderController', 'export'],
+            'orders/upload-payment' => ['PurchaseOrderController', 'uploadPayment'],
+            'orders/mark-paid' => ['PurchaseOrderController', 'markPaid'],
+            'orders/delete-payment' => ['PurchaseOrderController', 'deletePayment'],
+            'orders/payments' => ['PurchaseOrderController', 'payments'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],
@@ -118,6 +124,8 @@ class Router
             'materials/units' => ['MaterialController', 'units'],
             'materials/quick-store-category' => ['MaterialController', 'quickStoreCategory'],
             'materials/quick-store-unit' => ['MaterialController', 'quickStoreUnit'],
+            'materials/import' => ['MaterialController', 'import'],
+            'materials/import-process' => ['MaterialController', 'importProcess'],
         ];
 
         $path = implode('/', $segments);

@@ -13,8 +13,12 @@
         .main-card { border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         .supplier-block { border: 2px solid #dee2e6; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem; background: #fff; }
         .supplier-block h6 { color: #3a3b4e; }
-        .history-hint { font-size: 0.7rem; color: #888; margin-top: 2px; }
+        .history-hint { font-size: 0.7rem; color: #888; margin-top: 2px; display: block; }
         .history-hint strong { color: #28a745; }
+        #quotationMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; }
+        #quotationMap table th { font-size: 0.75rem; white-space: nowrap; }
+        #quotationMap table td { vertical-align: middle; font-size: 0.8rem; }
+        .map-price-input { font-size: 0.8rem !important; padding: 4px 6px; }
         @media (max-width: 768px) {
             .main-card .card-body, .main-card .card-header { padding: 1rem; }
             .supplier-block { padding: 1rem; }
@@ -135,6 +139,23 @@
 
                     <div id="suppliersContainer"></div>
 
+                    <!-- Modo Mapa de Cotações (desktop - colunas lado a lado) -->
+                    <div id="quotationMap" class="d-none d-md-none mb-3" style="overflow-x:auto;">
+                        <table class="table table-sm table-bordered" id="mapTable">
+                            <thead id="mapHead"></thead>
+                            <tbody id="mapBody"></tbody>
+                            <tfoot id="mapFoot"></tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Toggle de visualização -->
+                    <div class="d-none d-md-block mb-3" id="viewToggle" style="display:none !important;">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary active" id="btnViewList" onclick="setView('list')"><i class="bi bi-list"></i> Lista</button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnViewMap" onclick="setView('map')"><i class="bi bi-table"></i> Mapa</button>
+                        </div>
+                    </div>
+
                     <!-- Observações -->
                     <div class="mt-3">
                         <label class="form-label">Observações da Cotação</label>
@@ -239,6 +260,8 @@
                 if (bestPrice && bestPrice.unit_price != lastPrice.unit_price) {
                     histHint += ` | Melhor: <strong>R$ ${parseFloat(bestPrice.unit_price).toFixed(2).replace('.', ',')}</strong>`;
                 }
+                if (lastPrice.vendor_name) histHint += ` | Vend: ${lastPrice.vendor_name}`;
+                if (lastPrice.delivery_days) histHint += ` | Prazo: ${lastPrice.delivery_days}d`;
                 histHint += '</span>';
             }
             
@@ -267,6 +290,26 @@
             </div>
             <input type="hidden" name="supplier_ids[]" value="${sid}">
             
+            <!-- Vendedor e prazo -->
+            <div class="row g-2 mb-3 p-2 bg-light rounded">
+                <div class="col-12 col-md-4">
+                    <label class="form-label small text-muted mb-0">Vendedor</label>
+                    <input type="text" class="form-control form-control-sm" name="supplier_vendor[${sid}][name]" placeholder="Nome do vendedor">
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small text-muted mb-0">Tel. vendedor</label>
+                    <input type="text" inputmode="tel" class="form-control form-control-sm" name="supplier_vendor[${sid}][phone]" placeholder="(11) 99999-9999">
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small text-muted mb-0">E-mail vendedor</label>
+                    <input type="email" class="form-control form-control-sm" name="supplier_vendor[${sid}][email]" placeholder="email@loja.com">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small text-muted mb-0">Prazo (dias)</label>
+                    <input type="number" inputmode="numeric" class="form-control form-control-sm" name="supplier_vendor[${sid}][delivery_days]" placeholder="0" min="0">
+                </div>
+            </div>
+
             <!-- Preços por item -->
             ${itemsHtml}
             
@@ -382,6 +425,99 @@
         document.getElementById('subtotal-items-' + sid).textContent = 'R$ ' + subtotalItems.toFixed(2).replace('.', ',');
         document.getElementById('subtotal-final-' + sid).textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
     }
+
+    // --- Modo de visualização (Lista vs Mapa) ---
+    let currentView = 'list';
+
+    function updateViewToggle() {
+        const toggle = document.getElementById('viewToggle');
+        if (addedSuppliers.length >= 2) {
+            toggle.style.display = '';
+            toggle.classList.remove('d-none');
+        } else {
+            toggle.style.display = 'none !important';
+            if (currentView === 'map') setView('list');
+        }
+    }
+
+    function setView(mode) {
+        currentView = mode;
+        document.getElementById('btnViewList').classList.toggle('active', mode === 'list');
+        document.getElementById('btnViewMap').classList.toggle('active', mode === 'map');
+        
+        if (mode === 'map') {
+            document.getElementById('suppliersContainer').style.display = 'none';
+            document.getElementById('quotationMap').classList.remove('d-none');
+            document.getElementById('quotationMap').classList.add('d-block');
+            renderMap();
+        } else {
+            document.getElementById('suppliersContainer').style.display = '';
+            document.getElementById('quotationMap').classList.add('d-none');
+            document.getElementById('quotationMap').classList.remove('d-block');
+        }
+    }
+
+    function renderMap() {
+        if (addedSuppliers.length === 0) return;
+
+        // Header: Material | Qtd | Forn1 | Forn2 | ...
+        let headHtml = '<tr class="table-dark"><th style="min-width:200px;">Material</th><th class="text-center" style="width:60px;">Qtd</th>';
+        addedSuppliers.forEach(sid => {
+            const block = document.getElementById('supplier-block-' + sid);
+            const name = block?.querySelector('h6')?.textContent?.trim() || 'Fornecedor';
+            headHtml += `<th class="text-center" style="min-width:130px;">${name}</th>`;
+        });
+        headHtml += '</tr>';
+        document.getElementById('mapHead').innerHTML = headHtml;
+
+        // Body: uma linha por material
+        let bodyHtml = '';
+        items.forEach(item => {
+            bodyHtml += `<tr><td><strong>${item.material_name}</strong><br><small class="text-muted">${item.specification || ''} ${item.classification || ''}</small></td>`;
+            bodyHtml += `<td class="text-center">${item.quantity}</td>`;
+            addedSuppliers.forEach(sid => {
+                const input = document.querySelector(`[name="supplier_prices[${sid}][${item.id}]"]`);
+                const val = input ? input.value : '';
+                bodyHtml += `<td class="text-center"><input type="text" inputmode="decimal" class="form-control form-control-sm text-center map-price-input" data-sid="${sid}" data-item="${item.id}" value="${val}" placeholder="0,00"></td>`;
+            });
+            bodyHtml += '</tr>';
+        });
+        document.getElementById('mapBody').innerHTML = bodyHtml;
+
+        // Footer: totais por fornecedor
+        let footHtml = '<tr class="table-light fw-bold"><td>TOTAL</td><td></td>';
+        addedSuppliers.forEach(sid => {
+            const totalEl = document.getElementById('subtotal-final-' + sid);
+            footHtml += `<td class="text-center">${totalEl ? totalEl.textContent : '-'}</td>`;
+        });
+        footHtml += '</tr>';
+        document.getElementById('mapFoot').innerHTML = footHtml;
+
+        // Bind map inputs para sincronizar com os inputs da lista
+        document.querySelectorAll('.map-price-input').forEach(input => {
+            input.addEventListener('input', function() {
+                const sid = this.dataset.sid;
+                const itemId = this.dataset.item;
+                const listInput = document.querySelector(`[name="supplier_prices[${sid}][${itemId}]"]`);
+                if (listInput) {
+                    listInput.value = this.value;
+                    calculateSupplierTotal(sid);
+                }
+            });
+            input.addEventListener('blur', function() {
+                let val = this.value.replace(/[^\d,\.]/g, '').replace(',', '.');
+                if (val && !isNaN(parseFloat(val))) this.value = parseFloat(val).toFixed(2).replace('.', ',');
+            });
+        });
+    }
+
+    // Override addSupplierBlock finish to update toggle
+    const origAddBlock = addSupplierBlock;
+    const origRemoveBlock = removeSupplierBlock;
+    
+    // Patch: mostrar toggle quando >=2 fornecedores
+    const _origAdd = document.getElementById('suppliersContainer');
+    new MutationObserver(updateViewToggle).observe(_origAdd, { childList: true });
     </script>
 </body>
 </html>

@@ -3,9 +3,14 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <span class="badge bg-secondary"><?= count($materials) ?> materiais</span>
-    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newMaterialModal">
-        <i class="bi bi-plus-lg"></i> Novo Material
-    </button>
+    <div class="d-flex gap-2">
+        <a href="/admin/materials/import" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-upload"></i> <span class="d-none d-sm-inline">Importar</span>
+        </a>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newMaterialModal">
+            <i class="bi bi-plus-lg"></i> Novo Material
+        </button>
+    </div>
 </div>
 
 <!-- Busca -->
@@ -41,7 +46,7 @@
                     <td><?= htmlspecialchars($m['unit_name'] ?? '-') ?> <?= $m['unit_abbr'] ? '(' . $m['unit_abbr'] . ')' : '' ?></td>
                     <td><?= $m['active'] ? '<span class="badge bg-success">Ativo</span>' : '<span class="badge bg-secondary">Inativo</span>' ?></td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>"><i class="bi bi-pencil"></i></button>
                         <?php if ($m['active']): ?>
                         <form method="POST" action="/admin/materials/delete" class="d-inline" onsubmit="return confirm('Desativar?')"><input type="hidden" name="id" value="<?= $m['id'] ?>"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
                         <?php elseif (\App\Core\Auth::isSuperAdmin()): ?>
@@ -74,7 +79,7 @@
                     </div>
                 </div>
                 <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>"><i class="bi bi-pencil"></i></button>
                     <?php if ($m['active']): ?><form method="POST" action="/admin/materials/delete" onsubmit="return confirm('Desativar?')"><input type="hidden" name="id" value="<?= $m['id'] ?>"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
                     <?php elseif (\App\Core\Auth::isSuperAdmin()): ?><form method="POST" action="/admin/materials/delete" onsubmit="return confirm('EXCLUIR permanentemente?')"><input type="hidden" name="id" value="<?= $m['id'] ?>"><input type="hidden" name="action" value="permanent"><button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button></form>
                     <?php endif; ?>
@@ -99,9 +104,15 @@
                     </div>
                     <div class="modal-body">
                         <input type="hidden" name="id" id="matId">
-                        <div class="mb-3">
-                            <label class="form-label">Nome do Material *</label>
-                            <input type="text" class="form-control" name="name" id="matName" required>
+                        <div class="row g-2 mb-3">
+                            <div class="col-8">
+                                <label class="form-label">Nome do Material *</label>
+                                <input type="text" class="form-control" name="name" id="matName" required>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Código</label>
+                                <input type="text" class="form-control" name="code" id="matCode" placeholder="Ex: 11270">
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Especificação (Tipo)</label>
@@ -189,6 +200,7 @@ document.querySelectorAll('.edit-material-btn').forEach(btn => {
         document.getElementById('materialForm').action = '/admin/materials/update';
         document.getElementById('matId').value = this.dataset.id;
         document.getElementById('matName').value = this.dataset.name;
+        document.getElementById('matCode').value = this.dataset.code || '';
         document.getElementById('matCategoryId').value = this.dataset.categoryId;
         document.getElementById('matSpecification').value = this.dataset.specification;
         document.getElementById('matClassification').value = this.dataset.classification;

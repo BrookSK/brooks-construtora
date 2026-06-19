@@ -221,6 +221,11 @@
                     <i class="bi bi-graph-up"></i> Histórico Preços
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'payments' ? 'active' : '' ?>" href="/admin/orders/payments">
+                    <i class="bi bi-receipt"></i> NF / Boletos
+                </a>
+            </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('users')): ?>
             <li class="nav-item">

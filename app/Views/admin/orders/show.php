@@ -167,6 +167,23 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     <small class="text-muted d-block mb-2">Cotado por <?= htmlspecialchars($os['quoted_by_name']) ?> em <?= $os['quoted_at'] ? date('d/m/Y H:i', strtotime($os['quoted_at'])) : '' ?></small>
                     <?php endif; ?>
                     
+                    <?php if ($os['vendor_name'] || $os['delivery_days']): ?>
+                    <div class="small mb-2">
+                        <?php if ($os['vendor_name']): ?>
+                        <span class="me-3"><strong>Vendedor:</strong> <?= htmlspecialchars($os['vendor_name']) ?></span>
+                        <?php endif; ?>
+                        <?php if ($os['vendor_phone']): ?>
+                        <span class="me-3"><i class="bi bi-telephone"></i> <?= htmlspecialchars($os['vendor_phone']) ?></span>
+                        <?php endif; ?>
+                        <?php if ($os['vendor_email']): ?>
+                        <span class="me-3"><i class="bi bi-envelope"></i> <?= htmlspecialchars($os['vendor_email']) ?></span>
+                        <?php endif; ?>
+                        <?php if ($os['delivery_days']): ?>
+                        <span><strong>Prazo:</strong> <?= $os['delivery_days'] ?> dias</span>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+                    
                     <?php if ($os['subtotal_items'] > 0): ?>
                     <div class="row small mt-2">
                         <div class="col-6 col-md-3 mb-1">
@@ -207,6 +224,83 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     <?php endif; ?>
                 </div>
                 <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- NF e Boleto -->
+        <?php if ($order['status'] === 'approved'): ?>
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-receipt"></i> NF e Boleto</span>
+            </div>
+            <div class="card-body">
+                <?php if (!empty($payments)): ?>
+                <div class="list-group list-group-flush mb-3">
+                    <?php foreach ($payments as $p): ?>
+                    <div class="list-group-item px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-<?= $p['type'] === 'nf' ? 'info' : 'warning' ?> me-1"><?= strtoupper($p['type']) ?></span>
+                                <strong class="small"><?= $p['number'] ? '#' . htmlspecialchars($p['number']) : '' ?></strong>
+                                <?= $p['amount'] ? ' - R$ ' . number_format($p['amount'], 2, ',', '.') : '' ?>
+                                <?php if ($p['paid']): ?>
+                                <span class="badge bg-success ms-1">Pago <?= $p['paid_at'] ? date('d/m', strtotime($p['paid_at'])) : '' ?></span>
+                                <?php elseif ($p['due_date']): ?>
+                                <span class="badge bg-<?= strtotime($p['due_date']) < time() ? 'danger' : 'secondary' ?> ms-1">Vence <?= date('d/m', strtotime($p['due_date'])) ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <?php if ($p['file_path']): ?>
+                                <a href="<?= $p['file_path'] ?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></a>
+                                <?php endif; ?>
+                                <?php if (!$p['paid']): ?>
+                                <form method="POST" action="/admin/orders/mark-paid" class="d-inline">
+                                    <input type="hidden" name="id" value="<?= $p['id'] ?>">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Marcar pago"><i class="bi bi-check"></i></button>
+                                </form>
+                                <?php endif; ?>
+                                <?php if (\App\Core\Auth::isSuperAdmin()): ?>
+                                <form method="POST" action="/admin/orders/delete-payment" class="d-inline" onsubmit="return confirm('Excluir?')">
+                                    <input type="hidden" name="id" value="<?= $p['id'] ?>">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                </form>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php if ($p['notes']): ?><small class="text-muted"><?= htmlspecialchars($p['notes']) ?></small><?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+                <!-- Formulário de upload -->
+                <form method="POST" action="/admin/orders/upload-payment" enctype="multipart/form-data">
+                    <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+                    <div class="row g-2">
+                        <div class="col-6 col-md-2">
+                            <select class="form-select form-select-sm" name="type" required>
+                                <option value="nf">NF</option>
+                                <option value="boleto">Boleto</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <input type="text" class="form-control form-control-sm" name="number" placeholder="Número">
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <input type="text" inputmode="decimal" class="form-control form-control-sm" name="amount" placeholder="Valor (R$)">
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <input type="date" class="form-control form-control-sm" name="due_date">
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <input type="file" class="form-control form-control-sm" name="file" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                        </div>
+                        <div class="col-12 col-md-1">
+                            <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-upload"></i></button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
         <?php endif; ?>

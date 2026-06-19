@@ -115,6 +115,18 @@
                 <label>Cotado por</label>
                 <span><?= htmlspecialchars($order['quoted_by_name'] ?? '-') ?> <?= $order['quoted_at'] ? '(' . date('d/m/Y', strtotime($order['quoted_at'])) . ')' : '' ?></span>
             </div>
+            <?php if ($approvedSupplier && $approvedSupplier['vendor_name']): ?>
+            <div class="info-item">
+                <label>Vendedor</label>
+                <span><?= htmlspecialchars($approvedSupplier['vendor_name']) ?><?= $approvedSupplier['vendor_phone'] ? ' - ' . htmlspecialchars($approvedSupplier['vendor_phone']) : '' ?></span>
+            </div>
+            <?php endif; ?>
+            <?php if ($approvedSupplier && $approvedSupplier['delivery_days']): ?>
+            <div class="info-item">
+                <label>Prazo de Entrega</label>
+                <span><?= $approvedSupplier['delivery_days'] ?> dias</span>
+            </div>
+            <?php endif; ?>
             <?php if (!empty($order['supplier_cnpj'])): ?>
             <div class="info-item">
                 <label>CNPJ Fornecedor</label>

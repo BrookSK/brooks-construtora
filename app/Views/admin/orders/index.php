@@ -3,9 +3,14 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <span class="badge bg-secondary"><?= count($orders) ?> pedidos</span>
-    <a href="/admin/orders/create" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus-lg"></i> Novo Pedido
-    </a>
+    <div class="d-flex gap-2">
+        <a href="/admin/orders/export" class="btn btn-success btn-sm">
+            <i class="bi bi-file-earmark-spreadsheet"></i> <span class="d-none d-sm-inline">Planilha</span>
+        </a>
+        <a href="/admin/orders/create" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg"></i> Novo Pedido
+        </a>
+    </div>
 </div>
 
 <!-- Filtros -->

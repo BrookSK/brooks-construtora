@@ -6,6 +6,21 @@
 <form method="POST" action="/admin/orders/store" id="orderForm">
     <div class="row">
         <div class="col-lg-9">
+            <!-- Upload PDF com IA -->
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-file-earmark-pdf"></i> Importar Materiais (opcional)</div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">Faça upload de um PDF ou imagem com a lista de materiais. A IA irá identificar e adicionar automaticamente.</p>
+                    <div class="d-flex gap-2 align-items-center">
+                        <input type="file" class="form-control form-control-sm" id="pdfUpload" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                        <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0" id="parsePdfBtn" onclick="parsePdfFile()">
+                            <i class="bi bi-magic"></i> <span class="d-none d-sm-inline">Analisar</span>
+                        </button>
+                    </div>
+                    <div id="pdfStatus" class="mt-2" style="display:none;"></div>
+                </div>
+            </div>
+
             <!-- Itens do pedido -->
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -340,6 +355,59 @@ document.getElementById('orderForm').addEventListener('submit', function(e) {
 
 // Botão inline de adicionar item (mobile)
 document.getElementById('addItemBtnInline')?.addEventListener('click', () => addItem());
+
+// Upload de PDF com IA
+async function parsePdfFile() {
+    const fileInput = document.getElementById('pdfUpload');
+    const statusEl = document.getElementById('pdfStatus');
+    
+    if (!fileInput.files.length) { alert('Selecione um arquivo primeiro.'); return; }
+    
+    const btn = document.getElementById('parsePdfBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<div class="alert alert-info small py-2 mb-0"><i class="bi bi-hourglass-split"></i> Analisando documento com IA... pode levar alguns segundos.</div>';
+
+    const formData = new FormData();
+    formData.append('pdf', fileInput.files[0]);
+
+    try {
+        const resp = await fetch('/admin/orders/parse-pdf', { method: 'POST', body: formData });
+        const data = await resp.json();
+
+        if (data.success && data.materials) {
+            let added = 0;
+            data.materials.forEach(m => {
+                // Tentar encontrar material existente pelo nome
+                const existing = materials.find(mat => 
+                    mat.name.toLowerCase().includes(m.name.toLowerCase()) || 
+                    m.name.toLowerCase().includes(mat.name.toLowerCase())
+                );
+                
+                addItem({
+                    id: existing ? existing.id : '',
+                    name: m.name || '',
+                    specification: m.specification || (existing ? existing.specification : ''),
+                    classification: m.classification || (existing ? existing.classification : ''),
+                    unit: m.unit || (existing ? (existing.unit_abbr || existing.unit_name) : ''),
+                    quantity: m.quantity || 1,
+                });
+                added++;
+            });
+            
+            statusEl.innerHTML = `<div class="alert alert-success small py-2 mb-0"><i class="bi bi-check-circle"></i> ${added} materiais identificados e adicionados!</div>`;
+        } else {
+            statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ${data.error || 'Erro ao analisar'}</div>`;
+        }
+    } catch (e) {
+        statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> Erro de conexão</div>`;
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-magic"></i> <span class="d-none d-sm-inline">Analisar</span>';
+    fileInput.value = '';
+}
 
 // Revisão do pedido
 function showReview() {
