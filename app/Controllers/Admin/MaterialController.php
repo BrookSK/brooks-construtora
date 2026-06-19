@@ -202,40 +202,43 @@ class MaterialController extends Controller
         $rows = [];
 
         if ($ext === 'csv' || $ext === 'txt') {
-            $handle = fopen($file['tmp_name'], 'r');
+            $content = file_get_contents($file['tmp_name']);
+            // Normalizar quebras de linha
+            $content = str_replace(["\r\n", "\r"], "\n", $content);
+            // Salvar conteúdo normalizado em arquivo temporário
+            $tmpFile = tempnam(sys_get_temp_dir(), 'import_');
+            file_put_contents($tmpFile, $content);
+            
+            // Detectar separador pela primeira linha
+            $firstLine = strtok($content, "\n");
+            $separator = ',';
+            if (substr_count($firstLine, ';') > substr_count($firstLine, ',')) {
+                $separator = ';';
+            } elseif (substr_count($firstLine, "\t") > substr_count($firstLine, ',')) {
+                $separator = "\t";
+            }
+
+            $handle = fopen($tmpFile, 'r');
             if (!$handle) {
                 $this->json(['error' => 'Não foi possível ler o arquivo.'], 400);
                 return;
             }
 
-            $header = null;
-            while (($line = fgetcsv($handle, 0, ';')) !== false) {
-                if (!$header) {
-                    // Tentar detectar separador
-                    if (count($line) <= 1) {
-                        rewind($handle);
-                        $header = fgetcsv($handle, 0, ',');
-                        continue;
-                    }
-                    $header = $line;
-                    continue;
-                }
-                if (count($line) >= 3) {
+            $header = fgetcsv($handle, 0, $separator, '"', '\\');
+            // Limpar header (remover quebras de linha internas, espaços extras)
+            if ($header) {
+                $header = array_map(function($h) {
+                    return trim(preg_replace('/\s+/', ' ', $h));
+                }, $header);
+            }
+
+            while (($line = fgetcsv($handle, 0, $separator, '"', '\\')) !== false) {
+                if (count($line) >= 3 && !empty(trim($line[0] ?? ''))) {
                     $rows[] = $line;
                 }
             }
             fclose($handle);
-
-            // Se não conseguiu com ; nem ,, tentar tab
-            if (empty($rows)) {
-                $handle = fopen($file['tmp_name'], 'r');
-                $header = null;
-                while (($line = fgetcsv($handle, 0, "\t")) !== false) {
-                    if (!$header) { $header = $line; continue; }
-                    if (count($line) >= 3) $rows[] = $line;
-                }
-                fclose($handle);
-            }
+            @unlink($tmpFile);
         } else {
             // XLSX - ler como CSV exportado (SimpleXLSX não disponível sem Composer)
             // Converter via texto simples - instruir usuario a salvar como CSV
