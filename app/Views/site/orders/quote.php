@@ -543,11 +543,11 @@
             html += `
             <div class="accordion-item">
                 <h2 class="accordion-header">
-                    <button class="accordion-button ${index > 0 ? 'collapsed' : ''} py-2" type="button" data-bs-toggle="collapse" data-bs-target="#mapFin${sid}">
+                    <button class="accordion-button py-2" type="button" data-bs-toggle="collapse" data-bs-target="#mapFin${sid}">
                         <small><i class="bi bi-building"></i> ${name} - Vendedor / Financeiro</small>
                     </button>
                 </h2>
-                <div id="mapFin${sid}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}">
+                <div id="mapFin${sid}" class="accordion-collapse collapse show">
                     <div class="accordion-body p-2">
                         <div class="row g-2">
                             <div class="col-md-3">
