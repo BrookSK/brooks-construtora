@@ -392,56 +392,39 @@ async function parsePdfFile() {
                 const mNorm = normalize(m.name);
                 const mWords = mNorm.split(' ').filter(w => w.length > 2);
                 
-                // Buscar melhor match por pontuação de palavras em comum
                 let bestMatch = null;
                 let bestScore = 0;
                 
                 materials.forEach(mat => {
                     const matNorm = normalize(mat.name);
-                    
-                    // Match exato normalizado
-                    if (matNorm === mNorm) {
-                        bestMatch = mat;
-                        bestScore = 100;
-                        return;
-                    }
-                    
-                    // Match por contains normalizado
-                    if (matNorm.includes(mNorm) || mNorm.includes(matNorm)) {
-                        if (bestScore < 80) { bestMatch = mat; bestScore = 80; }
-                        return;
-                    }
-                    
-                    // Match por palavras em comum (fuzzy)
+                    if (matNorm === mNorm) { bestMatch = mat; bestScore = 100; return; }
+                    if (matNorm.includes(mNorm) || mNorm.includes(matNorm)) { if (bestScore < 80) { bestMatch = mat; bestScore = 80; } return; }
                     const matWords = matNorm.split(' ').filter(w => w.length > 2);
                     let commonWords = 0;
                     mWords.forEach(w => { if (matWords.includes(w)) commonWords++; });
-                    
                     const score = mWords.length > 0 ? (commonWords / mWords.length) * 70 : 0;
-                    if (score > bestScore && score >= 40) { // pelo menos 40% das palavras em comum
-                        bestMatch = mat;
-                        bestScore = score;
-                    }
+                    if (score > bestScore && score >= 40) { bestMatch = mat; bestScore = score; }
                 });
 
                 const existing = bestMatch;
                 
                 if (existing) {
                     found++;
+                    // Encontrado: adiciona direto nos itens do pedido
+                    addItem({
+                        id: existing.id,
+                        name: existing.name,
+                        specification: existing.specification || m.specification || '',
+                        classification: existing.classification || m.classification || '',
+                        unit: existing.unit_abbr || existing.unit_name || m.unit || '',
+                        quantity: m.quantity || 1,
+                    });
                 } else {
+                    // Não encontrado: NÃO adiciona nos itens, vai só pra tabela de revisão
                     notFound++;
                     notFoundList.push(m.name);
                     notFoundItems.push(m);
                 }
-
-                addItem({
-                    id: existing ? existing.id : '',
-                    name: existing ? existing.name : (m.name || ''),
-                    specification: m.specification || (existing ? existing.specification : ''),
-                    classification: m.classification || (existing ? existing.classification : ''),
-                    unit: m.unit || (existing ? (existing.unit_abbr || existing.unit_name) : ''),
-                    quantity: m.quantity || 1,
-                });
             });
             
             let resultHtml = `<div class="alert alert-success small py-2 mb-2"><i class="bi bi-check-circle"></i> <strong>${data.materials.length} materiais</strong> identificados pela IA.`;
@@ -488,6 +471,7 @@ async function quickRegisterFromPdf(idx) {
     const spec = document.getElementById('nf-spec-' + idx)?.value?.trim();
     const cls = document.getElementById('nf-class-' + idx)?.value?.trim();
     const unit = document.getElementById('nf-unit-' + idx)?.value?.trim();
+    const qty = document.getElementById('nf-qty-' + idx)?.value || 1;
     
     if (!name) { alert('Nome é obrigatório'); return; }
 
@@ -499,13 +483,24 @@ async function quickRegisterFromPdf(idx) {
     const data = await resp.json();
     
     if (data.success) {
-        // Adicionar ao array local
+        // Adicionar ao array local de materiais
         materials.push({ id: data.material.id, name: data.material.name, specification: spec, classification: cls, unit_abbr: unit, unit_name: '', category_name: spec });
         
+        // Adicionar como item no pedido (com vínculo)
+        addItem({
+            id: data.material.id,
+            name: data.material.name,
+            specification: spec,
+            classification: cls,
+            unit: unit,
+            quantity: parseFloat(qty) || 1,
+        });
+
         // Marcar linha como cadastrado
         const row = document.getElementById('nf-row-' + idx);
         if (row) {
-            row.style.opacity = '0.5';
+            row.style.opacity = '0.4';
+            row.style.textDecoration = 'line-through';
             row.querySelector('button').innerHTML = '<i class="bi bi-check text-success"></i>';
             row.querySelector('button').disabled = true;
         }
