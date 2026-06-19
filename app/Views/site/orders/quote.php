@@ -15,9 +15,10 @@
         .supplier-block h6 { color: #3a3b4e; }
         .history-hint { font-size: 0.7rem; color: #888; margin-top: 2px; display: block; }
         .history-hint strong { color: #28a745; }
-        #quotationMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; }
+        #quotationMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 1rem; }
         #quotationMap table th { font-size: 0.75rem; white-space: nowrap; }
         #quotationMap table td { vertical-align: middle; font-size: 0.8rem; }
+        #mapFinancials .accordion-button { font-size: 0.85rem; padding: 0.5rem 1rem; }
         .map-price-input { font-size: 0.8rem !important; padding: 4px 6px; }
         @media (max-width: 768px) {
             .main-card .card-body, .main-card .card-header { padding: 1rem; }
@@ -139,21 +140,23 @@
 
                     <div id="suppliersContainer"></div>
 
+                    <!-- Toggle de visualização -->
+                    <div class="d-none mb-3" id="viewToggle">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary active" id="btnViewList" onclick="setView('list')"><i class="bi bi-list"></i> Lista</button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnViewMap" onclick="setView('map')"><i class="bi bi-table"></i> Mapa</button>
+                        </div>
+                    </div>
+
                     <!-- Modo Mapa de Cotações (desktop - colunas lado a lado) -->
-                    <div id="quotationMap" class="d-none d-md-none mb-3" style="overflow-x:auto;">
+                    <div id="quotationMap" class="d-none mb-3" style="overflow-x:auto;">
                         <table class="table table-sm table-bordered" id="mapTable">
                             <thead id="mapHead"></thead>
                             <tbody id="mapBody"></tbody>
                             <tfoot id="mapFoot"></tfoot>
                         </table>
-                    </div>
-
-                    <!-- Toggle de visualização -->
-                    <div class="d-none d-md-block mb-3" id="viewToggle" style="display:none !important;">
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-secondary active" id="btnViewList" onclick="setView('list')"><i class="bi bi-list"></i> Lista</button>
-                            <button type="button" class="btn btn-outline-secondary" id="btnViewMap" onclick="setView('map')"><i class="bi bi-table"></i> Mapa</button>
-                        </div>
+                        <!-- Financeiros por fornecedor (colapsável) no mapa -->
+                        <div id="mapFinancials" class="mt-2"></div>
                     </div>
 
                     <!-- Observações -->
@@ -180,6 +183,7 @@
     const priceHistory = <?= json_encode($priceHistory ?? []) ?>;
     let supplierCount = 0;
     let addedSuppliers = [];
+    let supplierNames = {};
 
     // SearchableSelect para adicionar fornecedor
     const supplierSS = new SearchableSelect(document.getElementById('addSupplierSelect'), {
@@ -243,6 +247,7 @@
 
     function addSupplierBlock(sid, name) {
         supplierCount++;
+        supplierNames[sid] = name;
         const block = document.createElement('div');
         block.className = 'supplier-block';
         block.id = 'supplier-block-' + sid;
@@ -379,6 +384,7 @@
     function removeSupplierBlock(sid) {
         document.getElementById('supplier-block-' + sid)?.remove();
         addedSuppliers = addedSuppliers.filter(s => s !== sid);
+        delete supplierNames[sid];
         if (addedSuppliers.length === 0) document.getElementById('submitBtn').disabled = true;
     }
 
@@ -431,11 +437,16 @@
 
     function updateViewToggle() {
         const toggle = document.getElementById('viewToggle');
-        if (addedSuppliers.length >= 2) {
-            toggle.style.display = '';
+        const isMobile = window.innerWidth < 768;
+
+        if (addedSuppliers.length >= 1 && !isMobile) {
             toggle.classList.remove('d-none');
+            // Se tem 2+ fornecedores e está em lista, mudar para mapa automaticamente
+            if (addedSuppliers.length >= 2 && currentView === 'list') {
+                setView('map');
+            }
         } else {
-            toggle.style.display = 'none !important';
+            toggle.classList.add('d-none');
             if (currentView === 'map') setView('list');
         }
     }
@@ -448,76 +459,206 @@
         if (mode === 'map') {
             document.getElementById('suppliersContainer').style.display = 'none';
             document.getElementById('quotationMap').classList.remove('d-none');
-            document.getElementById('quotationMap').classList.add('d-block');
             renderMap();
         } else {
             document.getElementById('suppliersContainer').style.display = '';
             document.getElementById('quotationMap').classList.add('d-none');
-            document.getElementById('quotationMap').classList.remove('d-block');
         }
     }
 
     function renderMap() {
         if (addedSuppliers.length === 0) return;
 
-        // Header: Material | Qtd | Forn1 | Forn2 | ...
+        // Header
         let headHtml = '<tr class="table-dark"><th style="min-width:200px;">Material</th><th class="text-center" style="width:60px;">Qtd</th>';
         addedSuppliers.forEach(sid => {
-            const block = document.getElementById('supplier-block-' + sid);
-            const name = block?.querySelector('h6')?.textContent?.trim() || 'Fornecedor';
+            const name = supplierNames[sid] || 'Fornecedor';
             headHtml += `<th class="text-center" style="min-width:130px;">${name}</th>`;
         });
         headHtml += '</tr>';
         document.getElementById('mapHead').innerHTML = headHtml;
 
-        // Body: uma linha por material
+        // Body
         let bodyHtml = '';
         items.forEach(item => {
-            bodyHtml += `<tr><td><strong>${item.material_name}</strong><br><small class="text-muted">${item.specification || ''} ${item.classification || ''}</small></td>`;
+            bodyHtml += `<tr><td><strong style="font-size:0.8rem;">${item.material_name}</strong><br><small class="text-muted">${item.specification || ''} ${item.classification || ''}</small></td>`;
             bodyHtml += `<td class="text-center">${item.quantity}</td>`;
             addedSuppliers.forEach(sid => {
-                const input = document.querySelector(`[name="supplier_prices[${sid}][${item.id}]"]`);
+                const input = document.querySelector(`#supplier-block-${sid} [name="supplier_prices[${sid}][${item.id}]"]`);
                 const val = input ? input.value : '';
-                bodyHtml += `<td class="text-center"><input type="text" inputmode="decimal" class="form-control form-control-sm text-center map-price-input" data-sid="${sid}" data-item="${item.id}" value="${val}" placeholder="0,00"></td>`;
+                bodyHtml += `<td class="text-center"><input type="text" inputmode="decimal" class="form-control form-control-sm text-center map-price-input" data-sid="${sid}" data-item="${item.id}" value="${val}" placeholder="0,00" style="font-size:0.85rem;"></td>`;
             });
             bodyHtml += '</tr>';
         });
         document.getElementById('mapBody').innerHTML = bodyHtml;
 
-        // Footer: totais por fornecedor
-        let footHtml = '<tr class="table-light fw-bold"><td>TOTAL</td><td></td>';
-        addedSuppliers.forEach(sid => {
-            const totalEl = document.getElementById('subtotal-final-' + sid);
-            footHtml += `<td class="text-center">${totalEl ? totalEl.textContent : '-'}</td>`;
-        });
-        footHtml += '</tr>';
-        document.getElementById('mapFoot').innerHTML = footHtml;
+        // Footer com totais dos fornecedores
+        renderMapFooter();
 
-        // Bind map inputs para sincronizar com os inputs da lista
+        // Render financials section
+        renderMapFinancials();
+
+        // Bind inputs do mapa para sincronizar com os inputs ocultos da lista
         document.querySelectorAll('.map-price-input').forEach(input => {
             input.addEventListener('input', function() {
                 const sid = this.dataset.sid;
                 const itemId = this.dataset.item;
-                const listInput = document.querySelector(`[name="supplier_prices[${sid}][${itemId}]"]`);
+                const listInput = document.querySelector(`#supplier-block-${sid} [name="supplier_prices[${sid}][${itemId}]"]`);
                 if (listInput) {
                     listInput.value = this.value;
                     calculateSupplierTotal(sid);
                 }
+                setTimeout(renderMapFooter, 100);
             });
             input.addEventListener('blur', function() {
                 let val = this.value.replace(/[^\d,\.]/g, '').replace(',', '.');
-                if (val && !isNaN(parseFloat(val))) this.value = parseFloat(val).toFixed(2).replace('.', ',');
+                if (val && !isNaN(parseFloat(val))) {
+                    this.value = parseFloat(val).toFixed(2).replace('.', ',');
+                    // Sync com lista também no blur
+                    const sid = this.dataset.sid;
+                    const itemId = this.dataset.item;
+                    const listInput = document.querySelector(`#supplier-block-${sid} [name="supplier_prices[${sid}][${itemId}]"]`);
+                    if (listInput) {
+                        listInput.value = this.value;
+                        calculateSupplierTotal(sid);
+                    }
+                }
+                setTimeout(renderMapFooter, 150);
             });
         });
     }
 
-    // Override addSupplierBlock finish to update toggle
-    const origAddBlock = addSupplierBlock;
-    const origRemoveBlock = removeSupplierBlock;
-    
-    // Patch: mostrar toggle quando >=2 fornecedores
-    const _origAdd = document.getElementById('suppliersContainer');
-    new MutationObserver(updateViewToggle).observe(_origAdd, { childList: true });
+    function renderMapFinancials() {
+        const container = document.getElementById('mapFinancials');
+        let html = '<div class="accordion accordion-flush" id="mapFinancialsAccordion">';
+        
+        addedSuppliers.forEach((sid, index) => {
+            const name = supplierNames[sid] || 'Fornecedor';
+            const block = document.getElementById('supplier-block-' + sid);
+            
+            // Lê valores atuais dos campos financeiros da lista (hidden)
+            const getFieldVal = (field) => block ? (block.querySelector(`[name="supplier_financials[${sid}][${field}]"]`)?.value || '') : '';
+            const getVendorVal = (field) => block ? (block.querySelector(`[name="supplier_vendor[${sid}][${field}]"]`)?.value || '') : '';
+            
+            html += `
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button ${index > 0 ? 'collapsed' : ''} py-2" type="button" data-bs-toggle="collapse" data-bs-target="#mapFin${sid}">
+                        <small><i class="bi bi-building"></i> ${name} - Vendedor / Financeiro</small>
+                    </button>
+                </h2>
+                <div id="mapFin${sid}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}">
+                    <div class="accordion-body p-2">
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <label class="form-label small text-muted mb-0">Vendedor</label>
+                                <input type="text" class="form-control form-control-sm map-vendor-field" data-sid="${sid}" data-field="name" value="${getVendorVal('name')}" placeholder="Nome do vendedor">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted mb-0">Tel. vendedor</label>
+                                <input type="text" class="form-control form-control-sm map-vendor-field" data-sid="${sid}" data-field="phone" value="${getVendorVal('phone')}" placeholder="(11) 99999-9999">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small text-muted mb-0">E-mail vendedor</label>
+                                <input type="email" class="form-control form-control-sm map-vendor-field" data-sid="${sid}" data-field="email" value="${getVendorVal('email')}" placeholder="email@loja.com">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted mb-0">Prazo (dias)</label>
+                                <input type="number" class="form-control form-control-sm map-vendor-field" data-sid="${sid}" data-field="delivery_days" value="${getVendorVal('delivery_days')}" placeholder="0" min="0">
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-4 col-md-2">
+                                <label class="form-label small text-muted mb-0">Desconto</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control map-fin-field" data-sid="${sid}" data-field="discount_value" value="${getFieldVal('discount_value')}" placeholder="0">
+                                    <select class="form-select map-fin-select" data-sid="${sid}" data-field="discount_type" style="max-width:50px;">
+                                        <option value="percent" ${getFieldVal('discount_type') !== 'fixed' ? 'selected' : ''}>%</option>
+                                        <option value="fixed" ${getFieldVal('discount_type') === 'fixed' ? 'selected' : ''}>R$</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-4 col-md-2">
+                                <label class="form-label small text-muted mb-0">Acréscimo</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control map-fin-field" data-sid="${sid}" data-field="surcharge_value" value="${getFieldVal('surcharge_value')}" placeholder="0">
+                                    <select class="form-select map-fin-select" data-sid="${sid}" data-field="surcharge_type" style="max-width:50px;">
+                                        <option value="percent" ${getFieldVal('surcharge_type') !== 'fixed' ? 'selected' : ''}>%</option>
+                                        <option value="fixed" ${getFieldVal('surcharge_type') === 'fixed' ? 'selected' : ''}>R$</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-4 col-md-2">
+                                <label class="form-label small text-muted mb-0">IPI %</label>
+                                <input type="text" class="form-control form-control-sm map-fin-field" data-sid="${sid}" data-field="ipi_percent" value="${getFieldVal('ipi_percent')}" placeholder="0">
+                            </div>
+                            <div class="col-4 col-md-2">
+                                <label class="form-label small text-muted mb-0">ICMS %</label>
+                                <input type="text" class="form-control form-control-sm map-fin-field" data-sid="${sid}" data-field="icms_percent" value="${getFieldVal('icms_percent')}" placeholder="0">
+                            </div>
+                            <div class="col-4 col-md-2">
+                                <label class="form-label small text-muted mb-0">Frete (R$)</label>
+                                <input type="text" class="form-control form-control-sm map-fin-field" data-sid="${sid}" data-field="freight" value="${getFieldVal('freight')}" placeholder="0,00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+
+        // Bind syncs: map financials → list financials
+        container.querySelectorAll('.map-fin-field').forEach(input => {
+            input.addEventListener('input', function() {
+                const sid = this.dataset.sid;
+                const field = this.dataset.field;
+                const listInput = document.querySelector(`#supplier-block-${sid} [name="supplier_financials[${sid}][${field}]"]`);
+                if (listInput) {
+                    listInput.value = this.value;
+                    calculateSupplierTotal(sid);
+                    setTimeout(renderMapFooter, 100);
+                }
+            });
+        });
+        container.querySelectorAll('.map-fin-select').forEach(select => {
+            select.addEventListener('change', function() {
+                const sid = this.dataset.sid;
+                const field = this.dataset.field;
+                const listSelect = document.querySelector(`#supplier-block-${sid} [name="supplier_financials[${sid}][${field}]"]`);
+                if (listSelect) {
+                    listSelect.value = this.value;
+                    calculateSupplierTotal(sid);
+                    setTimeout(renderMapFooter, 100);
+                }
+            });
+        });
+        container.querySelectorAll('.map-vendor-field').forEach(input => {
+            input.addEventListener('input', function() {
+                const sid = this.dataset.sid;
+                const field = this.dataset.field;
+                const listInput = document.querySelector(`#supplier-block-${sid} [name="supplier_vendor[${sid}][${field}]"]`);
+                if (listInput) listInput.value = this.value;
+            });
+        });
+    }
+
+    function renderMapFooter() {
+        let footHtml = '<tr class="table-light fw-bold"><td>TOTAL</td><td></td>';
+        addedSuppliers.forEach(sid => {
+            const totalEl = document.getElementById('subtotal-final-' + sid);
+            footHtml += `<td class="text-center text-success">${totalEl ? totalEl.textContent : 'R$ 0,00'}</td>`;
+        });
+        footHtml += '</tr>';
+        document.getElementById('mapFoot').innerHTML = footHtml;
+    }
+
+    // Observar mudanças no container de fornecedores para atualizar toggle/mapa
+    new MutationObserver(() => {
+        updateViewToggle();
+        if (currentView === 'map') setTimeout(renderMap, 200);
+    }).observe(document.getElementById('suppliersContainer'), { childList: true });
     </script>
 </body>
 </html>
