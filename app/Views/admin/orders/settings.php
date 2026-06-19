@@ -21,6 +21,39 @@
         </div>
     </div>
 
+    <!-- Cron de Notificações -->
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-arrow-repeat"></i> <strong>Fila de Notificações (Cron)</strong></div>
+        <div class="card-body">
+            <?php
+            $pendingCount = \App\Models\NotificationQueue::countPending();
+            $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '');
+            $cronToken = \App\Models\Setting::get('cron_token', '');
+            ?>
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="small mb-2"><strong>Status:</strong> 
+                        <?php if ($pendingCount > 0): ?>
+                        <span class="badge bg-warning"><?= $pendingCount ?> pendente(s)</span>
+                        <?php else: ?>
+                        <span class="badge bg-success">Fila vazia</span>
+                        <?php endif; ?>
+                    </p>
+                    <p class="small mb-2"><strong>URL do Cron:</strong></p>
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" class="form-control" value="<?= $baseUrl ?>/cron-notifications.php?token=<?= htmlspecialchars($cronToken) ?>" readonly id="cronUrl">
+                        <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('cronUrl').value); this.innerHTML='<i class=\'bi bi-check\'></i>'"><i class="bi bi-clipboard"></i></button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <p class="small mb-2"><strong>Intervalo:</strong> A cada 1 minuto</p>
+                    <p class="small mb-2"><strong>Token:</strong> Configurado em <a href="/admin/settings">Configurações Gerais</a> (campo "Cron Token")</p>
+                    <p class="small text-muted mb-0">Configure esta URL em um serviço de cron externo (ex: cron-job.org) ou no crontab do servidor.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Fase 1: Cotação -->
         <div class="col-12 col-lg-4 mb-3">
