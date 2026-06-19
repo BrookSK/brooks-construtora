@@ -377,7 +377,10 @@ async function parsePdfFile() {
         const data = await resp.json();
 
         if (data.success && data.materials) {
-            let added = 0;
+            let found = 0;
+            let notFound = 0;
+            let notFoundList = [];
+
             data.materials.forEach(m => {
                 // Tentar encontrar material existente pelo nome
                 const existing = materials.find(mat => 
@@ -385,6 +388,13 @@ async function parsePdfFile() {
                     m.name.toLowerCase().includes(mat.name.toLowerCase())
                 );
                 
+                if (existing) {
+                    found++;
+                } else {
+                    notFound++;
+                    notFoundList.push(m.name);
+                }
+
                 addItem({
                     id: existing ? existing.id : '',
                     name: m.name || '',
@@ -393,10 +403,18 @@ async function parsePdfFile() {
                     unit: m.unit || (existing ? (existing.unit_abbr || existing.unit_name) : ''),
                     quantity: m.quantity || 1,
                 });
-                added++;
             });
             
-            statusEl.innerHTML = `<div class="alert alert-success small py-2 mb-0"><i class="bi bi-check-circle"></i> ${added} materiais identificados e adicionados!</div>`;
+            let resultHtml = `<div class="alert alert-success small py-2 mb-0"><i class="bi bi-check-circle"></i> <strong>${data.materials.length} materiais</strong> identificados pela IA e adicionados ao pedido.`;
+            if (found > 0) resultHtml += `<br><span class="text-success">${found} encontrados</span> no cadastro (vinculados).`;
+            if (notFound > 0) {
+                resultHtml += `<br><span class="text-warning">${notFound} não encontrados</span> no cadastro (adicionados sem vínculo — selecione manualmente ou cadastre).`;
+                resultHtml += `<details class="mt-1"><summary class="small text-muted" style="cursor:pointer;">Ver materiais não encontrados</summary><ul class="small mt-1 mb-0">`;
+                notFoundList.forEach(n => resultHtml += `<li>${n}</li>`);
+                resultHtml += `</ul></details>`;
+            }
+            resultHtml += `</div>`;
+            statusEl.innerHTML = resultHtml;
         } else {
             statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ${data.error || 'Erro ao analisar'}</div>`;
         }
