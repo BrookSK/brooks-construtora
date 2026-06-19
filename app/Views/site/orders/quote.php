@@ -15,15 +15,26 @@
         .supplier-block h6 { color: #3a3b4e; }
         .history-hint { font-size: 0.7rem; color: #888; margin-top: 2px; display: block; }
         .history-hint strong { color: #28a745; }
-        #quotationMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 1rem; }
+        #quotationMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 0.75rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         #quotationMap table th { font-size: 0.75rem; white-space: nowrap; }
         #quotationMap table td { vertical-align: middle; font-size: 0.8rem; }
+        #quotationMap table th:first-child, #quotationMap table td:first-child { position: sticky; left: 0; background: #fff; z-index: 1; }
+        #quotationMap table thead th:first-child { background: #212529; z-index: 2; }
+        #quotationMap table tfoot td:first-child { background: #f8f9fa; z-index: 1; }
         #mapFinancials .accordion-button { font-size: 0.85rem; padding: 0.5rem 1rem; }
         .map-price-input { font-size: 0.8rem !important; padding: 4px 6px; }
         @media (max-width: 768px) {
             .main-card .card-body, .main-card .card-header { padding: 1rem; }
             .supplier-block { padding: 1rem; }
             input, select, textarea { font-size: 16px !important; }
+            #quotationMap { padding: 0.5rem; }
+            #quotationMap table th { font-size: 0.65rem; }
+            #quotationMap table td { font-size: 0.7rem; padding: 0.25rem 0.4rem; }
+            .map-price-input { font-size: 14px !important; padding: 3px 4px; min-width: 70px; }
+            #mapFinancials .accordion-button { font-size: 0.8rem; padding: 0.4rem 0.75rem; }
+            #mapFinancials .accordion-body { padding: 0.5rem !important; }
+            #mapFinancials .form-control-sm { font-size: 14px !important; }
+            .w-md-auto { width: 100% !important; }
         }
     </style>
 </head>
@@ -142,19 +153,21 @@
 
                     <!-- Toggle de visualização -->
                     <div class="d-none mb-3" id="viewToggle">
-                        <div class="btn-group btn-group-sm">
+                        <div class="btn-group btn-group-sm w-100 w-md-auto">
                             <button type="button" class="btn btn-outline-secondary active" id="btnViewList" onclick="setView('list')"><i class="bi bi-list"></i> Lista</button>
                             <button type="button" class="btn btn-outline-secondary" id="btnViewMap" onclick="setView('map')"><i class="bi bi-table"></i> Mapa</button>
                         </div>
                     </div>
 
                     <!-- Modo Mapa de Cotações (desktop - colunas lado a lado) -->
-                    <div id="quotationMap" class="d-none mb-3" style="overflow-x:auto;">
-                        <table class="table table-sm table-bordered" id="mapTable">
+                    <div id="quotationMap" class="d-none mb-3">
+                        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                        <table class="table table-sm table-bordered mb-0" id="mapTable" style="min-width:500px;">
                             <thead id="mapHead"></thead>
                             <tbody id="mapBody"></tbody>
                             <tfoot id="mapFoot"></tfoot>
                         </table>
+                        </div>
                         <!-- Financeiros por fornecedor (colapsável) no mapa -->
                         <div id="mapFinancials" class="mt-2"></div>
                     </div>
@@ -437,9 +450,8 @@
 
     function updateViewToggle() {
         const toggle = document.getElementById('viewToggle');
-        const isMobile = window.innerWidth < 768;
 
-        if (addedSuppliers.length >= 1 && !isMobile) {
+        if (addedSuppliers.length >= 1) {
             toggle.classList.remove('d-none');
             // Se tem 2+ fornecedores e está em lista, mudar para mapa automaticamente
             if (addedSuppliers.length >= 2 && currentView === 'list') {
@@ -470,10 +482,10 @@
         if (addedSuppliers.length === 0) return;
 
         // Header
-        let headHtml = '<tr class="table-dark"><th style="min-width:200px;">Material</th><th class="text-center" style="width:60px;">Qtd</th>';
+        let headHtml = '<tr class="table-dark"><th style="min-width:160px; position:sticky; left:0; background:#212529; z-index:2;">Material</th><th class="text-center" style="width:50px;">Qtd</th>';
         addedSuppliers.forEach(sid => {
             const name = supplierNames[sid] || 'Fornecedor';
-            headHtml += `<th class="text-center" style="min-width:130px;">${name}</th>`;
+            headHtml += `<th class="text-center" style="min-width:110px;">${name}</th>`;
         });
         headHtml += '</tr>';
         document.getElementById('mapHead').innerHTML = headHtml;
@@ -481,7 +493,7 @@
         // Body
         let bodyHtml = '';
         items.forEach(item => {
-            bodyHtml += `<tr><td><strong style="font-size:0.8rem;">${item.material_name}</strong><br><small class="text-muted">${item.specification || ''} ${item.classification || ''}</small></td>`;
+            bodyHtml += `<tr><td style="position:sticky; left:0; background:#fff; z-index:1;"><strong style="font-size:0.75rem;">${item.material_name}</strong></td>`;
             bodyHtml += `<td class="text-center">${item.quantity}</td>`;
             addedSuppliers.forEach(sid => {
                 const input = document.querySelector(`#supplier-block-${sid} [name="supplier_prices[${sid}][${item.id}]"]`);
@@ -645,7 +657,7 @@
     }
 
     function renderMapFooter() {
-        let footHtml = '<tr class="table-light fw-bold"><td>TOTAL</td><td></td>';
+        let footHtml = '<tr class="table-light fw-bold"><td style="position:sticky; left:0; background:#f8f9fa; z-index:1;">TOTAL</td><td></td>';
         addedSuppliers.forEach(sid => {
             const totalEl = document.getElementById('subtotal-final-' + sid);
             footHtml += `<td class="text-center text-success">${totalEl ? totalEl.textContent : 'R$ 0,00'}</td>`;

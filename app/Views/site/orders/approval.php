@@ -13,11 +13,31 @@
         .supplier-compare { border: 2px solid #dee2e6; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s; }
         .supplier-compare:hover { border-color: #28a745; }
         .supplier-compare.selected { border-color: #28a745; background: #f0fff4; }
-        .supplier-compare .supplier-total { font-size: 1.3rem; font-weight: 700; }
+        .supplier-compare .supplier-total { font-size: 1.2rem; font-weight: 700; }
+        .supplier-item-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0; font-size: 0.8rem; gap: 0.5rem; }
+        .supplier-item-row:last-child { border-bottom: none; }
+        .supplier-item-name { flex: 1; min-width: 0; word-break: break-word; }
+        .supplier-item-price { white-space: nowrap; text-align: right; flex-shrink: 0; }
+        #approvalMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 0.75rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        #approvalMap table th { font-size: 0.7rem; white-space: nowrap; vertical-align: middle; }
+        #approvalMap table td { vertical-align: middle; font-size: 0.75rem; }
+        .map-supplier-header { cursor: pointer; transition: background 0.2s; min-width: 110px; }
+        .map-supplier-header:hover { background: #e8f5e9 !important; }
+        .map-supplier-header.selected { background: #c8e6c9 !important; }
+        .financial-detail { border: 1px solid #e9ecef; border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; background: #f8f9fa; }
+        .financial-detail .detail-label { font-size: 0.7rem; color: #6c757d; }
+        .financial-detail .detail-value { font-size: 0.8rem; }
         @media (max-width: 768px) {
-            .main-card .card-body { padding: 1rem; }
-            .main-card .card-header { padding: 1rem; }
-            .btn-lg { font-size: 0.9rem; padding: 0.6rem 1.2rem; }
+            .main-card .card-body, .main-card .card-header { padding: 1rem; }
+            .supplier-compare { padding: 0.75rem; }
+            .supplier-compare .supplier-total { font-size: 1.1rem; }
+            .supplier-item-row { font-size: 0.75rem; }
+            .btn-lg { font-size: 0.85rem; padding: 0.6rem 1rem; }
+            input, select, textarea { font-size: 16px !important; }
+            #approvalMap { padding: 0.5rem; }
+            #approvalMap table th { font-size: 0.65rem; }
+            #approvalMap table td { font-size: 0.7rem; padding: 0.25rem 0.4rem; }
+            .map-supplier-header { min-width: 90px; }
         }
     </style>
 </head>
@@ -29,7 +49,7 @@
         </div>
     </div>
 
-    <div class="container py-4">
+    <div class="container py-3 py-md-4">
         <?php if (!empty($flash)): ?>
         <div class="alert alert-<?= $flash['type'] === 'error' ? 'danger' : $flash['type'] ?> alert-dismissible fade show">
             <?= htmlspecialchars($flash['message']) ?>
@@ -38,8 +58,8 @@
         <?php endif; ?>
 
         <div class="card main-card">
-            <div class="card-header bg-info bg-opacity-10 border-0 p-4">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="card-header bg-info bg-opacity-10 border-0 p-3 p-md-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
                     <div>
                         <h5 class="mb-1">Pedido <strong><?= htmlspecialchars($order['code']) ?></strong></h5>
                         <p class="mb-0 text-muted small">Solicitado por: <?= htmlspecialchars($order['created_by_name']) ?></p>
@@ -49,17 +69,17 @@
                 </div>
             </div>
 
-            <div class="card-body p-4">
+            <div class="card-body p-3 p-md-4">
                 <?php if (!empty($order['description'])): ?>
-                <div class="alert alert-light small"><strong>Observações do pedido:</strong> <?= nl2br(htmlspecialchars($order['description'])) ?></div>
+                <div class="alert alert-light small mb-2"><strong>Obs pedido:</strong> <?= nl2br(htmlspecialchars($order['description'])) ?></div>
                 <?php endif; ?>
                 <?php if (!empty($order['quote_notes'])): ?>
-                <div class="alert alert-warning small"><strong>Observações da cotação:</strong> <?= nl2br(htmlspecialchars($order['quote_notes'])) ?></div>
+                <div class="alert alert-warning small mb-2"><strong>Obs cotação:</strong> <?= nl2br(htmlspecialchars($order['quote_notes'])) ?></div>
                 <?php endif; ?>
 
                 <?php if (!empty($orderSuppliers)): ?>
                 <!-- Multi-fornecedor: Comparação -->
-                <h6 class="mb-3"><i class="bi bi-building"></i> Fornecedores Cotados — Selecione o aprovado</h6>
+                <h6 class="mb-2"><i class="bi bi-building"></i> Fornecedores Cotados — Selecione o aprovado</h6>
 
                 <?php
                 // Agrupar preços por fornecedor
@@ -69,25 +89,55 @@
                 }
                 ?>
 
+                <!-- Toggle de visualização (disponível em todas as telas) -->
+                <?php if (count($orderSuppliers) >= 2): ?>
+                <div class="mb-3" id="approvalViewToggle">
+                    <div class="btn-group btn-group-sm w-100 w-md-auto">
+                        <button type="button" class="btn btn-outline-secondary" id="btnApprovalList" onclick="setApprovalView('list')"><i class="bi bi-list"></i> Lista</button>
+                        <button type="button" class="btn btn-outline-secondary active" id="btnApprovalMap" onclick="setApprovalView('map')"><i class="bi bi-table"></i> Mapa</button>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Visualização Lista -->
+                <div id="approvalListView" style="<?= count($orderSuppliers) >= 2 ? 'display:none;' : '' ?>">
                 <?php foreach ($orderSuppliers as $os): ?>
                 <div class="supplier-compare" onclick="selectSupplier(<?= $os['supplier_id'] ?>)" id="supplier-card-<?= $os['supplier_id'] ?>">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div>
-                            <input type="radio" name="approved_supplier_id" value="<?= $os['supplier_id'] ?>" id="radio-<?= $os['supplier_id'] ?>" form="approvalForm" class="form-check-input me-2">
-                            <label for="radio-<?= $os['supplier_id'] ?>" class="fw-bold"><?= htmlspecialchars($os['supplier_name']) ?></label>
+                        <div class="d-flex align-items-center">
+                            <input type="radio" name="approved_supplier_id" value="<?= $os['supplier_id'] ?>" id="radio-<?= $os['supplier_id'] ?>" form="approvalForm" class="form-check-input me-2 flex-shrink-0">
+                            <label for="radio-<?= $os['supplier_id'] ?>" class="fw-bold mb-0"><?= htmlspecialchars($os['supplier_name']) ?></label>
                         </div>
-                        <span class="supplier-total text-success">R$ <?= number_format($os['total'] ?? 0, 2, ',', '.') ?></span>
+                        <span class="supplier-total text-success"><?= 'R$ ' . number_format($os['total'] ?? 0, 2, ',', '.') ?></span>
                     </div>
+
+                    <!-- Info do vendedor/financeiro -->
+                    <?php if (!empty($os['vendor_name']) || !empty($os['delivery_days']) || (!empty($os['discount_value']) && $os['discount_value'] > 0)): ?>
+                    <div class="d-flex flex-wrap gap-2 mb-2" style="font-size:0.7rem; color:#6c757d;">
+                        <?php if (!empty($os['vendor_name'])): ?>
+                        <span><i class="bi bi-person"></i> <?= htmlspecialchars($os['vendor_name']) ?></span>
+                        <?php endif; ?>
+                        <?php if (!empty($os['delivery_days'])): ?>
+                        <span><i class="bi bi-truck"></i> <?= $os['delivery_days'] ?>d</span>
+                        <?php endif; ?>
+                        <?php if (!empty($os['discount_value']) && $os['discount_value'] > 0): ?>
+                        <span><i class="bi bi-arrow-down"></i> Desc: <?= $os['discount_value'] ?><?= $os['discount_type'] === 'percent' ? '%' : ' R$' ?></span>
+                        <?php endif; ?>
+                        <?php if (!empty($os['freight']) && $os['freight'] > 0): ?>
+                        <span><i class="bi bi-box-seam"></i> Frete: R$ <?= number_format($os['freight'], 2, ',', '.') ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                     
                     <!-- Detalhes dos itens deste fornecedor -->
-                    <div class="small">
+                    <div>
                         <?php if (isset($pricesBySupplier[$os['supplier_id']])): ?>
                         <?php foreach ($items as $item): ?>
                             <?php $p = $pricesBySupplier[$os['supplier_id']][$item['id']] ?? null; ?>
                             <?php if ($p): ?>
-                            <div class="d-flex justify-content-between py-1 border-bottom" style="font-size:0.8rem;">
-                                <span><?= htmlspecialchars($item['material_name']) ?> (x<?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?>)</span>
-                                <span>R$ <?= number_format($p['unit_price'], 2, ',', '.') ?> = <strong>R$ <?= number_format($p['total_price'], 2, ',', '.') ?></strong></span>
+                            <div class="supplier-item-row">
+                                <span class="supplier-item-name"><?= htmlspecialchars($item['material_name']) ?> (x<?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?>)</span>
+                                <span class="supplier-item-price">R$ <?= number_format($p['unit_price'], 2, ',', '.') ?> = <strong>R$ <?= number_format($p['total_price'], 2, ',', '.') ?></strong></span>
                             </div>
                             <?php endif; ?>
                         <?php endforeach; ?>
@@ -95,6 +145,104 @@
                     </div>
                 </div>
                 <?php endforeach; ?>
+                </div>
+
+                <!-- Visualização Mapa (colunas lado a lado) -->
+                <?php if (count($orderSuppliers) >= 2): ?>
+                <div id="approvalMap" class="mb-3">
+                    <p class="text-muted small mb-2">Clique no fornecedor para selecioná-lo.</p>
+                    <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                    <table class="table table-sm table-bordered mb-0" style="min-width:500px;">
+                        <thead>
+                            <tr class="table-dark">
+                                <th style="min-width:160px; position:sticky; left:0; background:#212529; z-index:1;">Material</th>
+                                <th class="text-center" style="width:45px;">Qtd</th>
+                                <?php foreach ($orderSuppliers as $os): ?>
+                                <th class="text-center map-supplier-header" onclick="selectSupplier(<?= $os['supplier_id'] ?>)" id="map-header-<?= $os['supplier_id'] ?>">
+                                    <?= htmlspecialchars($os['supplier_name']) ?>
+                                    <br><small class="text-success fw-bold"><?= 'R$ ' . number_format($os['total'] ?? 0, 2, ',', '.') ?></small>
+                                </th>
+                                <?php endforeach; ?>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($items as $item): ?>
+                            <tr>
+                                <td style="position:sticky; left:0; background:#fff; z-index:1;">
+                                    <strong style="font-size:0.75rem;"><?= htmlspecialchars($item['material_name']) ?></strong>
+                                </td>
+                                <td class="text-center"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
+                                <?php foreach ($orderSuppliers as $os): ?>
+                                <?php $p = $pricesBySupplier[$os['supplier_id']][$item['id']] ?? null; ?>
+                                <td class="text-center">
+                                    <?php if ($p): ?>
+                                    R$ <?= number_format($p['unit_price'], 2, ',', '.') ?>
+                                    <br><small class="fw-bold text-dark">= R$ <?= number_format($p['total_price'], 2, ',', '.') ?></small>
+                                    <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <?php endforeach; ?>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-success fw-bold">
+                                <td style="position:sticky; left:0; background:#d1e7dd; z-index:1;">TOTAL</td>
+                                <td></td>
+                                <?php foreach ($orderSuppliers as $os): ?>
+                                <td class="text-center">R$ <?= number_format($os['total'] ?? 0, 2, ',', '.') ?></td>
+                                <?php endforeach; ?>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    </div>
+
+                    <!-- Detalhes financeiros por fornecedor -->
+                    <div class="mt-3">
+                        <?php foreach ($orderSuppliers as $os): ?>
+                        <div class="financial-detail">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="small"><i class="bi bi-building"></i> <?= htmlspecialchars($os['supplier_name']) ?></strong>
+                                <span class="badge bg-success">R$ <?= number_format($os['total'] ?? 0, 2, ',', '.') ?></span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2" style="font-size:0.75rem; color:#6c757d;">
+                                <?php if (!empty($os['vendor_name'])): ?>
+                                <span><i class="bi bi-person"></i> <?= htmlspecialchars($os['vendor_name']) ?></span>
+                                <?php endif; ?>
+                                <?php if (!empty($os['vendor_phone'])): ?>
+                                <span><i class="bi bi-telephone"></i> <?= htmlspecialchars($os['vendor_phone']) ?></span>
+                                <?php endif; ?>
+                                <?php if (!empty($os['vendor_email'])): ?>
+                                <span><i class="bi bi-envelope"></i> <?= htmlspecialchars($os['vendor_email']) ?></span>
+                                <?php endif; ?>
+                                <?php if (!empty($os['delivery_days'])): ?>
+                                <span><i class="bi bi-truck"></i> <?= $os['delivery_days'] ?> dias</span>
+                                <?php endif; ?>
+                                <?php if (!empty($os['discount_value']) && $os['discount_value'] > 0): ?>
+                                <span><i class="bi bi-arrow-down-circle"></i> Desc: <?= $os['discount_value'] ?><?= ($os['discount_type'] ?? 'percent') === 'percent' ? '%' : ' R$' ?></span>
+                                <?php endif; ?>
+                                <?php if (!empty($os['surcharge_value']) && $os['surcharge_value'] > 0): ?>
+                                <span><i class="bi bi-arrow-up-circle"></i> Acrésc: <?= $os['surcharge_value'] ?><?= ($os['surcharge_type'] ?? 'percent') === 'percent' ? '%' : ' R$' ?></span>
+                                <?php endif; ?>
+                                <?php if (!empty($os['ipi_percent']) && $os['ipi_percent'] > 0): ?>
+                                <span>IPI: <?= $os['ipi_percent'] ?>%</span>
+                                <?php endif; ?>
+                                <?php if (!empty($os['icms_percent']) && $os['icms_percent'] > 0): ?>
+                                <span>ICMS: <?= $os['icms_percent'] ?>%</span>
+                                <?php endif; ?>
+                                <?php if (!empty($os['freight']) && $os['freight'] > 0): ?>
+                                <span><i class="bi bi-box-seam"></i> Frete: R$ <?= number_format($os['freight'], 2, ',', '.') ?></span>
+                                <?php endif; ?>
+                                <?php if (empty($os['vendor_name']) && empty($os['delivery_days']) && (empty($os['discount_value']) || $os['discount_value'] == 0) && (empty($os['freight']) || $os['freight'] == 0)): ?>
+                                <span class="text-muted fst-italic">Sem dados adicionais</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <?php else: ?>
                 <!-- Sem fornecedores: exibe tabela de itens com preços -->
@@ -146,11 +294,11 @@
                     </div>
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-center pt-3">
-                        <button type="submit" name="action" value="approve" class="btn btn-success btn-lg px-5" onclick="return confirmApproval()">
-                            <i class="bi bi-check-circle"></i> Aprovar Pedido
+                        <button type="submit" name="action" value="approve" class="btn btn-success btn-lg px-4 px-md-5" onclick="return confirmApproval()">
+                            <i class="bi bi-check-circle"></i> Aprovar
                         </button>
-                        <button type="submit" name="action" value="reject" class="btn btn-outline-danger btn-lg px-5" onclick="return confirm('Confirma a REJEIÇÃO de TODOS os fornecedores deste pedido?')">
-                            <i class="bi bi-x-circle"></i> Rejeitar Todos
+                        <button type="submit" name="action" value="reject" class="btn btn-outline-danger btn-lg px-4 px-md-5" onclick="return confirm('Confirma a REJEIÇÃO de TODOS os fornecedores deste pedido?')">
+                            <i class="bi bi-x-circle"></i> Rejeitar
                         </button>
                     </div>
                 </form>
@@ -161,9 +309,19 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     function selectSupplier(sid) {
+        // Highlight list view
         document.querySelectorAll('.supplier-compare').forEach(el => el.classList.remove('selected'));
-        document.getElementById('supplier-card-' + sid).classList.add('selected');
-        document.getElementById('radio-' + sid).checked = true;
+        const card = document.getElementById('supplier-card-' + sid);
+        if (card) card.classList.add('selected');
+        
+        // Check radio
+        const radio = document.getElementById('radio-' + sid);
+        if (radio) radio.checked = true;
+
+        // Highlight map headers
+        document.querySelectorAll('.map-supplier-header').forEach(el => el.classList.remove('selected'));
+        const mapHeader = document.getElementById('map-header-' + sid);
+        if (mapHeader) mapHeader.classList.add('selected');
     }
 
     function confirmApproval() {
@@ -177,6 +335,35 @@
         }
         return confirm('Confirma a APROVAÇÃO deste pedido?');
     }
+
+    // Toggle visualização Lista / Mapa
+    function setApprovalView(mode) {
+        const btnList = document.getElementById('btnApprovalList');
+        const btnMap = document.getElementById('btnApprovalMap');
+        const listView = document.getElementById('approvalListView');
+        const mapView = document.getElementById('approvalMap');
+
+        if (!btnList || !btnMap || !listView || !mapView) return;
+
+        btnList.classList.toggle('active', mode === 'list');
+        btnMap.classList.toggle('active', mode === 'map');
+
+        if (mode === 'map') {
+            listView.style.display = 'none';
+            mapView.style.display = 'block';
+        } else {
+            listView.style.display = '';
+            mapView.style.display = 'none';
+        }
+    }
+
+    // Inicializar: se tem 2+ fornecedores, mapa é padrão
+    document.addEventListener('DOMContentLoaded', function() {
+        const mapView = document.getElementById('approvalMap');
+        if (mapView) {
+            mapView.style.display = 'block';
+        }
+    });
     </script>
 </body>
 </html>
