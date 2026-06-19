@@ -24,7 +24,8 @@
         .map-supplier-header { cursor: pointer; transition: background 0.2s; min-width: 110px; }
         .map-supplier-header:hover { background: #e8f5e9 !important; }
         .map-supplier-header.selected { background: #c8e6c9 !important; }
-        .financial-detail { border: 1px solid #e9ecef; border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; background: #f8f9fa; }
+        .financial-detail { border: 2px solid #e9ecef; border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; background: #f8f9fa; transition: border-color 0.2s, background 0.2s; }
+        .financial-detail:hover { border-color: #28a745; }
         .financial-detail .detail-label { font-size: 0.7rem; color: #6c757d; }
         .financial-detail .detail-value { font-size: 0.8rem; }
         @media (max-width: 768px) {
@@ -198,12 +199,16 @@
                     </table>
                     </div>
 
-                    <!-- Detalhes financeiros por fornecedor -->
+                    <!-- Detalhes financeiros por fornecedor (com seleção) -->
                     <div class="mt-3">
+                        <p class="text-muted small mb-2"><i class="bi bi-hand-index"></i> Selecione o fornecedor aprovado:</p>
                         <?php foreach ($orderSuppliers as $os): ?>
-                        <div class="financial-detail">
+                        <div class="financial-detail" onclick="selectSupplier(<?= $os['supplier_id'] ?>)" id="map-card-<?= $os['supplier_id'] ?>" style="cursor:pointer; transition: border-color 0.2s, background 0.2s;">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <strong class="small"><i class="bi bi-building"></i> <?= htmlspecialchars($os['supplier_name']) ?></strong>
+                                <div class="d-flex align-items-center">
+                                    <input type="radio" name="approved_supplier_id_map" value="<?= $os['supplier_id'] ?>" id="radio-map-<?= $os['supplier_id'] ?>" class="form-check-input me-2 flex-shrink-0" onchange="selectSupplier(<?= $os['supplier_id'] ?>)">
+                                    <strong class="small"><i class="bi bi-building"></i> <?= htmlspecialchars($os['supplier_name']) ?></strong>
+                                </div>
                                 <span class="badge bg-success">R$ <?= number_format($os['total'] ?? 0, 2, ',', '.') ?></span>
                             </div>
                             <div class="d-flex flex-wrap gap-2" style="font-size:0.75rem; color:#6c757d;">
@@ -314,23 +319,46 @@
         const card = document.getElementById('supplier-card-' + sid);
         if (card) card.classList.add('selected');
         
-        // Check radio
+        // Check radio (list)
         const radio = document.getElementById('radio-' + sid);
         if (radio) radio.checked = true;
+
+        // Check radio (map cards)
+        const radioMap = document.getElementById('radio-map-' + sid);
+        if (radioMap) radioMap.checked = true;
 
         // Highlight map headers
         document.querySelectorAll('.map-supplier-header').forEach(el => el.classList.remove('selected'));
         const mapHeader = document.getElementById('map-header-' + sid);
         if (mapHeader) mapHeader.classList.add('selected');
+
+        // Highlight map financial cards
+        document.querySelectorAll('.financial-detail').forEach(el => {
+            el.style.borderColor = '#e9ecef';
+            el.style.background = '#f8f9fa';
+        });
+        const mapCard = document.getElementById('map-card-' + sid);
+        if (mapCard) {
+            mapCard.style.borderColor = '#28a745';
+            mapCard.style.background = '#f0fff4';
+        }
     }
 
     function confirmApproval() {
         const hasSuppliers = document.querySelectorAll('.supplier-compare').length > 0;
         if (hasSuppliers) {
-            const selected = document.querySelector('input[name="approved_supplier_id"]:checked');
+            const selected = document.querySelector('input[name="approved_supplier_id"]:checked') || document.querySelector('input[name="approved_supplier_id_map"]:checked');
             if (!selected) {
                 alert('Selecione qual fornecedor está aprovando.');
                 return false;
+            }
+            // Garantir que o radio do form principal está checado
+            if (!document.querySelector('input[name="approved_supplier_id"]:checked')) {
+                const mapRadio = document.querySelector('input[name="approved_supplier_id_map"]:checked');
+                if (mapRadio) {
+                    const listRadio = document.getElementById('radio-' + mapRadio.value);
+                    if (listRadio) listRadio.checked = true;
+                }
             }
         }
         return confirm('Confirma a APROVAÇÃO deste pedido?');
