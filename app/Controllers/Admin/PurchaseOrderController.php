@@ -174,20 +174,16 @@ class PurchaseOrderController extends Controller
             $mediaType = '';
         
         if ($file['type'] === 'application/pdf') {
-            // Para PDF: extrair texto bruto (sem biblioteca externa)
-            $rawContent = file_get_contents($file['tmp_name']);
-            // Tentativa simples de extrair texto de PDF
-            $text = $this->extractTextFromPdf($rawContent);
+            // Para PDF: enviar via API Files da OpenAI e usar Assistants
+            // Alternativa: converter para base64 e usar formato file do GPT-4o
+            $content = base64_encode(file_get_contents($file['tmp_name']));
             
-            if (empty($text) || strlen($text) < 50) {
-                $this->json(['error' => 'Não foi possível extrair texto do PDF. Tente enviar como imagem (screenshot/foto do documento) em JPG ou PNG.'], 400);
-                return;
-            }
-
-            // Enviar como texto
             $messages = [
                 ['role' => 'system', 'content' => 'Você é um assistente que analisa listagens de materiais de construção. Extraia todos os materiais listados e retorne APENAS um JSON array. Cada item deve ter: name (nome do material), specification (tipo/especificação como "mat. Hidraulica", "mat. Civil", "madeira", etc), classification (medida como "100mm", "3/4", "50x40", etc), unit (unidade de medida como "unid", "mts", "m²", "kg", etc), quantity (quantidade numérica, use 1 se não especificado). Se não conseguir identificar algum campo, use string vazia. Retorne APENAS o JSON, sem markdown, sem explicação.'],
-                ['role' => 'user', 'content' => "Analise esta lista de materiais e extraia com quantidades:\n\n" . mb_substr($text, 0, 15000)]
+                ['role' => 'user', 'content' => [
+                    ['type' => 'text', 'text' => 'Analise este documento PDF e extraia a lista de materiais com quantidades:'],
+                    ['type' => 'file', 'file' => ['filename' => $file['name'], 'file_data' => "data:application/pdf;base64,{$content}"]]
+                ]]
             ];
         } else {
             // Para imagens: enviar como base64
@@ -217,7 +213,7 @@ class PurchaseOrderController extends Controller
                     'Authorization: Bearer ' . $openaiKey,
                 ],
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 60,
+                CURLOPT_TIMEOUT => 90,
                 CURLOPT_SSL_VERIFYPEER => false,
             ]);
 
@@ -226,7 +222,17 @@ class PurchaseOrderController extends Controller
             curl_close($ch);
 
             if ($httpCode !== 200) {
-                $this->json(['error' => 'Erro na API OpenAI (HTTP ' . $httpCode . ')'], 500);
+                // Se falhou com formato file, tentar upload via Files API
+                if ($file['type'] === 'application/pdf') {
+                    $result = $this->parsePdfViaFilesApi($file['tmp_name'], $file['name'], $openaiKey, $model);
+                    if ($result !== null) {
+                        $this->json($result);
+                        return;
+                    }
+                }
+                $errorBody = json_decode($response, true);
+                $errorMsg = $errorBody['error']['message'] ?? "HTTP {$httpCode}";
+                $this->json(['error' => 'Erro na API OpenAI: ' . $errorMsg], 500);
                 return;
             }
 
@@ -949,36 +955,109 @@ class PurchaseOrderController extends Controller
     private function extractTextFromPdf(string $rawContent): string
     {
         $text = '';
-        
-        // Método 1: Extrair streams de texto entre BT/ET
         if (preg_match_all('/BT\s*(.*?)\s*ET/s', $rawContent, $matches)) {
             foreach ($matches[1] as $block) {
-                // Extrair strings entre parênteses
                 if (preg_match_all('/\((.*?)\)/s', $block, $strings)) {
                     $text .= implode(' ', $strings[1]) . "\n";
                 }
-                // Extrair strings hexadecimais
-                if (preg_match_all('/<([0-9A-Fa-f]+)>/s', $block, $hexStrings)) {
-                    foreach ($hexStrings[1] as $hex) {
-                        $text .= hex2bin($hex) . ' ';
-                    }
-                }
             }
         }
-        
-        // Método 2: Se não encontrou texto com BT/ET, tentar extrair de streams decodificados
         if (strlen($text) < 50) {
-            // Extrair texto simples que aparece entre operadores Tj e TJ
             if (preg_match_all('/\(([^)]+)\)\s*Tj/s', $rawContent, $tjMatches)) {
                 $text .= implode("\n", $tjMatches[1]);
             }
         }
-
-        // Limpar caracteres não-ASCII e excesso de espaços
         $text = preg_replace('/[^\x20-\x7E\xC0-\xFF\n]/', ' ', $text);
         $text = preg_replace('/\s+/', ' ', $text);
-        $text = preg_replace('/\n\s*\n/', "\n", $text);
-        
         return trim($text);
+    }
+
+    /**
+     * Fallback: Upload PDF via Files API e usar com chat completions
+     */
+    private function parsePdfViaFilesApi(string $tmpPath, string $fileName, string $apiKey, string $model): ?array
+    {
+        // 1. Upload do arquivo
+        $ch = curl_init('https://api.openai.com/v1/files');
+        $cFile = new \CURLFile($tmpPath, 'application/pdf', $fileName);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => ['file' => $cFile, 'purpose' => 'assistants'],
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiKey],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $uploadResp = curl_exec($ch);
+        $uploadCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($uploadCode !== 200) return null;
+
+        $uploadData = json_decode($uploadResp, true);
+        $fileId = $uploadData['id'] ?? null;
+        if (!$fileId) return null;
+
+        // 2. Usar o arquivo no chat completions (responses API com file_search ou direto)
+        // Alternativa: extrair texto do PDF via Files API content endpoint
+        $ch = curl_init("https://api.openai.com/v1/files/{$fileId}/content");
+        curl_setopt_array($ch, [
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiKey],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $fileContent = curl_exec($ch);
+        curl_close($ch);
+
+        // Tentar extrair texto do conteúdo
+        $text = $this->extractTextFromPdf($fileContent);
+        if (strlen($text) < 50) {
+            // Se não extraiu texto, o PDF é escaneado - não há como sem OCR
+            // Deletar arquivo
+            $ch = curl_init("https://api.openai.com/v1/files/{$fileId}");
+            curl_setopt_array($ch, [CURLOPT_CUSTOMREQUEST => 'DELETE', CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiKey], CURLOPT_RETURNTRANSFER => true, CURLOPT_SSL_VERIFYPEER => false]);
+            curl_exec($ch); curl_close($ch);
+            return ['error' => 'PDF escaneado (sem texto selecionável). Envie como imagem (JPG/PNG) ou use um PDF com texto selecionável.'];
+        }
+
+        // 3. Enviar texto extraído para análise
+        $ch = curl_init('https://api.openai.com/v1/chat/completions');
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode([
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'system', 'content' => 'Você é um assistente que analisa listagens de materiais de construção. Extraia todos os materiais e retorne APENAS um JSON array. Cada item: name, specification, classification, unit, quantity (use 1 se não especificado). Retorne APENAS o JSON.'],
+                    ['role' => 'user', 'content' => "Extraia os materiais desta lista:\n\n" . mb_substr($text, 0, 15000)]
+                ],
+                'max_tokens' => 4000,
+                'temperature' => 0.1,
+            ]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . $apiKey],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 90,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // Deletar arquivo da OpenAI
+        $ch = curl_init("https://api.openai.com/v1/files/{$fileId}");
+        curl_setopt_array($ch, [CURLOPT_CUSTOMREQUEST => 'DELETE', CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiKey], CURLOPT_RETURNTRANSFER => true, CURLOPT_SSL_VERIFYPEER => false]);
+        curl_exec($ch); curl_close($ch);
+
+        if ($httpCode !== 200) return null;
+
+        $result = json_decode($response, true);
+        $responseText = $result['choices'][0]['message']['content'] ?? '';
+        $responseText = preg_replace('/```json\s*/', '', $responseText);
+        $responseText = preg_replace('/```\s*/', '', $responseText);
+        $materials = json_decode(trim($responseText), true);
+
+        if (!is_array($materials)) return ['error' => 'Não foi possível interpretar o documento.'];
+
+        return ['success' => true, 'materials' => $materials];
     }
 }
