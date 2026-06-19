@@ -15,6 +15,7 @@ use App\Models\Setting;
 use App\Services\MailService;
 use App\Services\EmailTemplate;
 use App\Services\NotificationService;
+use App\Services\XlsxService;
 
 class PurchaseOrderController extends Controller
 {
@@ -470,6 +471,120 @@ class PurchaseOrderController extends Controller
         ]);
     }
 
+    /**
+     * Gerar XLSX de um pedido aprovado
+     */
+    public function xlsx(string $id = ''): void
+    {
+        $orderId = (int) $id;
+        $order = PurchaseOrder::findFull($orderId);
+
+        if (!$order || $order['status'] !== 'approved') {
+            $this->show404();
+            return;
+        }
+
+        $items = PurchaseOrderItem::getByOrder($orderId);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
+        $approvedSupplier = PurchaseOrderSupplier::getApproved($orderId);
+
+        $xlsx = new XlsxService();
+        $xlsx->setSheetName('Pedido ' . $order['code']);
+        $xlsx->setColumnWidths([6, 45, 12, 12, 8, 8, 12, 14]);
+
+        // Título
+        $xlsx->addRow(['BROOKS CONSTRUTORA - Pedido de Materiais'], 'title');
+        $xlsx->addEmptyRow();
+
+        // Informações
+        $xlsx->addRow(['Pedido:', $order['code'], '', 'Data:', date('d/m/Y', strtotime($order['created_at']))], 'bold');
+        $xlsx->addRow(['Solicitante:', $order['created_by_name'] ?? '-', '', 'Status:', 'Aprovado'], 'bold');
+
+        $supplierName = $approvedSupplier ? $approvedSupplier['supplier_name'] : ($order['supplier_name'] ?? '-');
+        $xlsx->addRow(['Fornecedor:', $supplierName], 'bold');
+
+        if ($approvedSupplier) {
+            $details = [];
+            if ($approvedSupplier['vendor_name']) $details[] = 'Vendedor: ' . $approvedSupplier['vendor_name'];
+            if ($approvedSupplier['vendor_phone']) $details[] = 'Tel: ' . $approvedSupplier['vendor_phone'];
+            if ($approvedSupplier['delivery_days']) $details[] = 'Prazo: ' . $approvedSupplier['delivery_days'] . ' dias';
+            if (!empty($details)) {
+                $xlsx->addRow([implode(' | ', $details)]);
+            }
+        }
+
+        $xlsx->addRow(['Aprovado por:', $order['approved_by_name'] ?? '-', '', 'Data:', $order['approved_at'] ? date('d/m/Y H:i', strtotime($order['approved_at'])) : ''], 'bold');
+        $xlsx->addEmptyRow();
+
+        // Header
+        $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Unid.', 'Qtd', 'Unit.', 'Total'], 'header');
+
+        // Itens
+        $subtotalInsumos = 0;
+        foreach ($items as $i => $item) {
+            $unitPrice = $item['unit_price'] ?? 0;
+            $totalPrice = $item['total_price'] ?? 0;
+            $subtotalInsumos += $totalPrice;
+
+            $xlsx->addRow([
+                $i + 1,
+                $item['material_name'],
+                $item['specification'] ?? '',
+                $item['classification'] ?? '',
+                $item['unit'] ?? '',
+                $item['quantity'],
+                $unitPrice,
+                $totalPrice,
+            ]);
+        }
+
+        // Totais
+        $xlsx->addRow(['', '', '', '', '', '', 'Insumos:', $subtotalInsumos], 'total');
+        if ($order['total_estimated'] != $subtotalInsumos && $order['total_estimated'] > 0) {
+            $xlsx->addRow(['', '', '', '', '', '', 'TOTAL:', $order['total_estimated']], 'total');
+        }
+
+        // Financeiros
+        if ($approvedSupplier && $approvedSupplier['subtotal_items'] > 0) {
+            $finRows = [];
+            if ($approvedSupplier['discount_value'] > 0) $finRows[] = 'Desconto: ' . $approvedSupplier['discount_value'] . ($approvedSupplier['discount_type'] === 'percent' ? '%' : ' R$');
+            if ($approvedSupplier['surcharge_value'] > 0) $finRows[] = 'Acréscimo: ' . $approvedSupplier['surcharge_value'] . ($approvedSupplier['surcharge_type'] === 'percent' ? '%' : ' R$');
+            if ($approvedSupplier['ipi_percent'] > 0) $finRows[] = 'IPI: ' . $approvedSupplier['ipi_percent'] . '%';
+            if ($approvedSupplier['icms_percent'] > 0) $finRows[] = 'ICMS: ' . $approvedSupplier['icms_percent'] . '%';
+            if ($approvedSupplier['freight'] > 0) $finRows[] = 'Frete: R$ ' . number_format($approvedSupplier['freight'], 2, ',', '.');
+            if (!empty($finRows)) {
+                $xlsx->addEmptyRow();
+                $xlsx->addRow(['Detalhamento: ' . implode(' | ', $finRows)], 'bold');
+            }
+        }
+
+        // Comparação
+        if (count($orderSuppliers) > 1) {
+            $xlsx->addEmptyRow();
+            $xlsx->addRow(['Comparação de Fornecedores:'], 'bold');
+            $xlsx->addRow(['Fornecedor', 'Insumos', 'Desconto', 'Acréscimo', 'IPI', 'ICMS', 'Frete', 'Total'], 'header');
+            foreach ($orderSuppliers as $os) {
+                $xlsx->addRow([
+                    $os['supplier_name'] . ($os['approved'] ? ' (APROVADO)' : ''),
+                    $os['subtotal_items'] ?? 0,
+                    $os['discount_value'] > 0 ? $os['discount_value'] . ($os['discount_type'] === 'percent' ? '%' : ' R$') : '-',
+                    $os['surcharge_value'] > 0 ? $os['surcharge_value'] . ($os['surcharge_type'] === 'percent' ? '%' : ' R$') : '-',
+                    $os['ipi_percent'] > 0 ? $os['ipi_percent'] . '%' : '-',
+                    $os['icms_percent'] > 0 ? $os['icms_percent'] . '%' : '-',
+                    $os['freight'] ?? 0,
+                    $os['subtotal_final'] ?? $os['total'] ?? 0,
+                ]);
+            }
+        }
+
+        if (!empty($order['description'])) {
+            $xlsx->addEmptyRow();
+            $xlsx->addRow(['Observações: ' . $order['description']]);
+        }
+
+        $xlsx->download('Pedido_' . $order['code'] . '.xlsx');
+    }
+
     // ============================
     // PAINEL COM PIN (ACESSO RÁPIDO)
     // ============================
@@ -673,11 +788,12 @@ class PurchaseOrderController extends Controller
         $items = PurchaseOrderItem::getByOrder($orderId);
         $baseUrl = $this->getBaseUrl();
         $pdfUrl = "{$baseUrl}/pedido/pdf/{$orderId}";
+        $xlsxUrl = "{$baseUrl}/pedido/xlsx/{$orderId}";
 
         $emails = Setting::get('orders_completed_emails', '');
         if (!empty($emails)) {
             $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
-            $body = EmailTemplate::purchaseOrderCompleted($order, $items, $pdfUrl);
+            $body = EmailTemplate::purchaseOrderCompleted($order, $items, $pdfUrl, $xlsxUrl);
             NotificationService::queueEmails($emails, $subject, $body);
         }
 
@@ -690,7 +806,8 @@ class PurchaseOrderController extends Controller
                 . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
                 . "*Valor Total:* {$totalFormatted}\n"
                 . "*Aprovado por:* {$order['approved_by_name']}\n\n"
-                . "*PDF do pedido:*\n{$pdfUrl}";
+                . "*PDF do pedido:*\n{$pdfUrl}\n\n"
+                . "*Planilha do pedido:*\n{$xlsxUrl}";
 
             $this->sendWebhook($webhookUrl, [
                 'event' => 'order_approved',
@@ -699,6 +816,7 @@ class PurchaseOrderController extends Controller
                 'total' => $order['total_estimated'],
                 'approved_by' => $order['approved_by_name'],
                 'pdf_url' => $pdfUrl,
+                'xlsx_url' => $xlsxUrl,
                 'phone' => Setting::get('orders_completed_phone', ''),
                 'phone_name' => Setting::get('orders_completed_phone_name', ''),
                 'message' => $message,

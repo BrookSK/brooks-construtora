@@ -235,9 +235,16 @@ HTML;
         return self::wrap("Aprovação Pendente - {$order['code']}", $body);
     }
 
-    public static function purchaseOrderCompleted(array $order, array $items, string $pdfUrl): string
+    public static function purchaseOrderCompleted(array $order, array $items, string $pdfUrl, string $xlsxUrl = ''): string
     {
         $totalFormatted = number_format($order['total_estimated'] ?? 0, 2, ',', '.');
+
+        $xlsxButton = '';
+        if (!empty($xlsxUrl)) {
+            $xlsxButton = <<<HTML
+<a href="{$xlsxUrl}" style="display:inline-block; background-color:#28a745; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px; margin-left:10px;">Baixar Planilha</a>
+HTML;
+        }
 
         $body = <<<HTML
 <p style="margin-bottom:15px;">O pedido de materiais foi <strong style="color:#28a745;">APROVADO</strong> com sucesso!</p>
@@ -254,9 +261,10 @@ HTML;
 
 <p style="text-align:center; margin: 25px 0 10px;">
     <a href="{$pdfUrl}" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Ver PDF do Pedido</a>
+    {$xlsxButton}
 </p>
 
-<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique acima para visualizar e baixar o PDF formalizado do pedido.</p>
+<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique acima para visualizar o PDF ou baixar a planilha do pedido.</p>
 HTML;
 
         return self::wrap("Pedido Aprovado - {$order['code']}", $body);

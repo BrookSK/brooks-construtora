@@ -29,7 +29,10 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <div class="ms-auto">
                     <?php if ($order['status'] === 'approved'): ?>
                     <a href="/pedido/pdf/<?= $order['id'] ?>" class="btn btn-sm btn-success" target="_blank">
-                        <i class="bi bi-file-pdf"></i> Ver PDF
+                        <i class="bi bi-file-pdf"></i> PDF
+                    </a>
+                    <a href="/pedido/xlsx/<?= $order['id'] ?>" class="btn btn-sm btn-primary">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> XLSX
                     </a>
                     <?php endif; ?>
                 </div>
@@ -353,6 +356,9 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <?php if ($order['status'] === 'approved'): ?>
                 <a href="/pedido/pdf/<?= $order['id'] ?>" class="btn btn-success w-100" target="_blank">
                     <i class="bi bi-file-pdf"></i> Gerar PDF
+                </a>
+                <a href="/pedido/xlsx/<?= $order['id'] ?>" class="btn btn-primary w-100">
+                    <i class="bi bi-file-earmark-spreadsheet"></i> Baixar Planilha
                 </a>
                 <?php endif; ?>
 

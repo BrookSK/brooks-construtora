@@ -18,6 +18,7 @@ use App\Models\MaterialCategory;
 use App\Models\MeasurementUnit;
 use App\Models\Setting;
 use App\Services\MailService;
+use App\Services\XlsxService;
 use App\Services\EmailTemplate;
 use App\Services\NotificationService;
 
@@ -557,46 +558,151 @@ class PurchaseOrderController extends Controller
     /**
      * Exportar planilha CSV
      */
-    public function export(): void
+    public function export(string $id = ''): void
     {
-        $orders = PurchaseOrder::allWithSupplier();
+        $orderId = (int) $id;
+        $order = PurchaseOrder::findFull($orderId);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $items = PurchaseOrderItem::getByOrder($orderId);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
+        $approvedSupplier = PurchaseOrderSupplier::getApproved($orderId);
+
+        $xlsx = new XlsxService();
+        $xlsx->setSheetName('Pedido ' . $order['code']);
+        $xlsx->setColumnWidths([6, 45, 12, 12, 8, 8, 12, 14]);
+
+        // Título
+        $xlsx->addRow(['BROOKS CONSTRUTORA - Pedido de Materiais'], 'title');
+        $xlsx->addEmptyRow();
+
+        // Informações do pedido
+        $xlsx->addRow(['Pedido:', $order['code'], '', 'Data:', date('d/m/Y', strtotime($order['created_at']))], 'bold');
+        $xlsx->addRow(['Solicitante:', $order['created_by_name'] ?? '-', '', 'Status:', $this->statusLabel($order['status'])], 'bold');
         
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="pedidos_' . date('Y-m-d') . '.csv"');
+        $supplierName = $approvedSupplier ? $approvedSupplier['supplier_name'] : ($order['supplier_name'] ?? 'Pendente');
+        $xlsx->addRow(['Fornecedor:', $supplierName], 'bold');
         
-        $output = fopen('php://output', 'w');
-        // BOM para UTF-8 no Excel
-        fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
-        
-        // Header
-        fputcsv($output, ['ID Pedido', 'Data Solicitação', 'Item/Serviço', 'Fornecedor', 'Valor Orçado', 'Valor Final', 'Solicitado Por', 'Status', 'Data Aprovação', 'Observações'], ';');
-        
-        foreach ($orders as $order) {
-            $items = PurchaseOrderItem::getByOrder($order['id']);
-            $statusLabels = [
-                'draft' => 'Rascunho', 'pending_quote' => 'Aguard. Cotação',
-                'quoted' => 'Cotado', 'pending_approval' => 'Aguard. Aprovação',
-                'approved' => 'Aprovado', 'rejected' => 'Rejeitado', 'cancelled' => 'Cancelado',
-            ];
-            
-            foreach ($items as $item) {
-                fputcsv($output, [
-                    $order['code'],
-                    date('d/m/Y', strtotime($order['created_at'])),
-                    $item['material_name'] . ($item['classification'] ? ' - ' . $item['classification'] : ''),
-                    $order['supplier_name'] ?? '',
-                    $item['unit_price'] ? number_format($item['unit_price'], 2, ',', '.') : '',
-                    $item['total_price'] ? number_format($item['total_price'], 2, ',', '.') : '',
-                    $order['created_by_name'] ?? '',
-                    $statusLabels[$order['status']] ?? $order['status'],
-                    $order['approved_at'] ? date('d/m/Y', strtotime($order['approved_at'])) : '',
-                    $order['description'] ?? '',
-                ], ';');
+        if ($approvedSupplier) {
+            $details = [];
+            if ($approvedSupplier['vendor_name']) $details[] = 'Vendedor: ' . $approvedSupplier['vendor_name'];
+            if ($approvedSupplier['vendor_phone']) $details[] = 'Tel: ' . $approvedSupplier['vendor_phone'];
+            if ($approvedSupplier['delivery_days']) $details[] = 'Prazo: ' . $approvedSupplier['delivery_days'] . ' dias';
+            if (!empty($details)) {
+                $xlsx->addRow([implode(' | ', $details)]);
             }
         }
+
+        if (!empty($order['approved_by_name'])) {
+            $xlsx->addRow(['Aprovado por:', $order['approved_by_name'], '', 'Data:', $order['approved_at'] ? date('d/m/Y H:i', strtotime($order['approved_at'])) : ''], 'bold');
+        }
+
+        $xlsx->addEmptyRow();
+
+        // Header da tabela de itens
+        $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Unid.', 'Qtd', 'Unit.', 'Total'], 'header');
+
+        // Itens
+        $subtotalInsumos = 0;
+        foreach ($items as $i => $item) {
+            $unitPrice = $item['unit_price'] ?? 0;
+            $totalPrice = $item['total_price'] ?? 0;
+            $subtotalInsumos += $totalPrice;
+
+            $xlsx->addRow([
+                $i + 1,
+                $item['material_name'],
+                $item['specification'] ?? '',
+                $item['classification'] ?? '',
+                $item['unit'] ?? '',
+                $item['quantity'],
+                $unitPrice,
+                $totalPrice,
+            ]);
+        }
+
+        // Subtotal e Total
+        $xlsx->addRow(['', '', '', '', '', '', 'Insumos:', $subtotalInsumos], 'total');
         
-        fclose($output);
-        exit;
+        if ($order['total_estimated'] != $subtotalInsumos && $order['total_estimated'] > 0) {
+            $xlsx->addRow(['', '', '', '', '', '', 'TOTAL:', $order['total_estimated']], 'total');
+        }
+
+        // Financeiros do fornecedor aprovado
+        if ($approvedSupplier && $approvedSupplier['subtotal_items'] > 0) {
+            $xlsx->addEmptyRow();
+            $xlsx->addRow(['Detalhamento Financeiro:'], 'bold');
+            
+            $finRows = [];
+            if ($approvedSupplier['discount_value'] > 0) {
+                $finRows[] = 'Desconto: ' . $approvedSupplier['discount_value'] . ($approvedSupplier['discount_type'] === 'percent' ? '%' : ' R$');
+            }
+            if ($approvedSupplier['surcharge_value'] > 0) {
+                $finRows[] = 'Acréscimo: ' . $approvedSupplier['surcharge_value'] . ($approvedSupplier['surcharge_type'] === 'percent' ? '%' : ' R$');
+            }
+            if ($approvedSupplier['ipi_percent'] > 0) {
+                $finRows[] = 'IPI: ' . $approvedSupplier['ipi_percent'] . '%';
+            }
+            if ($approvedSupplier['icms_percent'] > 0) {
+                $finRows[] = 'ICMS: ' . $approvedSupplier['icms_percent'] . '%';
+            }
+            if ($approvedSupplier['freight'] > 0) {
+                $finRows[] = 'Frete: R$ ' . number_format($approvedSupplier['freight'], 2, ',', '.');
+            }
+            if (!empty($finRows)) {
+                $xlsx->addRow([implode(' | ', $finRows)]);
+            }
+        }
+
+        // Comparação de fornecedores (se houver mais de 1)
+        if (count($orderSuppliers) > 1) {
+            $xlsx->addEmptyRow();
+            $xlsx->addRow(['Comparação de Fornecedores:'], 'bold');
+            $xlsx->addRow(['Fornecedor', 'Insumos', 'Desconto', 'Acréscimo', 'IPI', 'ICMS', 'Frete', 'Total'], 'header');
+            
+            foreach ($orderSuppliers as $os) {
+                $xlsx->addRow([
+                    $os['supplier_name'] . ($os['approved'] ? ' (APROVADO)' : ''),
+                    $os['subtotal_items'] ?? 0,
+                    $os['discount_value'] > 0 ? $os['discount_value'] . ($os['discount_type'] === 'percent' ? '%' : ' R$') : '-',
+                    $os['surcharge_value'] > 0 ? $os['surcharge_value'] . ($os['surcharge_type'] === 'percent' ? '%' : ' R$') : '-',
+                    $os['ipi_percent'] > 0 ? $os['ipi_percent'] . '%' : '-',
+                    $os['icms_percent'] > 0 ? $os['icms_percent'] . '%' : '-',
+                    $os['freight'] ?? 0,
+                    $os['subtotal_final'] ?? $os['total'] ?? 0,
+                ]);
+            }
+        }
+
+        // Observações
+        if (!empty($order['description'])) {
+            $xlsx->addEmptyRow();
+            $xlsx->addRow(['Observações: ' . $order['description']]);
+        }
+        if (!empty($order['approval_notes'])) {
+            $xlsx->addRow(['Notas da aprovação: ' . $order['approval_notes']]);
+        }
+
+        $xlsx->download('Pedido_' . $order['code'] . '.xlsx');
+    }
+
+    private function statusLabel(string $status): string
+    {
+        $labels = [
+            'draft' => 'Rascunho',
+            'pending_quote' => 'Aguard. Cotação',
+            'quoted' => 'Cotado',
+            'pending_approval' => 'Aguard. Aprovação',
+            'approved' => 'Aprovado',
+            'rejected' => 'Rejeitado',
+            'cancelled' => 'Cancelado',
+        ];
+        return $labels[$status] ?? $status;
     }
 
     /**

@@ -185,6 +185,7 @@ class Router
             'pedido/aprovacao' => ['PurchaseOrderController', 'approval'],
             'pedido/aprovacao/enviar' => ['PurchaseOrderController', 'submitApproval'],
             'pedido/pdf' => ['PurchaseOrderController', 'pdf'],
+            'pedido/xlsx' => ['PurchaseOrderController', 'xlsx'],
 
             // Painel de pedidos com PIN
             'pedidos' => ['PurchaseOrderController', 'pinPanel'],

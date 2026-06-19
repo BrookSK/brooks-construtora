@@ -79,6 +79,9 @@
         <button class="btn btn-primary" id="downloadPdfBtn">
             <i class="bi bi-download"></i> Baixar PDF
         </button>
+        <a href="/pedido/xlsx/<?= $order['id'] ?>" class="btn btn-success ms-2">
+            <i class="bi bi-file-earmark-spreadsheet"></i> Baixar Planilha
+        </a>
         <button class="btn btn-outline-secondary ms-2" onclick="window.print()">
             <i class="bi bi-printer"></i> Imprimir
         </button>
