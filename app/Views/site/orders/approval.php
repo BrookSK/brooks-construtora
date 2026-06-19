@@ -188,13 +188,6 @@
                             <?php endforeach; ?>
                         </tbody>
                         <tfoot>
-                            <tr class="table-light">
-                                <td style="position:sticky; left:0; background:#f8f9fa; z-index:1;"><small class="text-muted">Insumos</small></td>
-                                <td></td>
-                                <?php foreach ($orderSuppliers as $os): ?>
-                                <td class="text-center"><small class="text-muted">R$ <?= number_format($os['subtotal_items'] ?? 0, 2, ',', '.') ?></small></td>
-                                <?php endforeach; ?>
-                            </tr>
                             <tr class="table-success fw-bold">
                                 <td style="position:sticky; left:0; background:#d1e7dd; z-index:1;">TOTAL</td>
                                 <td></td>

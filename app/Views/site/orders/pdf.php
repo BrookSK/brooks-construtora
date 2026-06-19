@@ -213,8 +213,20 @@
                     <td style="text-align:right;">R$ <?= number_format($item['total_price'] ?? 0, 2, ',', '.') ?></td>
                 </tr>
                 <?php endforeach; ?>
+                <?php
+                // Calcular subtotal de insumos (soma dos totais unitários)
+                $subtotalInsumos = 0;
+                foreach ($items as $item) {
+                    $subtotalInsumos += ($item['total_price'] ?? 0);
+                }
+                ?>
                 <tr class="total-row">
-                    <td colspan="7" style="text-align:right;">TOTAL:</td>
+                    <td colspan="5" style="text-align:right;">
+                        <?php if ($subtotalInsumos != $order['total_estimated']): ?>
+                        <span style="font-size:0.75rem; color:#666; font-weight:normal;">Insumos: R$ <?= number_format($subtotalInsumos, 2, ',', '.') ?></span>
+                        <?php endif; ?>
+                    </td>
+                    <td colspan="2" style="text-align:right;">TOTAL:</td>
                     <td style="text-align:right; color:#28a745;">R$ <?= number_format($order['total_estimated'], 2, ',', '.') ?></td>
                 </tr>
             </tbody>
@@ -240,6 +252,9 @@
             </div>
             <?php endforeach; ?>
             <div style="border-top:2px solid #3a3b4e; padding-top:8px; margin-top:8px; text-align:right;">
+                <?php if ($subtotalInsumos != $order['total_estimated']): ?>
+                <div style="font-size:0.75rem; color:#666; margin-bottom:4px;">Insumos: R$ <?= number_format($subtotalInsumos, 2, ',', '.') ?></div>
+                <?php endif; ?>
                 <strong style="font-size:1rem;">TOTAL: <span style="color:#28a745;">R$ <?= number_format($order['total_estimated'], 2, ',', '.') ?></span></strong>
             </div>
         </div>
