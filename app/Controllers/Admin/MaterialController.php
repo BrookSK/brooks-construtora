@@ -25,7 +25,36 @@ class MaterialController extends Controller
 
     public function index(): void
     {
-        $materials = Material::allWithRelations();
+        $page = max(1, (int) $this->input('page', 1));
+        $perPage = 50;
+        $search = trim($this->input('q', ''));
+        
+        if (!empty($search)) {
+            $where = "m.active = 1 AND (m.name LIKE ? OR m.specification LIKE ? OR m.code LIKE ? OR m.classification LIKE ?)";
+            $params = ["%{$search}%", "%{$search}%", "%{$search}%", "%{$search}%"];
+            $total = (int) \App\Core\Database::fetch("SELECT COUNT(*) as total FROM materials m WHERE {$where}", $params)['total'];
+            $offset = ($page - 1) * $perPage;
+            $materials = \App\Core\Database::fetchAll(
+                "SELECT m.*, mc.name as category_name, mu.name as unit_name, mu.abbreviation as unit_abbr 
+                 FROM materials m
+                 LEFT JOIN material_categories mc ON m.category_id = mc.id
+                 LEFT JOIN measurement_units mu ON m.unit_id = mu.id
+                 WHERE {$where} ORDER BY m.name ASC LIMIT {$perPage} OFFSET {$offset}",
+                $params
+            );
+        } else {
+            $total = Material::count();
+            $offset = ($page - 1) * $perPage;
+            $materials = \App\Core\Database::fetchAll(
+                "SELECT m.*, mc.name as category_name, mu.name as unit_name, mu.abbreviation as unit_abbr 
+                 FROM materials m
+                 LEFT JOIN material_categories mc ON m.category_id = mc.id
+                 LEFT JOIN measurement_units mu ON m.unit_id = mu.id
+                 ORDER BY m.name ASC LIMIT {$perPage} OFFSET {$offset}"
+            );
+        }
+
+        $totalPages = ceil($total / $perPage);
         $categories = MaterialCategory::all('name ASC');
         $units = MeasurementUnit::all('name ASC');
 
@@ -33,6 +62,10 @@ class MaterialController extends Controller
             'materials' => $materials,
             'categories' => $categories,
             'units' => $units,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'total' => $total,
+            'search' => $search,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);

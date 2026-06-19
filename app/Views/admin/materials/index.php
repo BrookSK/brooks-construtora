@@ -2,7 +2,7 @@
 <?php ob_start(); ?>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <span class="badge bg-secondary"><?= count($materials) ?> materiais</span>
+    <span class="badge bg-secondary"><?= $total ?> materiais</span>
     <div class="d-flex gap-2">
         <a href="/admin/materials/import" class="btn btn-outline-success btn-sm">
             <i class="bi bi-upload"></i> <span class="d-none d-sm-inline">Importar</span>
@@ -13,10 +13,14 @@
     </div>
 </div>
 
-<!-- Busca -->
+<!-- Busca server-side -->
 <div class="card mb-3">
     <div class="card-body py-2">
-        <input type="text" class="form-control" id="searchInput" placeholder="Buscar materiais...">
+        <form method="GET" action="/admin/materials" class="d-flex gap-2">
+            <input type="text" class="form-control" name="q" value="<?= htmlspecialchars($search) ?>" placeholder="Buscar materiais...">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
+            <?php if ($search): ?><a href="/admin/materials" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x"></i></a><?php endif; ?>
+        </form>
     </div>
 </div>
 
@@ -90,6 +94,34 @@
     <?php endforeach; ?>
     <?php endif; ?>
 </div>
+
+<!-- Paginação -->
+<?php if ($totalPages > 1): ?>
+<nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center flex-wrap">
+        <?php if ($page > 1): ?>
+        <li class="page-item"><a class="page-link" href="/admin/materials?page=<?= $page - 1 ?><?= $search ? '&q=' . urlencode($search) : '' ?>"><i class="bi bi-chevron-left"></i></a></li>
+        <?php endif; ?>
+        <?php
+        $start = max(1, $page - 3);
+        $end = min($totalPages, $page + 3);
+        if ($start > 1): ?>
+        <li class="page-item"><a class="page-link" href="/admin/materials?page=1<?= $search ? '&q=' . urlencode($search) : '' ?>">1</a></li>
+        <?php if ($start > 2): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
+        <?php endif; ?>
+        <?php for ($i = $start; $i <= $end; $i++): ?>
+        <li class="page-item <?= $i == $page ? 'active' : '' ?>"><a class="page-link" href="/admin/materials?page=<?= $i ?><?= $search ? '&q=' . urlencode($search) : '' ?>"><?= $i ?></a></li>
+        <?php endfor; ?>
+        <?php if ($end < $totalPages): ?>
+        <?php if ($end < $totalPages - 1): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
+        <li class="page-item"><a class="page-link" href="/admin/materials?page=<?= $totalPages ?><?= $search ? '&q=' . urlencode($search) : '' ?>"><?= $totalPages ?></a></li>
+        <?php endif; ?>
+        <?php if ($page < $totalPages): ?>
+        <li class="page-item"><a class="page-link" href="/admin/materials?page=<?= $page + 1 ?><?= $search ? '&q=' . urlencode($search) : '' ?>"><i class="bi bi-chevron-right"></i></a></li>
+        <?php endif; ?>
+    </ul>
+</nav>
+<?php endif; ?>
 
 <!-- Modal Novo Material (com steps internos - sem modal sobre modal) -->
 <div class="modal fade" id="newMaterialModal" tabindex="-1">
@@ -184,14 +216,6 @@
 </div>
 
 <script>
-// Busca
-document.getElementById('searchInput').addEventListener('input', function() {
-    const val = this.value.toLowerCase();
-    document.querySelectorAll('.material-row').forEach(row => {
-        row.style.display = row.textContent.toLowerCase().includes(val) ? '' : 'none';
-    });
-});
-
 // Editar material
 document.querySelectorAll('.edit-material-btn').forEach(btn => {
     btn.addEventListener('click', function() {
