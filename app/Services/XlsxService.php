@@ -4,30 +4,56 @@ namespace App\Services;
 
 /**
  * Gerador de arquivos XLSX puro PHP (sem dependências externas).
- * Gera um XLSX com formatação: cabeçalho, bordas, larguras de coluna, etc.
+ * Suporta múltiplas abas, formatação, bordas, cores, larguras de coluna.
  */
 class XlsxService
 {
-    private array $rows = [];
-    private array $columns = [];
-    private array $merges = [];
-    private string $sheetName = 'Planilha1';
-    private array $styles = [];
-    private int $styleCount = 1;
+    private array $sheets = [];
+    private int $currentSheet = 0;
 
-    public function setSheetName(string $name): void
+    public function __construct()
     {
-        $this->sheetName = $name;
+        $this->addSheet('Planilha1');
     }
 
     /**
-     * Adiciona uma linha de dados.
-     * $style pode ser: 'header', 'bold', 'total', 'normal', 'title'
+     * Adiciona uma nova aba e a define como ativa.
+     */
+    public function addSheet(string $name): int
+    {
+        $index = count($this->sheets);
+        $this->sheets[$index] = [
+            'name' => $name,
+            'rows' => [],
+            'columns' => [],
+        ];
+        $this->currentSheet = $index;
+        return $index;
+    }
+
+    /**
+     * Define a aba ativa pelo índice.
+     */
+    public function setActiveSheet(int $index): void
+    {
+        if (isset($this->sheets[$index])) {
+            $this->currentSheet = $index;
+        }
+    }
+
+    public function setSheetName(string $name): void
+    {
+        $this->sheets[$this->currentSheet]['name'] = $name;
+    }
+
+    /**
+     * Adiciona uma linha de dados na aba ativa.
+     * $style: 'header', 'bold', 'total', 'normal', 'title'
      */
     public function addRow(array $cells, string $style = 'normal'): int
     {
-        $rowIndex = count($this->rows) + 1;
-        $this->rows[] = ['cells' => $cells, 'style' => $style];
+        $rowIndex = count($this->sheets[$this->currentSheet]['rows']) + 1;
+        $this->sheets[$this->currentSheet]['rows'][] = ['cells' => $cells, 'style' => $style];
         return $rowIndex;
     }
 
@@ -38,45 +64,33 @@ class XlsxService
 
     public function setColumnWidths(array $widths): void
     {
-        $this->columns = $widths;
-    }
-
-    public function mergeCells(string $range): void
-    {
-        $this->merges[] = $range;
+        $this->sheets[$this->currentSheet]['columns'] = $widths;
     }
 
     /**
-     * Gera o arquivo XLSX e retorna como string binária.
+     * Gera o XLSX e retorna como string binária.
      */
     public function generate(): string
     {
         $tempFile = tempnam(sys_get_temp_dir(), 'xlsx_');
-        
+
         $zip = new \ZipArchive();
         $zip->open($tempFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
 
-        // [Content_Types].xml
         $zip->addFromString('[Content_Types].xml', $this->contentTypes());
-        
-        // _rels/.rels
         $zip->addFromString('_rels/.rels', $this->rels());
-        
-        // xl/_rels/workbook.xml.rels
         $zip->addFromString('xl/_rels/workbook.xml.rels', $this->workbookRels());
-        
-        // xl/workbook.xml
         $zip->addFromString('xl/workbook.xml', $this->workbook());
-        
-        // xl/styles.xml
         $zip->addFromString('xl/styles.xml', $this->styles());
-        
-        // xl/sharedStrings.xml
+
+        // Shared strings (todas as abas)
         $sharedStrings = $this->buildSharedStrings();
         $zip->addFromString('xl/sharedStrings.xml', $sharedStrings['xml']);
-        
-        // xl/worksheets/sheet1.xml
-        $zip->addFromString('xl/worksheets/sheet1.xml', $this->sheet($sharedStrings['map']));
+
+        // Cada aba
+        foreach ($this->sheets as $i => $sheet) {
+            $zip->addFromString('xl/worksheets/sheet' . ($i + 1) . '.xml', $this->sheetXml($sheet, $sharedStrings['map']));
+        }
 
         $zip->close();
 
@@ -92,24 +106,29 @@ class XlsxService
     public function download(string $filename): void
     {
         $content = $this->generate();
-        
+
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . strlen($content));
         header('Cache-Control: max-age=0');
-        
+
         echo $content;
         exit;
     }
 
     private function contentTypes(): string
     {
+        $sheets = '';
+        foreach ($this->sheets as $i => $s) {
+            $sheets .= '<Override PartName="/xl/worksheets/sheet' . ($i + 1) . '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' . "\n";
+        }
+
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
     <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
     <Default Extension="xml" ContentType="application/xml"/>
     <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-    <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+    ' . $sheets . '
     <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
     <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
 </Types>';
@@ -125,34 +144,45 @@ class XlsxService
 
     private function workbookRels(): string
     {
+        $rels = '';
+        foreach ($this->sheets as $i => $s) {
+            $rels .= '<Relationship Id="rId' . ($i + 1) . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' . ($i + 1) . '.xml"/>' . "\n";
+        }
+        $next = count($this->sheets) + 1;
+
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-    <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-    <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+    ' . $rels . '
+    <Relationship Id="rId' . $next . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+    <Relationship Id="rId' . ($next + 1) . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
 </Relationships>';
     }
 
     private function workbook(): string
     {
-        $name = htmlspecialchars($this->sheetName, ENT_XML1);
+        $sheetsXml = '';
+        foreach ($this->sheets as $i => $s) {
+            $name = htmlspecialchars($s['name'], ENT_XML1);
+            $sheetsXml .= '<sheet name="' . $name . '" sheetId="' . ($i + 1) . '" r:id="rId' . ($i + 1) . '"/>' . "\n";
+        }
+
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
     <sheets>
-        <sheet name="' . $name . '" sheetId="1" r:id="rId1"/>
+        ' . $sheetsXml . '
     </sheets>
 </workbook>';
     }
 
     /**
      * Estilos:
-     * 0 = normal
-     * 1 = header (fundo escuro, texto branco, bold)
-     * 2 = bold
-     * 3 = total (fundo verde, bold)
-     * 4 = title (grande, bold)
-     * 5 = currency (formato R$)
-     * 6 = header currency
+     * 0 = normal (com borda)
+     * 1 = header (fundo escuro, texto branco, bold, borda)
+     * 2 = bold (com borda)
+     * 3 = total (fundo verde, bold, borda)
+     * 4 = title (grande, bold, sem borda)
+     * 5 = currency (formato R$, com borda)
+     * 6 = total+currency (fundo verde, bold, formato R$, borda)
      */
     private function styles(): string
     {
@@ -187,7 +217,7 @@ class XlsxService
         <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
     </cellStyleXfs>
     <cellXfs count="7">
-        <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+        <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
         <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
         <xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/>
         <xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
@@ -204,13 +234,15 @@ class XlsxService
         $map = [];
         $index = 0;
 
-        foreach ($this->rows as $row) {
-            foreach ($row['cells'] as $cell) {
-                $val = (string) $cell;
-                if (!is_numeric($cell) && !isset($map[$val])) {
-                    $map[$val] = $index;
-                    $strings[] = $val;
-                    $index++;
+        foreach ($this->sheets as $sheet) {
+            foreach ($sheet['rows'] as $row) {
+                foreach ($row['cells'] as $cell) {
+                    $val = (string) $cell;
+                    if (!is_numeric($cell) && $val !== '' && !isset($map[$val])) {
+                        $map[$val] = $index;
+                        $strings[] = $val;
+                        $index++;
+                    }
                 }
             }
         }
@@ -225,15 +257,15 @@ class XlsxService
         return ['xml' => $xml, 'map' => $map];
     }
 
-    private function sheet(array $stringMap): string
+    private function sheetXml(array $sheet, array $stringMap): string
     {
         $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
         $xml .= '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
 
         // Colunas
-        if (!empty($this->columns)) {
+        if (!empty($sheet['columns'])) {
             $xml .= '<cols>';
-            foreach ($this->columns as $i => $width) {
+            foreach ($sheet['columns'] as $i => $width) {
                 $col = $i + 1;
                 $xml .= '<col min="' . $col . '" max="' . $col . '" width="' . $width . '" customWidth="1"/>';
             }
@@ -242,7 +274,7 @@ class XlsxService
 
         $xml .= '<sheetData>';
 
-        foreach ($this->rows as $rowIdx => $row) {
+        foreach ($sheet['rows'] as $rowIdx => $row) {
             $rowNum = $rowIdx + 1;
             $xml .= '<row r="' . $rowNum . '">';
 
@@ -252,14 +284,14 @@ class XlsxService
                 $styleId = $this->getStyleId($row['style'], $cellVal);
                 $val = (string) $cellVal;
 
-                if (is_numeric($cellVal) && $cellVal !== '') {
+                if ($val === '') {
+                    $xml .= '<c r="' . $ref . '" s="' . $styleId . '"/>';
+                } elseif (is_numeric($cellVal)) {
                     $xml .= '<c r="' . $ref . '" s="' . $styleId . '"><v>' . $cellVal . '</v></c>';
+                } elseif (isset($stringMap[$val])) {
+                    $xml .= '<c r="' . $ref . '" t="s" s="' . $styleId . '"><v>' . $stringMap[$val] . '</v></c>';
                 } else {
-                    if (isset($stringMap[$val])) {
-                        $xml .= '<c r="' . $ref . '" t="s" s="' . $styleId . '"><v>' . $stringMap[$val] . '</v></c>';
-                    } else {
-                        $xml .= '<c r="' . $ref . '" t="inlineStr" s="' . $styleId . '"><is><t>' . htmlspecialchars($val, ENT_XML1, 'UTF-8') . '</t></is></c>';
-                    }
+                    $xml .= '<c r="' . $ref . '" t="inlineStr" s="' . $styleId . '"><is><t>' . htmlspecialchars($val, ENT_XML1, 'UTF-8') . '</t></is></c>';
                 }
             }
 
@@ -267,27 +299,16 @@ class XlsxService
         }
 
         $xml .= '</sheetData>';
-
-        // Merge cells
-        if (!empty($this->merges)) {
-            $xml .= '<mergeCells count="' . count($this->merges) . '">';
-            foreach ($this->merges as $range) {
-                $xml .= '<mergeCell ref="' . $range . '"/>';
-            }
-            $xml .= '</mergeCells>';
-        }
-
         $xml .= '</worksheet>';
         return $xml;
     }
 
     private function getStyleId(string $rowStyle, $cellVal): int
     {
-        // Styles: 0=normal, 1=header, 2=bold, 3=total, 4=title, 5=currency, 6=total+currency
         switch ($rowStyle) {
             case 'header': return 1;
             case 'bold': return 2;
-            case 'total': return is_numeric($cellVal) ? 6 : 3;
+            case 'total': return is_numeric($cellVal) && $cellVal !== '' ? 6 : 3;
             case 'title': return 4;
             case 'currency': return 5;
             default: return 0;

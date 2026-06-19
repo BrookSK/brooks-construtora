@@ -489,6 +489,10 @@ class PurchaseOrderController extends Controller
         $approvedSupplier = PurchaseOrderSupplier::getApproved($orderId);
 
         $xlsx = new XlsxService();
+
+        // ========================
+        // ABA 1: Pedido detalhado
+        // ========================
         $xlsx->setSheetName('Pedido ' . $order['code']);
         $xlsx->setColumnWidths([6, 45, 12, 12, 8, 8, 12, 14]);
 
@@ -516,7 +520,7 @@ class PurchaseOrderController extends Controller
         $xlsx->addRow(['Aprovado por:', $order['approved_by_name'] ?? '-', '', 'Data:', $order['approved_at'] ? date('d/m/Y H:i', strtotime($order['approved_at'])) : ''], 'bold');
         $xlsx->addEmptyRow();
 
-        // Header
+        // Header da tabela
         $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Unid.', 'Qtd', 'Unit.', 'Total'], 'header');
 
         // Itens
@@ -558,7 +562,7 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        // Comparação
+        // Comparação de fornecedores
         if (count($orderSuppliers) > 1) {
             $xlsx->addEmptyRow();
             $xlsx->addRow(['Comparação de Fornecedores:'], 'bold');
@@ -580,6 +584,46 @@ class PurchaseOrderController extends Controller
         if (!empty($order['description'])) {
             $xlsx->addEmptyRow();
             $xlsx->addRow(['Observações: ' . $order['description']]);
+        }
+
+        // ========================
+        // ABA 2: Controle de Orçamento
+        // ========================
+        $xlsx->addSheet('Controle');
+        $xlsx->setColumnWidths([16, 14, 45, 20, 14, 14, 18, 14, 16, 30]);
+
+        // Header
+        $xlsx->addRow([
+            'ID do Pedido',
+            'Data Solicitação',
+            'Item / Serviço',
+            'Fornecedor',
+            'Valor Orçado',
+            'Valor Final',
+            'Solicitado Por',
+            'Status',
+            'Data Aprovação',
+            'Observações',
+        ], 'header');
+
+        // Uma linha por item do pedido
+        $statusLabel = 'Aprovado';
+        $approvalDate = $order['approved_at'] ? date('d/m/Y', strtotime($order['approved_at'])) : '';
+        $supplierFinal = $approvedSupplier ? $approvedSupplier['supplier_name'] : ($order['supplier_name'] ?? '');
+
+        foreach ($items as $item) {
+            $xlsx->addRow([
+                $order['code'],
+                date('d/m/Y', strtotime($order['created_at'])),
+                $item['material_name'] . ($item['classification'] ? ' - ' . $item['classification'] : ''),
+                $supplierFinal,
+                $item['unit_price'] ?? 0,
+                $item['total_price'] ?? 0,
+                $order['created_by_name'] ?? '',
+                $statusLabel,
+                $approvalDate,
+                $order['description'] ?? '',
+            ]);
         }
 
         $xlsx->download('Pedido_' . $order['code'] . '.xlsx');

@@ -574,6 +574,10 @@ class PurchaseOrderController extends Controller
         $approvedSupplier = PurchaseOrderSupplier::getApproved($orderId);
 
         $xlsx = new XlsxService();
+
+        // ========================
+        // ABA 1: Pedido detalhado
+        // ========================
         $xlsx->setSheetName('Pedido ' . $order['code']);
         $xlsx->setColumnWidths([6, 45, 12, 12, 8, 8, 12, 14]);
 
@@ -636,26 +640,14 @@ class PurchaseOrderController extends Controller
         // Financeiros do fornecedor aprovado
         if ($approvedSupplier && $approvedSupplier['subtotal_items'] > 0) {
             $xlsx->addEmptyRow();
-            $xlsx->addRow(['Detalhamento Financeiro:'], 'bold');
-            
             $finRows = [];
-            if ($approvedSupplier['discount_value'] > 0) {
-                $finRows[] = 'Desconto: ' . $approvedSupplier['discount_value'] . ($approvedSupplier['discount_type'] === 'percent' ? '%' : ' R$');
-            }
-            if ($approvedSupplier['surcharge_value'] > 0) {
-                $finRows[] = 'Acréscimo: ' . $approvedSupplier['surcharge_value'] . ($approvedSupplier['surcharge_type'] === 'percent' ? '%' : ' R$');
-            }
-            if ($approvedSupplier['ipi_percent'] > 0) {
-                $finRows[] = 'IPI: ' . $approvedSupplier['ipi_percent'] . '%';
-            }
-            if ($approvedSupplier['icms_percent'] > 0) {
-                $finRows[] = 'ICMS: ' . $approvedSupplier['icms_percent'] . '%';
-            }
-            if ($approvedSupplier['freight'] > 0) {
-                $finRows[] = 'Frete: R$ ' . number_format($approvedSupplier['freight'], 2, ',', '.');
-            }
+            if ($approvedSupplier['discount_value'] > 0) $finRows[] = 'Desconto: ' . $approvedSupplier['discount_value'] . ($approvedSupplier['discount_type'] === 'percent' ? '%' : ' R$');
+            if ($approvedSupplier['surcharge_value'] > 0) $finRows[] = 'Acréscimo: ' . $approvedSupplier['surcharge_value'] . ($approvedSupplier['surcharge_type'] === 'percent' ? '%' : ' R$');
+            if ($approvedSupplier['ipi_percent'] > 0) $finRows[] = 'IPI: ' . $approvedSupplier['ipi_percent'] . '%';
+            if ($approvedSupplier['icms_percent'] > 0) $finRows[] = 'ICMS: ' . $approvedSupplier['icms_percent'] . '%';
+            if ($approvedSupplier['freight'] > 0) $finRows[] = 'Frete: R$ ' . number_format($approvedSupplier['freight'], 2, ',', '.');
             if (!empty($finRows)) {
-                $xlsx->addRow([implode(' | ', $finRows)]);
+                $xlsx->addRow(['Detalhamento: ' . implode(' | ', $finRows)], 'bold');
             }
         }
 
@@ -686,6 +678,46 @@ class PurchaseOrderController extends Controller
         }
         if (!empty($order['approval_notes'])) {
             $xlsx->addRow(['Notas da aprovação: ' . $order['approval_notes']]);
+        }
+
+        // ========================
+        // ABA 2: Controle de Orçamento
+        // ========================
+        $xlsx->addSheet('Controle');
+        $xlsx->setColumnWidths([16, 14, 45, 20, 14, 14, 18, 14, 16, 30]);
+
+        // Header
+        $xlsx->addRow([
+            'ID do Pedido',
+            'Data Solicitação',
+            'Item / Serviço',
+            'Fornecedor',
+            'Valor Orçado',
+            'Valor Final',
+            'Solicitado Por',
+            'Status',
+            'Data Aprovação',
+            'Observações',
+        ], 'header');
+
+        // Uma linha por item
+        $statusText = $this->statusLabel($order['status']);
+        $approvalDate = $order['approved_at'] ? date('d/m/Y', strtotime($order['approved_at'])) : '';
+        $supplierFinal = $approvedSupplier ? $approvedSupplier['supplier_name'] : ($order['supplier_name'] ?? '');
+
+        foreach ($items as $item) {
+            $xlsx->addRow([
+                $order['code'],
+                date('d/m/Y', strtotime($order['created_at'])),
+                $item['material_name'] . ($item['classification'] ? ' - ' . $item['classification'] : ''),
+                $supplierFinal,
+                $item['unit_price'] ?? 0,
+                $item['total_price'] ?? 0,
+                $order['created_by_name'] ?? '',
+                $statusText,
+                $approvalDate,
+                $order['description'] ?? '',
+            ]);
         }
 
         $xlsx->download('Pedido_' . $order['code'] . '.xlsx');
