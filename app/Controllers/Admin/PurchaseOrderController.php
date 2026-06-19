@@ -160,18 +160,7 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        // Extrair texto do PDF ou usar imagem
-        $content = '';
-        if ($file['type'] === 'application/pdf') {
-            // Ler conteúdo bruto para enviar como base64
-            $content = base64_encode(file_get_contents($file['tmp_name']));
-            $mediaType = 'application/pdf';
-        } else {
-            $content = base64_encode(file_get_contents($file['tmp_name']));
-            $mediaType = $file['type'];
-        }
-
-        // Chamar OpenAI para analisar
+        // Extrair conteúdo para enviar à IA
         try {
             $openaiKey = Setting::get('openai_api_key', '');
             $model = Setting::get('openai_model', 'gpt-4o');
@@ -181,13 +170,38 @@ class PurchaseOrderController extends Controller
                 return;
             }
 
+            $content = '';
+            $mediaType = '';
+        
+        if ($file['type'] === 'application/pdf') {
+            // Para PDF: extrair texto bruto (sem biblioteca externa)
+            $rawContent = file_get_contents($file['tmp_name']);
+            // Tentativa simples de extrair texto de PDF
+            $text = $this->extractTextFromPdf($rawContent);
+            
+            if (empty($text) || strlen($text) < 50) {
+                $this->json(['error' => 'Não foi possível extrair texto do PDF. Tente enviar como imagem (screenshot/foto do documento) em JPG ou PNG.'], 400);
+                return;
+            }
+
+            // Enviar como texto
             $messages = [
-                ['role' => 'system', 'content' => 'Você é um assistente que analisa documentos de listagem de materiais de construção. Extraia todos os materiais listados e retorne APENAS um JSON array. Cada item deve ter: name (nome do material), specification (tipo/especificação como "mat. Hidraulica", "mat. Civil", "madeira", etc), classification (medida como "100mm", "3/4", "50x40", etc), unit (unidade de medida como "unid", "mts", "m²", "kg", etc), quantity (quantidade numérica). Se não conseguir identificar algum campo, use string vazia. Retorne APENAS o JSON, sem markdown, sem explicação.'],
+                ['role' => 'system', 'content' => 'Você é um assistente que analisa listagens de materiais de construção. Extraia todos os materiais listados e retorne APENAS um JSON array. Cada item deve ter: name (nome do material), specification (tipo/especificação como "mat. Hidraulica", "mat. Civil", "madeira", etc), classification (medida como "100mm", "3/4", "50x40", etc), unit (unidade de medida como "unid", "mts", "m²", "kg", etc), quantity (quantidade numérica, use 1 se não especificado). Se não conseguir identificar algum campo, use string vazia. Retorne APENAS o JSON, sem markdown, sem explicação.'],
+                ['role' => 'user', 'content' => "Analise esta lista de materiais e extraia com quantidades:\n\n" . mb_substr($text, 0, 15000)]
+            ];
+        } else {
+            // Para imagens: enviar como base64
+            $content = base64_encode(file_get_contents($file['tmp_name']));
+            $mediaType = $file['type'];
+
+            $messages = [
+                ['role' => 'system', 'content' => 'Você é um assistente que analisa documentos de listagem de materiais de construção. Extraia todos os materiais listados e retorne APENAS um JSON array. Cada item deve ter: name (nome do material), specification (tipo/especificação como "mat. Hidraulica", "mat. Civil", "madeira", etc), classification (medida como "100mm", "3/4", "50x40", etc), unit (unidade de medida como "unid", "mts", "m²", "kg", etc), quantity (quantidade numérica, use 1 se não especificado). Se não conseguir identificar algum campo, use string vazia. Retorne APENAS o JSON, sem markdown, sem explicação.'],
                 ['role' => 'user', 'content' => [
                     ['type' => 'text', 'text' => 'Analise este documento e extraia a lista de materiais com quantidades:'],
                     ['type' => 'image_url', 'image_url' => ['url' => "data:{$mediaType};base64,{$content}"]]
                 ]]
             ];
+        }
 
             $ch = curl_init('https://api.openai.com/v1/chat/completions');
             curl_setopt_array($ch, [
@@ -927,5 +941,44 @@ class PurchaseOrderController extends Controller
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'www.brooksconstrutora.com.br';
         return $scheme . '://' . $host;
+    }
+
+    /**
+     * Extrair texto bruto de um PDF (sem bibliotecas externas)
+     */
+    private function extractTextFromPdf(string $rawContent): string
+    {
+        $text = '';
+        
+        // Método 1: Extrair streams de texto entre BT/ET
+        if (preg_match_all('/BT\s*(.*?)\s*ET/s', $rawContent, $matches)) {
+            foreach ($matches[1] as $block) {
+                // Extrair strings entre parênteses
+                if (preg_match_all('/\((.*?)\)/s', $block, $strings)) {
+                    $text .= implode(' ', $strings[1]) . "\n";
+                }
+                // Extrair strings hexadecimais
+                if (preg_match_all('/<([0-9A-Fa-f]+)>/s', $block, $hexStrings)) {
+                    foreach ($hexStrings[1] as $hex) {
+                        $text .= hex2bin($hex) . ' ';
+                    }
+                }
+            }
+        }
+        
+        // Método 2: Se não encontrou texto com BT/ET, tentar extrair de streams decodificados
+        if (strlen($text) < 50) {
+            // Extrair texto simples que aparece entre operadores Tj e TJ
+            if (preg_match_all('/\(([^)]+)\)\s*Tj/s', $rawContent, $tjMatches)) {
+                $text .= implode("\n", $tjMatches[1]);
+            }
+        }
+
+        // Limpar caracteres não-ASCII e excesso de espaços
+        $text = preg_replace('/[^\x20-\x7E\xC0-\xFF\n]/', ' ', $text);
+        $text = preg_replace('/\s+/', ' ', $text);
+        $text = preg_replace('/\n\s*\n/', "\n", $text);
+        
+        return trim($text);
     }
 }
