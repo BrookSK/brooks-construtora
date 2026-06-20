@@ -14,31 +14,38 @@
         .supplier-compare:hover { border-color: #28a745; }
         .supplier-compare.selected { border-color: #28a745; background: #f0fff4; }
         .supplier-compare .supplier-total { font-size: 1.2rem; font-weight: 700; }
-        .supplier-item-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0; font-size: 0.8rem; gap: 0.5rem; }
+        .supplier-item-row { padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0; font-size: 0.78rem; }
         .supplier-item-row:last-child { border-bottom: none; }
-        .supplier-item-name { flex: 1; min-width: 0; word-break: break-word; }
-        .supplier-item-price { white-space: nowrap; text-align: right; flex-shrink: 0; }
-        #approvalMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 0.75rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .supplier-item-name { color: #333; line-height: 1.3; }
+        .supplier-item-price { font-weight: 600; color: #333; }
+        #approvalMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 0.75rem; }
         #approvalMap table th { font-size: 0.7rem; white-space: nowrap; vertical-align: middle; }
         #approvalMap table td { vertical-align: middle; font-size: 0.75rem; }
         .map-supplier-header { cursor: pointer; transition: background 0.2s; min-width: 110px; }
         .map-supplier-header:hover { background: #e8f5e9 !important; }
         .map-supplier-header.selected { background: #c8e6c9 !important; }
-        .financial-detail { border: 2px solid #e9ecef; border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; background: #f8f9fa; transition: border-color 0.2s, background 0.2s; }
+        .financial-detail { border: 2px solid #e9ecef; border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; background: #f8f9fa; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
         .financial-detail:hover { border-color: #28a745; }
-        .financial-detail .detail-label { font-size: 0.7rem; color: #6c757d; }
-        .financial-detail .detail-value { font-size: 0.8rem; }
+        @media (min-width: 769px) {
+            .supplier-item-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+            .supplier-item-name { flex: 1; min-width: 0; }
+            .supplier-item-price { white-space: nowrap; text-align: right; flex-shrink: 0; }
+        }
         @media (max-width: 768px) {
-            .main-card .card-body, .main-card .card-header { padding: 1rem; }
+            .main-card .card-body, .main-card .card-header { padding: 0.75rem; }
+            .page-header h4 { font-size: 1.1rem; }
             .supplier-compare { padding: 0.75rem; }
-            .supplier-compare .supplier-total { font-size: 1.1rem; }
-            .supplier-item-row { font-size: 0.75rem; }
+            .supplier-compare .supplier-total { font-size: 1rem; }
+            .supplier-item-row { font-size: 0.72rem; }
+            .supplier-item-price { display: block; text-align: right; margin-top: 2px; font-size: 0.72rem; }
             .btn-lg { font-size: 0.85rem; padding: 0.6rem 1rem; }
             input, select, textarea { font-size: 16px !important; }
-            #approvalMap { padding: 0.5rem; }
-            #approvalMap table th { font-size: 0.65rem; }
-            #approvalMap table td { font-size: 0.7rem; padding: 0.25rem 0.4rem; }
-            .map-supplier-header { min-width: 90px; }
+            #approvalMap { padding: 0.4rem; }
+            #approvalMap table th { font-size: 0.6rem; padding: 0.3rem; }
+            #approvalMap table td { font-size: 0.65rem; padding: 0.2rem 0.3rem; }
+            .map-supplier-header { min-width: 80px; }
+            .financial-detail { padding: 0.5rem; font-size: 0.72rem; }
+            .view-toggle-wrap .btn { font-size: 0.8rem; padding: 0.35rem 0.75rem; }
         }
     </style>
 </head>
@@ -92,8 +99,8 @@
 
                 <!-- Toggle de visualização (disponível em todas as telas) -->
                 <?php if (count($orderSuppliers) >= 2): ?>
-                <div class="mb-3" id="approvalViewToggle">
-                    <div class="btn-group btn-group-sm w-100 w-md-auto">
+                <div class="mb-3 view-toggle-wrap">
+                    <div class="btn-group btn-group-sm w-100">
                         <button type="button" class="btn btn-outline-secondary" id="btnApprovalList" onclick="setApprovalView('list')"><i class="bi bi-list"></i> Lista</button>
                         <button type="button" class="btn btn-outline-secondary active" id="btnApprovalMap" onclick="setApprovalView('map')"><i class="bi bi-table"></i> Mapa</button>
                     </div>
@@ -151,8 +158,8 @@
                 <!-- Visualização Mapa (colunas lado a lado) -->
                 <?php if (count($orderSuppliers) >= 2): ?>
                 <div id="approvalMap" class="mb-3">
-                    <p class="text-muted small mb-2">Clique no fornecedor para selecioná-lo.</p>
-                    <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                    <p class="text-muted small mb-2"><i class="bi bi-hand-index"></i> Toque no fornecedor para selecionar.</p>
+                    <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; margin: 0 -0.5rem; padding: 0 0.5rem;">
                     <table class="table table-sm table-bordered mb-0" style="min-width:500px;">
                         <thead>
                             <tr class="table-dark">

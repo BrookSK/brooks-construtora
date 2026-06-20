@@ -15,6 +15,8 @@
         .supplier-block h6 { color: #3a3b4e; }
         .history-hint { font-size: 0.7rem; color: #888; margin-top: 2px; display: block; }
         .history-hint strong { color: #28a745; }
+        .supplier-item-entry .item-info { flex: 1; min-width: 0; font-size: 0.8rem; }
+        .supplier-item-entry .item-price-input { width: 130px; flex-shrink: 0; }
         #quotationMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 0.75rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         #quotationMap table th { font-size: 0.75rem; white-space: nowrap; }
         #quotationMap table td { vertical-align: middle; font-size: 0.8rem; }
@@ -24,17 +26,26 @@
         #mapFinancials .accordion-button { font-size: 0.85rem; padding: 0.5rem 1rem; }
         .map-price-input { font-size: 0.8rem !important; padding: 4px 6px; }
         @media (max-width: 768px) {
-            .main-card .card-body, .main-card .card-header { padding: 1rem; }
-            .supplier-block { padding: 1rem; }
+            .main-card .card-body, .main-card .card-header { padding: 0.75rem; }
+            .page-header h4 { font-size: 1.1rem; }
+            .supplier-block { padding: 0.75rem; margin-bottom: 1rem; }
+            .supplier-block h6 { font-size: 0.9rem; }
+            .supplier-block .d-flex.justify-content-between { flex-direction: column; gap: 0.25rem; }
+            .supplier-block .d-flex.justify-content-between .flex-grow-1 { width: 100%; }
+            .supplier-block .d-flex.justify-content-between div[style*="min-width"] { min-width: 100% !important; margin-top: 4px; }
+            .supplier-item-entry .item-price-input { width: 100%; margin-top: 4px; }
+            .supplier-item-entry .item-info { font-size: 0.72rem; }
             input, select, textarea { font-size: 16px !important; }
-            #quotationMap { padding: 0.5rem; }
-            #quotationMap table th { font-size: 0.65rem; }
-            #quotationMap table td { font-size: 0.7rem; padding: 0.25rem 0.4rem; }
-            .map-price-input { font-size: 14px !important; padding: 3px 4px; min-width: 70px; }
-            #mapFinancials .accordion-button { font-size: 0.8rem; padding: 0.4rem 0.75rem; }
+            #quotationMap { padding: 0.4rem; margin: 0 -0.5rem; border-radius: 4px; }
+            #quotationMap table th { font-size: 0.6rem; padding: 0.25rem 0.3rem; }
+            #quotationMap table td { font-size: 0.65rem; padding: 0.2rem 0.3rem; }
+            .map-price-input { font-size: 14px !important; padding: 3px 4px; min-width: 65px; }
+            #mapFinancials .accordion-button { font-size: 0.78rem; padding: 0.4rem 0.6rem; }
             #mapFinancials .accordion-body { padding: 0.5rem !important; }
-            #mapFinancials .form-control-sm { font-size: 14px !important; }
-            .w-md-auto { width: 100% !important; }
+            #mapFinancials .form-control-sm { font-size: 14px !important; padding: 0.25rem 0.4rem; }
+            #mapFinancials .form-label { font-size: 0.65rem !important; }
+            .view-toggle-wrap .btn-group { width: 100%; }
+            .history-hint { font-size: 0.65rem; }
         }
     </style>
 </head>
@@ -152,8 +163,8 @@
                     <div id="suppliersContainer"></div>
 
                     <!-- Toggle de visualização -->
-                    <div class="d-none mb-3" id="viewToggle">
-                        <div class="btn-group btn-group-sm w-100 w-md-auto">
+                    <div class="d-none mb-3 view-toggle-wrap" id="viewToggle">
+                        <div class="btn-group btn-group-sm w-100">
                             <button type="button" class="btn btn-outline-secondary active" id="btnViewList" onclick="setView('list')"><i class="bi bi-list"></i> Lista</button>
                             <button type="button" class="btn btn-outline-secondary" id="btnViewMap" onclick="setView('map')"><i class="bi bi-table"></i> Mapa</button>
                         </div>
@@ -284,18 +295,20 @@
             }
             
             itemsHtml += `
-                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                    <div class="flex-grow-1">
-                        <span class="small">${item.material_name}</span>
-                        <span class="text-muted small">(x${item.quantity} ${item.unit || ''})</span>
-                        ${histHint}
-                    </div>
-                    <div style="min-width:120px;">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text">R$</span>
-                            <input type="text" inputmode="decimal" class="form-control price-input" 
-                                name="supplier_prices[${sid}][${item.id}]" placeholder="0,00" required
-                                data-qty="${item.quantity}" data-sid="${sid}">
+                <div class="supplier-item-entry py-2 border-bottom">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-1">
+                        <div class="item-info">
+                            <span class="small">${item.material_name}</span>
+                            <span class="text-muted small">(x${item.quantity} ${item.unit || ''})</span>
+                            ${histHint}
+                        </div>
+                        <div class="item-price-input">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">R$</span>
+                                <input type="text" inputmode="decimal" class="form-control price-input" 
+                                    name="supplier_prices[${sid}][${item.id}]" placeholder="0,00" required
+                                    data-qty="${item.quantity}" data-sid="${sid}">
+                            </div>
                         </div>
                     </div>
                 </div>`;
