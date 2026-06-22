@@ -181,7 +181,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
             <div class="card-header"><i class="bi bi-building"></i> Fornecedores Cotados</div>
             <div class="card-body p-0">
                 <?php foreach ($orderSuppliers as $os): ?>
-                <div class="p-3 <?= $os['approved'] ? 'bg-success bg-opacity-10' : '' ?> <?= !$loop ?? '' ?>border-bottom">
+                <div class="p-3 <?= $os['approved'] ? 'bg-success bg-opacity-10' : '' ?> border-bottom">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div>
                             <strong><?= htmlspecialchars($os['supplier_name']) ?></strong>
