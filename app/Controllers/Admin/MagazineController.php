@@ -212,6 +212,33 @@ class MagazineController extends Controller
             "SELECT * FROM generation_jobs WHERE status IN ('pending', 'processing') ORDER BY created_at DESC LIMIT 1"
         );
 
+        // Detectar job travado: se está em processing há mais de 15 minutos desde o início, marca como falho
+        if ($job) {
+            $startedAt = $job['started_at'] ?? $job['created_at'];
+            $elapsed = time() - strtotime($startedAt);
+            $maxDuration = 15 * 60; // 15 minutos
+
+            if ($elapsed > $maxDuration) {
+                Database::update('generation_jobs', [
+                    'status' => 'failed',
+                    'error_message' => 'Processo encerrado por timeout (mais de 10 minutos sem resposta). Tente gerar novamente.',
+                    'completed_at' => date('Y-m-d H:i:s'),
+                ], 'id = ?', [$job['id']]);
+
+                // Trata como job recente falho
+                $this->json([
+                    'active' => false,
+                    'recent' => true,
+                    'job_id' => (int) $job['id'],
+                    'magazine_id' => $job['magazine_id'] ? (int) $job['magazine_id'] : null,
+                    'status' => 'failed',
+                    'current_step_label' => $job['current_step_label'],
+                    'error_message' => 'Processo encerrado por timeout. Tente gerar novamente.',
+                ]);
+                return;
+            }
+        }
+
         if (!$job) {
             // Retorna o último job completado nos últimos 30 segundos (para o frontend perceber a conclusão)
             $recent = Database::fetch(
