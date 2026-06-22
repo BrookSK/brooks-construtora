@@ -1518,7 +1518,7 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        $validPhases = ['quote_requested', 'approval_requested', 'order_approved', 'order_rejected', 'delivery_ready', 'spare_item'];
+        $validPhases = ['quote_requested', 'approval_requested', 'order_approved', 'order_rejected', 'payment_uploaded', 'delivery_ready', 'spare_item'];
 
         if (!in_array($phase, $validPhases)) {
             $this->json(['error' => 'Fase inválida.'], 400);
@@ -1547,12 +1547,52 @@ class PurchaseOrderController extends Controller
                     $body = EmailTemplate::purchaseOrderRejected($order, $order['rejected_by_name'] ?? 'N/A', $order['approval_notes'] ?? '');
                     NotificationService::queueEmails($emails, $subject, $body, $orderId, 'order_rejected');
                 }
+                $webhookUrl = Setting::get('orders_completed_webhook', '');
+                if (!empty($webhookUrl)) {
+                    $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
+                    $supplierNames = !empty($orderSuppliers) ? array_column($orderSuppliers, 'supplier_name') : [];
+                    $supplierDisplay = !empty($supplierNames) ? implode(', ', $supplierNames) : ($order['supplier_name'] ?? 'N/A');
+                    $message = "*PEDIDO REJEITADO*\n\n*Pedido:* {$order['code']}\n*Fornecedores cotados:* {$supplierDisplay}\n*Rejeitado por:* " . ($order['rejected_by_name'] ?? 'N/A') . "\n*Motivo:* " . ($order['approval_notes'] ?? '-');
+                    $this->sendWebhook($webhookUrl, [
+                        'event' => 'order_rejected', 'order_code' => $order['code'],
+                        'suppliers' => $supplierNames, 'rejected_by' => $order['rejected_by_name'] ?? '',
+                        'reason' => $order['approval_notes'] ?? '',
+                        'phone' => Setting::get('orders_completed_phone', ''),
+                        'phone_name' => Setting::get('orders_completed_phone_name', ''),
+                        'message' => $message,
+                    ], $orderId);
+                }
+                break;
+
+            case 'payment_uploaded':
+                // Reenviar notificação de NF/Boleto — reenvia a última ou todas
+                $payments = PurchaseOrderPayment::getByOrder($orderId);
+                if (!empty($payments)) {
+                    $lastPayment = $payments[0]; // Mais recente
+                    $this->sendPaymentNotifications($orderId, $lastPayment['type'], [
+                        'number' => $lastPayment['number'] ?? '',
+                        'amount' => $lastPayment['amount'] ?? 0,
+                        'due_date' => $lastPayment['due_date'] ?? '',
+                    ]);
+                } else {
+                    // Sem pagamentos registrados, envia notificação genérica
+                    $emails = Setting::get('orders_payment_emails', '');
+                    if (!empty($emails)) {
+                        $subject = "Pedido Aprovado (NF pendente) - {$order['code']}";
+                        $body = EmailTemplate::purchaseOrderCompleted($order, PurchaseOrderItem::getByOrder($orderId), $this->getBaseUrl() . '/pedido/pdf/' . $orderId);
+                        NotificationService::queueEmails($emails, $subject, $body, $orderId, 'payment_uploaded');
+                    }
+                }
                 break;
 
             case 'delivery_ready':
                 if (!empty($order['delivery_token'])) {
                     $this->sendDeliveryNotifications($orderId, $order['delivery_token']);
                 }
+                break;
+
+            case 'spare_item':
+                // Não faz sentido reenviar sobressalente sem item específico
                 break;
         }
 

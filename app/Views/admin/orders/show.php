@@ -606,6 +606,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <?php endif; ?>
                         <?php if ($order['status'] === 'approved'): ?>
                         <button class="btn btn-sm btn-outline-success" onclick="resendPhase(<?= $order['id'] ?>, 'order_approved')"><i class="bi bi-arrow-repeat"></i> Conclusão</button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="resendPhase(<?= $order['id'] ?>, 'payment_uploaded')"><i class="bi bi-arrow-repeat"></i> NF/Pagamento</button>
                         <?php endif; ?>
                         <?php if ($order['status'] === 'rejected'): ?>
                         <button class="btn btn-sm btn-outline-danger" onclick="resendPhase(<?= $order['id'] ?>, 'order_rejected')"><i class="bi bi-arrow-repeat"></i> Rejeição</button>
@@ -868,7 +869,7 @@ function resendSingle(id) {
 }
 
 function resendPhase(orderId, phase) {
-    const labels = {quote_requested:'Cotação',approval_requested:'Aprovação',order_approved:'Conclusão',order_rejected:'Rejeição',delivery_ready:'Entrega'};
+    const labels = {quote_requested:'Cotação',approval_requested:'Aprovação',order_approved:'Conclusão',order_rejected:'Rejeição',payment_uploaded:'NF/Pagamento',delivery_ready:'Entrega'};
     if (!confirm('Reenviar todas as notificações de "' + (labels[phase] || phase) + '" para este pedido?')) return;
     fetch('/admin/orders/resend-all-phase', {
         method: 'POST',
