@@ -1138,6 +1138,10 @@ class PurchaseOrderController extends Controller
                 PurchaseOrderDelivery::updateById($id, ['status' => 'replacement_delivered', 'replacement_delivered_at' => $now]);
                 $description = "Troca entregue - conferido por {$performedBy}";
                 break;
+            case 'reset':
+                PurchaseOrderDelivery::updateById($id, ['status' => 'pending', 'delivered_at' => null, 'checked_by' => null, 'divergence_notes' => null]);
+                $description = "Desfeito/resetado por {$performedBy}";
+                break;
             default:
                 $this->json(['error' => 'Ação inválida'], 400);
                 return;
