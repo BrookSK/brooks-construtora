@@ -24,7 +24,16 @@
                         O pedido <strong><?= htmlspecialchars($order['code']) ?></strong> foi aprovado com sucesso.
                     </p>
 
-                    <?php if ($approvedSupplier): ?>
+                    <?php if (!empty($approvedSuppliers) && count($approvedSuppliers) > 1): ?>
+                    <div class="bg-light rounded p-3 mb-3 text-start">
+                        <small class="text-muted d-block mb-1">Fornecedores Aprovados</small>
+                        <?php foreach ($approvedSuppliers as $as): ?>
+                        <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                            <strong><?= htmlspecialchars($as['supplier_name']) ?></strong>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php elseif ($approvedSupplier): ?>
                     <div class="bg-light rounded p-3 mb-3 text-start">
                         <small class="text-muted d-block mb-1">Fornecedor Aprovado</small>
                         <strong><?= htmlspecialchars($approvedSupplier['supplier_name']) ?></strong>

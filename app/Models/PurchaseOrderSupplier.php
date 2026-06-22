@@ -27,6 +27,18 @@ class PurchaseOrderSupplier extends Model
             "SELECT pos.*, s.name as supplier_name, s.cnpj, s.email, s.phone
              FROM purchase_order_suppliers pos
              JOIN suppliers s ON pos.supplier_id = s.id
+             WHERE pos.order_id = ? AND pos.approved = 1
+             LIMIT 1",
+            [$orderId]
+        );
+    }
+
+    public static function getAllApproved(int $orderId): array
+    {
+        return Database::fetchAll(
+            "SELECT pos.*, s.name as supplier_name, s.cnpj, s.email, s.phone
+             FROM purchase_order_suppliers pos
+             JOIN suppliers s ON pos.supplier_id = s.id
              WHERE pos.order_id = ? AND pos.approved = 1",
             [$orderId]
         );

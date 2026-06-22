@@ -3,10 +3,11 @@
 namespace App\Services;
 
 use App\Models\NotificationQueue;
-use App\Models\Setting;
 
 class NotificationService
 {
+    private static bool $flushScheduled = false;
+
     /**
      * Enfileirar e-mail para múltiplos destinatários
      */
@@ -20,6 +21,8 @@ class NotificationService
                 NotificationQueue::queueEmail($email, $subject, $body);
             }
         }
+
+        self::scheduleFlush();
     }
 
     /**
@@ -39,15 +42,28 @@ class NotificationService
             $payload['phone'] = $phone;
             NotificationQueue::queueWebhook($url, $payload);
         }
+
+        self::scheduleFlush();
     }
 
     /**
-     * Tentar processar imediatamente (para não depender 100% do cron)
-     * Se falhar, fica na fila para o cron pegar depois
+     * Agenda o processamento imediato para o final do request (uma só vez)
+     */
+    private static function scheduleFlush(): void
+    {
+        if (!self::$flushScheduled) {
+            self::$flushScheduled = true;
+            register_shutdown_function([self::class, 'processImmediate']);
+        }
+    }
+
+    /**
+     * Processar fila imediatamente (chamado automaticamente no shutdown do request)
+     * Processa todas as pendentes para garantir envio rápido
      */
     public static function processImmediate(): void
     {
-        $pending = NotificationQueue::getPending(5);
+        $pending = NotificationQueue::getPending(50);
         if (empty($pending)) return;
 
         $mailService = null;

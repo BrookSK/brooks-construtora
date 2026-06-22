@@ -10,46 +10,49 @@
         body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
         .page-header { background: #3a3b4e; color: #fff; padding: 1rem 0; }
         .main-card { border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        .supplier-compare { border: 2px solid #dee2e6; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s; }
-        .supplier-compare:hover { border-color: #28a745; }
-        .supplier-compare.selected { border-color: #28a745; background: #f0fff4; }
-        .supplier-compare .supplier-total { font-size: 1.2rem; font-weight: 700; }
-        .supplier-item-row { padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0; font-size: 0.78rem; }
-        .supplier-item-row:last-child { border-bottom: none; }
-        .supplier-item-name { color: #333; line-height: 1.3; }
-        .supplier-item-price { font-weight: 600; color: #333; }
+        .item-card { border: 1px solid #dee2e6; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; }
+        .item-card .item-title { font-weight: 600; font-size: 0.85rem; color: #333; }
+        .item-card .item-qty { font-size: 0.75rem; color: #6c757d; }
+        .supplier-option { border: 2px solid #e9ecef; border-radius: 6px; padding: 0.5rem 0.75rem;
+            margin-bottom: 0.4rem; cursor: pointer; transition: all 0.2s; display: flex;
+            align-items: center; justify-content: space-between; gap: 0.5rem; }
+        .supplier-option:hover { border-color: #28a745; background: #f8fff8; }
+        .supplier-option.selected { border-color: #28a745; background: #f0fff4; }
+        .supplier-option .supplier-name { font-size: 0.78rem; font-weight: 500; }
+        .supplier-option .supplier-price { font-size: 0.8rem; font-weight: 700; color: #28a745; white-space: nowrap; }
         #approvalMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 0.75rem; }
         #approvalMap table th { font-size: 0.7rem; white-space: nowrap; vertical-align: middle; }
         #approvalMap table td { vertical-align: middle; font-size: 0.75rem; }
-        .map-supplier-header { cursor: pointer; transition: background 0.2s; min-width: 110px; }
-        .map-supplier-header:hover { background: #e8f5e9 !important; }
-        .map-supplier-header.selected { background: #c8e6c9 !important; }
-        .financial-detail { border: 2px solid #e9ecef; border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; background: #f8f9fa; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
-        .financial-detail:hover { border-color: #28a745; }
+        .map-cell-selectable { cursor: pointer; transition: background 0.2s; }
+        .map-cell-selectable:hover { background: #e8f5e9 !important; }
+        .map-cell-selectable.selected { background: #c8e6c9 !important; }
+        .map-supplier-header { min-width: 110px; }
+        .total-display { background: #e8f5e9; border: 1px solid #c3e6cb; border-radius: 8px; padding: 0.75rem;
+            text-align: center; margin-top: 1rem; }
+        .total-display .total-value { font-size: 1.3rem; font-weight: 700; color: #28a745; }
+        .total-display .total-label { font-size: 0.75rem; color: #6c757d; }
+        .btn-select-all { font-size: 0.7rem; padding: 0.2rem 0.5rem; }
         @media (min-width: 769px) {
-            .supplier-item-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
-            .supplier-item-name { flex: 1; min-width: 0; }
-            .supplier-item-price { white-space: nowrap; text-align: right; flex-shrink: 0; }
+            .item-card { display: flex; align-items: stretch; gap: 0.75rem; }
+            .item-card .item-info { min-width: 180px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; }
+            .item-card .supplier-options { flex: 1; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+            .item-card .supplier-options .supplier-option { flex: 1; min-width: 140px; margin-bottom: 0; }
         }
         @media (max-width: 768px) {
             .main-card .card-body, .main-card .card-header { padding: 0.75rem; }
             .page-header h4 { font-size: 1.1rem; }
-            .supplier-compare { padding: 0.75rem; }
-            .supplier-compare .supplier-total { font-size: 1rem; }
-            .supplier-item-row { font-size: 0.72rem; }
-            .supplier-item-price { display: block; text-align: right; margin-top: 2px; font-size: 0.72rem; }
             .btn-lg { font-size: 0.85rem; padding: 0.6rem 1rem; }
             input, select, textarea { font-size: 16px !important; }
             #approvalMap { padding: 0.5rem; }
             #approvalMap table { border-collapse: separate; border-spacing: 0; }
-            #approvalMap table th { font-size: 0.65rem; padding: 0.4rem 0.35rem; line-height: 1.3; }
-            #approvalMap table td { font-size: 0.7rem; padding: 0.4rem 0.35rem; line-height: 1.3; }
-            #approvalMap table td[style*="sticky"] { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
-            .map-supplier-header { min-width: 90px; padding: 0.4rem 0.3rem !important; }
-            .map-supplier-header small { font-size: 0.65rem; }
-            .financial-detail { padding: 0.6rem; font-size: 0.75rem; margin-bottom: 0.6rem; }
-            .financial-detail .badge { font-size: 0.7rem; }
+            #approvalMap table th { font-size: 0.6rem; padding: 0.35rem 0.3rem; line-height: 1.3; }
+            #approvalMap table td { font-size: 0.68rem; padding: 0.35rem 0.3rem; line-height: 1.3; }
+            .map-supplier-header { min-width: 85px; padding: 0.35rem 0.25rem !important; }
             .view-toggle-wrap .btn { font-size: 0.8rem; padding: 0.35rem 0.75rem; }
+            .item-card { padding: 0.6rem; }
+            .supplier-option { padding: 0.4rem 0.6rem; }
+            .supplier-option .supplier-name { font-size: 0.72rem; }
+            .supplier-option .supplier-price { font-size: 0.75rem; }
         }
     </style>
 </head>
@@ -88,91 +91,83 @@
                 <?php if (!empty($order['quote_notes'])): ?>
                 <div class="alert alert-warning small mb-2"><strong>Obs cotação:</strong> <?= nl2br(htmlspecialchars($order['quote_notes'])) ?></div>
                 <?php endif; ?>
-
                 <?php if (!empty($orderSuppliers)): ?>
-                <!-- Multi-fornecedor: Comparação -->
-                <h6 class="mb-2"><i class="bi bi-building"></i> Fornecedores Cotados — Selecione o aprovado</h6>
-
                 <?php
-                // Agrupar preços por fornecedor
+                // Agrupar preços por fornecedor e por item
                 $pricesBySupplier = [];
+                $pricesByItem = [];
                 foreach ($itemPrices as $p) {
                     $pricesBySupplier[$p['supplier_id']][$p['item_id']] = $p;
+                    $pricesByItem[$p['item_id']][$p['supplier_id']] = $p;
                 }
                 ?>
 
-                <!-- Toggle de visualização (disponível em todas as telas) -->
+                <!-- Título e botões de seleção rápida -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+                    <h6 class="mb-0"><i class="bi bi-cart-check"></i> Selecione o fornecedor por item</h6>
+                    <?php if (count($orderSuppliers) >= 2): ?>
+                    <div class="d-flex gap-1 flex-wrap">
+                        <?php foreach ($orderSuppliers as $os): ?>
+                        <button type="button" class="btn btn-outline-success btn-select-all" onclick="selectAllFromSupplier(<?= $os['supplier_id'] ?>)">
+                            Todos de <?= htmlspecialchars($os['supplier_name']) ?>
+                        </button>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <p class="text-muted small mb-3"><i class="bi bi-info-circle"></i> Você pode escolher fornecedores diferentes para cada material.</p>
+                <!-- Toggle de visualização -->
                 <?php if (count($orderSuppliers) >= 2): ?>
                 <div class="mb-3 view-toggle-wrap">
                     <div class="btn-group btn-group-sm w-100">
                         <button type="button" class="btn btn-outline-secondary" id="btnApprovalList" onclick="setApprovalView('list')"><i class="bi bi-list"></i> Lista</button>
-                        <button type="button" class="btn btn-outline-secondary active" id="btnApprovalMap" onclick="setApprovalView('map')"><i class="bi bi-table"></i> Mapa</button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnApprovalMap" onclick="setApprovalView('map')"><i class="bi bi-table"></i> Mapa</button>
                     </div>
                 </div>
                 <?php endif; ?>
 
-                <!-- Visualização Lista -->
+                <!-- VISUALIZAÇÃO LISTA (por item) -->
                 <div id="approvalListView" style="display:none;">
-                <?php foreach ($orderSuppliers as $os): ?>
-                <div class="supplier-compare" onclick="selectSupplier(<?= $os['supplier_id'] ?>)" id="supplier-card-<?= $os['supplier_id'] ?>">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="d-flex align-items-center">
-                            <input type="radio" name="approved_supplier_id" value="<?= $os['supplier_id'] ?>" id="radio-<?= $os['supplier_id'] ?>" form="approvalForm" class="form-check-input me-2 flex-shrink-0">
-                            <label for="radio-<?= $os['supplier_id'] ?>" class="fw-bold mb-0"><?= htmlspecialchars($os['supplier_name']) ?></label>
-                        </div>
-                        <span class="supplier-total text-success"><?= 'R$ ' . number_format($os['total'] ?? 0, 2, ',', '.') ?></span>
+                <?php foreach ($items as $item): ?>
+                <div class="item-card" id="item-card-<?= $item['id'] ?>">
+                    <div class="item-info">
+                        <div class="item-title"><?= htmlspecialchars($item['material_name']) ?></div>
+                        <div class="item-qty">Qtd: <?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?><?= $item['unit'] ? ' ' . $item['unit'] : '' ?></div>
                     </div>
-
-                    <!-- Info do vendedor/financeiro -->
-                    <?php if (!empty($os['vendor_name']) || !empty($os['delivery_days']) || (!empty($os['discount_value']) && $os['discount_value'] > 0)): ?>
-                    <div class="d-flex flex-wrap gap-2 mb-2" style="font-size:0.7rem; color:#6c757d;">
-                        <?php if (!empty($os['vendor_name'])): ?>
-                        <span><i class="bi bi-person"></i> <?= htmlspecialchars($os['vendor_name']) ?></span>
-                        <?php endif; ?>
-                        <?php if (!empty($os['delivery_days'])): ?>
-                        <span><i class="bi bi-truck"></i> <?= $os['delivery_days'] ?>d</span>
-                        <?php endif; ?>
-                        <?php if (!empty($os['discount_value']) && $os['discount_value'] > 0): ?>
-                        <span><i class="bi bi-arrow-down"></i> Desc: <?= $os['discount_value'] ?><?= $os['discount_type'] === 'percent' ? '%' : ' R$' ?></span>
-                        <?php endif; ?>
-                        <?php if (!empty($os['freight']) && $os['freight'] > 0): ?>
-                        <span><i class="bi bi-box-seam"></i> Frete: R$ <?= number_format($os['freight'], 2, ',', '.') ?></span>
-                        <?php endif; ?>
-                    </div>
-                    <?php endif; ?>
-                    
-                    <!-- Detalhes dos itens deste fornecedor -->
-                    <div>
-                        <?php if (isset($pricesBySupplier[$os['supplier_id']])): ?>
-                        <?php foreach ($items as $item): ?>
-                            <?php $p = $pricesBySupplier[$os['supplier_id']][$item['id']] ?? null; ?>
-                            <?php if ($p): ?>
-                            <div class="supplier-item-row">
-                                <span class="supplier-item-name"><?= htmlspecialchars($item['material_name']) ?> (x<?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?>)</span>
-                                <span class="supplier-item-price">R$ <?= number_format($p['unit_price'], 2, ',', '.') ?> = <strong>R$ <?= number_format($p['total_price'], 2, ',', '.') ?></strong></span>
+                    <div class="supplier-options">
+                        <?php foreach ($orderSuppliers as $os): ?>
+                        <?php $p = $pricesByItem[$item['id']][$os['supplier_id']] ?? null; ?>
+                        <?php if ($p): ?>
+                        <div class="supplier-option" id="opt-<?= $item['id'] ?>-<?= $os['supplier_id'] ?>"
+                             onclick="selectItemSupplier(<?= $item['id'] ?>, <?= $os['supplier_id'] ?>)">
+                            <div>
+                                <div class="supplier-name"><?= htmlspecialchars($os['supplier_name']) ?></div>
+                                <div style="font-size:0.68rem; color:#888;">R$ <?= number_format($p['unit_price'], 2, ',', '.') ?>/un</div>
                             </div>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
+                            <div class="supplier-price">R$ <?= number_format($p['total_price'], 2, ',', '.') ?></div>
+                        </div>
                         <?php endif; ?>
+                        <?php endforeach; ?>
                     </div>
                 </div>
                 <?php endforeach; ?>
                 </div>
-
-                <!-- Visualização Mapa (colunas lado a lado) -->
+                <!-- VISUALIZAÇÃO MAPA (tabela comparativa com seleção por célula) -->
                 <?php if (count($orderSuppliers) >= 2): ?>
                 <div id="approvalMap" class="mb-3" style="display:none;">
-                    <p class="text-muted small mb-2"><i class="bi bi-hand-index"></i> Toque no fornecedor para selecionar.</p>
+                    <p class="text-muted small mb-2"><i class="bi bi-hand-index"></i> Toque no preço de cada item para selecionar o fornecedor daquele material.</p>
                     <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; margin: 0 -0.5rem; padding: 0 0.5rem;">
                     <table class="table table-sm table-bordered mb-0" style="min-width:500px;">
                         <thead>
                             <tr class="table-dark">
-                                <th style="min-width:160px; position:sticky; left:0; background:#212529; z-index:1;">Material</th>
+                                <th style="min-width:140px; position:sticky; left:0; background:#212529; z-index:1;">Material</th>
                                 <th class="text-center" style="width:45px;">Qtd</th>
                                 <?php foreach ($orderSuppliers as $os): ?>
-                                <th class="text-center map-supplier-header" onclick="selectSupplier(<?= $os['supplier_id'] ?>)" id="map-header-<?= $os['supplier_id'] ?>">
+                                <th class="text-center map-supplier-header">
                                     <?= htmlspecialchars($os['supplier_name']) ?>
                                     <br><small class="text-success fw-bold"><?= 'R$ ' . number_format($os['total'] ?? 0, 2, ',', '.') ?></small>
+                                    <br><button type="button" class="btn btn-outline-light btn-select-all" style="font-size:0.6rem; padding:0.1rem 0.3rem; margin-top:2px;" onclick="selectAllFromSupplier(<?= $os['supplier_id'] ?>)">Selecionar todos</button>
                                 </th>
                                 <?php endforeach; ?>
                             </tr>
@@ -181,12 +176,14 @@
                             <?php foreach ($items as $item): ?>
                             <tr>
                                 <td style="position:sticky; left:0; background:#fff; z-index:1;">
-                                    <strong style="font-size:0.75rem;"><?= htmlspecialchars($item['material_name']) ?></strong>
+                                    <strong style="font-size:0.72rem;"><?= htmlspecialchars($item['material_name']) ?></strong>
                                 </td>
                                 <td class="text-center"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
                                 <?php foreach ($orderSuppliers as $os): ?>
                                 <?php $p = $pricesBySupplier[$os['supplier_id']][$item['id']] ?? null; ?>
-                                <td class="text-center">
+                                <td class="text-center <?= $p ? 'map-cell-selectable' : '' ?>"
+                                    id="map-cell-<?= $item['id'] ?>-<?= $os['supplier_id'] ?>"
+                                    <?= $p ? 'onclick="selectItemSupplier(' . $item['id'] . ', ' . $os['supplier_id'] . ')"' : '' ?>>
                                     <?php if ($p): ?>
                                     R$ <?= number_format($p['unit_price'], 2, ',', '.') ?>
                                     <br><small class="fw-bold text-dark">= R$ <?= number_format($p['total_price'], 2, ',', '.') ?></small>
@@ -198,67 +195,16 @@
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
-                        <tfoot>
-                            <tr class="table-success fw-bold">
-                                <td style="position:sticky; left:0; background:#d1e7dd; z-index:1;">TOTAL</td>
-                                <td></td>
-                                <?php foreach ($orderSuppliers as $os): ?>
-                                <td class="text-center">R$ <?= number_format($os['total'] ?? 0, 2, ',', '.') ?></td>
-                                <?php endforeach; ?>
-                            </tr>
-                        </tfoot>
                     </table>
-                    </div>
-
-                    <!-- Detalhes financeiros por fornecedor (com seleção) -->
-                    <div class="mt-3">
-                        <p class="text-muted small mb-2"><i class="bi bi-hand-index"></i> Selecione o fornecedor aprovado:</p>
-                        <?php foreach ($orderSuppliers as $os): ?>
-                        <div class="financial-detail" onclick="selectSupplier(<?= $os['supplier_id'] ?>)" id="map-card-<?= $os['supplier_id'] ?>" style="cursor:pointer; transition: border-color 0.2s, background 0.2s;">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <div class="d-flex align-items-center">
-                                    <input type="radio" name="approved_supplier_id_map" value="<?= $os['supplier_id'] ?>" id="radio-map-<?= $os['supplier_id'] ?>" class="form-check-input me-2 flex-shrink-0" onchange="selectSupplier(<?= $os['supplier_id'] ?>)">
-                                    <strong class="small"><i class="bi bi-building"></i> <?= htmlspecialchars($os['supplier_name']) ?></strong>
-                                </div>
-                                <span class="badge bg-success">R$ <?= number_format($os['total'] ?? 0, 2, ',', '.') ?></span>
-                            </div>
-                            <div class="d-flex flex-wrap gap-2" style="font-size:0.75rem; color:#6c757d;">
-                                <?php if (!empty($os['vendor_name'])): ?>
-                                <span><i class="bi bi-person"></i> <?= htmlspecialchars($os['vendor_name']) ?></span>
-                                <?php endif; ?>
-                                <?php if (!empty($os['vendor_phone'])): ?>
-                                <span><i class="bi bi-telephone"></i> <?= htmlspecialchars($os['vendor_phone']) ?></span>
-                                <?php endif; ?>
-                                <?php if (!empty($os['vendor_email'])): ?>
-                                <span><i class="bi bi-envelope"></i> <?= htmlspecialchars($os['vendor_email']) ?></span>
-                                <?php endif; ?>
-                                <?php if (!empty($os['delivery_days'])): ?>
-                                <span><i class="bi bi-truck"></i> <?= $os['delivery_days'] ?> dias</span>
-                                <?php endif; ?>
-                                <?php if (!empty($os['discount_value']) && $os['discount_value'] > 0): ?>
-                                <span><i class="bi bi-arrow-down-circle"></i> Desc: <?= $os['discount_value'] ?><?= ($os['discount_type'] ?? 'percent') === 'percent' ? '%' : ' R$' ?></span>
-                                <?php endif; ?>
-                                <?php if (!empty($os['surcharge_value']) && $os['surcharge_value'] > 0): ?>
-                                <span><i class="bi bi-arrow-up-circle"></i> Acrésc: <?= $os['surcharge_value'] ?><?= ($os['surcharge_type'] ?? 'percent') === 'percent' ? '%' : ' R$' ?></span>
-                                <?php endif; ?>
-                                <?php if (!empty($os['ipi_percent']) && $os['ipi_percent'] > 0): ?>
-                                <span>IPI: <?= $os['ipi_percent'] ?>%</span>
-                                <?php endif; ?>
-                                <?php if (!empty($os['icms_percent']) && $os['icms_percent'] > 0): ?>
-                                <span>ICMS: <?= $os['icms_percent'] ?>%</span>
-                                <?php endif; ?>
-                                <?php if (!empty($os['freight']) && $os['freight'] > 0): ?>
-                                <span><i class="bi bi-box-seam"></i> Frete: R$ <?= number_format($os['freight'], 2, ',', '.') ?></span>
-                                <?php endif; ?>
-                                <?php if (empty($os['vendor_name']) && empty($os['delivery_days']) && (empty($os['discount_value']) || $os['discount_value'] == 0) && (empty($os['freight']) || $os['freight'] == 0)): ?>
-                                <span class="text-muted fst-italic">Sem dados adicionais</span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
                     </div>
                 </div>
                 <?php endif; ?>
+                <!-- Total calculado dinamicamente -->
+                <div class="total-display" id="totalDisplay">
+                    <div class="total-label">Total Aprovado</div>
+                    <div class="total-value" id="totalValue">R$ 0,00</div>
+                    <div class="small text-muted mt-1" id="totalDetail"></div>
+                </div>
 
                 <?php else: ?>
                 <!-- Sem fornecedores: exibe tabela de itens com preços -->
@@ -292,9 +238,11 @@
                 <?php endif; ?>
 
                 <hr>
-
                 <!-- Formulário de decisão -->
                 <form method="POST" action="/pedido/aprovacao/enviar/<?= $token ?>" id="approvalForm">
+                    <!-- Inputs ocultos para seleção por item (preenchidos via JS) -->
+                    <div id="hiddenInputs"></div>
+
                     <h6 class="mb-3"><i class="bi bi-person-check"></i> Sua Decisão</h6>
                     
                     <div class="row mb-3">
@@ -324,55 +272,106 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    function selectSupplier(sid) {
-        // Highlight list view
-        document.querySelectorAll('.supplier-compare').forEach(el => el.classList.remove('selected'));
-        const card = document.getElementById('supplier-card-' + sid);
-        if (card) card.classList.add('selected');
-        
-        // Check radio (list)
-        const radio = document.getElementById('radio-' + sid);
-        if (radio) radio.checked = true;
+    // Dados dos preços por item/fornecedor (para cálculo de total)
+    const priceData = <?= json_encode($pricesByItem ?? []) ?>;
+    const supplierNames = <?= json_encode(array_column($orderSuppliers ?? [], 'supplier_name', 'supplier_id')) ?>;
+    const itemIds = <?= json_encode(array_column($items ?? [], 'id')) ?>;
 
-        // Check radio (map cards)
-        const radioMap = document.getElementById('radio-map-' + sid);
-        if (radioMap) radioMap.checked = true;
+    // Estado: qual fornecedor está selecionado para cada item
+    const selections = {};
 
-        // Highlight map headers
-        document.querySelectorAll('.map-supplier-header').forEach(el => el.classList.remove('selected'));
-        const mapHeader = document.getElementById('map-header-' + sid);
-        if (mapHeader) mapHeader.classList.add('selected');
+    function selectItemSupplier(itemId, supplierId) {
+        selections[itemId] = supplierId;
 
-        // Highlight map financial cards
-        document.querySelectorAll('.financial-detail').forEach(el => {
-            el.style.borderColor = '#e9ecef';
-            el.style.background = '#f8f9fa';
+        // Highlight na lista
+        document.querySelectorAll('[id^="opt-' + itemId + '-"]').forEach(el => el.classList.remove('selected'));
+        const opt = document.getElementById('opt-' + itemId + '-' + supplierId);
+        if (opt) opt.classList.add('selected');
+
+        // Highlight no mapa
+        document.querySelectorAll('[id^="map-cell-' + itemId + '-"]').forEach(el => el.classList.remove('selected'));
+        const cell = document.getElementById('map-cell-' + itemId + '-' + supplierId);
+        if (cell) cell.classList.add('selected');
+
+        // Highlight no card do item (borda verde se selecionado)
+        const itemCard = document.getElementById('item-card-' + itemId);
+        if (itemCard) {
+            itemCard.style.borderColor = '#28a745';
+        }
+
+        updateTotal();
+        updateHiddenInputs();
+    }
+
+    function selectAllFromSupplier(supplierId) {
+        itemIds.forEach(function(itemId) {
+            if (priceData[itemId] && priceData[itemId][supplierId]) {
+                selectItemSupplier(itemId, supplierId);
+            }
         });
-        const mapCard = document.getElementById('map-card-' + sid);
-        if (mapCard) {
-            mapCard.style.borderColor = '#28a745';
-            mapCard.style.background = '#f0fff4';
+    }
+    function updateTotal() {
+        let total = 0;
+        let count = 0;
+        const supplierTotals = {};
+
+        for (const itemId in selections) {
+            const sid = selections[itemId];
+            if (priceData[itemId] && priceData[itemId][sid]) {
+                const price = parseFloat(priceData[itemId][sid]['total_price']) || 0;
+                total += price;
+                count++;
+                if (!supplierTotals[sid]) supplierTotals[sid] = 0;
+                supplierTotals[sid] += price;
+            }
+        }
+
+        const totalEl = document.getElementById('totalValue');
+        const detailEl = document.getElementById('totalDetail');
+
+        if (count === 0) {
+            totalEl.textContent = 'R$ 0,00';
+            detailEl.textContent = 'Selecione os fornecedores para cada item';
+        } else {
+            totalEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            // Detalhe por fornecedor
+            const details = [];
+            for (const sid in supplierTotals) {
+                const name = supplierNames[sid] || 'Fornecedor';
+                const val = supplierTotals[sid].toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                details.push(name + ': R$ ' + val);
+            }
+            detailEl.textContent = details.join(' | ') + ' (' + count + '/' + itemIds.length + ' itens)';
         }
     }
 
+    function updateHiddenInputs() {
+        const container = document.getElementById('hiddenInputs');
+        container.innerHTML = '';
+        for (const itemId in selections) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'item_suppliers[' + itemId + ']';
+            input.value = selections[itemId];
+            container.appendChild(input);
+        }
+    }
     function confirmApproval() {
-        const hasSuppliers = document.querySelectorAll('.supplier-compare').length > 0;
-        if (hasSuppliers) {
-            const selected = document.querySelector('input[name="approved_supplier_id"]:checked') || document.querySelector('input[name="approved_supplier_id_map"]:checked');
-            if (!selected) {
-                alert('Selecione qual fornecedor está aprovando.');
+        const totalItems = itemIds.length;
+        const selectedCount = Object.keys(selections).length;
+
+        if (totalItems > 0 && selectedCount === 0) {
+            alert('Selecione o fornecedor para pelo menos um item.');
+            return false;
+        }
+
+        if (selectedCount < totalItems) {
+            if (!confirm('Atenção: ' + (totalItems - selectedCount) + ' item(ns) ainda não têm fornecedor selecionado. Deseja aprovar apenas os itens selecionados?')) {
                 return false;
             }
-            // Garantir que o radio do form principal está checado
-            if (!document.querySelector('input[name="approved_supplier_id"]:checked')) {
-                const mapRadio = document.querySelector('input[name="approved_supplier_id_map"]:checked');
-                if (mapRadio) {
-                    const listRadio = document.getElementById('radio-' + mapRadio.value);
-                    if (listRadio) listRadio.checked = true;
-                }
-            }
         }
-        return confirm('Confirma a APROVAÇÃO deste pedido?');
+
+        return confirm('Confirma a APROVAÇÃO deste pedido com os fornecedores selecionados?');
     }
 
     // Toggle visualização Lista / Mapa
@@ -400,20 +399,17 @@
     document.addEventListener('DOMContentLoaded', function() {
         const mapView = document.getElementById('approvalMap');
         const listView = document.getElementById('approvalListView');
-        
-        // Se não tem mapa (apenas 1 fornecedor), mostra lista direto
+
         if (!mapView && listView) {
             listView.style.display = 'block';
             return;
         }
-        
+
         if (mapView && listView) {
             const isMobile = window.innerWidth <= 768;
-            if (isMobile) {
-                setApprovalView('list');
-            } else {
-                setApprovalView('map');
-            }
+            setApprovalView(isMobile ? 'list' : 'map');
+        } else if (listView) {
+            listView.style.display = 'block';
         }
     });
     </script>

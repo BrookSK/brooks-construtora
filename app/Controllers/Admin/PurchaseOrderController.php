@@ -1084,8 +1084,6 @@ class PurchaseOrderController extends Controller
     private function sendWebhook(string $url, array $data): void
     {
         NotificationService::queueWebhook($url, $data);
-        // Tentar processar imediatamente em background
-        NotificationService::processImmediate();
     }
 
     private function sendPaymentNotifications(int $orderId, string $type, array $docData): void

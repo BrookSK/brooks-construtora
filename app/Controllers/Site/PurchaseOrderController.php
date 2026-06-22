@@ -303,7 +303,7 @@ class PurchaseOrderController extends Controller
         $action = $this->input('action', '');
         $personName = trim($this->input('person_name', ''));
         $notes = trim($this->input('approval_notes', ''));
-        $approvedSupplierId = (int) $this->input('approved_supplier_id', 0);
+        $itemSuppliers = $_POST['item_suppliers'] ?? [];
 
         if (empty($personName)) {
             $this->setFlash('error', 'Informe seu nome para registrar a decisão.');
@@ -314,56 +314,76 @@ class PurchaseOrderController extends Controller
         if ($action === 'approve') {
             $orderSuppliers = PurchaseOrderSupplier::getByOrder($order['id']);
 
-            // Se tem fornecedores vinculados, precisa selecionar qual aprovar
-            if (!empty($orderSuppliers) && $approvedSupplierId <= 0) {
-                $this->setFlash('error', 'Selecione qual fornecedor está aprovando.');
+            // Se tem fornecedores vinculados, precisa ter pelo menos um item selecionado
+            if (!empty($orderSuppliers) && empty($itemSuppliers)) {
+                $this->setFlash('error', 'Selecione o fornecedor para pelo menos um item.');
                 $this->redirect('/pedido/aprovacao/' . $token);
                 return;
             }
 
-            $approvedSupplierName = '';
-            $approvedTotal = $order['total_estimated'];
+            $approvedTotal = 0;
+            $approvedSupplierIds = [];
+            $approvedSupplierNames = [];
 
-            if (!empty($orderSuppliers) && $approvedSupplierId > 0) {
-                // Marcar fornecedor aprovado
-                foreach ($orderSuppliers as $os) {
-                    if ($os['supplier_id'] == $approvedSupplierId) {
-                        PurchaseOrderSupplier::updateById($os['id'], ['approved' => 1, 'status' => 'approved']);
-                        $approvedSupplierName = $os['supplier_name'];
-                        $approvedTotal = $os['total'];
+            if (!empty($orderSuppliers) && !empty($itemSuppliers)) {
+                // Processar aprovação por item
+                foreach ($itemSuppliers as $itemId => $supplierId) {
+                    $itemId = (int) $itemId;
+                    $supplierId = (int) $supplierId;
+                    
+                    if ($supplierId <= 0) continue;
 
-                        // Copiar preços do fornecedor aprovado para os itens do pedido
-                        $prices = PurchaseOrderItemPrice::getByOrderAndSupplier($order['id'], $approvedSupplierId);
-                        foreach ($prices as $p) {
-                            PurchaseOrderItem::updateById($p['item_id'], [
+                    // Buscar o preço deste item neste fornecedor
+                    $prices = PurchaseOrderItemPrice::getByOrderAndSupplier($order['id'], $supplierId);
+                    foreach ($prices as $p) {
+                        if ((int) $p['item_id'] === $itemId) {
+                            PurchaseOrderItem::updateById($itemId, [
                                 'unit_price' => $p['unit_price'],
                                 'total_price' => $p['total_price'],
+                                'approved_supplier_id' => $supplierId,
                             ]);
+                            $approvedTotal += (float) $p['total_price'];
+                            break;
                         }
+                    }
 
-                        // Marcar no histórico de preços como aprovado
-                        Database::query(
-                            "UPDATE material_price_history SET was_approved = 1 WHERE order_id = ? AND supplier_id = ?",
-                            [$order['id'], $approvedSupplierId]
-                        );
+                    $approvedSupplierIds[$supplierId] = true;
+
+                    // Marcar no histórico de preços como aprovado
+                    Database::query(
+                        "UPDATE material_price_history SET was_approved = 1 WHERE order_id = ? AND supplier_id = ? AND material_id = (SELECT material_id FROM purchase_order_items WHERE id = ?)",
+                        [$order['id'], $supplierId, $itemId]
+                    );
+                }
+
+                // Marcar fornecedores que foram aprovados (pode ser mais de um)
+                foreach ($orderSuppliers as $os) {
+                    if (isset($approvedSupplierIds[$os['supplier_id']])) {
+                        PurchaseOrderSupplier::updateById($os['id'], ['approved' => 1, 'status' => 'approved']);
+                        $approvedSupplierNames[] = $os['supplier_name'];
                     } else {
                         PurchaseOrderSupplier::updateById($os['id'], ['status' => 'rejected']);
                     }
                 }
             }
 
+            // Determinar supplier_id principal (o com mais itens, para compatibilidade)
+            $supplierCounts = array_count_values(array_map('intval', $itemSuppliers));
+            arsort($supplierCounts);
+            $primarySupplierId = !empty($supplierCounts) ? array_key_first($supplierCounts) : null;
+
             PurchaseOrder::updateById($order['id'], [
                 'status' => 'approved',
-                'supplier_id' => $approvedSupplierId ?: null,
-                'total_estimated' => $approvedTotal,
+                'supplier_id' => $primarySupplierId,
+                'total_estimated' => $approvedTotal > 0 ? $approvedTotal : $order['total_estimated'],
                 'approved_by_name' => $personName,
                 'approved_at' => date('Y-m-d H:i:s'),
                 'approval_notes' => $notes,
             ]);
 
             $approvalDesc = "Pedido aprovado por {$personName}";
-            if ($approvedSupplierName) {
-                $approvalDesc .= ". Fornecedor aprovado: {$approvedSupplierName}";
+            if (!empty($approvedSupplierNames)) {
+                $approvalDesc .= ". Fornecedor(es) aprovado(s): " . implode(', ', $approvedSupplierNames);
             }
             if (!empty($notes)) {
                 $approvalDesc .= ". Obs: {$notes}";
@@ -378,6 +398,7 @@ class PurchaseOrderController extends Controller
                 'order' => $order,
                 'action' => 'approved',
                 'approvedSupplier' => PurchaseOrderSupplier::getApproved($order['id']),
+                'approvedSuppliers' => PurchaseOrderSupplier::getAllApproved($order['id']),
             ]);
         } elseif ($action === 'reject') {
             if (empty($notes)) {
@@ -871,7 +892,6 @@ class PurchaseOrderController extends Controller
     private function sendWebhook(string $url, array $data): void
     {
         NotificationService::queueWebhook($url, $data);
-        NotificationService::processImmediate();
     }
 
     private function getBaseUrl(): string
