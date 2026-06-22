@@ -301,6 +301,33 @@
             </div>
         </div>
 
+        <!-- Itens Sobressalentes -->
+        <?php
+        $spareItems = \App\Models\PurchaseOrderSpareItem::getByOrder($order['id']);
+        if (!empty($spareItems)):
+        $spareTotal = array_sum(array_column($spareItems, 'total_price'));
+        ?>
+        <div style="margin-top:1.5rem; border:1px solid #ffc107; border-radius:6px; padding:1rem; background:#fffdf0;">
+            <h6 style="color:#856404; margin-bottom:0.5rem; font-size:0.9rem;"><i class="bi bi-bag-plus"></i> Itens Sobressalentes (Comprados na Hora)</h6>
+            <table class="table table-sm mb-0" style="font-size:0.75rem;">
+                <thead><tr><th>Data</th><th>Item</th><th>Qtd</th><th style="text-align:right;">Valor</th><th>Onde</th><th>Por</th></tr></thead>
+                <tbody>
+                <?php foreach ($spareItems as $si): ?>
+                <tr>
+                    <td><?= $si['purchased_at'] ? date('d/m', strtotime($si['purchased_at'])) : '-' ?></td>
+                    <td><strong><?= htmlspecialchars($si['description']) ?></strong></td>
+                    <td><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?></td>
+                    <td style="text-align:right;">R$ <?= number_format($si['total_price'], 2, ',', '.') ?></td>
+                    <td><?= htmlspecialchars($si['supplier_name'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($si['purchased_by'] ?? '-') ?></td>
+                </tr>
+                <?php endforeach; ?>
+                <tr style="border-top:2px solid #ffc107;"><td colspan="3" style="text-align:right; font-weight:700;">Total sobressalentes:</td><td style="text-align:right; font-weight:700;">R$ <?= number_format($spareTotal, 2, ',', '.') ?></td><td colspan="2"></td></tr>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+
         <!-- Aprovação -->
         <div class="approval-section">
             <h6><i class="bi bi-check-circle-fill"></i> Aprovação</h6>

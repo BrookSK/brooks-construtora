@@ -209,6 +209,37 @@
                 </div>
             </div>
         </div>
+
+        <!-- Fase 6: Itens Sobressalentes -->
+        <div class="col-12 col-lg-3 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-warning bg-opacity-25">
+                    <i class="bi bi-6-circle text-dark"></i> <strong>Sobressalentes</strong>
+                    <p class="small text-muted mb-0 mt-1">Quem recebe quando item avulso é adicionado</p>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label small">E-mails</label>
+                        <textarea class="form-control form-control-sm" name="orders_spare_emails" rows="2" placeholder="gestor@empresa.com"><?= htmlspecialchars($settings['orders_spare_emails'] ?? '') ?></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Nome (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_spare_phone_name" placeholder="Ex: Gestor" value="<?= htmlspecialchars($settings['orders_spare_phone_name'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Telefone (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_spare_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_spare_phone'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">URL Webhook</label>
+                        <div class="input-group input-group-sm">
+                            <input type="url" class="form-control" name="orders_spare_webhook" id="webhook_spare" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_spare_webhook'] ?? '') ?>">
+                            <button type="button" class="btn btn-outline-warning" onclick="testWebhook('spare')" title="Testar"><i class="bi bi-lightning"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="text-end">
@@ -235,10 +266,13 @@
             <i class="bi bi-arrow-right text-muted"></i>
             <span class="badge bg-dark p-2">6. Checklist Entrega</span>
         </div>
+        <div class="d-flex flex-wrap align-items-center gap-2 justify-content-center mt-2">
+            <span class="badge bg-warning text-dark p-2">⚡ Sobressalentes</span>
+            <span class="text-muted small">— Pode ocorrer a qualquer momento após aprovação</span>
+        </div>
         <p class="text-muted small text-center mt-3 mb-0">
             Cada fase envia notificações (e-mail + webhook) para os responsáveis configurados.<br>
-            Na fase 5, o link enviado direciona para o painel de acesso rápido (PIN).<br>
-            Na fase 6, é enviado um link público para o checklist de conferência na obra.
+            Itens sobressalentes disparam notificação imediata com controle de saldo semanal.
         </p>
     </div>
 </div>
@@ -363,11 +397,26 @@ async function testWebhook(type) {
             phone: document.querySelector('[name="orders_delivery_phone"]')?.value || '',
             phone_name: document.querySelector('[name="orders_delivery_phone_name"]')?.value || '',
             message: '*CHECKLIST DE ENTREGA DISPONÍVEL*\n\n*Pedido:* PED-TESTE-001\n*Fornecedores:* Fornecedor A, Fornecedor B\n*Itens:* 5\n\n*Acesse o checklist para conferir as entregas:*\n' + window.location.origin + '/pedido/entrega/token-de-teste-delivery'
+        },
+        spare: {
+            event: 'spare_item_added',
+            test: true,
+            order_code: 'PED-TESTE-001',
+            item: 'Fita Isolante 20m',
+            total: 12.90,
+            purchased_by: 'Mestre de Obras',
+            week_total: 350.00,
+            weekly_budget: 1000.00,
+            remaining: 650.00,
+            exceeded: false,
+            phone: document.querySelector('[name="orders_spare_phone"]')?.value || '',
+            phone_name: document.querySelector('[name="orders_spare_phone_name"]')?.value || '',
+            message: '*ITEM SOBRESSALENTE ADICIONADO*\n\n*Pedido:* PED-TESTE-001\n*Item:* Fita Isolante 20m\n*Valor:* R$ 12,90\n*Comprado por:* Mestre de Obras\n\n*Saldo semanal:*\nGasto: R$ 350,00 / R$ 1.000,00\nRestante: R$ 650,00'
         }
     };
 
     const payload = payloads[type];
-    const labels = { quote: 'Cotação', approval: 'Aprovação', completed: 'Conclusão', payment: 'Pagamento/NF', delivery: 'Entrega' };
+    const labels = { quote: 'Cotação', approval: 'Aprovação', completed: 'Conclusão', payment: 'Pagamento/NF', delivery: 'Entrega', spare: 'Sobressalentes' };
 
     // Mostrar modal
     document.getElementById('testResultTitle').textContent = 'Teste Webhook - ' + labels[type];

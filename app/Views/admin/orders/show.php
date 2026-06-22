@@ -528,6 +528,55 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
             </div>
         </div>
 
+        <!-- Itens Sobressalentes -->
+        <?php if ($order['status'] === 'approved'): ?>
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bag-plus"></i> Itens Sobressalentes</span>
+                <a href="/admin/orders/spare-items" class="btn btn-sm btn-outline-secondary"><i class="bi bi-gear"></i> Gerenciar</a>
+            </div>
+            <?php if (!empty($spareItems)): ?>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0" style="font-size:0.8rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data</th>
+                            <th>Item</th>
+                            <th class="text-center">Qtd</th>
+                            <th class="text-end">Valor</th>
+                            <th>Onde</th>
+                            <th>Por</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php $spareTotal = 0; ?>
+                        <?php foreach ($spareItems as $si): ?>
+                        <?php $spareTotal += $si['total_price']; ?>
+                        <tr>
+                            <td><?= $si['purchased_at'] ? date('d/m', strtotime($si['purchased_at'])) : '-' ?></td>
+                            <td><strong><?= htmlspecialchars($si['description']) ?></strong></td>
+                            <td class="text-center"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?></td>
+                            <td class="text-end">R$ <?= number_format($si['total_price'], 2, ',', '.') ?></td>
+                            <td><?= htmlspecialchars($si['supplier_name'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($si['purchased_by'] ?? '-') ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                        <tr class="table-warning">
+                            <td colspan="3" class="text-end fw-bold">Total sobressalentes:</td>
+                            <td class="text-end fw-bold">R$ <?= number_format($spareTotal, 2, ',', '.') ?></td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <?php else: ?>
+            <div class="card-body text-center text-muted py-3 small">
+                Nenhum item sobressalente vinculado a este pedido.
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
         <!-- Histórico -->
         <div class="card mb-3">
             <div class="card-header"><i class="bi bi-clock-history"></i> Histórico</div>

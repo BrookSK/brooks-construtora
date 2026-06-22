@@ -7,6 +7,9 @@
         <a href="/admin/orders/tracking" class="btn btn-outline-dark btn-sm">
             <i class="bi bi-clipboard-check"></i> Acompanhamento
         </a>
+        <a href="/admin/orders/spare-items" class="btn btn-outline-warning btn-sm">
+            <i class="bi bi-bag-plus"></i> Sobressalentes
+        </a>
         <a href="/admin/orders/create" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg"></i> Novo Pedido
         </a>

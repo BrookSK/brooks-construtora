@@ -12,6 +12,7 @@ use App\Models\PurchaseOrderSupplier;
 use App\Models\PurchaseOrderItemPrice;
 use App\Models\PurchaseOrderPayment;
 use App\Models\PurchaseOrderDelivery;
+use App\Models\PurchaseOrderSpareItem;
 use App\Models\MaterialPriceHistory;
 use App\Models\Supplier;
 use App\Models\Material;
@@ -276,6 +277,7 @@ class PurchaseOrderController extends Controller
         $itemPrices = PurchaseOrderItemPrice::getByOrder($id);
         $payments = PurchaseOrderPayment::getByOrder($id);
         $deliveries = PurchaseOrderDelivery::getByOrder($id);
+        $spareItems = PurchaseOrderSpareItem::getByOrder($id);
 
         $this->view('admin.orders.show', [
             'order' => $order,
@@ -285,6 +287,7 @@ class PurchaseOrderController extends Controller
             'itemPrices' => $itemPrices,
             'payments' => $payments,
             'deliveries' => $deliveries,
+            'spareItems' => $spareItems,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);
@@ -1350,6 +1353,158 @@ class PurchaseOrderController extends Controller
         }
 
         $this->json(['success' => true, 'timestamp' => $now]);
+    }
+
+    // ============================
+    // ITENS SOBRESSALENTES
+    // ============================
+
+    /**
+     * Tela de itens sobressalentes (visão semanal)
+     */
+    public function spareItems(): void
+    {
+        $weeklyBudget = (float) Setting::get('spare_items_weekly_budget', 1000);
+        $thisWeekTotal = PurchaseOrderSpareItem::totalThisWeek();
+        $thisWeekItems = PurchaseOrderSpareItem::getThisWeek();
+        $allItems = PurchaseOrderSpareItem::getAllGroupedByWeek(200);
+        $orders = Database::fetchAll("SELECT id, code FROM purchase_orders WHERE status = 'approved' ORDER BY code DESC");
+
+        $this->view('admin.orders.spare_items', [
+            'weeklyBudget' => $weeklyBudget,
+            'thisWeekTotal' => $thisWeekTotal,
+            'thisWeekItems' => $thisWeekItems,
+            'allItems' => $allItems,
+            'orders' => $orders,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
+    }
+
+    /**
+     * Adicionar item sobressalente
+     */
+    public function spareItemAdd(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/admin/orders/spare-items'); return; }
+
+        $orderId = (int) $this->input('order_id');
+        $description = trim($this->input('description', ''));
+        $quantity = (float) str_replace(',', '.', $this->input('quantity', '1'));
+        $unit = trim($this->input('unit', ''));
+        $unitPrice = (float) str_replace(',', '.', str_replace('.', '', $this->input('unit_price', '0')));
+        $supplierName = trim($this->input('supplier_name', ''));
+        $paymentMethod = $this->input('payment_method', '') ?: null;
+        $purchasedBy = trim($this->input('purchased_by', ''));
+        $purchasedAt = $this->input('purchased_at', date('Y-m-d'));
+        $notes = trim($this->input('notes', ''));
+
+        if (empty($description) || $orderId <= 0) {
+            $this->setFlash('error', 'Preencha a descrição e selecione o pedido.');
+            $this->redirect('/admin/orders/spare-items');
+            return;
+        }
+
+        $totalPrice = $quantity * $unitPrice;
+
+        $itemId = PurchaseOrderSpareItem::create([
+            'order_id' => $orderId,
+            'description' => $description,
+            'quantity' => $quantity,
+            'unit' => $unit,
+            'unit_price' => $unitPrice,
+            'total_price' => $totalPrice,
+            'supplier_name' => $supplierName,
+            'payment_method' => $paymentMethod,
+            'purchased_by' => $purchasedBy ?: (Auth::user()['name'] ?? 'Sistema'),
+            'purchased_at' => $purchasedAt,
+            'notes' => $notes,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        // Registrar no histórico do pedido
+        $order = PurchaseOrder::find($orderId);
+        if ($order) {
+            PurchaseOrderHistory::log($orderId, 'spare_item_added',
+                "Item sobressalente adicionado: {$description} (R$ " . number_format($totalPrice, 2, ',', '.') . ")",
+                $purchasedBy ?: (Auth::user()['name'] ?? 'Sistema'), Auth::id());
+        }
+
+        // Enviar notificação
+        $this->sendSpareItemNotification($orderId, $description, $totalPrice, $purchasedBy ?: (Auth::user()['name'] ?? 'Sistema'));
+
+        $this->setFlash('success', "Item \"{$description}\" adicionado com sucesso!");
+        $this->redirect('/admin/orders/spare-items');
+    }
+
+    /**
+     * Excluir item sobressalente
+     */
+    public function spareItemDelete(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/admin/orders/spare-items'); return; }
+
+        $id = (int) $this->input('id');
+        $item = PurchaseOrderSpareItem::find($id);
+
+        if ($item) {
+            PurchaseOrderSpareItem::deleteById($id);
+            PurchaseOrderHistory::log($item['order_id'], 'spare_item_removed',
+                "Item sobressalente removido: {$item['description']} (R$ " . number_format($item['total_price'], 2, ',', '.') . ")",
+                Auth::user()['name'] ?? 'Sistema', Auth::id());
+            $this->setFlash('success', 'Item removido.');
+        }
+
+        $this->redirect('/admin/orders/spare-items');
+    }
+
+    private function sendSpareItemNotification(int $orderId, string $description, float $total, string $purchasedBy): void
+    {
+        $order = PurchaseOrder::find($orderId);
+        if (!$order) return;
+
+        $weeklyBudget = (float) Setting::get('spare_items_weekly_budget', 1000);
+        $weekTotal = PurchaseOrderSpareItem::totalThisWeek();
+        $remaining = $weeklyBudget - $weekTotal;
+
+        $baseUrl = $this->getBaseUrl();
+
+        // E-mail
+        $emails = Setting::get('orders_spare_emails', '');
+        if (!empty($emails)) {
+            $subject = "Item Sobressalente - Pedido {$order['code']} - R$ " . number_format($total, 2, ',', '.');
+            $body = \App\Services\EmailTemplate::spareItemAdded($order, $description, $total, $purchasedBy, $weekTotal, $weeklyBudget);
+            NotificationService::queueEmails($emails, $subject, $body);
+        }
+
+        // Webhook
+        $webhookUrl = Setting::get('orders_spare_webhook', '');
+        if (!empty($webhookUrl)) {
+            $message = "*ITEM SOBRESSALENTE ADICIONADO*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . "*Item:* {$description}\n"
+                . "*Valor:* R$ " . number_format($total, 2, ',', '.') . "\n"
+                . "*Comprado por:* {$purchasedBy}\n\n"
+                . "*Saldo semanal:*\n"
+                . "Gasto: R$ " . number_format($weekTotal, 2, ',', '.') . " / R$ " . number_format($weeklyBudget, 2, ',', '.') . "\n"
+                . "Restante: R$ " . number_format(max(0, $remaining), 2, ',', '.')
+                . ($remaining < 0 ? " ⚠️ *EXCEDIDO!*" : '');
+
+            $this->sendWebhook($webhookUrl, [
+                'event' => 'spare_item_added',
+                'order_code' => $order['code'],
+                'item' => $description,
+                'total' => $total,
+                'purchased_by' => $purchasedBy,
+                'week_total' => $weekTotal,
+                'weekly_budget' => $weeklyBudget,
+                'remaining' => max(0, $remaining),
+                'exceeded' => $remaining < 0,
+                'phone' => Setting::get('orders_spare_phone', ''),
+                'phone_name' => Setting::get('orders_spare_phone_name', ''),
+                'message' => $message,
+            ]);
+        }
     }
 
     /**

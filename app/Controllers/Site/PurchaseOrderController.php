@@ -10,6 +10,7 @@ use App\Models\PurchaseOrderHistory;
 use App\Models\PurchaseOrderSupplier;
 use App\Models\PurchaseOrderItemPrice;
 use App\Models\PurchaseOrderDelivery;
+use App\Models\PurchaseOrderSpareItem;
 use App\Models\MaterialPriceHistory;
 use App\Models\Supplier;
 use App\Models\Setting;
@@ -676,6 +677,28 @@ class PurchaseOrderController extends Controller
                 $approvalDate,
                 $order['description'] ?? '',
             ]);
+        }
+
+        // Itens sobressalentes
+        $spareItems = PurchaseOrderSpareItem::getByOrder($orderId);
+        if (!empty($spareItems)) {
+            $xlsx->addEmptyRow();
+            $xlsx->addRow(['ITENS SOBRESSALENTES (Comprados na Hora)'], 'bold');
+            $xlsx->addRow(['Data', 'Descrição', '', '', '', 'Qtd', 'Valor', 'Onde', 'Por'], 'header');
+            $spareTotal = 0;
+            foreach ($spareItems as $si) {
+                $spareTotal += $si['total_price'];
+                $xlsx->addRow([
+                    $si['purchased_at'] ? date('d/m/Y', strtotime($si['purchased_at'])) : '-',
+                    $si['description'],
+                    '', '', '',
+                    $si['quantity'],
+                    $si['total_price'],
+                    $si['supplier_name'] ?? '-',
+                    $si['purchased_by'] ?? '-',
+                ]);
+            }
+            $xlsx->addRow(['', '', '', '', '', '', $spareTotal, 'Total Sobressalentes'], 'total');
         }
 
         $xlsx->download('Pedido_' . $order['code'] . '.xlsx');

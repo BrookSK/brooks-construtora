@@ -107,6 +107,9 @@ class Router
             'orders/delivery-expected-date' => ['PurchaseOrderController', 'deliveryExpectedDate'],
             'orders/delivery-data' => ['PurchaseOrderController', 'deliveryData'],
             'orders/tracking' => ['PurchaseOrderController', 'tracking'],
+            'orders/spare-items' => ['PurchaseOrderController', 'spareItems'],
+            'orders/spare-items/add' => ['PurchaseOrderController', 'spareItemAdd'],
+            'orders/spare-items/delete' => ['PurchaseOrderController', 'spareItemDelete'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],

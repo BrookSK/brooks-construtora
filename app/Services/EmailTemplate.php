@@ -386,6 +386,48 @@ HTML;
         return self::wrap("Checklist de Entrega - {$order['code']}", $body);
     }
 
+    public static function spareItemAdded(array $order, string $description, float $total, string $purchasedBy, float $weekTotal, float $weeklyBudget): string
+    {
+        $totalFmt = number_format($total, 2, ',', '.');
+        $weekFmt = number_format($weekTotal, 2, ',', '.');
+        $budgetFmt = number_format($weeklyBudget, 2, ',', '.');
+        $remaining = $weeklyBudget - $weekTotal;
+        $remainingFmt = number_format(max(0, $remaining), 2, ',', '.');
+        $exceeded = $remaining < 0;
+        $barColor = $exceeded ? '#dc3545' : ($remaining < ($weeklyBudget * 0.2) ? '#ffc107' : '#28a745');
+
+        $body = <<<HTML
+<p style="margin-bottom:15px;">Um item sobressalente foi adicionado a um pedido.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff3cd; border-radius:6px; margin-bottom:20px; border:1px solid #ffc107;">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#856404; text-transform:uppercase; font-weight:600;">🛒 Item Sobressalente</p>
+    <p style="margin:0; font-size:17px; color:#333; font-weight:600;">{$description}</p>
+    <p style="margin:8px 0 0; font-size:13px; color:#555;">Pedido: <strong>{$order['code']}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Valor: <strong>R$ {$totalFmt}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Comprado por: <strong>{$purchasedBy}</strong></p>
+</td></tr>
+</table>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa; border-radius:6px; margin-bottom:20px; border:1px solid #dee2e6;">
+<tr><td style="padding: 15px 20px;">
+    <p style="margin:0 0 8px; font-size:13px; color:#333; font-weight:600;">Saldo Semanal</p>
+    <div style="background:#e9ecef; border-radius:4px; height:10px; overflow:hidden;">
+        <div style="background:{$barColor}; height:100%; width:min(100%, {$weekTotal}00/{$weeklyBudget}00 * 100)%;"></div>
+    </div>
+    <p style="margin:8px 0 0; font-size:13px; color:#555;">Gasto: R$ {$weekFmt} / R$ {$budgetFmt}</p>
+    <p style="margin:4px 0 0; font-size:13px; color:{$barColor}; font-weight:600;">Restante: R$ {$remainingFmt}</p>
+</td></tr>
+</table>
+HTML;
+
+        if ($exceeded) {
+            $body .= '<p style="color:#dc3545; font-weight:600; text-align:center;">⚠️ ORÇAMENTO SEMANAL EXCEDIDO!</p>';
+        }
+
+        return self::wrap("Item Sobressalente - {$order['code']}", $body);
+    }
+
     /**
      * Template de e-mail para envio de NF/Boleto (Fase 4)
      */
