@@ -590,12 +590,8 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <input type="hidden" name="description" id="spare-description">
                             <select id="spare-mat-select" style="display:none;">
                                 <option value="">-- Selecione ou digite --</option>
-                                <?php foreach ($materials as $m): ?>
-                                <option value="<?= htmlspecialchars($m['name'] . ($m['classification'] ? ' (' . $m['classification'] . ')' : '')) ?>"
-                                    data-unit="<?= htmlspecialchars($m['unit_abbr'] ?? $m['unit_name'] ?? '') ?>">
-                                    <?= htmlspecialchars($m['name'] . ($m['classification'] ? ' - ' . $m['classification'] : '') . ($m['specification'] ? ' (' . $m['specification'] . ')' : '')) ?>
-                                </option>
-                                <?php endforeach; ?>
+<?php foreach ($materials as $m): ?><option value="<?= htmlspecialchars($m['name'] . ($m['classification'] ? ' (' . $m['classification'] . ')' : '')) ?>" data-unit="<?= htmlspecialchars($m['unit_abbr'] ?? $m['unit_name'] ?? '') ?>"><?= htmlspecialchars($m['name'] . ($m['classification'] ? ' - ' . $m['classification'] : '') . ($m['specification'] ? ' (' . $m['specification'] . ')' : '')) ?></option>
+<?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-4 col-md-1">
