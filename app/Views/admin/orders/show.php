@@ -869,7 +869,6 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
     </div>
 </div>
 
-<script>
 <script src="/assets/js/searchable-select.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
