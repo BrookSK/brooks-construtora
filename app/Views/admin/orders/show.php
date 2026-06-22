@@ -371,12 +371,14 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('deliveryLink').value); this.innerHTML='<i class=\'bi bi-check\'></i>'" title="Copiar link público"><i class="bi bi-clipboard"></i></button>
                     </div>
                     <?php endif; ?>
-                    <?php if (empty($deliveries)): ?>
                     <form method="POST" action="/admin/orders/delivery-init" class="d-inline">
                         <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+                        <?php if (empty($deliveries)): ?>
                         <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-plus-circle"></i> Criar Checklist</button>
+                        <?php else: ?>
+                        <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Recriar checklist? Isso vai resetar todos os status de entrega.')"><i class="bi bi-arrow-repeat"></i> Recriar</button>
+                        <?php endif; ?>
                     </form>
-                    <?php endif; ?>
                 </div>
             </div>
             <?php if (!empty($deliveries)): ?>

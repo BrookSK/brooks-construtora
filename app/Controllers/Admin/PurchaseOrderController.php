@@ -1257,6 +1257,12 @@ class PurchaseOrderController extends Controller
             return;
         }
 
+        // Se já existe checklist, recria (deleta e refaz para corrigir fornecedores)
+        $existing = PurchaseOrderDelivery::getByOrder($orderId);
+        if (!empty($existing)) {
+            Database::query("DELETE FROM purchase_order_deliveries WHERE order_id = ?", [$orderId]);
+        }
+
         PurchaseOrderDelivery::initializeForOrder($orderId);
 
         // Gerar token de acesso público se não tem
@@ -1267,12 +1273,14 @@ class PurchaseOrderController extends Controller
             $deliveryToken = $order['delivery_token'];
         }
 
-        // Enviar notificação de checklist disponível
-        $this->sendDeliveryNotifications($orderId, $deliveryToken);
+        // Enviar notificação apenas na primeira vez
+        if (empty($existing)) {
+            $this->sendDeliveryNotifications($orderId, $deliveryToken);
+        }
 
-        PurchaseOrderHistory::log($orderId, 'delivery_init', 'Checklist de entrega criado', Auth::user()['name'] ?? 'Sistema', Auth::id());
+        PurchaseOrderHistory::log($orderId, 'delivery_init', 'Checklist de entrega ' . (empty($existing) ? 'criado' : 'recriado'), Auth::user()['name'] ?? 'Sistema', Auth::id());
         
-        $this->setFlash('success', 'Checklist de entrega criado e notificações enviadas!');
+        $this->setFlash('success', 'Checklist de entrega ' . (empty($existing) ? 'criado' : 'recriado') . ' com sucesso!');
         $this->redirect('/admin/orders/show/' . $orderId);
     }
 
