@@ -106,6 +106,7 @@ class Router
             'orders/delivery-update' => ['PurchaseOrderController', 'deliveryUpdate'],
             'orders/delivery-expected-date' => ['PurchaseOrderController', 'deliveryExpectedDate'],
             'orders/delivery-data' => ['PurchaseOrderController', 'deliveryData'],
+            'orders/tracking' => ['PurchaseOrderController', 'tracking'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],

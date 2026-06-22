@@ -4,6 +4,9 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <span class="badge bg-secondary"><?= count($orders) ?> pedidos</span>
     <div class="d-flex gap-2">
+        <a href="/admin/orders/tracking" class="btn btn-outline-dark btn-sm">
+            <i class="bi bi-clipboard-check"></i> Acompanhamento
+        </a>
         <a href="/admin/orders/create" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg"></i> Novo Pedido
         </a>

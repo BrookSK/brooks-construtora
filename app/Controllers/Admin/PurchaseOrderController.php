@@ -1353,6 +1353,73 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Visão de acompanhamento de entregas de todos os pedidos aprovados
+     */
+    public function tracking(): void
+    {
+        // Buscar todos os pedidos aprovados que têm checklist de entrega
+        $orders = Database::fetchAll(
+            "SELECT po.id, po.code, po.total_estimated, po.approved_by_name, po.approved_at, po.delivery_token,
+                    s.name as supplier_name
+             FROM purchase_orders po
+             LEFT JOIN suppliers s ON po.supplier_id = s.id
+             WHERE po.status = 'approved'
+             AND EXISTS (SELECT 1 FROM purchase_order_deliveries pod WHERE pod.order_id = po.id)
+             ORDER BY po.approved_at DESC"
+        );
+
+        // Para cada pedido, buscar itens de entrega com dados completos
+        $trackingData = [];
+        $today = date('Y-m-d');
+
+        foreach ($orders as $order) {
+            $deliveries = Database::fetchAll(
+                "SELECT pod.*, poi.material_name, poi.quantity, poi.unit, poi.approved_supplier_id,
+                        s.name as supplier_name,
+                        pos.payment_method, pos.payment_condition, pos.payment_first_due, pos.delivery_days
+                 FROM purchase_order_deliveries pod
+                 JOIN purchase_order_items poi ON pod.item_id = poi.id
+                 LEFT JOIN suppliers s ON pod.supplier_id = s.id
+                 LEFT JOIN purchase_order_suppliers pos ON pos.order_id = pod.order_id AND pos.supplier_id = pod.supplier_id
+                 WHERE pod.order_id = ?
+                 ORDER BY pod.expected_date ASC, pod.id ASC",
+                [$order['id']]
+            );
+
+            $lateCount = 0;
+            $pendingCount = 0;
+            $doneCount = 0;
+
+            foreach ($deliveries as &$d) {
+                $d['is_late'] = false;
+                if ($d['status'] !== 'checked' && $d['status'] !== 'delivered' && $d['status'] !== 'replacement_delivered') {
+                    if ($d['expected_date'] && $d['expected_date'] < $today) { $d['is_late'] = true; $lateCount++; }
+                    elseif ($d['status'] === 'replacement_requested' && $d['replacement_expected_date'] && $d['replacement_expected_date'] < $today) { $d['is_late'] = true; $lateCount++; }
+                    $pendingCount++;
+                } else {
+                    $doneCount++;
+                }
+            }
+            unset($d);
+
+            $trackingData[] = [
+                'order' => $order,
+                'deliveries' => $deliveries,
+                'late_count' => $lateCount,
+                'pending_count' => $pendingCount,
+                'done_count' => $doneCount,
+                'total_count' => count($deliveries),
+            ];
+        }
+
+        $this->view('admin.orders.tracking', [
+            'trackingData' => $trackingData,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
+    }
+
+    /**
      * Retorna dados atualizados do checklist (para polling AJAX no admin)
      */
     public function deliveryData(): void
