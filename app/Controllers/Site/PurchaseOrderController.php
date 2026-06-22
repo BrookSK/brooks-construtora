@@ -9,6 +9,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseOrderHistory;
 use App\Models\PurchaseOrderSupplier;
 use App\Models\PurchaseOrderItemPrice;
+use App\Models\PurchaseOrderDelivery;
 use App\Models\MaterialPriceHistory;
 use App\Models\Supplier;
 use App\Models\Setting;
@@ -933,6 +934,111 @@ class PurchaseOrderController extends Controller
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'www.brooksconstrutora.com.br';
         return $scheme . '://' . $host;
+    }
+
+    // ============================
+    // CHECKLIST PÚBLICO DE ENTREGA
+    // ============================
+
+    /**
+     * Página pública do checklist de entrega
+     */
+    public function deliveryPublic(string $token = ''): void
+    {
+        if (empty($token)) { $this->show404(); return; }
+
+        $order = Database::fetch("SELECT * FROM purchase_orders WHERE delivery_token = ?", [$token]);
+        if (!$order || $order['status'] !== 'approved') { $this->show404(); return; }
+
+        $items = PurchaseOrderItem::getByOrder($order['id']);
+        $deliveries = PurchaseOrderDelivery::getByOrder($order['id']);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($order['id']);
+
+        $this->view('site.orders.delivery', [
+            'order' => $order,
+            'items' => $items,
+            'deliveries' => $deliveries,
+            'orderSuppliers' => $orderSuppliers,
+            'token' => $token,
+        ]);
+    }
+
+    /**
+     * Endpoint AJAX para atualizar entrega (público, via token)
+     */
+    public function deliveryPublicUpdate(string $token = ''): void
+    {
+        if (!$this->isPost() || empty($token)) { $this->json(['error' => 'Não autorizado'], 403); return; }
+
+        $order = Database::fetch("SELECT * FROM purchase_orders WHERE delivery_token = ?", [$token]);
+        if (!$order) { $this->json(['error' => 'Token inválido'], 403); return; }
+
+        $id = (int) $this->input('id');
+        $delivery = PurchaseOrderDelivery::find($id);
+        if (!$delivery || $delivery['order_id'] != $order['id']) { $this->json(['error' => 'Item não encontrado'], 404); return; }
+
+        $action = $this->input('delivery_action', '');
+        $performedBy = trim($this->input('performed_by', 'Obra'));
+        $now = date('Y-m-d H:i:s');
+        $description = '';
+
+        switch ($action) {
+            case 'mark_delivered':
+                PurchaseOrderDelivery::updateById($id, ['status' => 'delivered', 'delivered_at' => $now]);
+                $description = "Marcado como entregue por {$performedBy}";
+                break;
+            case 'mark_checked':
+                PurchaseOrderDelivery::updateById($id, ['status' => 'checked', 'checked_by' => $performedBy]);
+                $description = "Conferido OK por {$performedBy}";
+                break;
+            case 'mark_divergence':
+                $notes = trim($this->input('divergence_notes', ''));
+                PurchaseOrderDelivery::updateById($id, ['status' => 'divergence', 'divergence_notes' => $notes]);
+                $description = "Divergência: {$notes} (por {$performedBy})";
+                break;
+            case 'request_replacement':
+                $expectedDate = $this->input('replacement_expected_date', '');
+                $notes = trim($this->input('replacement_notes', ''));
+                PurchaseOrderDelivery::updateById($id, ['status' => 'replacement_requested', 'replacement_requested_at' => $now, 'replacement_expected_date' => $expectedDate ?: null, 'replacement_notes' => $notes]);
+                $description = "Troca solicitada por {$performedBy}";
+                break;
+            case 'mark_replacement_delivered':
+                PurchaseOrderDelivery::updateById($id, ['status' => 'replacement_delivered', 'replacement_delivered_at' => $now]);
+                $description = "Troca entregue - conferido por {$performedBy}";
+                break;
+            default:
+                $this->json(['error' => 'Ação inválida'], 400);
+                return;
+        }
+
+        if ($description) {
+            Database::insert('purchase_order_delivery_history', [
+                'delivery_id' => $id, 'order_id' => $order['id'],
+                'action' => $action, 'description' => $description,
+                'performed_by' => $performedBy, 'created_at' => $now,
+            ]);
+        }
+
+        $this->json(['success' => true, 'timestamp' => $now]);
+    }
+
+    /**
+     * Endpoint AJAX para buscar dados atualizados (polling do público)
+     */
+    public function deliveryPublicData(string $token = ''): void
+    {
+        if (empty($token)) { $this->json(['error' => 'Token inválido'], 403); return; }
+
+        $order = Database::fetch("SELECT id, code FROM purchase_orders WHERE delivery_token = ?", [$token]);
+        if (!$order) { $this->json(['error' => 'Token inválido'], 403); return; }
+
+        $deliveries = PurchaseOrderDelivery::getByOrder($order['id']);
+        $history = Database::fetchAll(
+            "SELECT * FROM purchase_order_delivery_history WHERE order_id = ? ORDER BY created_at DESC LIMIT 50",
+            [$order['id']]
+        );
+
+        $this->json(['deliveries' => $deliveries, 'history' => $history]);
     }
 
     private function show404(): void

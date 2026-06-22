@@ -178,6 +178,37 @@
                 </div>
             </div>
         </div>
+
+        <!-- Fase 5: Entrega / Checklist -->
+        <div class="col-12 col-lg-3 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-dark bg-opacity-10">
+                    <i class="bi bi-5-circle text-dark"></i> <strong>Entrega</strong>
+                    <p class="small text-muted mb-0 mt-1">Quem recebe o link do checklist de entrega</p>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label small">E-mails</label>
+                        <textarea class="form-control form-control-sm" name="orders_delivery_emails" rows="2" placeholder="obra@empresa.com"><?= htmlspecialchars($settings['orders_delivery_emails'] ?? '') ?></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Nome (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_delivery_phone_name" placeholder="Ex: Mestre de Obras" value="<?= htmlspecialchars($settings['orders_delivery_phone_name'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Telefone (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_delivery_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_delivery_phone'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">URL Webhook</label>
+                        <div class="input-group input-group-sm">
+                            <input type="url" class="form-control" name="orders_delivery_webhook" id="webhook_delivery" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_delivery_webhook'] ?? '') ?>">
+                            <button type="button" class="btn btn-outline-dark" onclick="testWebhook('delivery')" title="Testar"><i class="bi bi-lightning"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="text-end">
@@ -200,11 +231,14 @@
             <i class="bi bi-arrow-right text-muted"></i>
             <span class="badge bg-success p-2">4. Aprovado/Rejeitado</span>
             <i class="bi bi-arrow-right text-muted"></i>
-            <span class="badge bg-primary p-2">5. NF/Boleto Enviado</span>
+            <span class="badge bg-primary p-2">5. NF/Boleto</span>
+            <i class="bi bi-arrow-right text-muted"></i>
+            <span class="badge bg-dark p-2">6. Checklist Entrega</span>
         </div>
         <p class="text-muted small text-center mt-3 mb-0">
             Cada fase envia notificações (e-mail + webhook) para os responsáveis configurados.<br>
-            Na fase 4, o link enviado direciona para o painel de acesso rápido (PIN) onde é possível enviar NF/boleto.
+            Na fase 5, o link enviado direciona para o painel de acesso rápido (PIN).<br>
+            Na fase 6, é enviado um link público para o checklist de conferência na obra.
         </p>
     </div>
 </div>
@@ -318,11 +352,22 @@ async function testWebhook(type) {
             phone: document.querySelector('[name="orders_payment_phone"]')?.value || '',
             phone_name: document.querySelector('[name="orders_payment_phone_name"]')?.value || '',
             message: '*NF/BOLETO ENVIADO*\n\n*Pedido:* PED-TESTE-001\n*Fornecedor:* Fornecedor de Teste LTDA\n*Tipo:* NF\n*Numero:* 12345\n*Valor:* R$ 4.750,00\n*Vencimento:* 15/07/2026\n\n*Acesse o painel para conferir:*\n' + window.location.origin + '/pedidos'
+        },
+        delivery: {
+            event: 'delivery_checklist_ready',
+            test: true,
+            order_code: 'PED-TESTE-001',
+            suppliers: ['Fornecedor A', 'Fornecedor B'],
+            items_count: 5,
+            checklist_url: window.location.origin + '/pedido/entrega/token-de-teste-delivery',
+            phone: document.querySelector('[name="orders_delivery_phone"]')?.value || '',
+            phone_name: document.querySelector('[name="orders_delivery_phone_name"]')?.value || '',
+            message: '*CHECKLIST DE ENTREGA DISPONÍVEL*\n\n*Pedido:* PED-TESTE-001\n*Fornecedores:* Fornecedor A, Fornecedor B\n*Itens:* 5\n\n*Acesse o checklist para conferir as entregas:*\n' + window.location.origin + '/pedido/entrega/token-de-teste-delivery'
         }
     };
 
     const payload = payloads[type];
-    const labels = { quote: 'Cotação', approval: 'Aprovação', completed: 'Conclusão', payment: 'Pagamento/NF' };
+    const labels = { quote: 'Cotação', approval: 'Aprovação', completed: 'Conclusão', payment: 'Pagamento/NF', delivery: 'Entrega' };
 
     // Mostrar modal
     document.getElementById('testResultTitle').textContent = 'Teste Webhook - ' + labels[type];

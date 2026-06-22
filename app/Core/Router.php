@@ -102,6 +102,10 @@ class Router
             'orders/mark-paid' => ['PurchaseOrderController', 'markPaid'],
             'orders/delete-payment' => ['PurchaseOrderController', 'deletePayment'],
             'orders/payments' => ['PurchaseOrderController', 'payments'],
+            'orders/delivery-init' => ['PurchaseOrderController', 'deliveryInit'],
+            'orders/delivery-update' => ['PurchaseOrderController', 'deliveryUpdate'],
+            'orders/delivery-expected-date' => ['PurchaseOrderController', 'deliveryExpectedDate'],
+            'orders/delivery-data' => ['PurchaseOrderController', 'deliveryData'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],
@@ -186,6 +190,9 @@ class Router
             'pedido/aprovacao/enviar' => ['PurchaseOrderController', 'submitApproval'],
             'pedido/pdf' => ['PurchaseOrderController', 'pdf'],
             'pedido/xlsx' => ['PurchaseOrderController', 'xlsx'],
+            'pedido/entrega' => ['PurchaseOrderController', 'deliveryPublic'],
+            'pedido/entrega/update' => ['PurchaseOrderController', 'deliveryPublicUpdate'],
+            'pedido/entrega/data' => ['PurchaseOrderController', 'deliveryPublicData'],
 
             // Painel de pedidos com PIN
             'pedidos' => ['PurchaseOrderController', 'pinPanel'],

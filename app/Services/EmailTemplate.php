@@ -356,6 +356,39 @@ HTML;
     /**
      * Template de e-mail para envio de NF/Boleto (Fase 4)
      */
+    public static function purchaseOrderDelivery(array $order, array $items, string $checklistUrl, string $supplierDisplay): string
+    {
+        $itemCount = count($items);
+        $totalFormatted = number_format($order['total_estimated'] ?? 0, 2, ',', '.');
+
+        $body = <<<HTML
+<p style="margin-bottom:15px;">O checklist de entrega do pedido está disponível para conferência na obra.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#e8f5e9; border-radius:6px; margin-bottom:20px; border:1px solid #c8e6c9;">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#388e3c; text-transform:uppercase; font-weight:600;">📋 Checklist de Entrega</p>
+    <p style="margin:0; font-size:17px; color:#2e7d32; font-weight:600;">{$order['code']}</p>
+    <p style="margin:8px 0 0; font-size:13px; color:#555;">Fornecedor(es): <strong>{$supplierDisplay}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Itens: <strong>{$itemCount}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Valor Total: <strong>R$ {$totalFormatted}</strong></p>
+</td></tr>
+</table>
+
+<p style="text-align:center; margin: 25px 0 10px;">
+    <a href="{$checklistUrl}" style="display:inline-block; background-color:#28a745; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Acessar Checklist de Entrega</a>
+</p>
+
+<p style="font-size:13px; color:#666; margin-top:15px;">Use este link para conferir os materiais no momento da entrega. Marque cada item como entregue, conferido ou registre divergências diretamente pelo celular.</p>
+
+<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">As alterações são salvas automaticamente em tempo real.</p>
+HTML;
+
+        return self::wrap("Checklist de Entrega - {$order['code']}", $body);
+    }
+
+    /**
+     * Template de e-mail para envio de NF/Boleto (Fase 4)
+     */
     public static function purchaseOrderPayment(array $order, string $typeLabel, array $docData, string $uploadedBy, string $panelUrl): string
     {
         $amountFmt = $docData['amount'] ? 'R$ ' . number_format($docData['amount'], 2, ',', '.') : 'N/A';

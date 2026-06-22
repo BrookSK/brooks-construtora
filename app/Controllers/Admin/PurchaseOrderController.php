@@ -11,6 +11,7 @@ use App\Models\PurchaseOrderHistory;
 use App\Models\PurchaseOrderSupplier;
 use App\Models\PurchaseOrderItemPrice;
 use App\Models\PurchaseOrderPayment;
+use App\Models\PurchaseOrderDelivery;
 use App\Models\MaterialPriceHistory;
 use App\Models\Supplier;
 use App\Models\Material;
@@ -274,6 +275,7 @@ class PurchaseOrderController extends Controller
         $orderSuppliers = PurchaseOrderSupplier::getByOrder($id);
         $itemPrices = PurchaseOrderItemPrice::getByOrder($id);
         $payments = PurchaseOrderPayment::getByOrder($id);
+        $deliveries = PurchaseOrderDelivery::getByOrder($id);
 
         $this->view('admin.orders.show', [
             'order' => $order,
@@ -282,6 +284,7 @@ class PurchaseOrderController extends Controller
             'orderSuppliers' => $orderSuppliers,
             'itemPrices' => $itemPrices,
             'payments' => $payments,
+            'deliveries' => $deliveries,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);
@@ -1159,11 +1162,248 @@ class PurchaseOrderController extends Controller
         }
     }
 
+    private function sendDeliveryNotifications(int $orderId, string $deliveryToken): void
+    {
+        $order = PurchaseOrder::findFull($orderId);
+        $items = PurchaseOrderItem::getByOrder($orderId);
+        $approvedSuppliers = PurchaseOrderSupplier::getAllApproved($orderId);
+        $baseUrl = $this->getBaseUrl();
+        $checklistUrl = "{$baseUrl}/pedido/entrega/{$deliveryToken}";
+
+        $supplierNames = !empty($approvedSuppliers) ? array_column($approvedSuppliers, 'supplier_name') : [];
+        $supplierDisplay = !empty($supplierNames) ? implode(', ', $supplierNames) : ($order['supplier_name'] ?? 'N/A');
+
+        // E-mail
+        $emails = Setting::get('orders_delivery_emails', '');
+        if (!empty($emails)) {
+            $subject = "Checklist de Entrega - Pedido {$order['code']}";
+            $body = EmailTemplate::purchaseOrderDelivery($order, $items, $checklistUrl, $supplierDisplay);
+            NotificationService::queueEmails($emails, $subject, $body);
+        }
+
+        // Webhook
+        $webhookUrl = Setting::get('orders_delivery_webhook', '');
+        if (!empty($webhookUrl)) {
+            $message = "*CHECKLIST DE ENTREGA DISPONÍVEL*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . "*Fornecedor(es):* {$supplierDisplay}\n"
+                . "*Itens:* " . count($items) . "\n"
+                . "*Valor:* R$ " . number_format($order['total_estimated'], 2, ',', '.') . "\n\n"
+                . "*Acesse o checklist para conferir as entregas:*\n{$checklistUrl}";
+
+            $this->sendWebhook($webhookUrl, [
+                'event' => 'delivery_checklist_ready',
+                'order_code' => $order['code'],
+                'suppliers' => $supplierNames,
+                'items_count' => count($items),
+                'checklist_url' => $checklistUrl,
+                'phone' => Setting::get('orders_delivery_phone', ''),
+                'phone_name' => Setting::get('orders_delivery_phone_name', ''),
+                'message' => $message,
+            ]);
+        }
+    }
+
     private function getBaseUrl(): string
     {
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'www.brooksconstrutora.com.br';
         return $scheme . '://' . $host;
+    }
+
+    // ============================
+    // CHECKLIST DE ENTREGA
+    // ============================
+
+    /**
+     * Inicializa o checklist de entrega para um pedido aprovado
+     */
+    public function deliveryInit(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/admin/orders'); return; }
+
+        $orderId = (int) $this->input('order_id');
+        $order = PurchaseOrder::findFull($orderId);
+
+        if (!$order || $order['status'] !== 'approved') {
+            $this->setFlash('error', 'Pedido não encontrado ou não está aprovado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        PurchaseOrderDelivery::initializeForOrder($orderId);
+
+        // Gerar token de acesso público se não tem
+        if (empty($order['delivery_token'])) {
+            $deliveryToken = bin2hex(random_bytes(32));
+            PurchaseOrder::updateById($orderId, ['delivery_token' => $deliveryToken]);
+        } else {
+            $deliveryToken = $order['delivery_token'];
+        }
+
+        // Enviar notificação de checklist disponível
+        $this->sendDeliveryNotifications($orderId, $deliveryToken);
+
+        PurchaseOrderHistory::log($orderId, 'delivery_init', 'Checklist de entrega criado', Auth::user()['name'] ?? 'Sistema', Auth::id());
+        
+        $this->setFlash('success', 'Checklist de entrega criado e notificações enviadas!');
+        $this->redirect('/admin/orders/show/' . $orderId);
+    }
+
+    /**
+     * Atualiza o status de entrega de um item
+     */
+    public function deliveryUpdate(): void
+    {
+        if (!$this->isPost()) { $this->json(['error' => 'POST only'], 405); return; }
+
+        $id = (int) $this->input('id');
+        $delivery = PurchaseOrderDelivery::find($id);
+
+        if (!$delivery) {
+            $this->json(['error' => 'Registro não encontrado.'], 404);
+            return;
+        }
+
+        $action = $this->input('delivery_action', '');
+        $performedBy = trim($this->input('performed_by', Auth::user()['name'] ?? 'Sistema'));
+        $now = date('Y-m-d H:i:s');
+        $description = '';
+
+        switch ($action) {
+            case 'mark_delivered':
+                PurchaseOrderDelivery::updateById($id, [
+                    'status' => 'delivered',
+                    'delivered_at' => $now,
+                ]);
+                $description = "Marcado como entregue por {$performedBy}";
+                break;
+
+            case 'mark_checked':
+                PurchaseOrderDelivery::updateById($id, [
+                    'status' => 'checked',
+                    'checked_by' => $performedBy,
+                ]);
+                $description = "Conferido OK por {$performedBy}";
+                break;
+
+            case 'mark_divergence':
+                $notes = trim($this->input('divergence_notes', ''));
+                PurchaseOrderDelivery::updateById($id, [
+                    'status' => 'divergence',
+                    'divergence_notes' => $notes,
+                ]);
+                $description = "Divergência registrada por {$performedBy}: {$notes}";
+                break;
+
+            case 'request_replacement':
+                $expectedDate = $this->input('replacement_expected_date', '');
+                $notes = trim($this->input('replacement_notes', ''));
+                PurchaseOrderDelivery::updateById($id, [
+                    'status' => 'replacement_requested',
+                    'replacement_requested_at' => $now,
+                    'replacement_expected_date' => $expectedDate ?: null,
+                    'replacement_notes' => $notes,
+                ]);
+                $description = "Troca solicitada por {$performedBy}" . ($expectedDate ? " - previsão: {$expectedDate}" : '');
+                break;
+
+            case 'mark_replacement_delivered':
+                PurchaseOrderDelivery::updateById($id, [
+                    'status' => 'replacement_delivered',
+                    'replacement_delivered_at' => $now,
+                ]);
+                $description = "Troca entregue - conferido por {$performedBy}";
+                break;
+
+            case 'reset':
+                PurchaseOrderDelivery::updateById($id, [
+                    'status' => 'pending',
+                    'delivered_at' => null,
+                    'checked_by' => null,
+                    'divergence_notes' => null,
+                ]);
+                $description = "Resetado para pendente por {$performedBy}";
+                break;
+
+            case 'add_notes':
+                $notes = trim($this->input('notes', ''));
+                PurchaseOrderDelivery::updateById($id, ['notes' => $notes]);
+                $description = "Observação adicionada por {$performedBy}: {$notes}";
+                break;
+
+            default:
+                $this->json(['error' => 'Ação inválida.'], 400);
+                return;
+        }
+
+        // Registrar no histórico
+        if ($description) {
+            Database::insert('purchase_order_delivery_history', [
+                'delivery_id' => $id,
+                'order_id' => $delivery['order_id'],
+                'action' => $action,
+                'description' => $description,
+                'performed_by' => $performedBy,
+                'created_at' => $now,
+            ]);
+        }
+
+        $this->json(['success' => true, 'timestamp' => $now]);
+    }
+
+    /**
+     * Retorna dados atualizados do checklist (para polling AJAX no admin)
+     */
+    public function deliveryData(): void
+    {
+        $orderId = (int) $this->input('order_id', 0);
+        if (!$orderId) { $this->json(['error' => 'order_id obrigatório'], 400); return; }
+
+        $deliveries = PurchaseOrderDelivery::getByOrder($orderId);
+        $history = Database::fetchAll(
+            "SELECT * FROM purchase_order_delivery_history WHERE order_id = ? ORDER BY created_at DESC LIMIT 50",
+            [$orderId]
+        );
+
+        $this->json(['deliveries' => $deliveries, 'history' => $history]);
+    }
+
+    /**
+     * Define a data esperada de entrega (por item ou por fornecedor)
+     */
+    public function deliveryExpectedDate(): void
+    {
+        if (!$this->isPost()) { $this->json(['error' => 'POST only'], 405); return; }
+
+        $orderId = (int) $this->input('order_id');
+        $supplierId = (int) $this->input('supplier_id', 0);
+        $itemId = (int) $this->input('item_id', 0);
+        $expectedDate = $this->input('expected_date', '');
+
+        if (empty($expectedDate)) {
+            $this->json(['error' => 'Data não informada.'], 400);
+            return;
+        }
+
+        if ($supplierId > 0) {
+            // Atualiza todos os itens deste fornecedor
+            Database::query(
+                "UPDATE purchase_order_deliveries SET expected_date = ? WHERE order_id = ? AND supplier_id = ?",
+                [$expectedDate, $orderId, $supplierId]
+            );
+        } elseif ($itemId > 0) {
+            // Atualiza apenas este item
+            Database::query(
+                "UPDATE purchase_order_deliveries SET expected_date = ? WHERE order_id = ? AND item_id = ?",
+                [$expectedDate, $orderId, $itemId]
+            );
+        } else {
+            $this->json(['error' => 'Informe supplier_id ou item_id.'], 400);
+            return;
+        }
+
+        $this->json(['success' => true]);
     }
 
     /**

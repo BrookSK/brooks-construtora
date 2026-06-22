@@ -341,6 +341,158 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
         </div>
         <?php endif; ?>
 
+        <!-- Checklist de Entrega -->
+        <?php if ($order['status'] === 'approved'): ?>
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span><i class="bi bi-clipboard-check"></i> Checklist de Entrega</span>
+                <div class="d-flex gap-2 align-items-center">
+                    <?php if (!empty($deliveries) && !empty($order['delivery_token'])): ?>
+                    <div class="input-group input-group-sm" style="max-width:250px;">
+                        <input type="text" class="form-control" value="<?= $baseUrl ?>/pedido/entrega/<?= $order['delivery_token'] ?>" readonly id="deliveryLink" style="font-size:0.65rem;">
+                        <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('deliveryLink').value); this.innerHTML='<i class=\'bi bi-check\'></i>'" title="Copiar link público"><i class="bi bi-clipboard"></i></button>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (empty($deliveries)): ?>
+                    <form method="POST" action="/admin/orders/delivery-init" class="d-inline">
+                        <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+                        <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-plus-circle"></i> Criar Checklist</button>
+                    </form>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php if (!empty($deliveries)): ?>
+            <div class="card-body p-0">
+                <?php
+                $statusLabelsDelivery = \App\Models\PurchaseOrderDelivery::$statusLabels;
+                $today = date('Y-m-d');
+                // Agrupar por fornecedor
+                $deliveriesBySupplier = [];
+                foreach ($deliveries as $d) {
+                    $key = $d['supplier_name'] ?? 'Sem fornecedor';
+                    $deliveriesBySupplier[$key][] = $d;
+                }
+                ?>
+                <?php foreach ($deliveriesBySupplier as $supplierName => $supplierDeliveries): ?>
+                <div class="border-bottom">
+                    <div class="px-3 py-2 bg-light d-flex justify-content-between align-items-center">
+                        <strong class="small"><i class="bi bi-building"></i> <?= htmlspecialchars($supplierName) ?></strong>
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="small text-muted mb-0">Entrega prevista:</label>
+                            <input type="date" class="form-control form-control-sm" style="width:140px;"
+                                value="<?= $supplierDeliveries[0]['expected_date'] ?? '' ?>"
+                                onchange="setExpectedDate(<?= $order['id'] ?>, <?= $supplierDeliveries[0]['supplier_id'] ?? 0 ?>, 0, this.value)">
+                        </div>
+                    </div>
+                    <?php foreach ($supplierDeliveries as $d): ?>
+                    <?php
+                    $si = $statusLabelsDelivery[$d['status']] ?? ['?', 'secondary', 'bi-question'];
+                    $isLate = $d['expected_date'] && $d['status'] === 'pending' && $d['expected_date'] < $today;
+                    ?>
+                    <div class="px-3 py-2 border-top <?= $isLate ? 'bg-danger bg-opacity-10' : '' ?>" id="delivery-<?= $d['id'] ?>">
+                        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="badge bg-<?= $si[1] ?>" style="font-size:0.65rem;"><i class="bi <?= $si[2] ?>"></i> <?= $si[0] ?></span>
+                                    <?php if ($isLate): ?>
+                                    <span class="badge bg-danger" style="font-size:0.6rem;"><i class="bi bi-clock"></i> ATRASADO</span>
+                                    <?php endif; ?>
+                                    <strong class="small"><?= htmlspecialchars($d['material_name']) ?></strong>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2" style="font-size:0.7rem; color:#6c757d;">
+                                    <span>Qtd: <?= number_format($d['quantity'], $d['quantity'] == (int)$d['quantity'] ? 0 : 2) ?> <?= htmlspecialchars($d['unit'] ?? '') ?></span>
+                                    <?php if ($d['expected_date']): ?>
+                                    <span><i class="bi bi-calendar"></i> Prev: <?= date('d/m/Y', strtotime($d['expected_date'])) ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($d['delivered_at']): ?>
+                                    <span class="text-success"><i class="bi bi-check"></i> Entregue: <?= date('d/m/Y H:i', strtotime($d['delivered_at'])) ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($d['checked_by']): ?>
+                                    <span class="text-success"><i class="bi bi-person-check"></i> Por: <?= htmlspecialchars($d['checked_by']) ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($d['divergence_notes']): ?>
+                                    <span class="text-danger"><i class="bi bi-exclamation"></i> <?= htmlspecialchars($d['divergence_notes']) ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($d['replacement_requested_at']): ?>
+                                    <span class="text-warning"><i class="bi bi-arrow-repeat"></i> Troca: <?= date('d/m/Y', strtotime($d['replacement_requested_at'])) ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($d['replacement_expected_date']): ?>
+                                    <span>Nova entrega: <?= date('d/m/Y', strtotime($d['replacement_expected_date'])) ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($d['notes']): ?>
+                                    <span><i class="bi bi-sticky"></i> <?= htmlspecialchars($d['notes']) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-1 flex-shrink-0">
+                                <?php if ($d['status'] === 'pending'): ?>
+                                <button class="btn btn-sm btn-outline-primary" title="Marcar Entregue" onclick="deliveryAction(<?= $d['id'] ?>, 'mark_delivered')"><i class="bi bi-box-seam"></i></button>
+                                <?php elseif ($d['status'] === 'delivered'): ?>
+                                <button class="btn btn-sm btn-outline-success" title="Conferido OK" onclick="deliveryAction(<?= $d['id'] ?>, 'mark_checked')"><i class="bi bi-check-lg"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" title="Divergência" onclick="showDivergenceModal(<?= $d['id'] ?>)"><i class="bi bi-exclamation-triangle"></i></button>
+                                <?php elseif ($d['status'] === 'divergence'): ?>
+                                <button class="btn btn-sm btn-outline-warning" title="Solicitar Troca" onclick="showReplacementModal(<?= $d['id'] ?>)"><i class="bi bi-arrow-repeat"></i></button>
+                                <?php elseif ($d['status'] === 'replacement_requested'): ?>
+                                <button class="btn btn-sm btn-outline-success" title="Troca Entregue" onclick="deliveryAction(<?= $d['id'] ?>, 'mark_replacement_delivered')"><i class="bi bi-check-all"></i></button>
+                                <?php endif; ?>
+                                <?php if (!in_array($d['status'], ['pending'])): ?>
+                                <button class="btn btn-sm btn-outline-secondary" title="Resetar" onclick="if(confirm('Resetar para pendente?'))deliveryAction(<?= $d['id'] ?>, 'reset')"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <div class="card-body text-center text-muted py-4">
+                <i class="bi bi-clipboard-check" style="font-size:2rem;"></i>
+                <p class="mb-0 mt-2 small">Clique em "Criar Checklist" para iniciar o controle de entregas.</p>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
+        <!-- Modal Divergência -->
+        <div class="modal fade" id="divergenceModal" tabindex="-1">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header py-2"><h6 class="modal-title">Registrar Divergência</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                        <input type="hidden" id="divergenceId">
+                        <textarea class="form-control" id="divergenceNotes" rows="3" placeholder="Descreva o problema..."></textarea>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button class="btn btn-sm btn-danger" onclick="submitDivergence()">Registrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Troca -->
+        <div class="modal fade" id="replacementModal" tabindex="-1">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header py-2"><h6 class="modal-title">Solicitar Troca</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                        <input type="hidden" id="replacementId">
+                        <div class="mb-2">
+                            <label class="form-label small">Previsão da nova entrega</label>
+                            <input type="date" class="form-control form-control-sm" id="replacementDate">
+                        </div>
+                        <div>
+                            <label class="form-label small">Observações</label>
+                            <textarea class="form-control form-control-sm" id="replacementNotes" rows="2" placeholder="Detalhes da troca..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button class="btn btn-sm btn-warning" onclick="submitReplacement()">Solicitar Troca</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Histórico -->
         <div class="card mb-3">
             <div class="card-header"><i class="bi bi-clock-history"></i> Histórico</div>
@@ -447,6 +599,61 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
         </a>
     </div>
 </div>
+
+<script>
+function deliveryAction(id, action, extraData) {
+    const fd = new FormData();
+    fd.append('id', id);
+    fd.append('delivery_action', action);
+    fd.append('performed_by', '<?= htmlspecialchars(\App\Core\Auth::user()['name'] ?? 'Admin') ?>');
+    if (extraData) {
+        for (const k in extraData) fd.append(k, extraData[k]);
+    }
+    fetch('/admin/orders/delivery-update', {method:'POST', body:fd})
+        .then(r => r.json())
+        .then(d => { if(d.success) location.reload(); else alert(d.error || 'Erro'); })
+        .catch(() => alert('Erro de conexão'));
+}
+
+function setExpectedDate(orderId, supplierId, itemId, date) {
+    const fd = new FormData();
+    fd.append('order_id', orderId);
+    fd.append('supplier_id', supplierId);
+    fd.append('item_id', itemId);
+    fd.append('expected_date', date);
+    fetch('/admin/orders/delivery-expected-date', {method:'POST', body:fd})
+        .then(r => r.json())
+        .then(d => { if(d.success) location.reload(); else alert(d.error || 'Erro'); })
+        .catch(() => alert('Erro de conexão'));
+}
+
+function showDivergenceModal(id) {
+    document.getElementById('divergenceId').value = id;
+    document.getElementById('divergenceNotes').value = '';
+    new bootstrap.Modal(document.getElementById('divergenceModal')).show();
+}
+
+function submitDivergence() {
+    const id = document.getElementById('divergenceId').value;
+    const notes = document.getElementById('divergenceNotes').value;
+    if (!notes.trim()) { alert('Descreva o problema.'); return; }
+    deliveryAction(id, 'mark_divergence', {divergence_notes: notes});
+}
+
+function showReplacementModal(id) {
+    document.getElementById('replacementId').value = id;
+    document.getElementById('replacementDate').value = '';
+    document.getElementById('replacementNotes').value = '';
+    new bootstrap.Modal(document.getElementById('replacementModal')).show();
+}
+
+function submitReplacement() {
+    const id = document.getElementById('replacementId').value;
+    const date = document.getElementById('replacementDate').value;
+    const notes = document.getElementById('replacementNotes').value;
+    deliveryAction(id, 'request_replacement', {replacement_expected_date: date, replacement_notes: notes});
+}
+</script>
 
 <?php $content = ob_get_clean(); ?>
 <?php require ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>
