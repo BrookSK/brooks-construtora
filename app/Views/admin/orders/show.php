@@ -587,12 +587,16 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     <input type="hidden" name="redirect" value="/admin/orders/show/<?= $order['id'] ?>">
                     <div class="row g-2">
                         <div class="col-12 col-md-4">
-                            <input type="text" class="form-control form-control-sm" name="description" id="spare-description" required placeholder="Buscar material ou digitar..." list="spare-materials-list" autocomplete="off">
-                            <datalist id="spare-materials-list">
+                            <select id="spare-mat-select" style="display:none;">
+                                <option value="">-- Selecione ou digite --</option>
                                 <?php foreach ($materials as $m): ?>
-                                <option value="<?= htmlspecialchars($m['name'] . ($m['classification'] ? ' (' . $m['classification'] . ')' : '')) ?>" data-unit="<?= htmlspecialchars($m['unit_abbr'] ?? $m['unit_name'] ?? '') ?>">
+                                <option value="<?= htmlspecialchars($m['name'] . ($m['classification'] ? ' (' . $m['classification'] . ')' : '')) ?>"
+                                    data-unit="<?= htmlspecialchars($m['unit_abbr'] ?? $m['unit_name'] ?? '') ?>">
+                                    <?= htmlspecialchars($m['name'] . ($m['classification'] ? ' - ' . $m['classification'] : '') . ($m['specification'] ? ' (' . $m['specification'] . ')' : '')) ?>
+                                </option>
                                 <?php endforeach; ?>
-                            </datalist>
+                            </select>
+                            <input type="hidden" name="description" id="spare-description" required>
                         </div>
                         <div class="col-4 col-md-1">
                             <input type="text" class="form-control form-control-sm" name="quantity" value="1" placeholder="Qtd" inputmode="decimal">
@@ -868,20 +872,31 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
 <script>
 <script src="/assets/js/searchable-select.js"></script>
 <script>
-// Auto-preencher unidade ao selecionar material da datalist
+// SearchableSelect para materiais no formulário de sobressalentes
 (function() {
-    const descInput = document.getElementById('spare-description');
-    const unitInput = document.getElementById('spare-unit');
-    const datalist = document.getElementById('spare-materials-list');
-    if (!descInput || !datalist) return;
+    const selectEl = document.getElementById('spare-mat-select');
+    if (!selectEl) return;
 
-    descInput.addEventListener('input', function() {
-        const opts = datalist.querySelectorAll('option');
-        for (const opt of opts) {
-            if (opt.value === this.value) {
-                if (opt.dataset.unit) unitInput.value = opt.dataset.unit;
-                break;
+    const ss = new SearchableSelect(selectEl, {
+        placeholder: 'Buscar material ou digitar...',
+        onSelect: function(value, text, dataset) {
+            document.getElementById('spare-description').value = value || text;
+            if (dataset && dataset.unit) {
+                document.getElementById('spare-unit').value = dataset.unit;
             }
+        }
+    });
+
+    // Permitir texto livre no submit
+    document.getElementById('spareItemForm').addEventListener('submit', function(e) {
+        const desc = document.getElementById('spare-description');
+        if (!desc.value && ss.input.value.trim()) {
+            desc.value = ss.input.value.trim();
+        }
+        if (!desc.value) {
+            e.preventDefault();
+            alert('Informe a descrição do item.');
+            ss.input.focus();
         }
     });
 })();
