@@ -223,6 +223,7 @@
             }
         }
         $hasMultiSupplier = !empty($allApproved) && count($allApproved) > 1;
+        $showSupplierColumn = !empty($supplierNamesMap);
         ?>
         <table class="items-table-desktop">
             <thead>
@@ -235,7 +236,7 @@
                     <th style="text-align:center;">Qtd</th>
                     <th style="text-align:right;">Unit.</th>
                     <th style="text-align:right;">Total</th>
-                    <?php if ($hasMultiSupplier): ?><th>Fornecedor</th><?php endif; ?>
+                    <?php if ($showSupplierColumn): ?><th>Fornecedor</th><?php endif; ?>
                 </tr>
             </thead>
             <tbody>
@@ -249,7 +250,7 @@
                     <td style="text-align:center;"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
                     <td style="text-align:right;">R$ <?= number_format($item['unit_price'] ?? 0, 2, ',', '.') ?></td>
                     <td style="text-align:right;">R$ <?= number_format($item['total_price'] ?? 0, 2, ',', '.') ?></td>
-                    <?php if ($hasMultiSupplier): ?><td style="font-size:0.7rem;"><?= htmlspecialchars($supplierNamesMap[$item['approved_supplier_id'] ?? 0] ?? '-') ?></td><?php endif; ?>
+                    <?php if ($showSupplierColumn): ?><td style="font-size:0.7rem;"><?= htmlspecialchars($supplierNamesMap[$item['approved_supplier_id'] ?? 0] ?? '-') ?></td><?php endif; ?>
                 </tr>
                 <?php endforeach; ?>
                 <?php
@@ -287,8 +288,8 @@
                 </div>
                 <div class="d-flex justify-content-between mt-1" style="font-size:0.7rem; color:#666;">
                     <span><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?> <?= htmlspecialchars($item['unit'] ?? '') ?> × R$ <?= number_format($item['unit_price'] ?? 0, 2, ',', '.') ?></span>
-                    <?php if ($hasMultiSupplier && !empty($item['approved_supplier_id'])): ?>
-                    <span style="color:#28a745;"><?= htmlspecialchars($supplierNamesMap[$item['approved_supplier_id']] ?? '') ?></span>
+                    <?php if (!empty($item['approved_supplier_id']) && isset($supplierNamesMap[$item['approved_supplier_id']])): ?>
+                    <span style="color:#28a745;"><?= htmlspecialchars($supplierNamesMap[$item['approved_supplier_id']]) ?></span>
                     <?php endif; ?>
                 </div>
             </div>
