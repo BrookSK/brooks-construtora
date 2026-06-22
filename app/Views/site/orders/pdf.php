@@ -103,8 +103,19 @@
         <!-- Informações -->
         <div class="info-grid">
             <div class="info-item">
-                <label>Fornecedor Aprovado</label>
-                <span><?= htmlspecialchars($approvedSupplier ? $approvedSupplier['supplier_name'] : ($order['supplier_name'] ?? 'N/A')) ?></span>
+                <label>Fornecedor(es) Aprovado(s)</label>
+                <span>
+                <?php 
+                $allApproved = \App\Models\PurchaseOrderSupplier::getAllApproved($order['id']);
+                if (!empty($allApproved) && count($allApproved) > 1):
+                    echo htmlspecialchars(implode(', ', array_column($allApproved, 'supplier_name')));
+                elseif ($approvedSupplier):
+                    echo htmlspecialchars($approvedSupplier['supplier_name']);
+                else:
+                    echo htmlspecialchars($order['supplier_name'] ?? 'N/A');
+                endif;
+                ?>
+                </span>
             </div>
             <div class="info-item">
                 <label>Data do Pedido</label>
@@ -190,6 +201,16 @@
         <?php endif; ?>
 
         <!-- Itens: Desktop (tabela completa) -->
+        <?php
+        // Montar mapa de supplier_id => nome para exibir fornecedor por item
+        $supplierNamesMap = [];
+        if (!empty($orderSuppliers)) {
+            foreach ($orderSuppliers as $os2) {
+                $supplierNamesMap[$os2['supplier_id']] = $os2['supplier_name'];
+            }
+        }
+        $hasMultiSupplier = !empty($allApproved) && count($allApproved) > 1;
+        ?>
         <table class="items-table-desktop">
             <thead>
                 <tr>
@@ -201,6 +222,7 @@
                     <th style="text-align:center;">Qtd</th>
                     <th style="text-align:right;">Unit.</th>
                     <th style="text-align:right;">Total</th>
+                    <?php if ($hasMultiSupplier): ?><th>Fornecedor</th><?php endif; ?>
                 </tr>
             </thead>
             <tbody>
@@ -214,6 +236,7 @@
                     <td style="text-align:center;"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
                     <td style="text-align:right;">R$ <?= number_format($item['unit_price'] ?? 0, 2, ',', '.') ?></td>
                     <td style="text-align:right;">R$ <?= number_format($item['total_price'] ?? 0, 2, ',', '.') ?></td>
+                    <?php if ($hasMultiSupplier): ?><td style="font-size:0.7rem;"><?= htmlspecialchars($supplierNamesMap[$item['approved_supplier_id'] ?? 0] ?? '-') ?></td><?php endif; ?>
                 </tr>
                 <?php endforeach; ?>
                 <?php
@@ -251,6 +274,9 @@
                 </div>
                 <div class="d-flex justify-content-between mt-1" style="font-size:0.7rem; color:#666;">
                     <span><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?> <?= htmlspecialchars($item['unit'] ?? '') ?> × R$ <?= number_format($item['unit_price'] ?? 0, 2, ',', '.') ?></span>
+                    <?php if ($hasMultiSupplier && !empty($item['approved_supplier_id'])): ?>
+                    <span style="color:#28a745;"><?= htmlspecialchars($supplierNamesMap[$item['approved_supplier_id']] ?? '') ?></span>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endforeach; ?>

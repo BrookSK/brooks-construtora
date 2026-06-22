@@ -235,7 +235,7 @@ HTML;
         return self::wrap("Aprovação Pendente - {$order['code']}", $body);
     }
 
-    public static function purchaseOrderCompleted(array $order, array $items, string $pdfUrl, string $xlsxUrl = ''): string
+    public static function purchaseOrderCompleted(array $order, array $items, string $pdfUrl, string $xlsxUrl = '', array $approvedSuppliers = []): string
     {
         $totalFormatted = number_format($order['total_estimated'] ?? 0, 2, ',', '.');
 
@@ -246,6 +246,12 @@ HTML;
 HTML;
         }
 
+        $supplierLine = '';
+        if (!empty($approvedSuppliers)) {
+            $names = array_column($approvedSuppliers, 'supplier_name');
+            $supplierLine = '<p style="margin:8px 0 0; font-size:13px; color:#555;">Fornecedor(es): <strong>' . htmlspecialchars(implode(', ', $names)) . '</strong></p>';
+        }
+
         $body = <<<HTML
 <p style="margin-bottom:15px;">O pedido de materiais foi <strong style="color:#28a745;">APROVADO</strong> com sucesso!</p>
 
@@ -253,6 +259,7 @@ HTML;
 <tr><td style="padding: 18px 20px;">
     <p style="margin:0 0 5px; font-size:13px; color:#388e3c; text-transform:uppercase; font-weight:600;">✓ Pedido Aprovado</p>
     <p style="margin:0; font-size:17px; color:#2e7d32; font-weight:600;">{$order['code']}</p>
+    {$supplierLine}
     <p style="margin:8px 0 0; font-size:13px; color:#555;">Aprovado por: <strong>{$order['approved_by_name']}</strong></p>
     <p style="margin:4px 0 0; font-size:13px; color:#555;">Data: {$order['approved_at']}</p>
     <p style="margin:10px 0 0; font-size:20px; color:#2e7d32; font-weight:700;">Total: R$ {$totalFormatted}</p>
@@ -282,7 +289,6 @@ HTML;
 <tr><td style="padding: 18px 20px;">
     <p style="margin:0 0 5px; font-size:13px; color:#721c24; text-transform:uppercase; font-weight:600;">✗ Pedido Rejeitado</p>
     <p style="margin:0; font-size:17px; color:#721c24; font-weight:600;">{$order['code']}</p>
-    <p style="margin:8px 0 0; font-size:13px; color:#555;">Fornecedor: <strong>{$order['supplier_name']}</strong></p>
     <p style="margin:4px 0 0; font-size:13px; color:#555;">Valor cotado: <strong>R$ {$totalFormatted}</strong></p>
     <p style="margin:4px 0 0; font-size:13px; color:#555;">Rejeitado por: <strong>{$rejectedBy}</strong></p>
     <p style="margin:4px 0 0; font-size:13px; color:#555;">Data: {$date}</p>
@@ -364,7 +370,7 @@ HTML;
     <p style="margin:0 0 5px; font-size:13px; color:#1565c0; text-transform:uppercase; font-weight:600;">{$typeLabel} Registrado</p>
     <p style="margin:0; font-size:17px; color:#1565c0; font-weight:600;">{$order['code']}</p>
     <p style="margin:8px 0 0; font-size:13px; color:#555;">Fornecedor: <strong>{$order['supplier_name']}</strong></p>
-    <p style="margin:4px 0 0; font-size:13px; color:#555;">Numero: <strong>{$numberText}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Número: <strong>{$numberText}</strong></p>
     <p style="margin:4px 0 0; font-size:13px; color:#555;">Valor: <strong>{$amountFmt}</strong></p>
     <p style="margin:4px 0 0; font-size:13px; color:#555;">Vencimento: <strong>{$dueDateFmt}</strong></p>
     <p style="margin:8px 0 0; font-size:13px; color:#555;">Enviado por: <strong>{$uploadedBy}</strong></p>

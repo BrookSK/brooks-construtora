@@ -32,11 +32,22 @@
                             <small class="text-muted">Pedido</small>
                             <strong><?= htmlspecialchars($order['code']) ?></strong>
                         </div>
-                        <?php if ($order['status'] === 'approved' && !empty($order['supplier_name'])): ?>
+                        <?php if ($order['status'] === 'approved'): ?>
+                        <?php
+                        $allApprovedSuppliers = \App\Models\PurchaseOrderSupplier::getAllApproved($order['id']);
+                        $supplierDisplay = '';
+                        if (!empty($allApprovedSuppliers) && count($allApprovedSuppliers) > 1) {
+                            $supplierDisplay = implode(', ', array_column($allApprovedSuppliers, 'supplier_name'));
+                        } elseif (!empty($order['supplier_name'])) {
+                            $supplierDisplay = $order['supplier_name'];
+                        }
+                        ?>
+                        <?php if (!empty($supplierDisplay)): ?>
                         <div class="d-flex justify-content-between mb-1">
-                            <small class="text-muted">Fornecedor aprovado</small>
-                            <strong class="text-success"><?= htmlspecialchars($order['supplier_name']) ?></strong>
+                            <small class="text-muted">Fornecedor(es) aprovado(s)</small>
+                            <strong class="text-success"><?= htmlspecialchars($supplierDisplay) ?></strong>
                         </div>
+                        <?php endif; ?>
                         <?php endif; ?>
                         <?php if ($order['total_estimated'] > 0): ?>
                         <div class="d-flex justify-content-between">

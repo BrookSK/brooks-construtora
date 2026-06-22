@@ -59,8 +59,16 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
             <div class="card-body">
                 <div class="row">
                     <div class="col-sm-6 mb-2">
-                        <small class="text-muted d-block">Fornecedor Aprovado</small>
+                        <small class="text-muted d-block">Fornecedor(es) Aprovado(s)</small>
+                        <?php
+                        $approvedSuppliers = \App\Models\PurchaseOrderSupplier::getAllApproved($order['id']);
+                        if (!empty($approvedSuppliers)):
+                            $names = array_column($approvedSuppliers, 'supplier_name');
+                        ?>
+                        <strong><?= htmlspecialchars(implode(', ', $names)) ?></strong>
+                        <?php else: ?>
                         <strong><?= htmlspecialchars($order['supplier_name'] ?? 'Pendente') ?></strong>
+                        <?php endif; ?>
                     </div>
                     <div class="col-sm-6 mb-2">
                         <small class="text-muted d-block">Solicitante</small>
@@ -127,10 +135,20 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <?php if ($order['total_estimated'] > 0): ?>
                             <th class="text-end">Unit.</th>
                             <th class="text-end">Total</th>
+                            <th>Fornecedor</th>
                             <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
+                        <?php 
+                        // Montar mapa de supplier_id => nome para exibir fornecedor por item
+                        $supplierNamesMap = [];
+                        if (!empty($orderSuppliers)) {
+                            foreach ($orderSuppliers as $os) {
+                                $supplierNamesMap[$os['supplier_id']] = $os['supplier_name'];
+                            }
+                        }
+                        ?>
                         <?php foreach ($items as $i => $item): ?>
                         <tr>
                             <td><?= $i + 1 ?></td>
@@ -142,12 +160,13 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <?php if ($order['total_estimated'] > 0): ?>
                             <td class="text-end"><?= $item['unit_price'] ? 'R$ ' . number_format($item['unit_price'], 2, ',', '.') : '-' ?></td>
                             <td class="text-end fw-bold"><?= $item['total_price'] ? 'R$ ' . number_format($item['total_price'], 2, ',', '.') : '-' ?></td>
+                            <td><small class="text-muted"><?= htmlspecialchars($supplierNamesMap[$item['approved_supplier_id'] ?? 0] ?? '-') ?></small></td>
                             <?php endif; ?>
                         </tr>
                         <?php endforeach; ?>
                         <?php if ($order['total_estimated'] > 0): ?>
                         <tr class="table-light">
-                            <td colspan="7" class="text-end fw-bold">TOTAL:</td>
+                            <td colspan="8" class="text-end fw-bold">TOTAL:</td>
                             <td class="text-end fw-bold text-success">R$ <?= number_format($order['total_estimated'], 2, ',', '.') ?></td>
                         </tr>
                         <?php endif; ?>

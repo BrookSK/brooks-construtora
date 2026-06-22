@@ -432,9 +432,13 @@ class PurchaseOrderController extends Controller
             // Webhook de rejeição (usa os dados da fase 3 - conclusão)
             $webhookUrl = Setting::get('orders_completed_webhook', '');
             if (!empty($webhookUrl)) {
+                $orderSuppliers = PurchaseOrderSupplier::getByOrder($order['id']);
+                $supplierNames = !empty($orderSuppliers) ? array_column($orderSuppliers, 'supplier_name') : [];
+                $supplierDisplay = !empty($supplierNames) ? implode(', ', $supplierNames) : ($order['supplier_name'] ?? 'N/A');
+
                 $message = "*PEDIDO REJEITADO*\n\n"
                     . "*Pedido:* {$order['code']}\n"
-                    . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                    . "*Fornecedores cotados:* {$supplierDisplay}\n"
                     . "*Valor cotado:* R$ " . number_format($order['total_estimated'], 2, ',', '.') . "\n"
                     . "*Rejeitado por:* {$personName}\n"
                     . "*Data:* " . date('d/m/Y H:i') . "\n\n"
@@ -443,7 +447,7 @@ class PurchaseOrderController extends Controller
                 $this->sendWebhook($webhookUrl, [
                     'event' => 'order_rejected',
                     'order_code' => $order['code'],
-                    'supplier' => $order['supplier_name'] ?? 'N/A',
+                    'suppliers' => $supplierNames,
                     'total' => $order['total_estimated'],
                     'rejected_by' => $personName,
                     'rejected_at' => date('Y-m-d H:i:s'),
@@ -458,6 +462,7 @@ class PurchaseOrderController extends Controller
                 'order' => $order,
                 'action' => 'rejected',
                 'approvedSupplier' => null,
+                'approvedSuppliers' => [],
             ]);
         } else {
             $this->setFlash('error', 'Ação inválida.');
@@ -508,6 +513,7 @@ class PurchaseOrderController extends Controller
         $items = PurchaseOrderItem::getByOrder($orderId);
         $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
         $approvedSupplier = PurchaseOrderSupplier::getApproved($orderId);
+        $approvedSuppliers = PurchaseOrderSupplier::getAllApproved($orderId);
 
         $xlsx = new XlsxService();
 
@@ -525,8 +531,14 @@ class PurchaseOrderController extends Controller
         $xlsx->addRow(['Pedido:', $order['code'], '', 'Data:', date('d/m/Y', strtotime($order['created_at']))], 'bold');
         $xlsx->addRow(['Solicitante:', $order['created_by_name'] ?? '-', '', 'Status:', 'Aprovado'], 'bold');
 
-        $supplierName = $approvedSupplier ? $approvedSupplier['supplier_name'] : ($order['supplier_name'] ?? '-');
-        $xlsx->addRow(['Fornecedor:', $supplierName], 'bold');
+        // Fornecedores aprovados
+        if (!empty($approvedSuppliers) && count($approvedSuppliers) > 1) {
+            $supplierNames = implode(', ', array_column($approvedSuppliers, 'supplier_name'));
+            $xlsx->addRow(['Fornecedores:', $supplierNames], 'bold');
+        } else {
+            $supplierName = $approvedSupplier ? $approvedSupplier['supplier_name'] : ($order['supplier_name'] ?? '-');
+            $xlsx->addRow(['Fornecedor:', $supplierName], 'bold');
+        }
 
         if ($approvedSupplier) {
             $details = [];
@@ -542,7 +554,17 @@ class PurchaseOrderController extends Controller
         $xlsx->addEmptyRow();
 
         // Header da tabela
-        $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Unid.', 'Qtd', 'Unit.', 'Total'], 'header');
+        $hasMultiSupplier = !empty($approvedSuppliers) && count($approvedSuppliers) > 1;
+        $supplierNamesMap = [];
+        foreach ($orderSuppliers as $os) {
+            $supplierNamesMap[$os['supplier_id']] = $os['supplier_name'];
+        }
+
+        if ($hasMultiSupplier) {
+            $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Unid.', 'Qtd', 'Unit.', 'Total', 'Fornecedor'], 'header');
+        } else {
+            $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Unid.', 'Qtd', 'Unit.', 'Total'], 'header');
+        }
 
         // Itens
         $subtotalInsumos = 0;
@@ -551,7 +573,7 @@ class PurchaseOrderController extends Controller
             $totalPrice = $item['total_price'] ?? 0;
             $subtotalInsumos += $totalPrice;
 
-            $xlsx->addRow([
+            $row = [
                 $i + 1,
                 $item['material_name'],
                 $item['specification'] ?? '',
@@ -560,7 +582,11 @@ class PurchaseOrderController extends Controller
                 $item['quantity'],
                 $unitPrice,
                 $totalPrice,
-            ]);
+            ];
+            if ($hasMultiSupplier) {
+                $row[] = $supplierNamesMap[$item['approved_supplier_id'] ?? 0] ?? '-';
+            }
+            $xlsx->addRow($row);
         }
 
         // Totais
@@ -851,6 +877,7 @@ class PurchaseOrderController extends Controller
     {
         $order = PurchaseOrder::findFull($orderId);
         $items = PurchaseOrderItem::getByOrder($orderId);
+        $approvedSuppliers = PurchaseOrderSupplier::getAllApproved($orderId);
         $baseUrl = $this->getBaseUrl();
         $pdfUrl = "{$baseUrl}/pedido/pdf/{$orderId}";
         $xlsxUrl = "{$baseUrl}/pedido/xlsx/{$orderId}";
@@ -858,7 +885,7 @@ class PurchaseOrderController extends Controller
         $emails = Setting::get('orders_completed_emails', '');
         if (!empty($emails)) {
             $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
-            $body = EmailTemplate::purchaseOrderCompleted($order, $items, $pdfUrl, $xlsxUrl);
+            $body = EmailTemplate::purchaseOrderCompleted($order, $items, $pdfUrl, $xlsxUrl, $approvedSuppliers);
             NotificationService::queueEmails($emails, $subject, $body);
         }
 
@@ -866,9 +893,16 @@ class PurchaseOrderController extends Controller
         if (!empty($webhookUrl)) {
             $totalFormatted = 'R$ ' . number_format($order['total_estimated'], 2, ',', '.');
 
+            // Montar lista de fornecedores aprovados
+            $supplierNames = [];
+            if (!empty($approvedSuppliers)) {
+                $supplierNames = array_column($approvedSuppliers, 'supplier_name');
+            }
+            $supplierDisplay = !empty($supplierNames) ? implode(', ', $supplierNames) : ($order['supplier_name'] ?? 'N/A');
+
             $message = "*PEDIDO APROVADO*\n\n"
                 . "*Pedido:* {$order['code']}\n"
-                . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                . "*Fornecedor(es):* {$supplierDisplay}\n"
                 . "*Valor Total:* {$totalFormatted}\n"
                 . "*Aprovado por:* {$order['approved_by_name']}\n\n"
                 . "*PDF do pedido:*\n{$pdfUrl}\n\n"
@@ -877,7 +911,7 @@ class PurchaseOrderController extends Controller
             $this->sendWebhook($webhookUrl, [
                 'event' => 'order_approved',
                 'order_code' => $order['code'],
-                'supplier' => $order['supplier_name'] ?? 'N/A',
+                'suppliers' => $supplierNames,
                 'total' => $order['total_estimated'],
                 'approved_by' => $order['approved_by_name'],
                 'pdf_url' => $pdfUrl,
