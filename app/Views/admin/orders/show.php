@@ -546,6 +546,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <th class="text-end">Valor</th>
                             <th>Onde</th>
                             <th>Por</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -559,21 +560,72 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <td class="text-end">R$ <?= number_format($si['total_price'], 2, ',', '.') ?></td>
                             <td><?= htmlspecialchars($si['supplier_name'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($si['purchased_by'] ?? '-') ?></td>
+                            <td>
+                                <form method="POST" action="/admin/orders/spare-items/delete" class="d-inline" onsubmit="return confirm('Excluir?')">
+                                    <input type="hidden" name="id" value="<?= $si['id'] ?>">
+                                    <input type="hidden" name="redirect" value="/admin/orders/show/<?= $order['id'] ?>">
+                                    <button class="btn btn-sm btn-outline-danger p-0 px-1"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                         <tr class="table-warning">
-                            <td colspan="3" class="text-end fw-bold">Total sobressalentes:</td>
+                            <td colspan="3" class="text-end fw-bold">Total:</td>
                             <td class="text-end fw-bold">R$ <?= number_format($spareTotal, 2, ',', '.') ?></td>
-                            <td colspan="2"></td>
+                            <td colspan="3"></td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-            <?php else: ?>
-            <div class="card-body text-center text-muted py-3 small">
-                Nenhum item sobressalente vinculado a este pedido.
-            </div>
             <?php endif; ?>
+            <!-- Formulário inline para adicionar -->
+            <div class="card-body border-top">
+                <form method="POST" action="/admin/orders/spare-items/add">
+                    <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+                    <input type="hidden" name="redirect" value="/admin/orders/show/<?= $order['id'] ?>">
+                    <div class="row g-2">
+                        <div class="col-12 col-md-4">
+                            <input type="text" class="form-control form-control-sm" name="description" required placeholder="Descrição do item *">
+                        </div>
+                        <div class="col-4 col-md-1">
+                            <input type="text" class="form-control form-control-sm" name="quantity" value="1" placeholder="Qtd" inputmode="decimal">
+                        </div>
+                        <div class="col-4 col-md-1">
+                            <input type="text" class="form-control form-control-sm" name="unit" placeholder="un">
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <input type="text" class="form-control form-control-sm" name="unit_price" required placeholder="Preço R$" inputmode="decimal">
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <input type="text" class="form-control form-control-sm" name="supplier_name" placeholder="Onde comprou">
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <select class="form-select form-select-sm" name="payment_method">
+                                <option value="">Pgto</option>
+                                <option value="pix">PIX</option>
+                                <option value="cartao">Cartão</option>
+                                <option value="dinheiro">Dinheiro</option>
+                                <option value="boleto">Boleto</option>
+                                <option value="transferencia">Transf.</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-2 mt-1">
+                        <div class="col-6 col-md-3">
+                            <input type="text" class="form-control form-control-sm" name="purchased_by" value="<?= htmlspecialchars($user['name'] ?? '') ?>" placeholder="Comprado por">
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <input type="date" class="form-control form-control-sm" name="purchased_at" value="<?= date('Y-m-d') ?>">
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <input type="text" class="form-control form-control-sm" name="notes" placeholder="Observações">
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <button type="submit" class="btn btn-sm btn-warning w-100"><i class="bi bi-plus-lg"></i> Adicionar</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
         <?php endif; ?>
 

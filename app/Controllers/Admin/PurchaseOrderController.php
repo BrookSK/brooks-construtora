@@ -1457,7 +1457,8 @@ class PurchaseOrderController extends Controller
         $this->sendSpareItemNotification($orderId, $description, $totalPrice, $purchasedBy ?: (Auth::user()['name'] ?? 'Sistema'));
 
         $this->setFlash('success', "Item \"{$description}\" adicionado com sucesso!");
-        $this->redirect('/admin/orders/spare-items');
+        $redirect = $this->input('redirect', '/admin/orders/spare-items');
+        $this->redirect($redirect);
     }
 
     /**
@@ -1478,7 +1479,8 @@ class PurchaseOrderController extends Controller
             $this->setFlash('success', 'Item removido.');
         }
 
-        $this->redirect('/admin/orders/spare-items');
+        $redirect = $this->input('redirect', '/admin/orders/spare-items');
+        $this->redirect($redirect);
     }
 
     // ============================
