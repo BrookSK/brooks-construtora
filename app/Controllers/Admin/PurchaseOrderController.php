@@ -1119,15 +1119,16 @@ class PurchaseOrderController extends Controller
 
     private function sendWebhook(string $url, array $data, ?int $orderId = null, ?string $eventType = null): void
     {
-        // Auto-detect event type from payload if not provided
         if (!$eventType && isset($data['event'])) {
             $eventType = $data['event'];
         }
-        // Auto-detect orderId from internal field if not provided
         if (!$orderId && isset($data['_order_id'])) {
             $orderId = (int) $data['_order_id'];
             unset($data['_order_id']);
         }
+
+        error_log("[BROOKS_WEBHOOK] sendWebhook: url={$url} event={$eventType} orderId={$orderId} phone=" . ($data['phone'] ?? 'N/A'));
+
         NotificationService::queueWebhook($url, $data, $orderId, $eventType);
     }
 
@@ -1155,6 +1156,8 @@ class PurchaseOrderController extends Controller
 
         // Webhook
         $webhookUrl = Setting::get('orders_payment_webhook', '');
+        error_log("[BROOKS_WEBHOOK] sendPaymentNotifications: webhook_url='{$webhookUrl}' phone='" . Setting::get('orders_payment_phone', '') . "' order={$orderId}");
+        
         if (!empty(trim($webhookUrl))) {
             $message = "*{$typeLabel} ENVIADO*\n\n"
                 . "*Pedido:* {$order['code']}\n"

@@ -31,7 +31,10 @@ class NotificationService
      */
     public static function queueWebhook(string $url, array $data, ?int $orderId = null, ?string $eventType = null): void
     {
-        if (empty($url)) return;
+        if (empty($url)) {
+            error_log("[BROOKS_WEBHOOK] queueWebhook: URL VAZIA - nao enfileirou. event={$eventType} orderId={$orderId}");
+            return;
+        }
 
         $phones = isset($data['phone']) && !empty($data['phone']) 
             ? array_map('trim', explode(',', $data['phone'])) 
@@ -41,12 +44,15 @@ class NotificationService
             ? array_map('trim', explode(',', $data['phone_name']))
             : [];
 
+        error_log("[BROOKS_WEBHOOK] queueWebhook: url={$url} phones=" . implode(',', $phones) . " event={$eventType} orderId={$orderId}");
+
         foreach ($phones as $i => $phone) {
             $payload = $data;
             $payload['phone'] = $phone;
             $recipientName = $phoneNames[$i] ?? ($phoneNames[0] ?? $phone);
             $payload['phone_name'] = $recipientName;
-            NotificationQueue::queueWebhook($url, $payload, $orderId, $eventType, $recipientName);
+            $queueId = NotificationQueue::queueWebhook($url, $payload, $orderId, $eventType, $recipientName);
+            error_log("[BROOKS_WEBHOOK]   enfileirado ID={$queueId} phone={$phone} name={$recipientName}");
         }
 
         self::scheduleFlush();
@@ -70,7 +76,12 @@ class NotificationService
     public static function processImmediate(): void
     {
         $pending = NotificationQueue::getPending(50);
-        if (empty($pending)) return;
+        if (empty($pending)) {
+            error_log("[BROOKS_WEBHOOK] processImmediate: nenhum pendente na fila");
+            return;
+        }
+
+        error_log("[BROOKS_WEBHOOK] processImmediate: " . count($pending) . " pendente(s) na fila");
 
         $mailService = null;
 
@@ -82,6 +93,8 @@ class NotificationService
                     $mailService->send($n['to_email'], $n['subject'], $n['body'], true);
                     NotificationQueue::markSent($n['id']);
                 } elseif ($n['type'] === 'webhook') {
+                    error_log("[BROOKS_WEBHOOK] processImmediate: enviando ID={$n['id']} url={$n['webhook_url']}");
+
                     $ch = curl_init($n['webhook_url']);
                     curl_setopt_array($ch, [
                         CURLOPT_POST => true,
@@ -91,10 +104,12 @@ class NotificationService
                         CURLOPT_TIMEOUT => 10,
                         CURLOPT_SSL_VERIFYPEER => false,
                     ]);
-                    curl_exec($ch);
+                    $response = curl_exec($ch);
                     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                     $error = curl_error($ch);
                     curl_close($ch);
+
+                    error_log("[BROOKS_WEBHOOK] processImmediate: ID={$n['id']} HTTP={$httpCode} error={$error}");
 
                     if ($error || $httpCode >= 400) {
                         NotificationQueue::markFailed($n['id'], $error ?: "HTTP {$httpCode}");
@@ -103,6 +118,7 @@ class NotificationService
                     }
                 }
             } catch (\Exception $e) {
+                error_log("[BROOKS_WEBHOOK] processImmediate: EXCEPTION ID={$n['id']} " . $e->getMessage());
                 NotificationQueue::markFailed($n['id'], $e->getMessage());
             }
         }
