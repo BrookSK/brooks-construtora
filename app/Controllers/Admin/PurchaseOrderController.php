@@ -451,6 +451,7 @@ class PurchaseOrderController extends Controller
         }
 
         $settings = Setting::getGroup('orders_');
+        $settings['spare_items_weekly_budget'] = Setting::get('spare_items_weekly_budget', '1000');
 
         $this->view('admin.orders.settings', [
             'settings' => $settings,
@@ -486,7 +487,16 @@ class PurchaseOrderController extends Controller
             'orders_payment_webhook',
             'orders_payment_phone',
             'orders_payment_phone_name',
+            'orders_delivery_emails',
+            'orders_delivery_webhook',
+            'orders_delivery_phone',
+            'orders_delivery_phone_name',
+            'orders_spare_emails',
+            'orders_spare_webhook',
+            'orders_spare_phone',
+            'orders_spare_phone_name',
             'orders_pin_code',
+            'spare_items_weekly_budget',
         ];
 
         $data = [];
