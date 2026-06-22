@@ -92,6 +92,7 @@ class PurchaseOrderDelivery extends Model
 
     /**
      * Verifica se algum item está atrasado
+     * Atrasado = data combinada já passou E status NÃO é checked/delivered/replacement_delivered
      */
     public static function getLateItems(int $orderId): array
     {
@@ -101,9 +102,12 @@ class PurchaseOrderDelivery extends Model
              JOIN purchase_order_items poi ON pod.item_id = poi.id
              LEFT JOIN suppliers s ON pod.supplier_id = s.id
              WHERE pod.order_id = ? 
-               AND pod.status IN ('pending', 'divergence', 'replacement_requested')
-               AND pod.expected_date IS NOT NULL 
-               AND pod.expected_date < CURDATE()
+               AND pod.status NOT IN ('checked', 'replacement_delivered')
+               AND (
+                   (pod.expected_date IS NOT NULL AND pod.expected_date < CURDATE() AND pod.status IN ('pending', 'divergence', 'replacement_requested'))
+                   OR
+                   (pod.replacement_expected_date IS NOT NULL AND pod.replacement_expected_date < CURDATE() AND pod.status = 'replacement_requested')
+               )
              ORDER BY pod.expected_date ASC",
             [$orderId]
         );

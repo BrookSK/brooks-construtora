@@ -193,6 +193,10 @@ class PurchaseOrderController extends Controller
                     'vendor_phone' => trim($vendor['phone'] ?? ''),
                     'vendor_email' => trim($vendor['email'] ?? ''),
                     'delivery_days' => !empty($vendor['delivery_days']) ? (int) $vendor['delivery_days'] : null,
+                    'payment_method' => !empty($vendor['payment_method']) ? $vendor['payment_method'] : null,
+                    'payment_condition' => trim($vendor['payment_condition'] ?? '') ?: null,
+                    'payment_first_due' => !empty($vendor['payment_first_due']) ? $vendor['payment_first_due'] : null,
+                    'payment_notes' => trim($vendor['payment_notes'] ?? '') ?: null,
                 ]);
 
                 // Registrar histórico de preços

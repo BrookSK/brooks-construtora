@@ -141,6 +141,19 @@
                 <span><?= $approvedSupplier['delivery_days'] ?> dias</span>
             </div>
             <?php endif; ?>
+            <?php if ($approvedSupplier && !empty($approvedSupplier['payment_method'])): ?>
+            <?php $paymentLabels = ['pix'=>'PIX','boleto'=>'Boleto','cartao'=>'Cartão','transferencia'=>'Transferência','dinheiro'=>'Dinheiro','outro'=>'Outro']; ?>
+            <div class="info-item">
+                <label>Forma de Pagamento</label>
+                <span><?= $paymentLabels[$approvedSupplier['payment_method']] ?? $approvedSupplier['payment_method'] ?><?= !empty($approvedSupplier['payment_condition']) ? ' (' . htmlspecialchars($approvedSupplier['payment_condition']) . ')' : '' ?></span>
+            </div>
+            <?php if (!empty($approvedSupplier['payment_first_due'])): ?>
+            <div class="info-item">
+                <label>1ª Parcela</label>
+                <span><?= date('d/m/Y', strtotime($approvedSupplier['payment_first_due'])) ?></span>
+            </div>
+            <?php endif; ?>
+            <?php endif; ?>
             <?php if (!empty($order['supplier_cnpj'])): ?>
             <div class="info-item">
                 <label>CNPJ Fornecedor</label>

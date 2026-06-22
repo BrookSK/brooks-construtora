@@ -55,3 +55,10 @@ CREATE TABLE IF NOT EXISTS purchase_order_delivery_history (
 ALTER TABLE purchase_orders
     ADD COLUMN delivery_token VARCHAR(64) DEFAULT NULL COMMENT 'Token para acesso público ao checklist de entrega' AFTER approval_token;
 
+-- Forma de pagamento combinada por fornecedor
+ALTER TABLE purchase_order_suppliers
+    ADD COLUMN payment_method ENUM('pix','boleto','cartao','transferencia','dinheiro','outro') DEFAULT NULL COMMENT 'Forma de pagamento combinada' AFTER delivery_notes,
+    ADD COLUMN payment_condition VARCHAR(255) DEFAULT NULL COMMENT 'Condição: à vista, 30/60/90, 1+2x, etc' AFTER payment_method,
+    ADD COLUMN payment_first_due DATE DEFAULT NULL COMMENT 'Vencimento da primeira parcela' AFTER payment_condition,
+    ADD COLUMN payment_notes TEXT DEFAULT NULL COMMENT 'Observações de pagamento' AFTER payment_first_due;
+

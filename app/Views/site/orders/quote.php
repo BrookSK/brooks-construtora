@@ -381,6 +381,33 @@
                         <input type="text" inputmode="decimal" class="form-control form-control-sm" name="supplier_financials[${sid}][freight]" placeholder="0,00">
                     </div>
                 </div>
+                <!-- Forma de pagamento -->
+                <div class="row g-2 mt-2">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small text-muted mb-0">Forma de Pgto</label>
+                        <select class="form-select form-select-sm" name="supplier_vendor[${sid}][payment_method]">
+                            <option value="">-- Selecione --</option>
+                            <option value="pix">PIX</option>
+                            <option value="boleto">Boleto</option>
+                            <option value="cartao">Cartão</option>
+                            <option value="transferencia">Transferência</option>
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="outro">Outro</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small text-muted mb-0">Condição</label>
+                        <input type="text" class="form-control form-control-sm" name="supplier_vendor[${sid}][payment_condition]" placeholder="à vista, 30/60/90...">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small text-muted mb-0">1ª parcela</label>
+                        <input type="date" class="form-control form-control-sm" name="supplier_vendor[${sid}][payment_first_due]">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small text-muted mb-0">Obs pgto</label>
+                        <input type="text" class="form-control form-control-sm" name="supplier_vendor[${sid}][payment_notes]" placeholder="Observações...">
+                    </div>
+                </div>
                 <div class="d-flex justify-content-end gap-4 mt-3 pt-2 border-top">
                     <div class="text-end">
                         <small class="text-muted d-block">Subtotal insumos</small>
@@ -624,6 +651,32 @@
                             <div class="col-4 col-md-2">
                                 <label class="form-label small text-muted mb-0">Frete (R$)</label>
                                 <input type="text" class="form-control form-control-sm map-fin-field" data-sid="${sid}" data-field="freight" value="${getFieldVal('freight')}" placeholder="0,00">
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small text-muted mb-0">Forma de Pgto</label>
+                                <select class="form-select form-select-sm map-vendor-field" data-sid="${sid}" data-field="payment_method">
+                                    <option value="">-- Selecione --</option>
+                                    <option value="pix" ${getVendorVal('payment_method')==='pix'?'selected':''}>PIX</option>
+                                    <option value="boleto" ${getVendorVal('payment_method')==='boleto'?'selected':''}>Boleto</option>
+                                    <option value="cartao" ${getVendorVal('payment_method')==='cartao'?'selected':''}>Cartão</option>
+                                    <option value="transferencia" ${getVendorVal('payment_method')==='transferencia'?'selected':''}>Transferência</option>
+                                    <option value="dinheiro" ${getVendorVal('payment_method')==='dinheiro'?'selected':''}>Dinheiro</option>
+                                    <option value="outro" ${getVendorVal('payment_method')==='outro'?'selected':''}>Outro</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small text-muted mb-0">Condição</label>
+                                <input type="text" class="form-control form-control-sm map-vendor-field" data-sid="${sid}" data-field="payment_condition" value="${getVendorVal('payment_condition')}" placeholder="à vista, 30/60/90...">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small text-muted mb-0">1ª parcela</label>
+                                <input type="date" class="form-control form-control-sm map-vendor-field" data-sid="${sid}" data-field="payment_first_due" value="${getVendorVal('payment_first_due')}">
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small text-muted mb-0">Obs pgto</label>
+                                <input type="text" class="form-control form-control-sm map-vendor-field" data-sid="${sid}" data-field="payment_notes" value="${getVendorVal('payment_notes')}" placeholder="Observações...">
                             </div>
                         </div>
                     </div>

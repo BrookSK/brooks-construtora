@@ -220,6 +220,24 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     </div>
                     <?php endif; ?>
                     
+                    <?php if (!empty($os['payment_method'])): ?>
+                    <div class="small mb-2">
+                        <?php
+                        $paymentLabels = ['pix'=>'PIX','boleto'=>'Boleto','cartao'=>'Cartão','transferencia'=>'Transferência','dinheiro'=>'Dinheiro','outro'=>'Outro'];
+                        ?>
+                        <span class="me-3"><strong>Pagamento:</strong> <?= $paymentLabels[$os['payment_method']] ?? $os['payment_method'] ?></span>
+                        <?php if (!empty($os['payment_condition'])): ?>
+                        <span class="me-3"><?= htmlspecialchars($os['payment_condition']) ?></span>
+                        <?php endif; ?>
+                        <?php if (!empty($os['payment_first_due'])): ?>
+                        <span class="me-3"><i class="bi bi-calendar"></i> 1ª parcela: <?= date('d/m/Y', strtotime($os['payment_first_due'])) ?></span>
+                        <?php endif; ?>
+                        <?php if (!empty($os['payment_notes'])): ?>
+                        <span class="text-muted">(<?= htmlspecialchars($os['payment_notes']) ?>)</span>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+                    
                     <?php if ($os['subtotal_items'] > 0): ?>
                     <div class="row small mt-2">
                         <div class="col-6 col-md-3 mb-1">
@@ -366,6 +384,14 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <?php
                 $statusLabelsDelivery = \App\Models\PurchaseOrderDelivery::$statusLabels;
                 $today = date('Y-m-d');
+                // Contar atrasados
+                $lateCount = 0;
+                foreach ($deliveries as $d) {
+                    if ($d['status'] !== 'checked' && $d['status'] !== 'delivered' && $d['status'] !== 'replacement_delivered') {
+                        if ($d['expected_date'] && $d['expected_date'] < $today) $lateCount++;
+                        elseif ($d['status'] === 'replacement_requested' && $d['replacement_expected_date'] && $d['replacement_expected_date'] < $today) $lateCount++;
+                    }
+                }
                 // Agrupar por fornecedor
                 $deliveriesBySupplier = [];
                 foreach ($deliveries as $d) {
@@ -373,6 +399,11 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     $deliveriesBySupplier[$key][] = $d;
                 }
                 ?>
+                <?php if ($lateCount > 0): ?>
+                <div class="px-3 py-2 bg-danger bg-opacity-10 border-bottom">
+                    <strong class="small text-danger"><i class="bi bi-exclamation-triangle-fill"></i> <?= $lateCount ?> item(ns) em atraso</strong>
+                </div>
+                <?php endif; ?>
                 <?php foreach ($deliveriesBySupplier as $supplierName => $supplierDeliveries): ?>
                 <div class="border-bottom">
                     <div class="px-3 py-2 bg-light d-flex justify-content-between align-items-center">
@@ -387,7 +418,11 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     <?php foreach ($supplierDeliveries as $d): ?>
                     <?php
                     $si = $statusLabelsDelivery[$d['status']] ?? ['?', 'secondary', 'bi-question'];
-                    $isLate = $d['expected_date'] && $d['status'] === 'pending' && $d['expected_date'] < $today;
+                    $isLate = false;
+                    if ($d['status'] !== 'checked' && $d['status'] !== 'delivered' && $d['status'] !== 'replacement_delivered') {
+                        if ($d['expected_date'] && $d['expected_date'] < $today) $isLate = true;
+                        if ($d['status'] === 'replacement_requested' && $d['replacement_expected_date'] && $d['replacement_expected_date'] < $today) $isLate = true;
+                    }
                     ?>
                     <div class="px-3 py-2 border-top <?= $isLate ? 'bg-danger bg-opacity-10' : '' ?>" id="delivery-<?= $d['id'] ?>">
                         <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">

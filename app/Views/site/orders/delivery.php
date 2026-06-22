@@ -69,7 +69,11 @@
             <?php foreach ($supplierDeliveries as $d): ?>
             <?php
             $si = $statusLabelsDelivery[$d['status']] ?? ['?', 'secondary', 'bi-question'];
-            $isLate = $d['expected_date'] && $d['status'] === 'pending' && $d['expected_date'] < $today;
+            $isLate = false;
+            if ($d['status'] !== 'checked' && $d['status'] !== 'delivered' && $d['status'] !== 'replacement_delivered') {
+                if ($d['expected_date'] && $d['expected_date'] < $today) $isLate = true;
+                if ($d['status'] === 'replacement_requested' && $d['replacement_expected_date'] && $d['replacement_expected_date'] < $today) $isLate = true;
+            }
             ?>
             <div class="delivery-item status-<?= $d['status'] ?> <?= $isLate ? 'late' : '' ?>" id="item-<?= $d['id'] ?>" data-id="<?= $d['id'] ?>" data-status="<?= $d['status'] ?>">
                 <div class="d-flex justify-content-between align-items-start gap-2">
@@ -262,7 +266,8 @@
             const el = document.getElementById('item-' + d.id);
             if (!el) return;
             const si = statusLabels[d.status] || ['?','secondary','bi-question'];
-            const isLate = d.expected_date && d.status === 'pending' && d.expected_date < today;
+            const isLate = (d.status !== 'checked' && d.status !== 'delivered' && d.status !== 'replacement_delivered') && 
+                ((d.expected_date && d.expected_date < today) || (d.status === 'replacement_requested' && d.replacement_expected_date && d.replacement_expected_date < today));
 
             // Atualizar classe
             el.className = 'delivery-item status-' + d.status + (isLate ? ' late' : '');
