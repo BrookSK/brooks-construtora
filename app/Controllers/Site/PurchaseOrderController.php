@@ -397,8 +397,14 @@ class PurchaseOrderController extends Controller
 
             PurchaseOrderHistory::log($order['id'], 'approved', $approvalDesc, $personName);
 
-            // Enviar notificações de conclusão
+            // Enviar notificações de conclusão (PDF pronto)
             $this->sendCompletedNotifications($order['id']);
+
+            // Enviar notificação de NF pendente
+            $this->sendPaymentPendingNotification($order['id']);
+
+            // Criar checklist de entrega e enviar notificação
+            $this->initDeliveryOnApproval($order['id']);
 
             $this->view('site.orders.approval_success', [
                 'order' => $order,
@@ -949,6 +955,103 @@ class PurchaseOrderController extends Controller
                 'message' => $message,
             ]);
         }
+    }
+
+    /**
+     * Envia notificação de NF/Boleto pendente ao aprovar
+     */
+    private function sendPaymentPendingNotification(int $orderId): void
+    {
+        $order = PurchaseOrder::findFull($orderId);
+        if (!$order) return;
+
+        $baseUrl = $this->getBaseUrl();
+        $panelUrl = "{$baseUrl}/pedidos";
+        $totalFmt = 'R$ ' . number_format((float)$order['total_estimated'], 2, ',', '.');
+
+        $emails = Setting::get('orders_payment_emails', '');
+        if (!empty($emails)) {
+            $subject = "NF/Boleto Pendente - Pedido {$order['code']} - {$totalFmt}";
+            $body = EmailTemplate::purchaseOrderPaymentPending($order, $panelUrl);
+            NotificationService::queueEmails($emails, $subject, $body, $orderId, 'payment_pending');
+        }
+
+        $webhookUrl = Setting::get('orders_payment_webhook', '');
+        if (!empty(trim($webhookUrl))) {
+            $message = "*NF/BOLETO PENDENTE*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                . "*Valor:* {$totalFmt}\n"
+                . "*Aprovado por:* " . ($order['approved_by_name'] ?? '-') . "\n\n"
+                . "Acesse o painel para enviar a NF ou boleto:\n{$panelUrl}";
+
+            $this->sendWebhook($webhookUrl, [
+                'event' => 'payment_pending',
+                'order_code' => $order['code'],
+                'supplier' => $order['supplier_name'] ?? 'N/A',
+                'total' => $order['total_estimated'],
+                'panel_url' => $panelUrl,
+                'phone' => Setting::get('orders_payment_phone', ''),
+                'phone_name' => Setting::get('orders_payment_phone_name', ''),
+                'message' => $message,
+            ], $orderId);
+        }
+    }
+
+    /**
+     * Cria checklist de entrega e envia notificação ao aprovar
+     */
+    private function initDeliveryOnApproval(int $orderId): void
+    {
+        $order = PurchaseOrder::findFull($orderId);
+        if (!$order) return;
+
+        // Inicializar checklist
+        PurchaseOrderDelivery::initializeForOrder($orderId);
+
+        // Gerar token se não tem
+        $deliveryToken = $order['delivery_token'] ?? '';
+        if (empty($deliveryToken)) {
+            $deliveryToken = bin2hex(random_bytes(32));
+            PurchaseOrder::updateById($orderId, ['delivery_token' => $deliveryToken]);
+        }
+
+        // Enviar notificação
+        $items = PurchaseOrderItem::getByOrder($orderId);
+        $approvedSuppliers = PurchaseOrderSupplier::getAllApproved($orderId);
+        $baseUrl = $this->getBaseUrl();
+        $checklistUrl = "{$baseUrl}/pedido/entrega/{$deliveryToken}";
+        $supplierNames = !empty($approvedSuppliers) ? array_column($approvedSuppliers, 'supplier_name') : [];
+        $supplierDisplay = !empty($supplierNames) ? implode(', ', $supplierNames) : ($order['supplier_name'] ?? 'N/A');
+
+        $emails = Setting::get('orders_delivery_emails', '');
+        if (!empty($emails)) {
+            $subject = "Checklist de Entrega - Pedido {$order['code']}";
+            $body = EmailTemplate::purchaseOrderDelivery($order, $items, $checklistUrl, $supplierDisplay);
+            NotificationService::queueEmails($emails, $subject, $body, $orderId, 'delivery_ready');
+        }
+
+        $webhookUrl = Setting::get('orders_delivery_webhook', '');
+        if (!empty(trim($webhookUrl))) {
+            $message = "*CHECKLIST DE ENTREGA DISPONÍVEL*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . "*Fornecedor(es):* {$supplierDisplay}\n"
+                . "*Itens:* " . count($items) . "\n\n"
+                . "*Acesse o checklist:*\n{$checklistUrl}";
+
+            $this->sendWebhook($webhookUrl, [
+                'event' => 'delivery_checklist_ready',
+                'order_code' => $order['code'],
+                'suppliers' => $supplierNames,
+                'items_count' => count($items),
+                'checklist_url' => $checklistUrl,
+                'phone' => Setting::get('orders_delivery_phone', ''),
+                'phone_name' => Setting::get('orders_delivery_phone_name', ''),
+                'message' => $message,
+            ], $orderId);
+        }
+
+        PurchaseOrderHistory::log($orderId, 'delivery_init', 'Checklist de entrega criado automaticamente na aprovação', $order['approved_by_name'] ?? 'Sistema');
     }
 
     private function sendWebhook(string $url, array $data, ?int $orderId = null, ?string $eventType = null): void
