@@ -40,11 +40,15 @@
             .supplier-item-price { display: block; text-align: right; margin-top: 2px; font-size: 0.72rem; }
             .btn-lg { font-size: 0.85rem; padding: 0.6rem 1rem; }
             input, select, textarea { font-size: 16px !important; }
-            #approvalMap { padding: 0.4rem; }
-            #approvalMap table th { font-size: 0.6rem; padding: 0.3rem; }
-            #approvalMap table td { font-size: 0.65rem; padding: 0.2rem 0.3rem; }
-            .map-supplier-header { min-width: 80px; }
-            .financial-detail { padding: 0.5rem; font-size: 0.72rem; }
+            #approvalMap { padding: 0.5rem; }
+            #approvalMap table { border-collapse: separate; border-spacing: 0; }
+            #approvalMap table th { font-size: 0.65rem; padding: 0.4rem 0.35rem; line-height: 1.3; }
+            #approvalMap table td { font-size: 0.7rem; padding: 0.4rem 0.35rem; line-height: 1.3; }
+            #approvalMap table td[style*="sticky"] { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+            .map-supplier-header { min-width: 90px; padding: 0.4rem 0.3rem !important; }
+            .map-supplier-header small { font-size: 0.65rem; }
+            .financial-detail { padding: 0.6rem; font-size: 0.75rem; margin-bottom: 0.6rem; }
+            .financial-detail .badge { font-size: 0.7rem; }
             .view-toggle-wrap .btn { font-size: 0.8rem; padding: 0.35rem 0.75rem; }
         }
     </style>
@@ -108,7 +112,7 @@
                 <?php endif; ?>
 
                 <!-- Visualização Lista -->
-                <div id="approvalListView" style="<?= count($orderSuppliers) >= 2 ? 'display:none;' : '' ?>">
+                <div id="approvalListView" style="display:none;">
                 <?php foreach ($orderSuppliers as $os): ?>
                 <div class="supplier-compare" onclick="selectSupplier(<?= $os['supplier_id'] ?>)" id="supplier-card-<?= $os['supplier_id'] ?>">
                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -157,7 +161,7 @@
 
                 <!-- Visualização Mapa (colunas lado a lado) -->
                 <?php if (count($orderSuppliers) >= 2): ?>
-                <div id="approvalMap" class="mb-3">
+                <div id="approvalMap" class="mb-3" style="display:none;">
                     <p class="text-muted small mb-2"><i class="bi bi-hand-index"></i> Toque no fornecedor para selecionar.</p>
                     <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; margin: 0 -0.5rem; padding: 0 0.5rem;">
                     <table class="table table-sm table-bordered mb-0" style="min-width:500px;">
@@ -387,16 +391,29 @@
             listView.style.display = 'none';
             mapView.style.display = 'block';
         } else {
-            listView.style.display = '';
+            listView.style.display = 'block';
             mapView.style.display = 'none';
         }
     }
 
-    // Inicializar: se tem 2+ fornecedores, mapa é padrão
+    // Inicializar: mobile começa em Lista, desktop em Mapa
     document.addEventListener('DOMContentLoaded', function() {
         const mapView = document.getElementById('approvalMap');
-        if (mapView) {
-            mapView.style.display = 'block';
+        const listView = document.getElementById('approvalListView');
+        
+        // Se não tem mapa (apenas 1 fornecedor), mostra lista direto
+        if (!mapView && listView) {
+            listView.style.display = 'block';
+            return;
+        }
+        
+        if (mapView && listView) {
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                setApprovalView('list');
+            } else {
+                setApprovalView('map');
+            }
         }
     });
     </script>
