@@ -1511,6 +1511,8 @@ class PurchaseOrderController extends Controller
 
         $orderId = (int) $this->input('order_id');
         $phase = $this->input('phase', '');
+        $sendEmail = $this->input('send_email', '1') === '1';
+        $sendWebhook = $this->input('send_webhook', '1') === '1';
 
         $order = PurchaseOrder::findFull($orderId);
         if (!$order) {
@@ -1525,82 +1527,212 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        // Regenerar e reenviar as notificações da fase
+        // Helper para enviar só o que foi selecionado
+        $items = PurchaseOrderItem::getByOrder($orderId);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
+
         switch ($phase) {
             case 'quote_requested':
-                $this->sendQuoteNotifications($orderId, $order['quote_token']);
+                if ($sendEmail) {
+                    $emails = Setting::get('orders_quote_emails', '');
+                    if (!empty($emails)) {
+                        $baseUrl = $this->getBaseUrl();
+                        $quoteUrl = "{$baseUrl}/pedido/cotacao/{$order['quote_token']}";
+                        $subject = "Cotação Pendente - Pedido {$order['code']}";
+                        $body = EmailTemplate::purchaseOrderQuote($order, $items, $quoteUrl, $orderSuppliers);
+                        NotificationService::queueEmails($emails, $subject, $body, $orderId, 'quote_requested');
+                    }
+                }
+                if ($sendWebhook) {
+                    $webhookUrl = Setting::get('orders_quote_webhook', '');
+                    if (!empty($webhookUrl)) {
+                        $baseUrl = $this->getBaseUrl();
+                        $quoteUrl = "{$baseUrl}/pedido/cotacao/{$order['quote_token']}";
+                        $itemsList = '';
+                        foreach ($items as $i => $item) {
+                            $itemsList .= ($i + 1) . ". {$item['material_name']} - Qtd: {$item['quantity']} {$item['unit']}\n";
+                        }
+                        $message = "*NOVO PEDIDO - COTAÇÃO PENDENTE*\n\n*Pedido:* {$order['code']}\n*Itens:* " . count($items) . "\n\n*Link:*\n{$quoteUrl}";
+                        $this->sendWebhook($webhookUrl, [
+                            'event' => 'quote_requested', 'order_code' => $order['code'],
+                            'items_count' => count($items), 'quote_url' => $quoteUrl,
+                            'phone' => Setting::get('orders_quote_phone', ''),
+                            'phone_name' => Setting::get('orders_quote_phone_name', ''),
+                            'message' => $message,
+                        ], $orderId);
+                    }
+                }
                 break;
 
             case 'approval_requested':
-                $this->sendApprovalNotifications($orderId, $order['approval_token']);
+                if ($sendEmail) {
+                    $emails = Setting::get('orders_approval_emails', '');
+                    if (!empty($emails)) {
+                        $baseUrl = $this->getBaseUrl();
+                        $approvalUrl = "{$baseUrl}/pedido/aprovacao/{$order['approval_token']}";
+                        $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
+                        $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
+                        NotificationService::queueEmails($emails, $subject, $body, $orderId, 'approval_requested');
+                    }
+                }
+                if ($sendWebhook) {
+                    $webhookUrl = Setting::get('orders_approval_webhook', '');
+                    if (!empty($webhookUrl)) {
+                        $baseUrl = $this->getBaseUrl();
+                        $approvalUrl = "{$baseUrl}/pedido/aprovacao/{$order['approval_token']}";
+                        $message = "*APROVAÇÃO PENDENTE*\n\n*Pedido:* {$order['code']}\n*Valor:* R$ " . number_format($order['total_estimated'], 2, ',', '.') . "\n\n*Link:*\n{$approvalUrl}";
+                        $this->sendWebhook($webhookUrl, [
+                            'event' => 'approval_requested', 'order_code' => $order['code'],
+                            'total' => $order['total_estimated'], 'approval_url' => $approvalUrl,
+                            'phone' => Setting::get('orders_approval_phone', ''),
+                            'phone_name' => Setting::get('orders_approval_phone_name', ''),
+                            'message' => $message,
+                        ], $orderId);
+                    }
+                }
                 break;
 
             case 'order_approved':
-                $this->sendCompletedNotifications($orderId);
+                if ($sendEmail) {
+                    $emails = Setting::get('orders_completed_emails', '');
+                    if (!empty($emails)) {
+                        $baseUrl = $this->getBaseUrl();
+                        $viewUrl = "{$baseUrl}/pedido/pdf/{$orderId}";
+                        $approvedSuppliers = PurchaseOrderSupplier::getAllApproved($orderId);
+                        $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
+                        $body = EmailTemplate::purchaseOrderCompleted($order, $items, $viewUrl, '', $approvedSuppliers);
+                        NotificationService::queueEmails($emails, $subject, $body, $orderId, 'order_approved');
+                    }
+                }
+                if ($sendWebhook) {
+                    $webhookUrl = Setting::get('orders_completed_webhook', '');
+                    if (!empty($webhookUrl)) {
+                        $baseUrl = $this->getBaseUrl();
+                        $viewUrl = "{$baseUrl}/pedido/pdf/{$orderId}";
+                        $approvedSuppliers = PurchaseOrderSupplier::getAllApproved($orderId);
+                        $approvedNames = !empty($approvedSuppliers) ? array_column($approvedSuppliers, 'supplier_name') : [];
+                        $supplierDisplay = !empty($approvedNames) ? implode(', ', $approvedNames) : ($order['supplier_name'] ?? 'N/A');
+                        $message = "*PEDIDO APROVADO*\n\n*Pedido:* {$order['code']}\n*Fornecedor(es):* {$supplierDisplay}\n*Valor:* R$ " . number_format($order['total_estimated'], 2, ',', '.') . "\n\n*PDF:*\n{$viewUrl}";
+                        $this->sendWebhook($webhookUrl, [
+                            'event' => 'order_approved', 'order_code' => $order['code'],
+                            'approved_suppliers' => $approvedNames, 'total' => $order['total_estimated'],
+                            'pdf_url' => $viewUrl,
+                            'phone' => Setting::get('orders_completed_phone', ''),
+                            'phone_name' => Setting::get('orders_completed_phone_name', ''),
+                            'message' => $message,
+                        ], $orderId);
+                    }
+                }
                 break;
 
             case 'order_rejected':
-                // Reenviar rejeição
-                $emails = Setting::get('orders_completed_emails', '');
-                if (!empty($emails)) {
-                    $subject = "Pedido REJEITADO - {$order['code']}";
-                    $body = EmailTemplate::purchaseOrderRejected($order, $order['rejected_by_name'] ?? 'N/A', $order['approval_notes'] ?? '');
-                    NotificationService::queueEmails($emails, $subject, $body, $orderId, 'order_rejected');
+                if ($sendEmail) {
+                    $emails = Setting::get('orders_completed_emails', '');
+                    if (!empty($emails)) {
+                        $subject = "Pedido REJEITADO - {$order['code']}";
+                        $body = EmailTemplate::purchaseOrderRejected($order, $order['rejected_by_name'] ?? 'N/A', $order['approval_notes'] ?? '');
+                        NotificationService::queueEmails($emails, $subject, $body, $orderId, 'order_rejected');
+                    }
                 }
-                $webhookUrl = Setting::get('orders_completed_webhook', '');
-                if (!empty($webhookUrl)) {
-                    $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
-                    $supplierNames = !empty($orderSuppliers) ? array_column($orderSuppliers, 'supplier_name') : [];
-                    $supplierDisplay = !empty($supplierNames) ? implode(', ', $supplierNames) : ($order['supplier_name'] ?? 'N/A');
-                    $message = "*PEDIDO REJEITADO*\n\n*Pedido:* {$order['code']}\n*Fornecedores cotados:* {$supplierDisplay}\n*Rejeitado por:* " . ($order['rejected_by_name'] ?? 'N/A') . "\n*Motivo:* " . ($order['approval_notes'] ?? '-');
-                    $this->sendWebhook($webhookUrl, [
-                        'event' => 'order_rejected', 'order_code' => $order['code'],
-                        'suppliers' => $supplierNames, 'rejected_by' => $order['rejected_by_name'] ?? '',
-                        'reason' => $order['approval_notes'] ?? '',
-                        'phone' => Setting::get('orders_completed_phone', ''),
-                        'phone_name' => Setting::get('orders_completed_phone_name', ''),
-                        'message' => $message,
-                    ], $orderId);
+                if ($sendWebhook) {
+                    $webhookUrl = Setting::get('orders_completed_webhook', '');
+                    if (!empty($webhookUrl)) {
+                        $supplierNames = !empty($orderSuppliers) ? array_column($orderSuppliers, 'supplier_name') : [];
+                        $supplierDisplay = !empty($supplierNames) ? implode(', ', $supplierNames) : ($order['supplier_name'] ?? 'N/A');
+                        $message = "*PEDIDO REJEITADO*\n\n*Pedido:* {$order['code']}\n*Fornecedores:* {$supplierDisplay}\n*Rejeitado por:* " . ($order['rejected_by_name'] ?? 'N/A') . "\n*Motivo:* " . ($order['approval_notes'] ?? '-');
+                        $this->sendWebhook($webhookUrl, [
+                            'event' => 'order_rejected', 'order_code' => $order['code'],
+                            'suppliers' => $supplierNames, 'rejected_by' => $order['rejected_by_name'] ?? '',
+                            'reason' => $order['approval_notes'] ?? '',
+                            'phone' => Setting::get('orders_completed_phone', ''),
+                            'phone_name' => Setting::get('orders_completed_phone_name', ''),
+                            'message' => $message,
+                        ], $orderId);
+                    }
                 }
                 break;
 
             case 'payment_uploaded':
-                // Reenviar notificação de NF/Boleto — reenvia a última ou todas
                 $payments = PurchaseOrderPayment::getByOrder($orderId);
-                if (!empty($payments)) {
-                    $lastPayment = $payments[0]; // Mais recente
-                    $this->sendPaymentNotifications($orderId, $lastPayment['type'], [
-                        'number' => $lastPayment['number'] ?? '',
-                        'amount' => $lastPayment['amount'] ?? 0,
-                        'due_date' => $lastPayment['due_date'] ?? '',
-                    ]);
-                } else {
-                    // Sem pagamentos registrados, envia notificação genérica
+                $lastPayment = !empty($payments) ? $payments[0] : null;
+                if ($sendEmail && $lastPayment) {
                     $emails = Setting::get('orders_payment_emails', '');
                     if (!empty($emails)) {
-                        $subject = "Pedido Aprovado (NF pendente) - {$order['code']}";
-                        $body = EmailTemplate::purchaseOrderCompleted($order, PurchaseOrderItem::getByOrder($orderId), $this->getBaseUrl() . '/pedido/pdf/' . $orderId);
+                        $baseUrl = $this->getBaseUrl();
+                        $typeLabel = strtoupper($lastPayment['type']);
+                        $docData = ['number' => $lastPayment['number'] ?? '', 'amount' => $lastPayment['amount'] ?? 0, 'due_date' => $lastPayment['due_date'] ?? ''];
+                        $subject = "{$typeLabel} Enviado - Pedido {$order['code']}";
+                        $body = EmailTemplate::purchaseOrderPayment($order, $typeLabel, $docData, Auth::user()['name'] ?? 'Sistema', $baseUrl . '/pedidos');
                         NotificationService::queueEmails($emails, $subject, $body, $orderId, 'payment_uploaded');
+                    }
+                }
+                if ($sendWebhook && $lastPayment) {
+                    $webhookUrl = Setting::get('orders_payment_webhook', '');
+                    if (!empty($webhookUrl)) {
+                        $baseUrl = $this->getBaseUrl();
+                        $typeLabel = strtoupper($lastPayment['type']);
+                        $amountFmt = $lastPayment['amount'] ? 'R$ ' . number_format($lastPayment['amount'], 2, ',', '.') : 'N/A';
+                        $message = "*{$typeLabel} ENVIADO*\n\n*Pedido:* {$order['code']}\n*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n*Valor:* {$amountFmt}\n*Data:* " . date('d/m/Y H:i');
+                        $this->sendWebhook($webhookUrl, [
+                            'event' => 'payment_uploaded', 'order_code' => $order['code'],
+                            'supplier' => $order['supplier_name'] ?? 'N/A',
+                            'document_type' => $typeLabel,
+                            'amount' => $lastPayment['amount'],
+                            'phone' => Setting::get('orders_payment_phone', ''),
+                            'phone_name' => Setting::get('orders_payment_phone_name', ''),
+                            'message' => $message,
+                        ], $orderId);
                     }
                 }
                 break;
 
             case 'delivery_ready':
                 if (!empty($order['delivery_token'])) {
-                    $this->sendDeliveryNotifications($orderId, $order['delivery_token']);
+                    if ($sendEmail) {
+                        $emails = Setting::get('orders_delivery_emails', '');
+                        if (!empty($emails)) {
+                            $baseUrl = $this->getBaseUrl();
+                            $checklistUrl = "{$baseUrl}/pedido/entrega/{$order['delivery_token']}";
+                            $approvedSuppliers = PurchaseOrderSupplier::getAllApproved($orderId);
+                            $supplierDisplay = !empty($approvedSuppliers) ? implode(', ', array_column($approvedSuppliers, 'supplier_name')) : ($order['supplier_name'] ?? 'N/A');
+                            $subject = "Checklist de Entrega - Pedido {$order['code']}";
+                            $body = EmailTemplate::purchaseOrderDelivery($order, $items, $checklistUrl, $supplierDisplay);
+                            NotificationService::queueEmails($emails, $subject, $body, $orderId, 'delivery_ready');
+                        }
+                    }
+                    if ($sendWebhook) {
+                        $webhookUrl = Setting::get('orders_delivery_webhook', '');
+                        if (!empty($webhookUrl)) {
+                            $baseUrl = $this->getBaseUrl();
+                            $checklistUrl = "{$baseUrl}/pedido/entrega/{$order['delivery_token']}";
+                            $approvedSuppliers = PurchaseOrderSupplier::getAllApproved($orderId);
+                            $supplierNames = !empty($approvedSuppliers) ? array_column($approvedSuppliers, 'supplier_name') : [];
+                            $message = "*CHECKLIST DE ENTREGA*\n\n*Pedido:* {$order['code']}\n*Itens:* " . count($items) . "\n\n*Link:*\n{$checklistUrl}";
+                            $this->sendWebhook($webhookUrl, [
+                                'event' => 'delivery_checklist_ready', 'order_code' => $order['code'],
+                                'suppliers' => $supplierNames, 'checklist_url' => $checklistUrl,
+                                'phone' => Setting::get('orders_delivery_phone', ''),
+                                'phone_name' => Setting::get('orders_delivery_phone_name', ''),
+                                'message' => $message,
+                            ], $orderId);
+                        }
+                    }
                 }
                 break;
 
             case 'spare_item':
-                // Não faz sentido reenviar sobressalente sem item específico
                 break;
         }
 
+        $channels = [];
+        if ($sendEmail) $channels[] = 'e-mail';
+        if ($sendWebhook) $channels[] = 'webhook';
+
         PurchaseOrderHistory::log($orderId, 'notifications_resent',
-            "Notificações da fase '{$phase}' reenviadas manualmente",
+            "Notificações reenviadas ({$phase}): " . implode(', ', $channels),
             Auth::user()['name'] ?? 'Sistema', Auth::id());
 
-        $this->json(['success' => true, 'message' => "Notificações da fase '{$phase}' reenviadas!"]);
+        $this->json(['success' => true, 'message' => ucfirst(implode(' e ', $channels)) . " reenviado(s)!"]);
     }
 
     private function sendSpareItemNotification(int $orderId, string $description, float $total, string $purchasedBy): void

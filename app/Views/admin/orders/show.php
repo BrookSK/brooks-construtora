@@ -597,7 +597,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <!-- Botões de reenvio por fase -->
                 <div class="card-body border-bottom py-2">
                     <small class="text-muted d-block mb-2">Reenviar notificações (gera e envia novamente):</small>
-                    <div class="d-flex flex-wrap gap-1">
+                    <div class="d-flex flex-wrap gap-1 mb-2">
                         <?php if (in_array($order['status'], ['pending_quote', 'quoted', 'pending_approval', 'approved'])): ?>
                         <button class="btn btn-sm btn-outline-warning" onclick="resendPhase(<?= $order['id'] ?>, 'quote_requested')"><i class="bi bi-arrow-repeat"></i> Cotação</button>
                         <?php endif; ?>
@@ -614,6 +614,17 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <?php if (!empty($order['delivery_token'])): ?>
                         <button class="btn btn-sm btn-outline-dark" onclick="resendPhase(<?= $order['id'] ?>, 'delivery_ready')"><i class="bi bi-arrow-repeat"></i> Entrega</button>
                         <?php endif; ?>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <small class="text-muted">Enviar:</small>
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="checkbox" id="resendEmail" checked>
+                            <label class="form-check-label small" for="resendEmail">E-mail</label>
+                        </div>
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="checkbox" id="resendWebhook" checked>
+                            <label class="form-check-label small" for="resendWebhook">Webhook</label>
+                        </div>
                     </div>
                 </div>
 
@@ -870,11 +881,23 @@ function resendSingle(id) {
 
 function resendPhase(orderId, phase) {
     const labels = {quote_requested:'Cotação',approval_requested:'Aprovação',order_approved:'Conclusão',order_rejected:'Rejeição',payment_uploaded:'NF/Pagamento',delivery_ready:'Entrega'};
-    if (!confirm('Reenviar todas as notificações de "' + (labels[phase] || phase) + '" para este pedido?')) return;
+    const sendEmail = document.getElementById('resendEmail').checked;
+    const sendWebhook = document.getElementById('resendWebhook').checked;
+
+    if (!sendEmail && !sendWebhook) {
+        alert('Selecione pelo menos uma opção: E-mail ou Webhook.');
+        return;
+    }
+
+    const channels = [];
+    if (sendEmail) channels.push('e-mail');
+    if (sendWebhook) channels.push('webhook');
+
+    if (!confirm('Reenviar ' + channels.join(' e ') + ' de "' + (labels[phase] || phase) + '" para este pedido?')) return;
     fetch('/admin/orders/resend-all-phase', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'order_id=' + orderId + '&phase=' + phase
+        body: 'order_id=' + orderId + '&phase=' + phase + '&send_email=' + (sendEmail ? '1' : '0') + '&send_webhook=' + (sendWebhook ? '1' : '0')
     })
     .then(r => r.json())
     .then(d => {
