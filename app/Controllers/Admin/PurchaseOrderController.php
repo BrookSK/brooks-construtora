@@ -1141,27 +1141,28 @@ class PurchaseOrderController extends Controller
         $orderUrl = "{$baseUrl}/admin/orders/show/{$orderId}";
         $typeLabel = strtoupper($type);
         $uploadedBy = Auth::user()['name'] ?? 'Sistema';
-        $amountFmt = $docData['amount'] ? 'R$ ' . number_format($docData['amount'], 2, ',', '.') : 'N/A';
-        $dueDateFmt = $docData['due_date'] ? date('d/m/Y', strtotime($docData['due_date'])) : 'N/A';
+        $amount = $docData['amount'] ?? 0;
+        $amountFmt = $amount ? 'R$ ' . number_format((float)$amount, 2, ',', '.') : 'N/A';
+        $dueDateFmt = !empty($docData['due_date']) ? date('d/m/Y', strtotime($docData['due_date'])) : 'N/A';
 
         // E-mail
         $emails = Setting::get('orders_payment_emails', '');
         if (!empty($emails)) {
             $subject = "{$typeLabel} Enviado - Pedido {$order['code']}";
             $body = EmailTemplate::purchaseOrderPayment($order, $typeLabel, $docData, $uploadedBy, $panelUrl);
-            NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'payment_uploaded');
+            NotificationService::queueEmails($emails, $subject, $body, (int)$order['id'], 'payment_uploaded');
         }
 
         // Webhook
         $webhookUrl = Setting::get('orders_payment_webhook', '');
-        if (!empty($webhookUrl)) {
+        if (!empty(trim($webhookUrl))) {
             $message = "*{$typeLabel} ENVIADO*\n\n"
                 . "*Pedido:* {$order['code']}\n"
                 . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
                 . "*Tipo:* {$typeLabel}\n"
-                . ($docData['number'] ? "*Numero:* {$docData['number']}\n" : '')
+                . (!empty($docData['number']) ? "*Numero:* {$docData['number']}\n" : '')
                 . "*Valor:* {$amountFmt}\n"
-                . ($docData['due_date'] ? "*Vencimento:* {$dueDateFmt}\n" : '')
+                . (!empty($docData['due_date']) ? "*Vencimento:* {$dueDateFmt}\n" : '')
                 . "*Enviado por:* {$uploadedBy}\n"
                 . "*Data:* " . date('d/m/Y H:i') . "\n\n"
                 . "*Acesse o painel para conferir:*\n{$panelUrl}";
@@ -1173,14 +1174,14 @@ class PurchaseOrderController extends Controller
                 'total' => $order['total_estimated'],
                 'document_type' => $typeLabel,
                 'document_number' => $docData['number'] ?? '',
-                'amount' => $docData['amount'],
-                'due_date' => $docData['due_date'],
+                'amount' => $amount,
+                'due_date' => $docData['due_date'] ?? '',
                 'uploaded_by' => $uploadedBy,
                 'panel_url' => $panelUrl,
                 'phone' => Setting::get('orders_payment_phone', ''),
                 'phone_name' => Setting::get('orders_payment_phone_name', ''),
                 'message' => $message,
-            ]);
+            ], (int)$order['id']);
         }
     }
 
