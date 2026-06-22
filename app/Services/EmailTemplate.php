@@ -428,8 +428,35 @@ HTML;
         return self::wrap("Item Sobressalente - {$order['code']}", $body);
     }
 
+    public static function purchaseOrderPaymentPending(array $order, string $panelUrl): string
+    {
+        $totalFormatted = number_format($order['total_estimated'] ?? 0, 2, ',', '.');
+
+        $body = <<<HTML
+<p style="margin-bottom:15px;">O pedido de materiais foi aprovado e está aguardando o envio da <strong>NF ou Boleto</strong>.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff3cd; border-radius:6px; margin-bottom:20px; border:1px solid #ffc107;">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#856404; text-transform:uppercase; font-weight:600;">⏳ NF/Boleto Pendente</p>
+    <p style="margin:0; font-size:17px; color:#333; font-weight:600;">{$order['code']}</p>
+    <p style="margin:8px 0 0; font-size:13px; color:#555;">Fornecedor: <strong>{$order['supplier_name']}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Valor: <strong>R$ {$totalFormatted}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Aprovado por: <strong>{$order['approved_by_name']}</strong></p>
+</td></tr>
+</table>
+
+<p style="text-align:center; margin: 25px 0 10px;">
+    <a href="{$panelUrl}" style="display:inline-block; background-color:#ffc107; color:#333; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Acessar Painel e Enviar NF/Boleto</a>
+</p>
+
+<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Acesse o painel para fazer o upload da NF ou boleto referente a este pedido.</p>
+HTML;
+
+        return self::wrap("NF/Boleto Pendente - {$order['code']}", $body);
+    }
+
     /**
-     * Template de e-mail para envio de NF/Boleto (Fase 4)
+     * Template de e-mail para envio de NF/Boleto (Fase 4) - quando já recebeu
      */
     public static function purchaseOrderPayment(array $order, string $typeLabel, array $docData, string $uploadedBy, string $panelUrl): string
     {

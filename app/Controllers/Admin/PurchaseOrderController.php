@@ -1159,11 +1159,11 @@ class PurchaseOrderController extends Controller
         error_log("[BROOKS_WEBHOOK] sendPaymentNotifications: webhook_url='{$webhookUrl}' phone='" . Setting::get('orders_payment_phone', '') . "' order={$orderId}");
         
         if (!empty(trim($webhookUrl))) {
-            $message = "*{$typeLabel} ENVIADO*\n\n"
+            $message = "*{$typeLabel} RECEBIDO ✓*\n\n"
                 . "*Pedido:* {$order['code']}\n"
                 . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
                 . "*Tipo:* {$typeLabel}\n"
-                . (!empty($docData['number']) ? "*Numero:* {$docData['number']}\n" : '')
+                . (!empty($docData['number']) ? "*Número:* {$docData['number']}\n" : '')
                 . "*Valor:* {$amountFmt}\n"
                 . (!empty($docData['due_date']) ? "*Vencimento:* {$dueDateFmt}\n" : '')
                 . "*Enviado por:* {$uploadedBy}\n"
@@ -1670,37 +1670,77 @@ class PurchaseOrderController extends Controller
 
             case 'payment_uploaded':
                 $payments = PurchaseOrderPayment::getByOrder($orderId);
-                $lastPayment = !empty($payments) ? $payments[0] : null;
-                $typeLabel = $lastPayment ? strtoupper($lastPayment['type']) : 'NF';
-                $docData = $lastPayment ? ['number' => $lastPayment['number'] ?? '', 'amount' => $lastPayment['amount'] ?? 0, 'due_date' => $lastPayment['due_date'] ?? ''] : ['number' => '', 'amount' => $order['total_estimated'], 'due_date' => ''];
+                $hasPayments = !empty($payments);
+                $baseUrl = $this->getBaseUrl();
+                $panelUrl = "{$baseUrl}/pedidos";
                 
-                if ($sendEmail) {
-                    $emails = Setting::get('orders_payment_emails', '');
-                    if (!empty($emails)) {
-                        $baseUrl = $this->getBaseUrl();
-                        $subject = "{$typeLabel} Enviado - Pedido {$order['code']}";
-                        $body = EmailTemplate::purchaseOrderPayment($order, $typeLabel, $docData, Auth::user()['name'] ?? 'Sistema', $baseUrl . '/pedidos');
-                        NotificationService::queueEmails($emails, $subject, $body, $orderId, 'payment_uploaded');
+                if ($hasPayments) {
+                    // Já tem NF/boleto — reenvia a notificação de documento recebido
+                    $lastPayment = $payments[0];
+                    $typeLabel = strtoupper($lastPayment['type']);
+                    $docData = ['number' => $lastPayment['number'] ?? '', 'amount' => $lastPayment['amount'] ?? 0, 'due_date' => $lastPayment['due_date'] ?? ''];
+                    
+                    if ($sendEmail) {
+                        $emails = Setting::get('orders_payment_emails', '');
+                        if (!empty($emails)) {
+                            $subject = "{$typeLabel} Enviado - Pedido {$order['code']}";
+                            $body = EmailTemplate::purchaseOrderPayment($order, $typeLabel, $docData, $lastPayment['uploaded_by'] ?? 'Sistema', $panelUrl);
+                            NotificationService::queueEmails($emails, $subject, $body, $orderId, 'payment_uploaded');
+                        }
                     }
-                }
-                if ($sendWebhook) {
-                    $webhookUrl = Setting::get('orders_payment_webhook', '');
-                    error_log("[BROOKS_WEBHOOK] resendAllPhase payment_uploaded: webhookUrl='{$webhookUrl}'");
-                    if (!empty(trim($webhookUrl))) {
-                        $baseUrl = $this->getBaseUrl();
-                        $amountFmt = $docData['amount'] ? 'R$ ' . number_format((float)$docData['amount'], 2, ',', '.') : 'N/A';
-                        $message = "*{$typeLabel} ENVIADO*\n\n*Pedido:* {$order['code']}\n*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n*Valor:* {$amountFmt}\n*Data:* " . date('d/m/Y H:i');
-                        $this->sendWebhook($webhookUrl, [
-                            'event' => 'payment_uploaded', 'order_code' => $order['code'],
-                            'supplier' => $order['supplier_name'] ?? 'N/A',
-                            'document_type' => $typeLabel,
-                            'amount' => $docData['amount'],
-                            'phone' => Setting::get('orders_payment_phone', ''),
-                            'phone_name' => Setting::get('orders_payment_phone_name', ''),
-                            'message' => $message,
-                        ], $orderId);
-                    } else {
-                        error_log("[BROOKS_WEBHOOK] resendAllPhase payment_uploaded: WEBHOOK URL VAZIA NO BANCO!");
+                    if ($sendWebhook) {
+                        $webhookUrl = Setting::get('orders_payment_webhook', '');
+                        if (!empty(trim($webhookUrl))) {
+                            $amountFmt = $docData['amount'] ? 'R$ ' . number_format((float)$docData['amount'], 2, ',', '.') : 'N/A';
+                            $message = "*{$typeLabel} RECEBIDO*\n\n"
+                                . "*Pedido:* {$order['code']}\n"
+                                . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                                . "*Tipo:* {$typeLabel}\n"
+                                . (!empty($docData['number']) ? "*Número:* {$docData['number']}\n" : '')
+                                . "*Valor:* {$amountFmt}\n"
+                                . "*Enviado por:* " . ($lastPayment['uploaded_by'] ?? '-') . "\n\n"
+                                . "*Ver pedido:*\n{$panelUrl}";
+                            $this->sendWebhook($webhookUrl, [
+                                'event' => 'payment_uploaded', 'order_code' => $order['code'],
+                                'supplier' => $order['supplier_name'] ?? 'N/A',
+                                'document_type' => $typeLabel, 'amount' => $docData['amount'],
+                                'phone' => Setting::get('orders_payment_phone', ''),
+                                'phone_name' => Setting::get('orders_payment_phone_name', ''),
+                                'message' => $message,
+                            ], $orderId);
+                        }
+                    }
+                } else {
+                    // NÃO tem NF/boleto — envia lembrete para a pessoa enviar
+                    $totalFmt = 'R$ ' . number_format((float)$order['total_estimated'], 2, ',', '.');
+                    
+                    if ($sendEmail) {
+                        $emails = Setting::get('orders_payment_emails', '');
+                        if (!empty($emails)) {
+                            $subject = "NF/Boleto Pendente - Pedido {$order['code']} - {$totalFmt}";
+                            $body = EmailTemplate::purchaseOrderPaymentPending($order, $panelUrl);
+                            NotificationService::queueEmails($emails, $subject, $body, $orderId, 'payment_pending');
+                        }
+                    }
+                    if ($sendWebhook) {
+                        $webhookUrl = Setting::get('orders_payment_webhook', '');
+                        if (!empty(trim($webhookUrl))) {
+                            $message = "*NF/BOLETO PENDENTE*\n\n"
+                                . "*Pedido:* {$order['code']}\n"
+                                . "*Fornecedor:* " . ($order['supplier_name'] ?? 'N/A') . "\n"
+                                . "*Valor:* {$totalFmt}\n"
+                                . "*Aprovado por:* " . ($order['approved_by_name'] ?? '-') . "\n\n"
+                                . "Acesse o painel para enviar a NF ou boleto:\n{$panelUrl}";
+                            $this->sendWebhook($webhookUrl, [
+                                'event' => 'payment_pending', 'order_code' => $order['code'],
+                                'supplier' => $order['supplier_name'] ?? 'N/A',
+                                'total' => $order['total_estimated'],
+                                'panel_url' => $panelUrl,
+                                'phone' => Setting::get('orders_payment_phone', ''),
+                                'phone_name' => Setting::get('orders_payment_phone_name', ''),
+                                'message' => $message,
+                            ], $orderId);
+                        }
                     }
                 }
                 break;
