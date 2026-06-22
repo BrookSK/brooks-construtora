@@ -278,6 +278,7 @@ class PurchaseOrderController extends Controller
         $payments = PurchaseOrderPayment::getByOrder($id);
         $deliveries = PurchaseOrderDelivery::getByOrder($id);
         $spareItems = PurchaseOrderSpareItem::getByOrder($id);
+        $materials = $order['status'] === 'approved' ? Material::allActive() : [];
 
         $this->view('admin.orders.show', [
             'order' => $order,
@@ -288,6 +289,7 @@ class PurchaseOrderController extends Controller
             'payments' => $payments,
             'deliveries' => $deliveries,
             'spareItems' => $spareItems,
+            'materials' => $materials,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);

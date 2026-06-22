@@ -582,18 +582,28 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
             <?php endif; ?>
             <!-- Formulário inline para adicionar -->
             <div class="card-body border-top">
-                <form method="POST" action="/admin/orders/spare-items/add">
+                <form method="POST" action="/admin/orders/spare-items/add" id="spareItemForm">
                     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
                     <input type="hidden" name="redirect" value="/admin/orders/show/<?= $order['id'] ?>">
                     <div class="row g-2">
                         <div class="col-12 col-md-4">
-                            <input type="text" class="form-control form-control-sm" name="description" required placeholder="Descrição do item *">
+                            <select id="spare-mat-select" style="display:none;">
+                                <option value="">-- Selecione ou digite --</option>
+                                <?php foreach ($materials as $m): ?>
+                                <option value="<?= htmlspecialchars($m['name'] . ($m['classification'] ? ' (' . $m['classification'] . ')' : '')) ?>"
+                                    data-unit="<?= htmlspecialchars($m['unit_abbr'] ?? $m['unit_name'] ?? '') ?>">
+                                    <?= htmlspecialchars($m['name'] . ($m['classification'] ? ' - ' . $m['classification'] : '') . ($m['specification'] ? ' (' . $m['specification'] . ')' : '')) ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div id="spare-mat-ss"></div>
+                            <input type="hidden" name="description" id="spare-description" required>
                         </div>
                         <div class="col-4 col-md-1">
                             <input type="text" class="form-control form-control-sm" name="quantity" value="1" placeholder="Qtd" inputmode="decimal">
                         </div>
                         <div class="col-4 col-md-1">
-                            <input type="text" class="form-control form-control-sm" name="unit" placeholder="un">
+                            <input type="text" class="form-control form-control-sm" name="unit" id="spare-unit" placeholder="un">
                         </div>
                         <div class="col-4 col-md-2">
                             <input type="text" class="form-control form-control-sm" name="unit_price" required placeholder="Preço R$" inputmode="decimal">
@@ -861,6 +871,47 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
 </div>
 
 <script>
+<script src="/assets/js/searchable-select.js"></script>
+<script>
+// Inicializar SearchableSelect para materiais no formulário de sobressalentes
+(function() {
+    const selectEl = document.getElementById('spare-mat-select');
+    if (!selectEl) return;
+    
+    const ss = new SearchableSelect(selectEl, {
+        placeholder: 'Buscar material ou digitar livre...',
+        onSelect: function(value, text, dataset) {
+            document.getElementById('spare-description').value = value || text;
+            if (dataset && dataset.unit) {
+                document.getElementById('spare-unit').value = dataset.unit;
+            }
+        }
+    });
+
+    // Permitir texto livre: ao sair do campo, se não selecionou nada, usa o texto digitado
+    ss.input.addEventListener('blur', function() {
+        setTimeout(function() {
+            const desc = document.getElementById('spare-description');
+            if (!desc.value && ss.input.value.trim()) {
+                desc.value = ss.input.value.trim();
+            }
+        }, 200);
+    });
+
+    // Ao submeter o form, garantir que descrição está preenchida com o input
+    document.getElementById('spareItemForm').addEventListener('submit', function(e) {
+        const desc = document.getElementById('spare-description');
+        if (!desc.value && ss.input.value.trim()) {
+            desc.value = ss.input.value.trim();
+        }
+        if (!desc.value) {
+            e.preventDefault();
+            alert('Informe a descrição do item.');
+            ss.input.focus();
+        }
+    });
+})();
+
 function deliveryAction(id, action, extraData) {
     const fd = new FormData();
     fd.append('id', id);
