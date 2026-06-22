@@ -12,11 +12,13 @@ class NotificationQueue extends Model
     /**
      * Enfileirar envio de e-mail
      */
-    public static function queueEmail(string $to, string $subject, string $body): int
+    public static function queueEmail(string $to, string $subject, string $body, ?int $orderId = null, ?string $eventType = null): int
     {
         return self::create([
             'type' => 'email',
             'status' => 'pending',
+            'order_id' => $orderId,
+            'event_type' => $eventType,
             'to_email' => $to,
             'subject' => $subject,
             'body' => $body,
@@ -27,15 +29,29 @@ class NotificationQueue extends Model
     /**
      * Enfileirar envio de webhook
      */
-    public static function queueWebhook(string $url, array $payload): int
+    public static function queueWebhook(string $url, array $payload, ?int $orderId = null, ?string $eventType = null, ?string $recipientName = null): int
     {
         return self::create([
             'type' => 'webhook',
             'status' => 'pending',
+            'order_id' => $orderId,
+            'event_type' => $eventType,
             'webhook_url' => $url,
             'webhook_payload' => json_encode($payload),
+            'recipient_name' => $recipientName,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
+    }
+
+    /**
+     * Buscar notificações de um pedido (para histórico)
+     */
+    public static function getByOrder(int $orderId): array
+    {
+        return Database::fetchAll(
+            "SELECT * FROM notification_queue WHERE order_id = ? ORDER BY created_at DESC",
+            [$orderId]
+        );
     }
 
     /**

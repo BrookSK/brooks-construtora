@@ -577,6 +577,116 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
         </div>
         <?php endif; ?>
 
+        <!-- Histórico de Notificações -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center" role="button" data-bs-toggle="collapse" data-bs-target="#notificationsCollapse">
+                <span><i class="bi bi-bell"></i> Histórico de Notificações</span>
+                <?php
+                $notifications = \App\Models\NotificationQueue::getByOrder($order['id']);
+                $nSent = count(array_filter($notifications, fn($n) => $n['status'] === 'sent'));
+                $nFailed = count(array_filter($notifications, fn($n) => $n['status'] === 'failed'));
+                $nPending = count(array_filter($notifications, fn($n) => in_array($n['status'], ['pending', 'processing'])));
+                ?>
+                <span>
+                    <?php if ($nSent): ?><span class="badge bg-success"><?= $nSent ?> enviadas</span><?php endif; ?>
+                    <?php if ($nFailed): ?><span class="badge bg-danger"><?= $nFailed ?> com erro</span><?php endif; ?>
+                    <?php if ($nPending): ?><span class="badge bg-warning"><?= $nPending ?> pendentes</span><?php endif; ?>
+                </span>
+            </div>
+            <div class="collapse" id="notificationsCollapse">
+                <!-- Botões de reenvio por fase -->
+                <div class="card-body border-bottom py-2">
+                    <small class="text-muted d-block mb-2">Reenviar notificações (gera e envia novamente):</small>
+                    <div class="d-flex flex-wrap gap-1">
+                        <?php if (in_array($order['status'], ['pending_quote', 'quoted', 'pending_approval', 'approved'])): ?>
+                        <button class="btn btn-sm btn-outline-warning" onclick="resendPhase(<?= $order['id'] ?>, 'quote_requested')"><i class="bi bi-arrow-repeat"></i> Cotação</button>
+                        <?php endif; ?>
+                        <?php if (in_array($order['status'], ['pending_approval', 'approved'])): ?>
+                        <button class="btn btn-sm btn-outline-info" onclick="resendPhase(<?= $order['id'] ?>, 'approval_requested')"><i class="bi bi-arrow-repeat"></i> Aprovação</button>
+                        <?php endif; ?>
+                        <?php if ($order['status'] === 'approved'): ?>
+                        <button class="btn btn-sm btn-outline-success" onclick="resendPhase(<?= $order['id'] ?>, 'order_approved')"><i class="bi bi-arrow-repeat"></i> Conclusão</button>
+                        <?php endif; ?>
+                        <?php if ($order['status'] === 'rejected'): ?>
+                        <button class="btn btn-sm btn-outline-danger" onclick="resendPhase(<?= $order['id'] ?>, 'order_rejected')"><i class="bi bi-arrow-repeat"></i> Rejeição</button>
+                        <?php endif; ?>
+                        <?php if (!empty($order['delivery_token'])): ?>
+                        <button class="btn btn-sm btn-outline-dark" onclick="resendPhase(<?= $order['id'] ?>, 'delivery_ready')"><i class="bi bi-arrow-repeat"></i> Entrega</button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <?php if (empty($notifications)): ?>
+                <div class="card-body text-center text-muted py-3 small">Nenhuma notificação registrada para este pedido.<br><small>Use os botões acima para enviar/reenviar.</small></div>
+                <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0" style="font-size:0.75rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Fase</th>
+                                <th>Destino</th>
+                                <th>Status</th>
+                                <th>Erro</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $eventLabels = [
+                                'quote_requested' => 'Cotação',
+                                'approval_requested' => 'Aprovação',
+                                'order_approved' => 'Aprovado',
+                                'order_rejected' => 'Rejeitado',
+                                'payment_uploaded' => 'Pagamento',
+                                'delivery_ready' => 'Entrega',
+                                'delivery_checklist_ready' => 'Entrega',
+                                'spare_item' => 'Sobressalente',
+                            ];
+                            ?>
+                            <?php foreach ($notifications as $n): ?>
+                            <tr class="<?= $n['status'] === 'failed' ? 'table-danger' : '' ?>" id="notif-row-<?= $n['id'] ?>">
+                                <td class="text-nowrap"><?= date('d/m/Y H:i', strtotime($n['created_at'])) ?></td>
+                                <td>
+                                    <?php if ($n['type'] === 'email'): ?>
+                                    <span class="badge bg-info" style="font-size:0.6rem;"><i class="bi bi-envelope"></i> E-mail</span>
+                                    <?php else: ?>
+                                    <span class="badge bg-dark" style="font-size:0.6rem;"><i class="bi bi-broadcast"></i> Webhook</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><small><?= $eventLabels[$n['event_type'] ?? ''] ?? ($n['event_type'] ?? '-') ?></small></td>
+                                <td>
+                                    <?php if ($n['type'] === 'email'): ?>
+                                    <small><?= htmlspecialchars($n['to_email'] ?? '') ?></small>
+                                    <?php else: ?>
+                                    <small><?= htmlspecialchars($n['recipient_name'] ?? 'Webhook') ?></small>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($n['status'] === 'sent'): ?>
+                                    <span class="badge bg-success" style="font-size:0.6rem;">Enviado<?= $n['sent_at'] ? ' ' . date('H:i', strtotime($n['sent_at'])) : '' ?></span>
+                                    <?php elseif ($n['status'] === 'failed'): ?>
+                                    <span class="badge bg-danger" style="font-size:0.6rem;">Falhou (<?= $n['attempts'] ?>x)</span>
+                                    <?php elseif ($n['status'] === 'processing'): ?>
+                                    <span class="badge bg-warning" style="font-size:0.6rem;">Processando...</span>
+                                    <?php else: ?>
+                                    <span class="badge bg-secondary" style="font-size:0.6rem;">Pendente</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><small class="text-danger"><?= htmlspecialchars($n['last_error'] ?? '') ?></small></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-secondary p-0 px-1" onclick="resendSingle(<?= $n['id'] ?>)" title="Reenviar esta"><i class="bi bi-arrow-repeat"></i></button>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <!-- Histórico -->
         <div class="card mb-3">
             <div class="card-header"><i class="bi bi-clock-history"></i> Histórico</div>
@@ -736,6 +846,45 @@ function submitReplacement() {
     const date = document.getElementById('replacementDate').value;
     const notes = document.getElementById('replacementNotes').value;
     deliveryAction(id, 'request_replacement', {replacement_expected_date: date, replacement_notes: notes});
+}
+
+function resendSingle(id) {
+    if (!confirm('Reenviar esta notificação?')) return;
+    fetch('/admin/orders/resend-notification', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'id=' + id
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            alert('Notificação reenviada!');
+            location.reload();
+        } else {
+            alert(d.error || 'Erro ao reenviar.');
+        }
+    })
+    .catch(() => alert('Erro de conexão'));
+}
+
+function resendPhase(orderId, phase) {
+    const labels = {quote_requested:'Cotação',approval_requested:'Aprovação',order_approved:'Conclusão',order_rejected:'Rejeição',delivery_ready:'Entrega'};
+    if (!confirm('Reenviar todas as notificações de "' + (labels[phase] || phase) + '" para este pedido?')) return;
+    fetch('/admin/orders/resend-all-phase', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'order_id=' + orderId + '&phase=' + phase
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            alert(d.message || 'Notificações reenviadas!');
+            location.reload();
+        } else {
+            alert(d.error || 'Erro ao reenviar.');
+        }
+    })
+    .catch(() => alert('Erro de conexão'));
 }
 </script>
 

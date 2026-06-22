@@ -11,14 +11,14 @@ class NotificationService
     /**
      * Enfileirar e-mail para múltiplos destinatários
      */
-    public static function queueEmails(string $emailsCsv, string $subject, string $body): void
+    public static function queueEmails(string $emailsCsv, string $subject, string $body, ?int $orderId = null, ?string $eventType = null): void
     {
         if (empty($emailsCsv)) return;
         
         $emailList = array_map('trim', explode(',', $emailsCsv));
         foreach ($emailList as $email) {
             if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                NotificationQueue::queueEmail($email, $subject, $body);
+                NotificationQueue::queueEmail($email, $subject, $body, $orderId, $eventType);
             }
         }
 
@@ -29,7 +29,7 @@ class NotificationService
      * Enfileirar webhook para múltiplos telefones
      * Se o campo phone tem vírgulas, cria um webhook por telefone
      */
-    public static function queueWebhook(string $url, array $data): void
+    public static function queueWebhook(string $url, array $data, ?int $orderId = null, ?string $eventType = null): void
     {
         if (empty($url)) return;
 
@@ -37,10 +37,16 @@ class NotificationService
             ? array_map('trim', explode(',', $data['phone'])) 
             : [''];
 
-        foreach ($phones as $phone) {
+        $phoneNames = isset($data['phone_name']) && !empty($data['phone_name'])
+            ? array_map('trim', explode(',', $data['phone_name']))
+            : [];
+
+        foreach ($phones as $i => $phone) {
             $payload = $data;
             $payload['phone'] = $phone;
-            NotificationQueue::queueWebhook($url, $payload);
+            $recipientName = $phoneNames[$i] ?? ($phoneNames[0] ?? $phone);
+            $payload['phone_name'] = $recipientName;
+            NotificationQueue::queueWebhook($url, $payload, $orderId, $eventType, $recipientName);
         }
 
         self::scheduleFlush();

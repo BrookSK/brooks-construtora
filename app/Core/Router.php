@@ -110,6 +110,8 @@ class Router
             'orders/spare-items' => ['PurchaseOrderController', 'spareItems'],
             'orders/spare-items/add' => ['PurchaseOrderController', 'spareItemAdd'],
             'orders/spare-items/delete' => ['PurchaseOrderController', 'spareItemDelete'],
+            'orders/resend-notification' => ['PurchaseOrderController', 'resendNotification'],
+            'orders/resend-all-phase' => ['PurchaseOrderController', 'resendAllPhase'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],

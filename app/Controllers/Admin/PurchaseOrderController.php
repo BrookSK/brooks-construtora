@@ -946,7 +946,7 @@ class PurchaseOrderController extends Controller
         if (!empty($emails)) {
             $subject = "Cotação Pendente - Pedido {$order['code']}";
             $body = EmailTemplate::purchaseOrderQuote($order, $items, $quoteUrl, $orderSuppliers);
-            NotificationService::queueEmails($emails, $subject, $body);
+            NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'quote_requested');
         }
 
         // Webhook
@@ -989,7 +989,7 @@ class PurchaseOrderController extends Controller
                 'phone' => Setting::get('orders_quote_phone', ''),
                 'phone_name' => Setting::get('orders_quote_phone_name', ''),
                 'message' => $message,
-            ]);
+            ], $order['id'], 'quote_requested');
         }
     }
 
@@ -1006,7 +1006,7 @@ class PurchaseOrderController extends Controller
         if (!empty($emails)) {
             $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
             $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
-            NotificationService::queueEmails($emails, $subject, $body);
+            NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'approval_requested');
         }
 
         // Webhook
@@ -1044,7 +1044,7 @@ class PurchaseOrderController extends Controller
                 'phone' => Setting::get('orders_approval_phone', ''),
                 'phone_name' => Setting::get('orders_approval_phone_name', ''),
                 'message' => $message,
-            ]);
+            ], $order['id']);
         }
     }
 
@@ -1062,7 +1062,7 @@ class PurchaseOrderController extends Controller
         if (!empty($emails)) {
             $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
             $body = EmailTemplate::purchaseOrderCompleted($order, $items, $viewUrl, '', $approvedSuppliers);
-            NotificationService::queueEmails($emails, $subject, $body);
+            NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'order_approved');
         }
 
         // Webhook
@@ -1107,9 +1107,18 @@ class PurchaseOrderController extends Controller
         }
     }
 
-    private function sendWebhook(string $url, array $data): void
+    private function sendWebhook(string $url, array $data, ?int $orderId = null, ?string $eventType = null): void
     {
-        NotificationService::queueWebhook($url, $data);
+        // Auto-detect event type from payload if not provided
+        if (!$eventType && isset($data['event'])) {
+            $eventType = $data['event'];
+        }
+        // Auto-detect orderId from internal field if not provided
+        if (!$orderId && isset($data['_order_id'])) {
+            $orderId = (int) $data['_order_id'];
+            unset($data['_order_id']);
+        }
+        NotificationService::queueWebhook($url, $data, $orderId, $eventType);
     }
 
     private function sendPaymentNotifications(int $orderId, string $type, array $docData): void
@@ -1130,7 +1139,7 @@ class PurchaseOrderController extends Controller
         if (!empty($emails)) {
             $subject = "{$typeLabel} Enviado - Pedido {$order['code']}";
             $body = EmailTemplate::purchaseOrderPayment($order, $typeLabel, $docData, $uploadedBy, $panelUrl);
-            NotificationService::queueEmails($emails, $subject, $body);
+            NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'payment_uploaded');
         }
 
         // Webhook
@@ -1181,7 +1190,7 @@ class PurchaseOrderController extends Controller
         if (!empty($emails)) {
             $subject = "Checklist de Entrega - Pedido {$order['code']}";
             $body = EmailTemplate::purchaseOrderDelivery($order, $items, $checklistUrl, $supplierDisplay);
-            NotificationService::queueEmails($emails, $subject, $body);
+            NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'delivery_ready');
         }
 
         // Webhook
@@ -1458,6 +1467,102 @@ class PurchaseOrderController extends Controller
         $this->redirect('/admin/orders/spare-items');
     }
 
+    // ============================
+    // REENVIO DE NOTIFICAÇÕES
+    // ============================
+
+    /**
+     * Reenviar uma notificação individual (coloca de volta na fila)
+     */
+    public function resendNotification(): void
+    {
+        if (!$this->isPost()) { $this->json(['error' => 'POST only'], 405); return; }
+
+        $id = (int) $this->input('id');
+        $notification = \App\Models\NotificationQueue::find($id);
+
+        if (!$notification) {
+            $this->json(['error' => 'Notificação não encontrada.'], 404);
+            return;
+        }
+
+        // Resetar para pendente para ser reenviada
+        \App\Models\NotificationQueue::updateById($id, [
+            'status' => 'pending',
+            'attempts' => 0,
+            'last_error' => null,
+            'sent_at' => null,
+            'scheduled_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        // Tentar processar imediatamente
+        NotificationService::processImmediate();
+
+        $this->json(['success' => true, 'message' => 'Notificação colocada na fila para reenvio.']);
+    }
+
+    /**
+     * Reenviar todas as notificações de uma fase do pedido
+     * Também funciona para pedidos sem histórico — regenera e envia as notificações da fase
+     */
+    public function resendAllPhase(): void
+    {
+        if (!$this->isPost()) { $this->json(['error' => 'POST only'], 405); return; }
+
+        $orderId = (int) $this->input('order_id');
+        $phase = $this->input('phase', '');
+
+        $order = PurchaseOrder::findFull($orderId);
+        if (!$order) {
+            $this->json(['error' => 'Pedido não encontrado.'], 404);
+            return;
+        }
+
+        $validPhases = ['quote_requested', 'approval_requested', 'order_approved', 'order_rejected', 'delivery_ready', 'spare_item'];
+
+        if (!in_array($phase, $validPhases)) {
+            $this->json(['error' => 'Fase inválida.'], 400);
+            return;
+        }
+
+        // Regenerar e reenviar as notificações da fase
+        switch ($phase) {
+            case 'quote_requested':
+                $this->sendQuoteNotifications($orderId, $order['quote_token']);
+                break;
+
+            case 'approval_requested':
+                $this->sendApprovalNotifications($orderId, $order['approval_token']);
+                break;
+
+            case 'order_approved':
+                $this->sendCompletedNotifications($orderId);
+                break;
+
+            case 'order_rejected':
+                // Reenviar rejeição
+                $emails = Setting::get('orders_completed_emails', '');
+                if (!empty($emails)) {
+                    $subject = "Pedido REJEITADO - {$order['code']}";
+                    $body = EmailTemplate::purchaseOrderRejected($order, $order['rejected_by_name'] ?? 'N/A', $order['approval_notes'] ?? '');
+                    NotificationService::queueEmails($emails, $subject, $body, $orderId, 'order_rejected');
+                }
+                break;
+
+            case 'delivery_ready':
+                if (!empty($order['delivery_token'])) {
+                    $this->sendDeliveryNotifications($orderId, $order['delivery_token']);
+                }
+                break;
+        }
+
+        PurchaseOrderHistory::log($orderId, 'notifications_resent',
+            "Notificações da fase '{$phase}' reenviadas manualmente",
+            Auth::user()['name'] ?? 'Sistema', Auth::id());
+
+        $this->json(['success' => true, 'message' => "Notificações da fase '{$phase}' reenviadas!"]);
+    }
+
     private function sendSpareItemNotification(int $orderId, string $description, float $total, string $purchasedBy): void
     {
         $order = PurchaseOrder::find($orderId);
@@ -1474,7 +1579,7 @@ class PurchaseOrderController extends Controller
         if (!empty($emails)) {
             $subject = "Item Sobressalente - Pedido {$order['code']} - R$ " . number_format($total, 2, ',', '.');
             $body = \App\Services\EmailTemplate::spareItemAdded($order, $description, $total, $purchasedBy, $weekTotal, $weeklyBudget);
-            NotificationService::queueEmails($emails, $subject, $body);
+            NotificationService::queueEmails($emails, $subject, $body, $orderId, 'spare_item');
         }
 
         // Webhook

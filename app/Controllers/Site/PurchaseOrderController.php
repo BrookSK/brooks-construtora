@@ -432,7 +432,7 @@ class PurchaseOrderController extends Controller
             if (!empty($emails)) {
                 $subject = "Pedido REJEITADO - {$order['code']}";
                 $body = EmailTemplate::purchaseOrderRejected($order, $personName, $notes);
-                NotificationService::queueEmails($emails, $subject, $body);
+                NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'order_rejected');
             }
 
             // Webhook de rejeição (usa os dados da fase 3 - conclusão)
@@ -861,7 +861,7 @@ class PurchaseOrderController extends Controller
         if (!empty($emails)) {
             $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
             $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
-            NotificationService::queueEmails($emails, $subject, $body);
+            NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'approval_requested');
         }
 
         $webhookUrl = Setting::get('orders_approval_webhook', '');
@@ -914,7 +914,7 @@ class PurchaseOrderController extends Controller
         if (!empty($emails)) {
             $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
             $body = EmailTemplate::purchaseOrderCompleted($order, $items, $pdfUrl, $xlsxUrl, $approvedSuppliers);
-            NotificationService::queueEmails($emails, $subject, $body);
+            NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'order_approved');
         }
 
         $webhookUrl = Setting::get('orders_completed_webhook', '');
@@ -951,9 +951,11 @@ class PurchaseOrderController extends Controller
         }
     }
 
-    private function sendWebhook(string $url, array $data): void
+    private function sendWebhook(string $url, array $data, ?int $orderId = null, ?string $eventType = null): void
     {
-        NotificationService::queueWebhook($url, $data);
+        if (!$eventType && isset($data['event'])) $eventType = $data['event'];
+        if (!$orderId && isset($data['_order_id'])) { $orderId = (int) $data['_order_id']; unset($data['_order_id']); }
+        NotificationService::queueWebhook($url, $data, $orderId, $eventType);
     }
 
     private function getBaseUrl(): string
