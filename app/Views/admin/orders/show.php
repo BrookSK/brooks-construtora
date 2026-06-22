@@ -586,7 +586,8 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
                     <input type="hidden" name="redirect" value="/admin/orders/show/<?= $order['id'] ?>">
                     <div class="row g-2">
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-4" id="spare-mat-wrapper">
+                            <input type="hidden" name="description" id="spare-description">
                             <select id="spare-mat-select" style="display:none;">
                                 <option value="">-- Selecione ou digite --</option>
                                 <?php foreach ($materials as $m): ?>
@@ -596,7 +597,6 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                                 </option>
                                 <?php endforeach; ?>
                             </select>
-                            <input type="hidden" name="description" id="spare-description" required>
                         </div>
                         <div class="col-4 col-md-1">
                             <input type="text" class="form-control form-control-sm" name="quantity" value="1" placeholder="Qtd" inputmode="decimal">
@@ -872,35 +872,39 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
 <script>
 <script src="/assets/js/searchable-select.js"></script>
 <script>
-// SearchableSelect para materiais no formulário de sobressalentes
-(function() {
+document.addEventListener('DOMContentLoaded', function() {
+    // SearchableSelect para materiais no formulário de sobressalentes
     const selectEl = document.getElementById('spare-mat-select');
-    if (!selectEl) return;
-
-    const ss = new SearchableSelect(selectEl, {
-        placeholder: 'Buscar material ou digitar...',
-        onSelect: function(value, text, dataset) {
-            document.getElementById('spare-description').value = value || text;
-            if (dataset && dataset.unit) {
-                document.getElementById('spare-unit').value = dataset.unit;
+    if (selectEl) {
+        const ss = new SearchableSelect(selectEl, {
+            placeholder: 'Buscar material ou digitar...',
+            onSelect: function(value, text, dataset) {
+                document.getElementById('spare-description').value = value || text;
+                if (dataset && dataset.unit) {
+                    document.getElementById('spare-unit').value = dataset.unit;
+                }
             }
-        }
-    });
+        });
 
-    // Permitir texto livre no submit
-    document.getElementById('spareItemForm').addEventListener('submit', function(e) {
-        const desc = document.getElementById('spare-description');
-        if (!desc.value && ss.input.value.trim()) {
-            desc.value = ss.input.value.trim();
+        // Permitir texto livre no submit
+        const form = document.getElementById('spareItemForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const desc = document.getElementById('spare-description');
+                if (!desc.value && ss.input && ss.input.value.trim()) {
+                    desc.value = ss.input.value.trim();
+                }
+                if (!desc.value) {
+                    e.preventDefault();
+                    alert('Informe a descrição do item.');
+                    if (ss.input) ss.input.focus();
+                }
+            });
         }
-        if (!desc.value) {
-            e.preventDefault();
-            alert('Informe a descrição do item.');
-            ss.input.focus();
-        }
-    });
-})();
-
+    }
+});
+</script>
+<script>
 function deliveryAction(id, action, extraData) {
     const fd = new FormData();
     fd.append('id', id);
