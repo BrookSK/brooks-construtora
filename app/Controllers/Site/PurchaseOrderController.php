@@ -1116,8 +1116,22 @@ class PurchaseOrderController extends Controller
 
         switch ($action) {
             case 'mark_delivered':
-                PurchaseOrderDelivery::updateById($id, ['status' => 'delivered', 'delivered_at' => $now]);
-                $description = "Marcado como entregue por {$performedBy}";
+                $receivedQty = $this->input('received_quantity', '');
+                $updateData = ['status' => 'delivered', 'delivered_at' => $now];
+                if ($receivedQty !== '') $updateData['received_quantity'] = (float) $receivedQty;
+                PurchaseOrderDelivery::updateById($id, $updateData);
+                $description = "Marcado como entregue por {$performedBy}" . ($receivedQty ? " (qty recebida: {$receivedQty})" : '');
+                break;
+            case 'mark_delivered_divergence':
+                $receivedQty = $this->input('received_quantity', '');
+                $notes = trim($this->input('divergence_notes', ''));
+                PurchaseOrderDelivery::updateById($id, [
+                    'status' => 'divergence',
+                    'delivered_at' => $now,
+                    'received_quantity' => $receivedQty ? (float) $receivedQty : null,
+                    'divergence_notes' => $notes,
+                ]);
+                $description = "Entregue com divergência por {$performedBy}: {$notes}";
                 break;
             case 'mark_checked':
                 PurchaseOrderDelivery::updateById($id, ['status' => 'checked', 'checked_by' => $performedBy]);

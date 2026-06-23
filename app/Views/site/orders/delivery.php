@@ -128,7 +128,7 @@ $pmLabels = ['pix'=>'PIX','boleto'=>'Boleto','cartao'=>'Cartão','transferencia'
                 <!-- Botões de ação -->
                 <div class="action-buttons">
                     <?php if ($d['status'] === 'pending'): ?>
-                    <button class="btn btn-primary action-btn" onclick="doAction(<?= $d['id'] ?>, 'mark_delivered')"><i class="bi bi-box-seam"></i> Marcar como Entregue</button>
+                    <button class="btn btn-primary action-btn" onclick="showDeliveredModal(<?= $d['id'] ?>, <?= $d['quantity'] ?>)"><i class="bi bi-box-seam"></i> Marcar como Entregue</button>
                     <?php elseif ($d['status'] === 'delivered'): ?>
                     <button class="btn btn-success action-btn" onclick="doAction(<?= $d['id'] ?>, 'mark_checked')"><i class="bi bi-check-circle"></i> Conferido - Tudo OK</button>
                     <button class="btn btn-outline-danger action-btn" onclick="showDivergence(<?= $d['id'] ?>)"><i class="bi bi-exclamation-triangle"></i> Tem Problema</button>
@@ -183,6 +183,27 @@ $pmLabels = ['pix'=>'PIX','boleto'=>'Boleto','cartao'=>'Cartão','transferencia'
 
     <!-- Toast -->
     <div class="toast-container"><div id="toast" class="toast align-items-center text-bg-success border-0" role="alert"><div class="d-flex"><div class="toast-body" id="toastMsg">Salvo!</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div></div>
+
+    <!-- Modal Entrega (quantidade) -->
+    <div class="modal fade" id="deliveredModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header py-2 bg-primary text-white"><h6 class="modal-title"><i class="bi bi-box-seam"></i> Registrar Entrega</h6><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+            <input type="hidden" id="delId">
+            <input type="hidden" id="delExpectedQty">
+            <p class="small mb-2">Quantidade pedida: <strong id="delExpectedLabel"></strong></p>
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Quantidade recebida *</label>
+                <input type="number" class="form-control" id="delReceivedQty" step="0.01" min="0" inputmode="decimal" placeholder="Informe a quantidade que chegou">
+            </div>
+            <div id="delQtyWarning" class="alert alert-warning py-2 small" style="display:none;">
+                <i class="bi bi-exclamation-triangle"></i> <span id="delQtyWarningText"></span>
+            </div>
+        </div>
+        <div class="modal-footer py-2 flex-column gap-2">
+            <button class="btn btn-primary w-100" onclick="submitDelivered()"><i class="bi bi-box-seam"></i> Confirmar Entrega</button>
+            <small class="text-muted">Se a quantidade estiver errada, será registrada como divergência automaticamente.</small>
+        </div>
+    </div></div></div>
 
     <!-- Modal Divergência -->
     <div class="modal fade" id="divModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
@@ -252,6 +273,46 @@ $pmLabels = ['pix'=>'PIX','boleto'=>'Boleto','cartao'=>'Cartão','transferencia'
             .catch(() => { showToast('Sem conexão', 'danger'); document.getElementById('syncStatus').innerHTML = '<i class="bi bi-exclamation-circle text-warning"></i> Offline'; });
     }
 
+    function showDeliveredModal(id, expectedQty) {
+        document.getElementById('delId').value = id;
+        document.getElementById('delExpectedQty').value = expectedQty;
+        document.getElementById('delExpectedLabel').textContent = expectedQty;
+        document.getElementById('delReceivedQty').value = expectedQty;
+        document.getElementById('delQtyWarning').style.display = 'none';
+        new bootstrap.Modal(document.getElementById('deliveredModal')).show();
+        // Listener para avisar se quantidade difere
+        document.getElementById('delReceivedQty').oninput = function() {
+            const received = parseFloat(this.value) || 0;
+            const expected = parseFloat(expectedQty) || 0;
+            const warn = document.getElementById('delQtyWarning');
+            if (received !== expected && this.value) {
+                warn.style.display = '';
+                if (received > expected) document.getElementById('delQtyWarningText').textContent = 'Recebeu ' + (received - expected) + ' a mais do que o pedido. Será registrado como divergência.';
+                else document.getElementById('delQtyWarningText').textContent = 'Recebeu ' + (expected - received) + ' a menos do que o pedido. Será registrado como divergência.';
+            } else { warn.style.display = 'none'; }
+        };
+    }
+
+    function submitDelivered() {
+        const name = getName(); if (!name) return;
+        const id = document.getElementById('delId').value;
+        const expected = parseFloat(document.getElementById('delExpectedQty').value) || 0;
+        const received = parseFloat(document.getElementById('delReceivedQty').value) || 0;
+        if (!received) { alert('Informe a quantidade recebida.'); return; }
+
+        bootstrap.Modal.getInstance(document.getElementById('deliveredModal')).hide();
+
+        if (received === expected) {
+            // Quantidade correta — marca como entregue normalmente
+            doAction(id, 'mark_delivered', {received_quantity: received});
+        } else {
+            // Quantidade diferente — marca como entregue + divergência automática
+            const diff = received > expected ? (received - expected) + ' a mais' : (expected - received) + ' a menos';
+            const notes = 'Quantidade divergente: pedido ' + expected + ', recebeu ' + received + ' (' + diff + ')';
+            doAction(id, 'mark_delivered_divergence', {received_quantity: received, divergence_notes: notes});
+        }
+    }
+
     function showDivergence(id) { document.getElementById('divId').value = id; document.getElementById('divNotes').value = ''; new bootstrap.Modal(document.getElementById('divModal')).show(); }
     function submitDivergence() {
         const notes = document.getElementById('divNotes').value.trim();
@@ -291,7 +352,7 @@ $pmLabels = ['pix'=>'PIX','boleto'=>'Boleto','cartao'=>'Cartão','transferencia'
 
             // Atualizar botões com texto
             let btns = '';
-            if (d.status === 'pending') btns = '<button class="btn btn-primary action-btn" onclick="doAction('+d.id+',\'mark_delivered\')"><i class="bi bi-box-seam"></i> Marcar como Entregue</button>';
+            if (d.status === 'pending') btns = '<button class="btn btn-primary action-btn" onclick="showDeliveredModal('+d.id+','+d.quantity+')"><i class="bi bi-box-seam"></i> Marcar como Entregue</button>';
             else if (d.status === 'delivered') btns = '<button class="btn btn-success action-btn" onclick="doAction('+d.id+',\'mark_checked\')"><i class="bi bi-check-circle"></i> Conferido - Tudo OK</button><button class="btn btn-outline-danger action-btn" onclick="showDivergence('+d.id+')"><i class="bi bi-exclamation-triangle"></i> Tem Problema</button><button class="btn btn-outline-secondary undo-btn" onclick="doAction('+d.id+',\'reset\')"><i class="bi bi-arrow-counterclockwise"></i> Desfazer (não chegou)</button>';
             else if (d.status === 'divergence') btns = '<button class="btn btn-warning action-btn" onclick="showReplacement('+d.id+')"><i class="bi bi-arrow-repeat"></i> Solicitar Troca</button><button class="btn btn-outline-secondary undo-btn" onclick="doAction('+d.id+',\'reset\')"><i class="bi bi-arrow-counterclockwise"></i> Desfazer</button>';
             else if (d.status === 'replacement_requested') btns = '<button class="btn btn-success action-btn" onclick="doAction('+d.id+',\'mark_replacement_delivered\')"><i class="bi bi-check-all"></i> Troca Recebida - OK</button><button class="btn btn-outline-secondary undo-btn" onclick="doAction('+d.id+',\'reset\')"><i class="bi bi-arrow-counterclockwise"></i> Desfazer</button>';
