@@ -88,7 +88,7 @@ class PurchaseOrderController extends Controller
 
         $order = PurchaseOrder::findByQuoteToken($token);
 
-        if (!$order || $order['status'] !== 'pending_quote') {
+        if (!$order || !in_array($order['status'], ['pending_quote', 'pending_approval'])) {
             $this->setFlash('error', 'Pedido não encontrado ou já foi processado.');
             $this->redirect('/pedido/cotacao/' . $token);
             return;
