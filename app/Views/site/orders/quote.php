@@ -88,9 +88,33 @@
                     <div class="row mb-4">
                         <div class="col-md-6">
                             <label class="form-label">Seu Nome *</label>
-                            <input type="text" class="form-control" name="quoted_by_name" required placeholder="Informe seu nome completo">
+                            <input type="text" class="form-control" name="quoted_by_name" required placeholder="Informe seu nome completo" value="<?= htmlspecialchars($order['quoted_by_name'] ?? '') ?>">
                         </div>
                     </div>
+
+                    <!-- Comentários/Perguntas da aprovação -->
+                    <?php if (!empty($comments)): ?>
+                    <div class="alert alert-warning mb-4">
+                        <h6 class="small fw-bold mb-2"><i class="bi bi-chat-dots"></i> Perguntas/Observações sobre este pedido</h6>
+                        <?php foreach ($comments as $c): ?>
+                        <div class="p-2 mb-1 rounded <?= $c['author_role'] === 'approver' ? 'bg-light border-start border-warning border-3' : 'bg-white border-start border-info border-3' ?>" style="font-size:0.8rem;">
+                            <strong><?= htmlspecialchars($c['author_name']) ?></strong>
+                            <span class="text-muted small">(<?= $c['author_role'] === 'approver' ? 'Aprovação' : 'Cotação' ?>) · <?= date('d/m H:i', strtotime($c['created_at'])) ?></span>
+                            <p class="mb-0 mt-1"><?= nl2br(htmlspecialchars($c['message'])) ?></p>
+                        </div>
+                        <?php endforeach; ?>
+                        <!-- Responder -->
+                        <div class="mt-2 pt-2 border-top">
+                            <form method="POST" action="/pedido/cotacao/comentario/<?= $token ?>" class="d-flex gap-2 align-items-end flex-wrap">
+                                <input type="hidden" name="person_name" id="quoterNameForComment">
+                                <div class="flex-grow-1">
+                                    <textarea class="form-control form-control-sm" name="comment_message" rows="2" placeholder="Responder..." required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-info" onclick="document.getElementById('quoterNameForComment').value = document.querySelector('[name=quoted_by_name]').value;"><i class="bi bi-send"></i> Responder</button>
+                            </form>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- Itens do pedido (referência) -->
                     <h6 class="mb-2"><i class="bi bi-list-check"></i> Itens do Pedido</h6>
@@ -737,6 +761,60 @@
         updateViewToggle();
         if (currentView === 'map') setTimeout(renderMap, 200);
     }).observe(document.getElementById('suppliersContainer'), { childList: true });
+
+    // Auto-carregar fornecedores existentes (quando pedido já foi cotado e está sendo editado)
+    <?php if ($order['status'] === 'pending_approval' && !empty($orderSuppliers)): ?>
+    (function() {
+        const existingPrices = <?= json_encode($itemPrices ?? []) ?>;
+        const pricesBySupplier = {};
+        existingPrices.forEach(p => {
+            if (!pricesBySupplier[p.supplier_id]) pricesBySupplier[p.supplier_id] = {};
+            pricesBySupplier[p.supplier_id][p.item_id] = p.unit_price;
+        });
+
+        <?php foreach ($orderSuppliers as $os): ?>
+        // Adicionar fornecedor <?= $os['supplier_name'] ?>
+        addedSuppliers.push('<?= $os['supplier_id'] ?>');
+        addSupplierBlock('<?= $os['supplier_id'] ?>', '<?= htmlspecialchars($os['supplier_name']) ?>');
+        
+        // Preencher preços
+        setTimeout(function() {
+            const block = document.getElementById('supplier-block-<?= $os['supplier_id'] ?>');
+            if (!block) return;
+            const prices = pricesBySupplier['<?= $os['supplier_id'] ?>'] || {};
+            for (const itemId in prices) {
+                const input = block.querySelector('[name="supplier_prices[<?= $os['supplier_id'] ?>][' + itemId + ']"]');
+                if (input) { input.value = prices[itemId]; input.dispatchEvent(new Event('input')); }
+            }
+            // Preencher vendedor
+            const vName = block.querySelector('[name*="[name]"]'); if (vName) vName.value = '<?= htmlspecialchars($os['vendor_name'] ?? '') ?>';
+            const vPhone = block.querySelector('[name*="[phone]"]'); if (vPhone) vPhone.value = '<?= htmlspecialchars($os['vendor_phone'] ?? '') ?>';
+            const vEmail = block.querySelector('[name*="[email]"]'); if (vEmail) vEmail.value = '<?= htmlspecialchars($os['vendor_email'] ?? '') ?>';
+            const vDays = block.querySelector('[name*="[delivery_days]"]'); if (vDays) vDays.value = '<?= $os['delivery_days'] ?? '' ?>';
+            const vPm = block.querySelector('[name*="[payment_method]"]'); if (vPm) vPm.value = '<?= $os['payment_method'] ?? '' ?>';
+            const vPc = block.querySelector('[name*="[payment_condition]"]'); if (vPc) vPc.value = '<?= htmlspecialchars($os['payment_condition'] ?? '') ?>';
+            const vPd = block.querySelector('[name*="[payment_first_due]"]'); if (vPd) vPd.value = '<?= $os['payment_first_due'] ?? '' ?>';
+            const vPn = block.querySelector('[name*="[payment_notes]"]'); if (vPn) vPn.value = '<?= htmlspecialchars($os['payment_notes'] ?? '') ?>';
+            // Financeiros
+            <?php if ($os['discount_value'] > 0): ?>
+            const dv = block.querySelector('[name*="[discount_value]"]'); if (dv) dv.value = '<?= $os['discount_value'] ?>';
+            const dt = block.querySelector('[name*="[discount_type]"]'); if (dt) dt.value = '<?= $os['discount_type'] ?? 'percent' ?>';
+            <?php endif; ?>
+            <?php if ($os['ipi_percent'] > 0): ?>
+            const ipi = block.querySelector('[name*="[ipi_percent]"]'); if (ipi) ipi.value = '<?= $os['ipi_percent'] ?>';
+            <?php endif; ?>
+            <?php if ($os['icms_percent'] > 0): ?>
+            const icms = block.querySelector('[name*="[icms_percent]"]'); if (icms) icms.value = '<?= $os['icms_percent'] ?>';
+            <?php endif; ?>
+            <?php if ($os['freight'] > 0): ?>
+            const fr = block.querySelector('[name*="[freight]"]'); if (fr) fr.value = '<?= number_format($os['freight'], 2, ',', '') ?>';
+            <?php endif; ?>
+        }, 300);
+        <?php endforeach; ?>
+
+        document.getElementById('submitBtn').disabled = false;
+    })();
+    <?php endif; ?>
     </script>
 
 <!-- Modal de Revisão antes de enviar -->

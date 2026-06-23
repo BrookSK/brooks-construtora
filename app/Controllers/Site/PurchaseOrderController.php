@@ -49,6 +49,8 @@ class PurchaseOrderController extends Controller
         $items = PurchaseOrderItem::getByOrder($order['id']);
         $orderSuppliers = PurchaseOrderSupplier::getByOrder($order['id']);
         $suppliers = Supplier::allActive();
+        $comments = Database::fetchAll("SELECT * FROM purchase_order_comments WHERE order_id = ? ORDER BY created_at ASC", [$order['id']]);
+        $itemPrices = PurchaseOrderItemPrice::getByOrder($order['id']);
         
         // Buscar histórico de preços para os materiais deste pedido
         $materialIds = array_filter(array_column($items, 'material_id'));
@@ -67,6 +69,8 @@ class PurchaseOrderController extends Controller
             'orderSuppliers' => $orderSuppliers,
             'suppliers' => $suppliers,
             'priceHistory' => $priceHistory,
+            'comments' => $comments,
+            'itemPrices' => $itemPrices,
             'token' => $token,
             'flash' => $this->getFlash(),
         ]);
