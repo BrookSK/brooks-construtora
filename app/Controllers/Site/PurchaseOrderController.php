@@ -236,12 +236,26 @@ class PurchaseOrderController extends Controller
 
         // Log no histórico
         $finalTotal = $lowestTotal != PHP_FLOAT_MAX ? $lowestTotal : 0;
-        PurchaseOrderHistory::log(
-            $order['id'],
-            'quoted',
-            "Cotação realizada por {$quotedByName}. Total: R$ " . number_format($finalTotal, 2, ',', '.'),
-            $quotedByName
-        );
+        $isEdit = $order['status'] === 'pending_approval';
+        
+        if ($isEdit) {
+            $oldTotal = (float) $order['total_estimated'];
+            $diff = $finalTotal - $oldTotal;
+            $diffStr = $diff != 0 ? ($diff > 0 ? ' (+R$ ' : ' (-R$ ') . number_format(abs($diff), 2, ',', '.') . ')' : '';
+            PurchaseOrderHistory::log(
+                $order['id'],
+                'quote_edited',
+                "Cotação EDITADA por {$quotedByName}. Novo total: R$ " . number_format($finalTotal, 2, ',', '.') . $diffStr . " (anterior: R$ " . number_format($oldTotal, 2, ',', '.') . ")",
+                $quotedByName
+            );
+        } else {
+            PurchaseOrderHistory::log(
+                $order['id'],
+                'quoted',
+                "Cotação realizada por {$quotedByName}. Total: R$ " . number_format($finalTotal, 2, ',', '.'),
+                $quotedByName
+            );
+        }
 
         // Enviar notificações de aprovação
         $this->sendApprovalNotifications($order['id'], $order['approval_token']);
