@@ -23,8 +23,15 @@ class OpenAIService
 
     public function generateTopics(int $quantity = 10, string $customPrompt = '', string $sourceUrls = ''): array
     {
+        $today = date('d/m/Y');
+        $year = date('Y');
+
         $prompt = "Você é um especialista em construção civil, reformas e arquitetura no Brasil. 
+        DATA DE HOJE: {$today}. Estamos em {$year}.
+        
         Gere {$quantity} temas para revistas digitais da Brooks Construtora, uma empresa especializada em reformas e construções de alto padrão em São Paulo.
+        
+        IMPORTANTE: Os temas devem ser ATUAIS e relevantes para {$year}. NÃO mencione anos anteriores (2022, 2023, 2024, 2025). Todos os temas devem refletir tendências, novidades e realidades de {$year}.
         
         Os temas devem ser relevantes, educativos e interessantes para clientes de alto padrão interessados em:
         - Reformas residenciais e corporativas
@@ -39,7 +46,7 @@ class OpenAIService
         }
 
         if (!empty($sourceUrls)) {
-            $prompt .= "\n\nIMPORTANTE: Baseie os temas nas seguintes fontes/referências. Crie temas inspirados no conteúdo desses links:\n{$sourceUrls}";
+            $prompt .= "\n\nIMPORTANTE: Baseie os temas nas seguintes fontes/referências. Crie temas inspirados no conteúdo desses links, mas adaptando para o contexto ATUAL ({$year}). Ignore datas antigas que possam aparecer nas fontes — adapte para a realidade de hoje:\n{$sourceUrls}";
         }
 
         $prompt .= "\n\nRetorne em formato JSON com a seguinte estrutura:
