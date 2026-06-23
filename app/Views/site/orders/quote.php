@@ -81,6 +81,19 @@
                 <?php endif; ?>
             </div>
 
+            <?php if (!empty($comments)): ?>
+            <!-- Form de resposta separado (fora do quoteForm) -->
+            <div class="card-body py-2 border-bottom">
+                <form method="POST" action="/pedido/cotacao/comentario/<?= $token ?>" class="d-flex gap-2 align-items-end flex-wrap" onsubmit="this.querySelector('[name=person_name]').value = document.querySelector('[name=quoted_by_name]').value || 'Cotador';">
+                    <input type="hidden" name="person_name" value="">
+                    <div class="flex-grow-1">
+                        <textarea class="form-control form-control-sm" name="comment_message" rows="2" placeholder="Responder à pergunta..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-info"><i class="bi bi-send"></i> Responder</button>
+                </form>
+            </div>
+            <?php endif; ?>
+
             <form method="POST" action="/pedido/cotacao/enviar/<?= $token ?>" id="quoteForm">
                 <div class="card-body p-3 p-md-4">
                     <!-- Identificação -->
@@ -103,16 +116,6 @@
                             <p class="mb-0 mt-1"><?= nl2br(htmlspecialchars($c['message'])) ?></p>
                         </div>
                         <?php endforeach; ?>
-                        <!-- Responder -->
-                        <div class="mt-2 pt-2 border-top">
-                            <form method="POST" action="/pedido/cotacao/comentario/<?= $token ?>" class="d-flex gap-2 align-items-end flex-wrap">
-                                <input type="hidden" name="person_name" id="quoterNameForComment">
-                                <div class="flex-grow-1">
-                                    <textarea class="form-control form-control-sm" name="comment_message" rows="2" placeholder="Responder..." required></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-sm btn-info" onclick="document.getElementById('quoterNameForComment').value = document.querySelector('[name=quoted_by_name]').value;"><i class="bi bi-send"></i> Responder</button>
-                            </form>
-                        </div>
                     </div>
                     <?php endif; ?>
 
