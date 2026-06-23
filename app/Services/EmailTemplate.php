@@ -428,6 +428,31 @@ HTML;
         return self::wrap("Item Sobressalente - {$order['code']}", $body);
     }
 
+    public static function orderComment(array $order, string $authorName, string $message, string $actionUrl, string $role): string
+    {
+        $roleLabel = $role === 'approver' ? 'Aprovação' : 'Cotação';
+        $actionLabel = $role === 'approver' ? 'Responder / Editar Cotação' : 'Ver Aprovação';
+        $bgColor = $role === 'approver' ? '#fff3cd' : '#d1ecf1';
+        $borderColor = $role === 'approver' ? '#ffc107' : '#bee5eb';
+
+        $body = <<<HTML
+<p style="margin-bottom:15px;">Nova mensagem sobre o pedido <strong>{$order['code']}</strong>:</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:{$bgColor}; border-radius:6px; margin-bottom:20px; border:1px solid {$borderColor};">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#333; font-weight:600;">💬 Mensagem de {$authorName} ({$roleLabel})</p>
+    <p style="margin:10px 0 0; font-size:14px; color:#333; line-height:1.6; white-space:pre-wrap;">{$message}</p>
+</td></tr>
+</table>
+
+<p style="text-align:center; margin: 25px 0 10px;">
+    <a href="{$actionUrl}" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">{$actionLabel}</a>
+</p>
+HTML;
+
+        return self::wrap("Mensagem - Pedido {$order['code']}", $body);
+    }
+
     public static function purchaseOrderPaymentPending(array $order, string $panelUrl): string
     {
         $totalFormatted = number_format($order['total_estimated'] ?? 0, 2, ',', '.');

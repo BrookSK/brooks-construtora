@@ -91,7 +91,39 @@
                 <?php if (!empty($order['quote_notes'])): ?>
                 <div class="alert alert-warning small mb-2"><strong>Obs cotação:</strong> <?= nl2br(htmlspecialchars($order['quote_notes'])) ?></div>
                 <?php endif; ?>
+
                 <?php if (!empty($orderSuppliers)): ?>
+                <!-- Resumo dos fornecedores com detalhes financeiros -->
+                <div class="mb-3">
+                    <h6 class="small fw-bold mb-2"><i class="bi bi-building"></i> Resumo dos Fornecedores Cotados</h6>
+                    <?php
+                    $pmLabels = ['pix'=>'PIX','boleto'=>'Boleto','cartao'=>'Cartão','transferencia'=>'Transferência','dinheiro'=>'Dinheiro','outro'=>'Outro'];
+                    foreach ($orderSuppliers as $os):
+                    ?>
+                    <div class="border rounded p-2 mb-2" style="font-size:0.78rem;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong><?= htmlspecialchars($os['supplier_name']) ?></strong>
+                            <span class="fw-bold text-success"><?= $os['total'] ? 'R$ ' . number_format($os['total'], 2, ',', '.') : '-' ?></span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mt-1" style="font-size:0.72rem; color:#6c757d;">
+                            <?php if (!empty($os['vendor_name'])): ?><span><i class="bi bi-person"></i> <?= htmlspecialchars($os['vendor_name']) ?></span><?php endif; ?>
+                            <?php if (!empty($os['vendor_phone'])): ?><span><i class="bi bi-telephone"></i> <?= htmlspecialchars($os['vendor_phone']) ?></span><?php endif; ?>
+                            <?php if (!empty($os['delivery_days'])): ?><span><i class="bi bi-truck"></i> <?= $os['delivery_days'] ?> dias</span><?php endif; ?>
+                            <?php if (!empty($os['payment_method'])): ?><span><i class="bi bi-credit-card"></i> <?= $pmLabels[$os['payment_method']] ?? $os['payment_method'] ?></span><?php endif; ?>
+                            <?php if (!empty($os['payment_condition'])): ?><span><?= htmlspecialchars($os['payment_condition']) ?></span><?php endif; ?>
+                            <?php if (!empty($os['payment_first_due'])): ?><span><i class="bi bi-calendar"></i> 1ª: <?= date('d/m/Y', strtotime($os['payment_first_due'])) ?></span><?php endif; ?>
+                            <?php if (!empty($os['discount_value']) && $os['discount_value'] > 0): ?><span><i class="bi bi-arrow-down"></i> Desc: <?= $os['discount_value'] ?><?= $os['discount_type'] === 'percent' ? '%' : ' R$' ?></span><?php endif; ?>
+                            <?php if (!empty($os['freight']) && $os['freight'] > 0): ?><span><i class="bi bi-box-seam"></i> Frete: R$ <?= number_format($os['freight'], 2, ',', '.') ?></span><?php endif; ?>
+                            <?php if (!empty($os['ipi_percent']) && $os['ipi_percent'] > 0): ?><span>IPI: <?= $os['ipi_percent'] ?>%</span><?php endif; ?>
+                            <?php if (!empty($os['icms_percent']) && $os['icms_percent'] > 0): ?><span>ICMS: <?= $os['icms_percent'] ?>%</span><?php endif; ?>
+                        </div>
+                        <?php if (!empty($os['quote_notes'])): ?>
+                        <div class="mt-1 small text-muted fst-italic">"<?= htmlspecialchars($os['quote_notes']) ?>"</div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+
                 <?php
                 // Agrupar preços por fornecedor e por item
                 $pricesBySupplier = [];
@@ -238,6 +270,42 @@
                 <?php endif; ?>
 
                 <hr>
+
+                <!-- Comentários / Perguntas -->
+                <?php if (!empty($comments)): ?>
+                <div class="mb-3">
+                    <h6 class="small fw-bold mb-2"><i class="bi bi-chat-dots"></i> Conversas sobre este pedido</h6>
+                    <?php foreach ($comments as $c): ?>
+                    <div class="p-2 mb-1 rounded <?= $c['author_role'] === 'approver' ? 'bg-warning bg-opacity-10 border-start border-warning border-3' : 'bg-info bg-opacity-10 border-start border-info border-3' ?>" style="font-size:0.8rem;">
+                        <strong><?= htmlspecialchars($c['author_name']) ?></strong>
+                        <span class="text-muted small">(<?= $c['author_role'] === 'approver' ? 'Aprovação' : 'Cotação' ?>) · <?= date('d/m H:i', strtotime($c['created_at'])) ?></span>
+                        <p class="mb-0 mt-1"><?= nl2br(htmlspecialchars($c['message'])) ?></p>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+                <!-- Botão de pergunta -->
+                <div class="mb-3">
+                    <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="collapse" data-bs-target="#commentSection">
+                        <i class="bi bi-chat-dots"></i> Fazer Pergunta / Observação
+                    </button>
+                    <div class="collapse mt-2" id="commentSection">
+                        <form method="POST" action="/pedido/aprovacao/comentario/<?= $token ?>">
+                            <div class="card card-body p-2">
+                                <div class="mb-2">
+                                    <input type="text" class="form-control form-control-sm" name="person_name" placeholder="Seu nome *" required>
+                                </div>
+                                <div class="mb-2">
+                                    <textarea class="form-control form-control-sm" name="comment_message" rows="3" placeholder="Escreva sua pergunta ou observação para o responsável pela cotação..." required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-warning btn-sm w-100"><i class="bi bi-send"></i> Enviar Pergunta</button>
+                                <small class="text-muted mt-1">O responsável pela cotação será notificado e poderá responder ou editar o orçamento.</small>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- Formulário de decisão -->
                 <form method="POST" action="/pedido/aprovacao/enviar/<?= $token ?>" id="approvalForm">
                     <!-- Inputs ocultos para seleção por item (preenchidos via JS) -->

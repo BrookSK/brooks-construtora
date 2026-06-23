@@ -203,6 +203,8 @@ class Router
             'pedido/entrega' => ['PurchaseOrderController', 'deliveryPublic'],
             'pedido/entrega/update' => ['PurchaseOrderController', 'deliveryPublicUpdate'],
             'pedido/entrega/data' => ['PurchaseOrderController', 'deliveryPublicData'],
+            'pedido/aprovacao/comentario' => ['PurchaseOrderController', 'approvalComment'],
+            'pedido/cotacao/comentario' => ['PurchaseOrderController', 'quoteComment'],
 
             // Painel de pedidos com PIN
             'pedidos' => ['PurchaseOrderController', 'pinPanel'],

@@ -38,10 +38,10 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        if (!in_array($order['status'], ['pending_quote'])) {
+        if (!in_array($order['status'], ['pending_quote', 'pending_approval'])) {
             $this->view('site.orders.already_processed', [
                 'order' => $order,
-                'message' => 'Este pedido já foi cotado.',
+                'message' => 'Este pedido já foi processado.',
             ]);
             return;
         }
@@ -277,12 +277,14 @@ class PurchaseOrderController extends Controller
         $items = PurchaseOrderItem::getByOrder($order['id']);
         $orderSuppliers = PurchaseOrderSupplier::getByOrder($order['id']);
         $itemPrices = PurchaseOrderItemPrice::getByOrder($order['id']);
+        $comments = Database::fetchAll("SELECT * FROM purchase_order_comments WHERE order_id = ? ORDER BY created_at ASC", [$order['id']]);
 
         $this->view('site.orders.approval', [
             'order' => $order,
             'items' => $items,
             'orderSuppliers' => $orderSuppliers,
             'itemPrices' => $itemPrices,
+            'comments' => $comments,
             'token' => $token,
             'flash' => $this->getFlash(),
         ]);
@@ -1066,6 +1068,142 @@ class PurchaseOrderController extends Controller
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'www.brooksconstrutora.com.br';
         return $scheme . '://' . $host;
+    }
+
+    // ============================
+    // COMENTÁRIOS APROVAÇÃO ↔ COTAÇÃO
+    // ============================
+
+    /**
+     * Aprovador envia pergunta/observação (da tela de aprovação)
+     */
+    public function approvalComment(string $token = ''): void
+    {
+        if (!$this->isPost() || empty($token)) { $this->show404(); return; }
+
+        $order = PurchaseOrder::findByApprovalToken($token);
+        if (!$order || $order['status'] !== 'pending_approval') {
+            $this->setFlash('error', 'Pedido não encontrado ou já processado.');
+            $this->redirect('/pedido/aprovacao/' . $token);
+            return;
+        }
+
+        $name = trim($this->input('person_name', ''));
+        $message = trim($this->input('comment_message', ''));
+
+        if (empty($name) || empty($message)) {
+            $this->setFlash('error', 'Preencha seu nome e a mensagem.');
+            $this->redirect('/pedido/aprovacao/' . $token);
+            return;
+        }
+
+        // Salvar comentário
+        Database::insert('purchase_order_comments', [
+            'order_id' => $order['id'],
+            'author_name' => $name,
+            'author_role' => 'approver',
+            'message' => $message,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        // Registrar no histórico
+        PurchaseOrderHistory::log($order['id'], 'comment_approver', "Pergunta de {$name}: {$message}", $name);
+
+        // Enviar notificação para o pessoal da cotação
+        $baseUrl = $this->getBaseUrl();
+        $quoteUrl = "{$baseUrl}/pedido/cotacao/{$order['quote_token']}";
+
+        $emails = Setting::get('orders_quote_emails', '');
+        if (!empty($emails)) {
+            $subject = "Pergunta sobre Pedido {$order['code']} - Aprovação";
+            $body = EmailTemplate::orderComment($order, $name, $message, $quoteUrl, 'approver');
+            NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'approval_comment');
+        }
+
+        $webhookUrl = Setting::get('orders_quote_webhook', '');
+        if (!empty(trim($webhookUrl))) {
+            $whMessage = "*PERGUNTA SOBRE PEDIDO*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . "*De:* {$name} (aprovação)\n"
+                . "*Mensagem:*\n{$message}\n\n"
+                . "*Responder/editar cotação:*\n{$quoteUrl}";
+            $this->sendWebhook($webhookUrl, [
+                'event' => 'approval_comment',
+                'order_code' => $order['code'],
+                'from' => $name,
+                'message' => $message,
+                'quote_url' => $quoteUrl,
+                'phone' => Setting::get('orders_quote_phone', ''),
+                'phone_name' => Setting::get('orders_quote_phone_name', ''),
+                'message' => $whMessage,
+            ], $order['id']);
+        }
+
+        $this->setFlash('success', 'Pergunta enviada! O responsável pela cotação será notificado.');
+        $this->redirect('/pedido/aprovacao/' . $token);
+    }
+
+    /**
+     * Cotador responde observação (da tela de cotação)
+     */
+    public function quoteComment(string $token = ''): void
+    {
+        if (!$this->isPost() || empty($token)) { $this->show404(); return; }
+
+        $order = PurchaseOrder::findByQuoteToken($token);
+        if (!$order) { $this->show404(); return; }
+
+        $name = trim($this->input('person_name', ''));
+        $message = trim($this->input('comment_message', ''));
+
+        if (empty($name) || empty($message)) {
+            $this->setFlash('error', 'Preencha seu nome e a mensagem.');
+            $this->redirect('/pedido/cotacao/' . $token);
+            return;
+        }
+
+        Database::insert('purchase_order_comments', [
+            'order_id' => $order['id'],
+            'author_name' => $name,
+            'author_role' => 'quoter',
+            'message' => $message,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        PurchaseOrderHistory::log($order['id'], 'comment_quoter', "Resposta de {$name}: {$message}", $name);
+
+        // Notifica o pessoal da aprovação
+        $baseUrl = $this->getBaseUrl();
+        $approvalUrl = "{$baseUrl}/pedido/aprovacao/{$order['approval_token']}";
+
+        $emails = Setting::get('orders_approval_emails', '');
+        if (!empty($emails)) {
+            $subject = "Resposta sobre Pedido {$order['code']} - Cotação";
+            $body = EmailTemplate::orderComment($order, $name, $message, $approvalUrl, 'quoter');
+            NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'quote_comment');
+        }
+
+        $webhookUrl = Setting::get('orders_approval_webhook', '');
+        if (!empty(trim($webhookUrl))) {
+            $whMessage = "*RESPOSTA SOBRE PEDIDO*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . "*De:* {$name} (cotação)\n"
+                . "*Mensagem:*\n{$message}\n\n"
+                . "*Ver aprovação:*\n{$approvalUrl}";
+            $this->sendWebhook($webhookUrl, [
+                'event' => 'quote_comment',
+                'order_code' => $order['code'],
+                'from' => $name,
+                'message' => $message,
+                'approval_url' => $approvalUrl,
+                'phone' => Setting::get('orders_approval_phone', ''),
+                'phone_name' => Setting::get('orders_approval_phone_name', ''),
+                'message' => $whMessage,
+            ], $order['id']);
+        }
+
+        $this->setFlash('success', 'Resposta enviada! O responsável pela aprovação será notificado.');
+        $this->redirect('/pedido/cotacao/' . $token);
     }
 
     // ============================
