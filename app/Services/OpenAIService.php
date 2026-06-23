@@ -68,7 +68,7 @@ class OpenAIService
     {
         $sourcesInstruction = '';
         if (!empty($sourceUrls)) {
-            $sourcesInstruction = "\n\nIMPORTANTE: Use as seguintes fontes como base para o conteúdo. Cite informações delas e inclua-as nas referências:\n{$sourceUrls}\n\nAo final do JSON, inclua um campo \"sources\" com array de objetos: [{\"title\": \"Título do artigo\", \"url\": \"URL\", \"author\": \"Autor/veículo\"}]";
+            $sourcesInstruction = "\n\nFONTES FORNECIDAS PELO USUÁRIO:\n{$sourceUrls}\n\nREGRAS SOBRE FONTES:\n- Liste nas fontes APENAS URLs que REALMENTE existem e que você REALMENTE usou como base.\n- As URLs fornecidas acima devem aparecer nas fontes.\n- Você PODE adicionar outras URLs reais que você conhece e usou como referência.\n- NUNCA invente URLs. Se uma URL não existe de verdade, NÃO coloque.\n- NÃO crie URLs fictícias com códigos inventados (como /a/XYZ123, /artigo/ABC).\n- Cada fonte deve ser uma URL real, verificável, de um site que existe.\n\nAo final do JSON, inclua um campo \"sources\" com array: [{\"title\": \"Título real do artigo/página\", \"url\": \"URL real que existe\", \"author\": \"Nome do site/veículo\"}]";
         }
 
         $prompt = "Crie conteúdo para uma revista digital da Brooks Construtora sobre: {$topicTitle} - {$topicDescription}{$sourcesInstruction}
