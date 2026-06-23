@@ -82,15 +82,26 @@
             </div>
 
             <?php if (!empty($comments)): ?>
-            <!-- Form de resposta separado (fora do quoteForm) -->
-            <div class="card-body py-2 border-bottom">
-                <form method="POST" action="/pedido/cotacao/comentario/<?= $token ?>" class="d-flex gap-2 align-items-end flex-wrap" onsubmit="this.querySelector('[name=person_name]').value = document.querySelector('[name=quoted_by_name]').value || 'Cotador';">
-                    <input type="hidden" name="person_name" value="">
-                    <div class="flex-grow-1">
-                        <textarea class="form-control form-control-sm" name="comment_message" rows="2" placeholder="Responder à pergunta..." required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-sm btn-info"><i class="bi bi-send"></i> Responder</button>
-                </form>
+            <!-- Conversas (fora do quoteForm) -->
+            <div class="card-body py-3 border-bottom bg-warning bg-opacity-10">
+                <h6 class="small fw-bold mb-2"><i class="bi bi-chat-dots"></i> Perguntas/Observações sobre este pedido</h6>
+                <?php foreach ($comments as $c): ?>
+                <div class="p-2 mb-1 rounded <?= $c['author_role'] === 'approver' ? 'bg-light border-start border-warning border-3' : 'bg-white border-start border-info border-3' ?>" style="font-size:0.8rem;">
+                    <strong><?= htmlspecialchars($c['author_name']) ?></strong>
+                    <span class="text-muted small">(<?= $c['author_role'] === 'approver' ? 'Aprovação' : 'Cotação' ?>) · <?= date('d/m H:i', strtotime($c['created_at'])) ?></span>
+                    <p class="mb-0 mt-1"><?= nl2br(htmlspecialchars($c['message'])) ?></p>
+                </div>
+                <?php endforeach; ?>
+                <!-- Responder -->
+                <div class="mt-2 pt-2 border-top">
+                    <form method="POST" action="/pedido/cotacao/comentario/<?= $token ?>" class="d-flex gap-2 align-items-end flex-wrap" onsubmit="this.querySelector('[name=person_name]').value = document.querySelector('[name=quoted_by_name]').value || 'Cotador';">
+                        <input type="hidden" name="person_name" value="">
+                        <div class="flex-grow-1">
+                            <textarea class="form-control form-control-sm" name="comment_message" rows="2" placeholder="Responder à pergunta..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-info"><i class="bi bi-send"></i> Responder</button>
+                    </form>
+                </div>
             </div>
             <?php endif; ?>
 
@@ -104,20 +115,6 @@
                             <input type="text" class="form-control" name="quoted_by_name" required placeholder="Informe seu nome completo" value="<?= htmlspecialchars($order['quoted_by_name'] ?? '') ?>">
                         </div>
                     </div>
-
-                    <!-- Comentários/Perguntas da aprovação -->
-                    <?php if (!empty($comments)): ?>
-                    <div class="alert alert-warning mb-4">
-                        <h6 class="small fw-bold mb-2"><i class="bi bi-chat-dots"></i> Perguntas/Observações sobre este pedido</h6>
-                        <?php foreach ($comments as $c): ?>
-                        <div class="p-2 mb-1 rounded <?= $c['author_role'] === 'approver' ? 'bg-light border-start border-warning border-3' : 'bg-white border-start border-info border-3' ?>" style="font-size:0.8rem;">
-                            <strong><?= htmlspecialchars($c['author_name']) ?></strong>
-                            <span class="text-muted small">(<?= $c['author_role'] === 'approver' ? 'Aprovação' : 'Cotação' ?>) · <?= date('d/m H:i', strtotime($c['created_at'])) ?></span>
-                            <p class="mb-0 mt-1"><?= nl2br(htmlspecialchars($c['message'])) ?></p>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <?php endif; ?>
 
                     <!-- Itens do pedido (referência) -->
                     <h6 class="mb-2"><i class="bi bi-list-check"></i> Itens do Pedido</h6>
