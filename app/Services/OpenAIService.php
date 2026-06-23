@@ -21,7 +21,7 @@ class OpenAIService
         }
     }
 
-    public function generateTopics(int $quantity = 10): array
+    public function generateTopics(int $quantity = 10, string $customPrompt = '', string $sourceUrls = ''): array
     {
         $prompt = "Você é um especialista em construção civil, reformas e arquitetura no Brasil. 
         Gere {$quantity} temas para revistas digitais da Brooks Construtora, uma empresa especializada em reformas e construções de alto padrão em São Paulo.
@@ -32,9 +32,17 @@ class OpenAIService
         - Tendências de arquitetura e design
         - Materiais e tecnologias de construção
         - Valorização de imóveis
-        - Sustentabilidade na construção
-        
-        Retorne em formato JSON com a seguinte estrutura:
+        - Sustentabilidade na construção";
+
+        if (!empty($customPrompt)) {
+            $prompt .= "\n\nINSTRUÇÕES ADICIONAIS DO USUÁRIO:\n{$customPrompt}";
+        }
+
+        if (!empty($sourceUrls)) {
+            $prompt .= "\n\nIMPORTANTE: Baseie os temas nas seguintes fontes/referências. Crie temas inspirados no conteúdo desses links:\n{$sourceUrls}";
+        }
+
+        $prompt .= "\n\nRetorne em formato JSON com a seguinte estrutura:
         [{\"title\": \"Título do tema\", \"description\": \"Breve descrição do que a revista abordará\"}]
         
         Retorne APENAS o JSON, sem markdown ou texto adicional.";
@@ -49,9 +57,14 @@ class OpenAIService
         return $topics;
     }
 
-    public function generateMagazineContent(string $topicTitle, string $topicDescription): array
+    public function generateMagazineContent(string $topicTitle, string $topicDescription, string $sourceUrls = ''): array
     {
-        $prompt = "Crie conteúdo para uma revista digital da Brooks Construtora sobre: {$topicTitle} - {$topicDescription}
+        $sourcesInstruction = '';
+        if (!empty($sourceUrls)) {
+            $sourcesInstruction = "\n\nIMPORTANTE: Use as seguintes fontes como base para o conteúdo. Cite informações delas e inclua-as nas referências:\n{$sourceUrls}\n\nAo final do JSON, inclua um campo \"sources\" com array de objetos: [{\"title\": \"Título do artigo\", \"url\": \"URL\", \"author\": \"Autor/veículo\"}]";
+        }
+
+        $prompt = "Crie conteúdo para uma revista digital da Brooks Construtora sobre: {$topicTitle} - {$topicDescription}{$sourcesInstruction}
 
 Gere EXATAMENTE 10 páginas em JSON. Cada página tem: layout, title, subtitle (opcional), content (parágrafos separados por \\n\\n), image_suggestion, image_suggestion_2 (opcional), caption (opcional).
 

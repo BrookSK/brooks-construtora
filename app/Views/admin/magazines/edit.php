@@ -207,6 +207,32 @@
             </div>
             <?php endforeach; ?>
 
+            <!-- Fontes / Referências -->
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 small"><i class="bi bi-journal-bookmark"></i> Fontes e Referências</h6>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSource()"><i class="bi bi-plus"></i> Adicionar</button>
+                </div>
+                <div class="card-body" id="sourcesContainer">
+                    <?php
+                    $sources = \App\Core\Database::fetchAll("SELECT * FROM magazine_sources WHERE magazine_id = ? ORDER BY sort_order", [$magazine['id']]);
+                    if (empty($sources)):
+                    ?>
+                    <p class="text-muted small text-center mb-0" id="noSourcesMsg">Nenhuma fonte adicionada. Clique em "Adicionar" para incluir referências.</p>
+                    <?php else: ?>
+                    <?php foreach ($sources as $i => $src): ?>
+                    <div class="source-row row g-2 mb-2 align-items-center" data-index="<?= $i ?>">
+                        <div class="col-md-4"><input type="text" class="form-control form-control-sm" name="sources[<?= $i ?>][title]" value="<?= htmlspecialchars($src['title']) ?>" placeholder="Título *"></div>
+                        <div class="col-md-4"><input type="url" class="form-control form-control-sm" name="sources[<?= $i ?>][url]" value="<?= htmlspecialchars($src['url'] ?? '') ?>" placeholder="URL"></div>
+                        <div class="col-md-2"><input type="text" class="form-control form-control-sm" name="sources[<?= $i ?>][author]" value="<?= htmlspecialchars($src['author'] ?? '') ?>" placeholder="Autor"></div>
+                        <div class="col-md-1"><input type="date" class="form-control form-control-sm" name="sources[<?= $i ?>][accessed_at]" value="<?= $src['accessed_at'] ?? '' ?>" title="Data de acesso"></div>
+                        <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.source-row').remove()"><i class="bi bi-trash"></i></button></div>
+                    </div>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
             <div class="text-end mb-4">
                 <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar Alterações</button>
             </div>
@@ -274,6 +300,22 @@ document.querySelectorAll('.generate-img-btn').forEach(btn=>{
         }).catch(()=>{alert('Erro.');this.disabled=false;this.innerHTML='<i class="bi bi-stars"></i>';});
     });
 });
+
+// Fontes
+let sourceIndex = <?= count($sources ?? []) ?>;
+function addSource() {
+    document.getElementById('noSourcesMsg')?.remove();
+    const container = document.getElementById('sourcesContainer');
+    const html = `<div class="source-row row g-2 mb-2 align-items-center" data-index="${sourceIndex}">
+        <div class="col-md-4"><input type="text" class="form-control form-control-sm" name="sources[${sourceIndex}][title]" placeholder="Título *"></div>
+        <div class="col-md-4"><input type="url" class="form-control form-control-sm" name="sources[${sourceIndex}][url]" placeholder="URL"></div>
+        <div class="col-md-2"><input type="text" class="form-control form-control-sm" name="sources[${sourceIndex}][author]" placeholder="Autor"></div>
+        <div class="col-md-1"><input type="date" class="form-control form-control-sm" name="sources[${sourceIndex}][accessed_at]" title="Data de acesso"></div>
+        <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.source-row').remove()"><i class="bi bi-trash"></i></button></div>
+    </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+    sourceIndex++;
+}
 
 // Gerar TODAS as imagens pendentes em background
 document.getElementById('btn-generate-all-images').addEventListener('click', async function() {

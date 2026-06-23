@@ -2,14 +2,15 @@
 
 <div class="row g-4">
     <div class="col-md-4">
-        <div class="card">
+        <!-- Gerar temas com IA -->
+        <div class="card mb-3">
             <div class="card-header">
-                <h6 class="mb-0">Gerar Novos Temas com IA</h6>
+                <h6 class="mb-0"><i class="bi bi-stars"></i> Gerar Temas com IA</h6>
             </div>
             <div class="card-body">
                 <form method="POST" action="/admin/magazines/generate-topics">
                     <div class="mb-3">
-                        <label class="form-label">Quantidade de temas</label>
+                        <label class="form-label small">Quantidade de temas</label>
                         <select class="form-select" name="quantity">
                             <option value="5">5 temas</option>
                             <option value="10" selected>10 temas</option>
@@ -17,20 +18,65 @@
                             <option value="20">20 temas</option>
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Prompt complementar (opcional)</label>
+                        <textarea class="form-control form-control-sm" name="custom_prompt" rows="3" placeholder="Ex: Foque nos temas mais relevantes da semana, ou escreva sobre tendências de 2026..."><?= htmlspecialchars(\App\Models\Setting::get('magazine_custom_prompt', '')) ?></textarea>
+                        <small class="text-muted">Instruções adicionais para a IA ao gerar os temas.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">URLs de fontes (opcional)</label>
+                        <textarea class="form-control form-control-sm" name="source_urls" rows="3" placeholder="Cole links de referência, um por linha. A IA usará como base para os temas."></textarea>
+                        <small class="text-muted">A IA vai criar temas baseados nessas fontes.</small>
+                    </div>
                     <button type="submit" class="btn btn-primary w-100" onclick="this.disabled=true; this.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span> Gerando...'; this.form.submit();">
                         <i class="bi bi-lightbulb"></i> Gerar Temas com IA
                     </button>
                 </form>
-                <small class="text-muted mt-2 d-block">A IA irá sugerir temas relevantes sobre construção, reformas e arquitetura.</small>
+            </div>
+        </div>
+
+        <!-- Criar tema manualmente -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-pencil"></i> Criar Tema Manual</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/admin/magazines/add-topic">
+                    <div class="mb-3">
+                        <label class="form-label small">Título do tema *</label>
+                        <input type="text" class="form-control form-control-sm" name="title" required placeholder="Ex: Tendências de Sustentabilidade 2026">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Descrição</label>
+                        <textarea class="form-control form-control-sm" name="description" rows="2" placeholder="Breve descrição do que a revista deve abordar"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">URLs de fontes (opcional)</label>
+                        <textarea class="form-control form-control-sm" name="source_urls" rows="2" placeholder="Links de referência (um por linha)"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-plus-circle"></i> Adicionar Tema
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 
     <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0">Temas Disponíveis</h6>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">Temas Disponíveis</h6>
+            <a href="/admin/magazines" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+        </div>
+
+        <!-- Botão criar revista do zero -->
+        <div class="card mb-3 border-success">
+            <div class="card-body py-2 d-flex justify-content-between align-items-center">
+                <span class="small"><i class="bi bi-journal-plus text-success"></i> Quer criar uma revista sem IA?</span>
+                <a href="/admin/magazines/create-manual" class="btn btn-sm btn-success"><i class="bi bi-pencil-square"></i> Criar Revista Manual</a>
             </div>
+        </div>
+
+        <div class="card">
             <div class="card-body">
                 <?php if (empty($topics)): ?>
                     <p class="text-muted text-center py-3">Nenhum tema gerado ainda. Use o formulário ao lado para gerar.</p>

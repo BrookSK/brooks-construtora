@@ -244,6 +244,29 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </div>
 
 <?php elseif ($layout === 'backcover'): ?>
+<!-- PÁGINA DE FONTES (antes da contracapa) -->
+<?php
+$sources = \App\Core\Database::fetchAll("SELECT * FROM magazine_sources WHERE magazine_id = ? ORDER BY sort_order", [$magazine['id']]);
+if (!empty($sources)):
+?>
+<div class="page pg-int">
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
+    <div style="margin-top:30px">
+        <div class="title-big" style="font-size:1.8rem; margin-bottom:5px;">Fontes e Referências</div>
+        <div style="width:60px; height:3px; background:#2e7d32; margin-bottom:25px;"></div>
+        <p class="text" style="margin-bottom:20px; color:#666;">As informações e dados apresentados nesta edição foram baseados nas seguintes fontes:</p>
+        <?php foreach ($sources as $i => $src): ?>
+        <div style="padding:8px 0; border-bottom:1px solid #eee; font-size:0.75rem;">
+            <strong style="color:#111;"><?= ($i + 1) ?>. <?= htmlspecialchars($src['title']) ?></strong>
+            <?php if ($src['author']): ?><span style="color:#666;"> — <?= htmlspecialchars($src['author']) ?></span><?php endif; ?>
+            <?php if ($src['url']): ?><br><span style="color:#2e7d32; font-size:0.65rem;"><?= htmlspecialchars($src['url']) ?></span><?php endif; ?>
+            <?php if ($src['accessed_at']): ?><span style="color:#999; font-size:0.6rem; margin-left:5px;">Acesso em <?= date('d/m/Y', strtotime($src['accessed_at'])) ?></span><?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- CONTRACAPA -->
 <div class="page pg-back">
     <img src="<?= $magazineLogo ?>" class="logo" alt="Brooks Construtora">

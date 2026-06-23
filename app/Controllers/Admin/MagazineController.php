@@ -62,15 +62,25 @@ class MagazineController extends Controller
         }
 
         $quantity = (int) $this->input('quantity', 10);
+        $customPrompt = trim($this->input('custom_prompt', ''));
+        $sourceUrls = trim($this->input('source_urls', ''));
+
+        // Salva prompt complementar como configuração para próxima vez
+        if ($customPrompt) {
+            Setting::set('magazine_custom_prompt', $customPrompt);
+        }
 
         try {
             $openai = new OpenAIService();
-            $topics = $openai->generateTopics($quantity);
+            $topics = $openai->generateTopics($quantity, $customPrompt, $sourceUrls);
 
             foreach ($topics as $topic) {
                 MagazineTopic::create([
                     'title' => $topic['title'],
                     'description' => $topic['description'],
+                    'source_urls' => $sourceUrls ?: null,
+                    'custom_prompt' => $customPrompt ?: null,
+                    'created_by' => 'ai',
                     'used' => 0,
                     'created_at' => date('Y-m-d H:i:s'),
                 ]);
@@ -82,6 +92,125 @@ class MagazineController extends Controller
         }
 
         $this->redirect('/admin/magazines/topics');
+    }
+
+    /**
+     * Adicionar tema manualmente
+     */
+    public function addTopic(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/admin/magazines/topics'); return; }
+
+        $title = trim($this->input('title', ''));
+        if (empty($title)) {
+            $this->setFlash('error', 'Título é obrigatório.');
+            $this->redirect('/admin/magazines/topics');
+            return;
+        }
+
+        MagazineTopic::create([
+            'title' => $title,
+            'description' => trim($this->input('description', '')),
+            'source_urls' => trim($this->input('source_urls', '')) ?: null,
+            'created_by' => 'manual',
+            'used' => 0,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->setFlash('success', 'Tema adicionado com sucesso!');
+        $this->redirect('/admin/magazines/topics');
+    }
+
+    /**
+     * Tela para criar revista manualmente (do zero)
+     */
+    public function createManual(): void
+    {
+        $this->view('admin.magazines.create_manual', [
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
+    }
+
+    /**
+     * Salvar revista criada manualmente
+     */
+    public function storeManual(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/admin/magazines/topics'); return; }
+
+        $title = trim($this->input('title', ''));
+        $subtitle = trim($this->input('subtitle', ''));
+
+        if (empty($title)) {
+            $this->setFlash('error', 'Título é obrigatório.');
+            $this->redirect('/admin/magazines/create-manual');
+            return;
+        }
+
+        // Cria a revista em modo draft
+        $magazineId = Magazine::create([
+            'title' => $title,
+            'subtitle' => $subtitle,
+            'topic_id' => null,
+            'status' => Magazine::STATUS_GENERATED,
+            'cover_image' => null,
+            'generated_by' => 'manual',
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        // Cria as 10 páginas padrão em branco
+        $layouts = ['cover', 'subcover', 'internal_01', 'internal_02', 'internal_03', 'internal_04', 'internal_05', 'internal_06', 'internal_07', 'backcover'];
+        foreach ($layouts as $i => $layout) {
+            $pageData = [
+                'page_number' => $i + 1,
+                'title' => '',
+                'subtitle' => '',
+                'content' => '',
+                'layout_type' => $layout,
+                'created_at' => date('Y-m-d H:i:s'),
+            ];
+            // Preenche defaults para cover/subcover/backcover
+            if ($layout === 'cover') { $pageData['title'] = 'NÚCLEO'; $pageData['subtitle'] = 'CONSTRUÇÃO — SUSTENTÁVEL'; }
+            if ($layout === 'subcover') { $pageData['title'] = 'ECO'; $pageData['subtitle'] = 'CONSTRUÇÃO — CONSCIENTE'; }
+            if ($layout === 'backcover') { $pageData['content'] = 'Construção consciente do zero ao acabamento. Comprometidos com o meio ambiente, com as pessoas e com o futuro.'; }
+            
+            Magazine::addPage($magazineId, $pageData);
+        }
+
+        $this->setFlash('success', 'Revista criada! Preencha o conteúdo das páginas.');
+        $this->redirect('/admin/magazines/edit/' . $magazineId);
+    }
+
+    /**
+     * Atualizar fontes de uma revista (AJAX)
+     */
+    public function updateSources(): void
+    {
+        if (!$this->isPost()) { $this->json(['error' => 'POST only'], 405); return; }
+
+        $magazineId = (int) $this->input('magazine_id');
+        $sources = $_POST['sources'] ?? [];
+
+        // Remove fontes existentes
+        Database::delete('magazine_sources', 'magazine_id = ?', [$magazineId]);
+
+        // Insere novas
+        foreach ($sources as $i => $src) {
+            $title = trim($src['title'] ?? '');
+            if (empty($title)) continue;
+            Database::insert('magazine_sources', [
+                'magazine_id' => $magazineId,
+                'title' => $title,
+                'url' => trim($src['url'] ?? '') ?: null,
+                'author' => trim($src['author'] ?? '') ?: null,
+                'accessed_at' => !empty($src['accessed_at']) ? $src['accessed_at'] : null,
+                'sort_order' => $i,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        $this->json(['success' => true]);
     }
 
     /**
@@ -466,6 +595,24 @@ class MagazineController extends Controller
             }
         }
 
+        // Atualiza fontes
+        if (isset($_POST['sources'])) {
+            Database::delete('magazine_sources', 'magazine_id = ?', [$id]);
+            foreach ($_POST['sources'] as $i => $src) {
+                $title = trim($src['title'] ?? '');
+                if (empty($title)) continue;
+                Database::insert('magazine_sources', [
+                    'magazine_id' => $id,
+                    'title' => $title,
+                    'url' => trim($src['url'] ?? '') ?: null,
+                    'author' => trim($src['author'] ?? '') ?: null,
+                    'accessed_at' => !empty($src['accessed_at']) ? $src['accessed_at'] : null,
+                    'sort_order' => $i,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+            }
+        }
+
         $this->setFlash('success', 'Revista atualizada com sucesso!');
         $this->redirect('/admin/magazines/edit/' . $id);
     }
@@ -822,7 +969,8 @@ class MagazineController extends Controller
 
         try {
             $openai = new OpenAIService();
-            $content = $openai->generateMagazineContent($topic['title'], $topic['description']);
+            $sourceUrls = $topic['source_urls'] ?? '';
+            $content = $openai->generateMagazineContent($topic['title'], $topic['description'], $sourceUrls);
         } catch (\Exception $e) {
             $failJob('Erro ao gerar conteúdo: ' . $e->getMessage());
             return;
@@ -860,6 +1008,20 @@ class MagazineController extends Controller
 
             $updateJob(['magazine_id' => $magazineId]);
             MagazineTopic::markAsUsed($topicId);
+
+            // Salvar fontes se a IA retornou
+            if (!empty($content['sources'])) {
+                foreach ($content['sources'] as $i => $src) {
+                    Database::insert('magazine_sources', [
+                        'magazine_id' => $magazineId,
+                        'title' => $src['title'] ?? 'Fonte ' . ($i + 1),
+                        'url' => $src['url'] ?? null,
+                        'author' => $src['author'] ?? null,
+                        'sort_order' => $i,
+                        'created_at' => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            }
         } catch (\Exception $e) {
             $failJob('Erro ao salvar revista: ' . $e->getMessage());
             return;
