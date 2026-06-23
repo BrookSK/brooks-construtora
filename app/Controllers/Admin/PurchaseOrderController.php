@@ -1431,14 +1431,38 @@ class PurchaseOrderController extends Controller
         $purchasedBy = trim($this->input('purchased_by', ''));
         $purchasedAt = $this->input('purchased_at', date('Y-m-d'));
         $notes = trim($this->input('notes', ''));
+        $justification = trim($this->input('justification', ''));
 
         if (empty($description) || $orderId <= 0) {
             $this->setFlash('error', 'Preencha a descrição e selecione o pedido.');
-            $this->redirect('/admin/orders/spare-items');
+            $redirect = $this->input('redirect', '/admin/orders/spare-items');
+            $this->redirect($redirect);
+            return;
+        }
+
+        if (empty($justification)) {
+            $this->setFlash('error', 'A justificativa é obrigatória para itens sobressalentes.');
+            $redirect = $this->input('redirect', '/admin/orders/spare-items');
+            $this->redirect($redirect);
             return;
         }
 
         $totalPrice = $quantity * $unitPrice;
+
+        // Upload do comprovante
+        $receiptPath = null;
+        $receiptName = null;
+        if (isset($_FILES['receipt']) && $_FILES['receipt']['error'] === UPLOAD_ERR_OK) {
+            $ext = pathinfo($_FILES['receipt']['name'], PATHINFO_EXTENSION);
+            $receiptName = $_FILES['receipt']['name'];
+            $newName = "spare_{$orderId}_" . time() . '.' . $ext;
+            $uploadDir = ROOT_PATH . '/public/uploads/spare-items/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+            $destination = $uploadDir . $newName;
+            if (move_uploaded_file($_FILES['receipt']['tmp_name'], $destination)) {
+                $receiptPath = '/uploads/spare-items/' . $newName;
+            }
+        }
 
         $itemId = PurchaseOrderSpareItem::create([
             'order_id' => $orderId,
@@ -1452,6 +1476,9 @@ class PurchaseOrderController extends Controller
             'purchased_by' => $purchasedBy ?: (Auth::user()['name'] ?? 'Sistema'),
             'purchased_at' => $purchasedAt,
             'notes' => $notes,
+            'justification' => $justification,
+            'receipt_path' => $receiptPath,
+            'receipt_name' => $receiptName,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 

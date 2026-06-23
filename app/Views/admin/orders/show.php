@@ -547,6 +547,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <th class="text-center">Qtd</th>
                             <th class="text-end">Valor</th>
                             <th>Onde</th>
+                            <th>Justificativa</th>
                             <th>Por</th>
                             <th></th>
                         </tr>
@@ -561,7 +562,13 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <td class="text-center"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?></td>
                             <td class="text-end">R$ <?= number_format($si['total_price'], 2, ',', '.') ?></td>
                             <td><?= htmlspecialchars($si['supplier_name'] ?? '-') ?></td>
-                            <td><?= htmlspecialchars($si['purchased_by'] ?? '-') ?></td>
+                            <td><small><?= htmlspecialchars($si['justification'] ?? $si['notes'] ?? '-') ?></small></td>
+                            <td>
+                                <?= htmlspecialchars($si['purchased_by'] ?? '-') ?>
+                                <?php if (!empty($si['receipt_path'])): ?>
+                                <a href="<?= $si['receipt_path'] ?>" target="_blank" class="ms-1" title="Ver comprovante"><i class="bi bi-paperclip text-primary"></i></a>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <form method="POST" action="/admin/orders/spare-items/delete" class="d-inline" onsubmit="return confirm('Excluir?')">
                                     <input type="hidden" name="id" value="<?= $si['id'] ?>">
@@ -574,7 +581,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <tr class="table-warning">
                             <td colspan="3" class="text-end fw-bold">Total:</td>
                             <td class="text-end fw-bold">R$ <?= number_format($spareTotal, 2, ',', '.') ?></td>
-                            <td colspan="3"></td>
+                            <td colspan="4"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -582,7 +589,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
             <?php endif; ?>
             <!-- Formulário inline para adicionar -->
             <div class="card-body border-top">
-                <form method="POST" action="/admin/orders/spare-items/add" id="spareItemForm">
+                <form method="POST" action="/admin/orders/spare-items/add" id="spareItemForm" enctype="multipart/form-data">
                     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
                     <input type="hidden" name="redirect" value="/admin/orders/show/<?= $order['id'] ?>">
                     <div class="row g-2">
@@ -618,14 +625,18 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         </div>
                     </div>
                     <div class="row g-2 mt-1">
-                        <div class="col-6 col-md-3">
+                        <div class="col-6 col-md-2">
                             <input type="text" class="form-control form-control-sm" name="purchased_by" value="<?= htmlspecialchars($user['name'] ?? '') ?>" placeholder="Comprado por">
                         </div>
-                        <div class="col-6 col-md-3">
+                        <div class="col-6 col-md-2">
                             <input type="date" class="form-control form-control-sm" name="purchased_at" value="<?= date('Y-m-d') ?>">
                         </div>
-                        <div class="col-12 col-md-4">
-                            <input type="text" class="form-control form-control-sm" name="notes" placeholder="Observações">
+                        <div class="col-12 col-md-3">
+                            <input type="text" class="form-control form-control-sm" name="justification" required placeholder="Justificativa (obrigatório) *">
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <input type="file" class="form-control form-control-sm" name="receipt" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                            <small class="text-muted" style="font-size:0.65rem;">Comprovante/foto (opcional)</small>
                         </div>
                         <div class="col-12 col-md-2">
                             <button type="submit" class="btn btn-sm btn-warning w-100"><i class="bi bi-plus-lg"></i> Adicionar</button>
