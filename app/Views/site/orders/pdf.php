@@ -329,6 +329,23 @@
         </div>
         <?php endif; ?>
 
+        <!-- Conversas (últimas 2) -->
+        <?php
+        $pdfComments = \App\Core\Database::fetchAll("SELECT * FROM purchase_order_comments WHERE order_id = ? ORDER BY created_at DESC LIMIT 4", [$order['id']]);
+        $pdfComments = array_reverse($pdfComments);
+        if (!empty($pdfComments)):
+        ?>
+        <div style="margin-top:1.5rem; border:1px solid #ffc107; border-radius:6px; padding:0.8rem; background:#fffdf0;">
+            <h6 style="color:#856404; margin-bottom:0.5rem; font-size:0.8rem;"><i class="bi bi-chat-dots"></i> Observações</h6>
+            <?php foreach ($pdfComments as $c): ?>
+            <div style="padding:4px 8px; margin-bottom:4px; border-left:3px solid <?= $c['author_role'] === 'approver' ? '#ffc107' : '#0dcaf0' ?>; font-size:0.7rem;">
+                <strong><?= htmlspecialchars($c['author_name']) ?></strong> <span style="color:#999;">(<?= $c['author_role'] === 'approver' ? 'Aprovação' : 'Cotação' ?>) <?= date('d/m H:i', strtotime($c['created_at'])) ?></span><br>
+                <?= htmlspecialchars($c['message']) ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
         <!-- Aprovação -->
         <div class="approval-section">
             <h6><i class="bi bi-check-circle-fill"></i> Aprovação</h6>

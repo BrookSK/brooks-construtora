@@ -647,6 +647,25 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
         </div>
         <?php endif; ?>
 
+        <!-- Conversas (Aprovação ↔ Cotação) -->
+        <?php
+        $comments = \App\Core\Database::fetchAll("SELECT * FROM purchase_order_comments WHERE order_id = ? ORDER BY created_at ASC", [$order['id']]);
+        ?>
+        <?php if (!empty($comments)): ?>
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-chat-dots"></i> Conversas (Aprovação ↔ Cotação) <span class="badge bg-secondary"><?= count($comments) ?></span></div>
+            <div class="card-body p-2">
+                <?php foreach ($comments as $c): ?>
+                <div class="p-2 mb-1 rounded <?= $c['author_role'] === 'approver' ? 'bg-warning bg-opacity-10 border-start border-warning border-3' : 'bg-info bg-opacity-10 border-start border-info border-3' ?>" style="font-size:0.8rem;">
+                    <strong><?= htmlspecialchars($c['author_name']) ?></strong>
+                    <span class="text-muted small">(<?= $c['author_role'] === 'approver' ? 'Aprovação' : 'Cotação' ?>) · <?= date('d/m/Y H:i', strtotime($c['created_at'])) ?></span>
+                    <p class="mb-0 mt-1"><?= nl2br(htmlspecialchars($c['message'])) ?></p>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Histórico de Notificações -->
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center" role="button" data-bs-toggle="collapse" data-bs-target="#notificationsCollapse">
