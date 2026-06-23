@@ -784,7 +784,12 @@
             const prices = pricesBySupplier['<?= $os['supplier_id'] ?>'] || {};
             for (const itemId in prices) {
                 const input = block.querySelector('[name="supplier_prices[<?= $os['supplier_id'] ?>][' + itemId + ']"]');
-                if (input) { input.value = prices[itemId]; input.dispatchEvent(new Event('input')); }
+                if (input) {
+                    // Converter formato do banco (100.00) para formato BR (100,00)
+                    const numVal = parseFloat(prices[itemId]) || 0;
+                    input.value = numVal.toFixed(2).replace('.', ',');
+                    input.dispatchEvent(new Event('input'));
+                }
             }
             // Preencher vendedor
             const vName = block.querySelector('[name*="[name]"]'); if (vName) vName.value = '<?= htmlspecialchars($os['vendor_name'] ?? '') ?>';
@@ -797,18 +802,20 @@
             const vPn = block.querySelector('[name*="[payment_notes]"]'); if (vPn) vPn.value = '<?= htmlspecialchars($os['payment_notes'] ?? '') ?>';
             // Financeiros
             <?php if ($os['discount_value'] > 0): ?>
-            const dv = block.querySelector('[name*="[discount_value]"]'); if (dv) dv.value = '<?= $os['discount_value'] ?>';
+            const dv = block.querySelector('[name*="[discount_value]"]'); if (dv) dv.value = '<?= str_replace('.', ',', $os['discount_value']) ?>';
             const dt = block.querySelector('[name*="[discount_type]"]'); if (dt) dt.value = '<?= $os['discount_type'] ?? 'percent' ?>';
             <?php endif; ?>
             <?php if ($os['ipi_percent'] > 0): ?>
-            const ipi = block.querySelector('[name*="[ipi_percent]"]'); if (ipi) ipi.value = '<?= $os['ipi_percent'] ?>';
+            const ipi = block.querySelector('[name*="[ipi_percent]"]'); if (ipi) ipi.value = '<?= str_replace('.', ',', $os['ipi_percent']) ?>';
             <?php endif; ?>
             <?php if ($os['icms_percent'] > 0): ?>
-            const icms = block.querySelector('[name*="[icms_percent]"]'); if (icms) icms.value = '<?= $os['icms_percent'] ?>';
+            const icms = block.querySelector('[name*="[icms_percent]"]'); if (icms) icms.value = '<?= str_replace('.', ',', $os['icms_percent']) ?>';
             <?php endif; ?>
             <?php if ($os['freight'] > 0): ?>
-            const fr = block.querySelector('[name*="[freight]"]'); if (fr) fr.value = '<?= number_format($os['freight'], 2, ',', '') ?>';
+            const fr = block.querySelector('[name*="[freight]"]'); if (fr) fr.value = '<?= str_replace('.', ',', $os['freight']) ?>';
             <?php endif; ?>
+            // Recalcular total
+            setTimeout(function() { calculateSupplierTotal('<?= $os['supplier_id'] ?>'); }, 500);
         }, 300);
         <?php endforeach; ?>
 
