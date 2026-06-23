@@ -191,8 +191,8 @@
                 </div>
 
                 <div class="card-footer p-3 p-md-4 text-center">
-                    <button type="submit" class="btn btn-success btn-lg px-5" id="submitBtn" disabled>
-                        <i class="bi bi-check-lg"></i> Enviar Cotação
+                    <button type="button" class="btn btn-success btn-lg px-5" id="submitBtn" disabled onclick="showReviewModal()">
+                        <i class="bi bi-check-lg"></i> Revisar e Enviar
                     </button>
                     <p class="text-muted small mt-2 mb-0">Adicione pelo menos um fornecedor para enviar.</p>
                 </div>
@@ -738,5 +738,110 @@
         if (currentView === 'map') setTimeout(renderMap, 200);
     }).observe(document.getElementById('suppliersContainer'), { childList: true });
     </script>
+
+<!-- Modal de Revisão antes de enviar -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2">
+                <h6 class="modal-title"><i class="bi bi-clipboard-check"></i> Revisar Cotação antes de Enviar</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="reviewContent" style="max-height:70vh; overflow-y:auto;">
+                <!-- Preenchido via JS -->
+            </div>
+            <div class="modal-footer py-2 flex-column gap-2">
+                <button type="button" class="btn btn-success btn-lg w-100" onclick="confirmSubmit()">
+                    <i class="bi bi-send"></i> Confirmar e Enviar para Aprovação
+                </button>
+                <button type="button" class="btn btn-outline-secondary w-100" data-bs-dismiss="modal">
+                    <i class="bi bi-pencil"></i> Voltar e Editar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showReviewModal() {
+    const form = document.getElementById('quoteForm');
+    const quotedBy = form.querySelector('[name="quoted_by_name"]')?.value || '-';
+    const quoteNotes = form.querySelector('[name="quote_notes"]')?.value || '';
+
+    let html = '<div class="mb-3 p-3 bg-light rounded">';
+    html += '<p class="mb-1"><strong>Cotado por:</strong> ' + escHtml(quotedBy) + '</p>';
+    if (quoteNotes) html += '<p class="mb-0"><strong>Observações:</strong> ' + escHtml(quoteNotes) + '</p>';
+    html += '</div>';
+
+    // Fornecedores e preços
+    html += '<h6 class="fw-bold mb-2"><i class="bi bi-building"></i> Fornecedores Cotados</h6>';
+
+    addedSuppliers.forEach(sid => {
+        const name = supplierNames[sid] || 'Fornecedor';
+        const block = document.getElementById('supplier-block-' + sid);
+        if (!block) return;
+
+        // Dados do vendedor
+        const vendorName = block.querySelector('[name*="[name]"]')?.value || '';
+        const vendorPhone = block.querySelector('[name*="[phone]"]')?.value || '';
+        const deliveryDays = block.querySelector('[name*="[delivery_days]"]')?.value || '';
+        const paymentMethod = block.querySelector('[name*="[payment_method]"]');
+        const paymentMethodText = paymentMethod ? paymentMethod.options[paymentMethod.selectedIndex]?.text || '' : '';
+        const paymentCondition = block.querySelector('[name*="[payment_condition]"]')?.value || '';
+
+        // Total
+        const totalEl = document.getElementById('subtotal-final-' + sid);
+        const totalText = totalEl ? totalEl.textContent : '-';
+
+        html += '<div class="card mb-2"><div class="card-body p-2">';
+        html += '<div class="d-flex justify-content-between align-items-center mb-1">';
+        html += '<strong>' + escHtml(name) + '</strong>';
+        html += '<span class="badge bg-success">' + totalText + '</span>';
+        html += '</div>';
+        
+        // Info do vendedor
+        let infoItems = [];
+        if (vendorName) infoItems.push('<i class="bi bi-person"></i> ' + escHtml(vendorName));
+        if (vendorPhone) infoItems.push('<i class="bi bi-telephone"></i> ' + escHtml(vendorPhone));
+        if (deliveryDays) infoItems.push('<i class="bi bi-truck"></i> ' + deliveryDays + ' dias');
+        if (paymentMethodText && paymentMethodText !== '-- Selecione --') infoItems.push('<i class="bi bi-credit-card"></i> ' + escHtml(paymentMethodText));
+        if (paymentCondition) infoItems.push(escHtml(paymentCondition));
+        if (infoItems.length) html += '<div class="small text-muted mb-1">' + infoItems.join(' · ') + '</div>';
+
+        // Preços dos itens
+        html += '<table class="table table-sm mb-0" style="font-size:0.75rem;"><thead><tr><th>Material</th><th class="text-end">Unit.</th><th class="text-end">Total</th></tr></thead><tbody>';
+        const priceInputs = block.querySelectorAll('.price-input');
+        priceInputs.forEach(input => {
+            const row = input.closest('tr') || input.closest('.row');
+            if (!row) return;
+            const matName = row.querySelector('strong')?.textContent || row.querySelector('td:first-child')?.textContent || '';
+            const unitPrice = input.value || '0';
+            const qty = row.querySelector('[readonly]')?.textContent || '';
+            const total = (parseFloat(unitPrice.replace(',', '.')) * (parseFloat(qty) || 1)).toFixed(2).replace('.', ',');
+            if (unitPrice && unitPrice !== '0') {
+                html += '<tr><td>' + escHtml(matName.trim()) + '</td><td class="text-end">R$ ' + escHtml(unitPrice) + '</td><td class="text-end fw-bold">R$ ' + total + '</td></tr>';
+            }
+        });
+        html += '</tbody></table>';
+        html += '</div></div>';
+    });
+
+    html += '<div class="alert alert-info small mt-3 mb-0"><i class="bi bi-info-circle"></i> Ao confirmar, a cotação será enviada e o pedido seguirá para aprovação. Revise os valores com atenção.</div>';
+
+    document.getElementById('reviewContent').innerHTML = html;
+    new bootstrap.Modal(document.getElementById('reviewModal')).show();
+}
+
+function confirmSubmit() {
+    bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+    document.getElementById('quoteForm').submit();
+}
+
+function escHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
 </body>
 </html>
