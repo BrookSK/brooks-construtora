@@ -94,6 +94,7 @@ class Router
             'orders/show' => ['PurchaseOrderController', 'show'],
             'orders/resend-quote' => ['PurchaseOrderController', 'resendQuote'],
             'orders/resend-approval' => ['PurchaseOrderController', 'resendApproval'],
+            'orders/reopen-approval' => ['PurchaseOrderController', 'reopenApproval'],
             'orders/cancel' => ['PurchaseOrderController', 'cancel'],
             'orders/delete' => ['PurchaseOrderController', 'delete'],
             'orders/clear-price-history' => ['PurchaseOrderController', 'clearPriceHistory'],

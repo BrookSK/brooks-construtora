@@ -428,6 +428,39 @@ HTML;
         return self::wrap("Item Sobressalente - {$order['code']}", $body);
     }
 
+    public static function orderReopened(array $order, string $previousSupplier, string $reason, string $approvalUrl, string $reopenedBy): string
+    {
+        $totalFmt = number_format($order['total_estimated'] ?? 0, 2, ',', '.');
+
+        $body = <<<HTML
+<p style="margin-bottom:15px;">O pedido abaixo foi <strong style="color:#dc3545;">REABERTO PARA REAPROVAÇÃO</strong>.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff3cd; border-radius:6px; margin-bottom:20px; border:1px solid #ffc107;">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#856404; text-transform:uppercase; font-weight:600;">⚠️ Reaprovação Necessária</p>
+    <p style="margin:0; font-size:17px; color:#333; font-weight:600;">{$order['code']}</p>
+    <p style="margin:8px 0 0; font-size:13px; color:#555;">Fornecedor anterior: <strong>{$previousSupplier}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Valor: <strong>R$ {$totalFmt}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Reaberto por: <strong>{$reopenedBy}</strong></p>
+</td></tr>
+</table>
+
+HTML;
+        if ($reason) {
+            $body .= "<p style=\"margin-bottom:15px;\"><strong>Motivo:</strong> {$reason}</p>";
+        }
+
+        $body .= <<<HTML
+<p style="font-size:13px; color:#666;">O fornecedor aprovado anteriormente foi desfeito. Acesse o link abaixo para selecionar o fornecedor correto e reaprovar.</p>
+
+<p style="text-align:center; margin: 25px 0 10px;">
+    <a href="{$approvalUrl}" style="display:inline-block; background-color:#ffc107; color:#333; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Acessar e Reaprovar</a>
+</p>
+HTML;
+
+        return self::wrap("⚠️ Reaprovação - {$order['code']}", $body);
+    }
+
     public static function orderComment(array $order, string $authorName, string $message, string $actionUrl, string $role): string
     {
         $roleLabel = $role === 'approver' ? 'Aprovação' : 'Cotação';

@@ -348,6 +348,90 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Reabrir pedido aprovado para reaprovação (quando aprovaram fornecedor errado)
+     */
+    public function reopenApproval(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/admin/orders'); return; }
+
+        $id = (int) $this->input('id', 0);
+        $reason = trim($this->input('reason', ''));
+        $order = PurchaseOrder::findFull($id);
+
+        if (!$order || $order['status'] !== 'approved') {
+            $this->setFlash('error', 'Pedido não encontrado ou não está aprovado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Admin';
+
+        // Salvar quem era o fornecedor aprovado anteriormente (para histórico)
+        $previousSupplier = $order['supplier_name'] ?? 'N/A';
+        $previousTotal = $order['total_estimated'];
+
+        // Resetar aprovação — volta para pending_approval
+        PurchaseOrder::updateById($id, [
+            'status' => 'pending_approval',
+            'supplier_id' => null,
+            'approved_by_name' => null,
+            'approved_at' => null,
+            'approval_notes' => null,
+        ]);
+
+        // Resetar fornecedores — remove flags de aprovado/rejeitado
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($id);
+        foreach ($orderSuppliers as $os) {
+            PurchaseOrderSupplier::updateById($os['id'], ['approved' => 0, 'status' => 'quoted']);
+        }
+
+        // Resetar approved_supplier_id dos itens
+        Database::query("UPDATE purchase_order_items SET approved_supplier_id = NULL WHERE order_id = ?", [$id]);
+
+        // Histórico detalhado
+        $historyDesc = "REABERTO PARA REAPROVAÇÃO por {$userName}. Fornecedor anterior: {$previousSupplier} (R$ " . number_format($previousTotal, 2, ',', '.') . ")";
+        if ($reason) $historyDesc .= ". Motivo: {$reason}";
+        PurchaseOrderHistory::log($id, 'reopened_approval', $historyDesc, $userName, Auth::id());
+
+        // Enviar notificações de reaprovação
+        $baseUrl = $this->getBaseUrl();
+        $approvalUrl = "{$baseUrl}/pedido/aprovacao/{$order['approval_token']}";
+
+        $emails = Setting::get('orders_approval_emails', '');
+        if (!empty($emails)) {
+            $subject = "⚠️ REAPROVAÇÃO - Pedido {$order['code']}";
+            $body = \App\Services\EmailTemplate::orderReopened($order, $previousSupplier, $reason, $approvalUrl, $userName);
+            NotificationService::queueEmails($emails, $subject, $body, $id, 'reopened_approval');
+        }
+
+        $webhookUrl = Setting::get('orders_approval_webhook', '');
+        if (!empty(trim($webhookUrl))) {
+            $message = "*⚠️ REAPROVAÇÃO DE PEDIDO*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . "*Fornecedor anterior:* {$previousSupplier}\n"
+                . "*Valor anterior:* R$ " . number_format($previousTotal, 2, ',', '.') . "\n"
+                . "*Reaberto por:* {$userName}\n"
+                . ($reason ? "*Motivo:* {$reason}\n" : '')
+                . "\n*O pedido precisa ser reaprovado. Acesse:*\n{$approvalUrl}";
+            $this->sendWebhook($webhookUrl, [
+                'event' => 'reopened_approval',
+                'order_code' => $order['code'],
+                'previous_supplier' => $previousSupplier,
+                'previous_total' => $previousTotal,
+                'reopened_by' => $userName,
+                'reason' => $reason,
+                'approval_url' => $approvalUrl,
+                'phone' => Setting::get('orders_approval_phone', ''),
+                'phone_name' => Setting::get('orders_approval_phone_name', ''),
+                'message' => $message,
+            ], $id);
+        }
+
+        $this->setFlash('success', 'Pedido reaberto para reaprovação! Notificações enviadas.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
      * Cancelar pedido
      */
     public function cancel(): void

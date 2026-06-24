@@ -840,6 +840,17 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <a href="/pedido/xlsx/<?= $order['id'] ?>" class="btn btn-primary w-100">
                     <i class="bi bi-file-earmark-spreadsheet"></i> Baixar Planilha
                 </a>
+                <hr>
+                <button type="button" class="btn btn-outline-warning w-100" data-bs-toggle="collapse" data-bs-target="#reopenSection">
+                    <i class="bi bi-arrow-repeat"></i> Reenviar p/ Reaprovação
+                </button>
+                <div class="collapse mt-2" id="reopenSection">
+                    <form method="POST" action="/admin/orders/reopen-approval" onsubmit="return confirm('Reabrir para reaprovação? O fornecedor aprovado será desfeito.')">
+                        <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                        <textarea class="form-control form-control-sm mb-2" name="reason" rows="2" placeholder="Motivo (opcional): ex: Fornecedor aprovado errado"></textarea>
+                        <button type="submit" class="btn btn-warning btn-sm w-100"><i class="bi bi-send"></i> Confirmar e Enviar</button>
+                    </form>
+                </div>
                 <?php endif; ?>
 
                 <?php if (!in_array($order['status'], ['approved', 'cancelled'])): ?>
