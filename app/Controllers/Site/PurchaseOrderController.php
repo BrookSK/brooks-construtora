@@ -821,10 +821,10 @@ class PurchaseOrderController extends Controller
             // Mapear role do PIN para role do sistema de permissões
             $roleMap = [
                 'buyer' => 'comprador',
-                'quoter' => 'comprador',
-                'approver' => 'comprador',
-                'payment' => 'comprador',
-                'delivery' => 'comprador',
+                'quoter' => 'cotador',
+                'approver' => 'aprovador',
+                'payment' => 'financeiro',
+                'delivery' => 'entrega',
                 'all' => 'comprador',
             ];
             $systemRole = $roleMap[$pinUser['role']] ?? 'comprador';

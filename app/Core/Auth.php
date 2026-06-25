@@ -93,6 +93,10 @@ class Auth
             'designer' => ['dashboard', 'magazines', 'magazines.edit'],
             'editor' => ['dashboard', 'magazines', 'orders', 'suppliers', 'materials'],
             'comprador' => ['dashboard', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials'],
+            'cotador' => ['dashboard', 'orders', 'orders.quote', 'suppliers', 'materials'],
+            'aprovador' => ['dashboard', 'orders', 'orders.approve'],
+            'financeiro' => ['dashboard', 'orders', 'orders.payment'],
+            'entrega' => ['dashboard', 'orders'],
         ];
 
         if (!isset($permissions[$role])) {
