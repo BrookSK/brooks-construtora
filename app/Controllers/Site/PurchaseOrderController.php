@@ -11,6 +11,7 @@ use App\Models\PurchaseOrderSupplier;
 use App\Models\PurchaseOrderItemPrice;
 use App\Models\PurchaseOrderDelivery;
 use App\Models\PurchaseOrderSpareItem;
+use App\Models\PinUser;
 use App\Models\MaterialPriceHistory;
 use App\Models\Supplier;
 use App\Models\Setting;
@@ -803,10 +804,36 @@ class PurchaseOrderController extends Controller
         }
 
         $pin = trim($this->input('pin', ''));
+        
+        // Primeiro tenta PIN individual (nova tabela pin_users)
+        $pinUser = PinUser::findByPin($pin);
+        if ($pinUser) {
+            // Login por PIN individual — sessão de 30 dias
+            $token = PinUser::createSession($pinUser['id']);
+            setcookie('pin_session', $token, [
+                'expires' => time() + (30 * 24 * 60 * 60),
+                'path' => '/',
+                'httponly' => true,
+                'samesite' => 'Lax',
+                'secure' => !empty($_SERVER['HTTPS']),
+            ]);
+
+            $_SESSION['user_id'] = $pinUser['id'];
+            $_SESSION['user_name'] = $pinUser['name'];
+            $_SESSION['user_email'] = $pinUser['email'] ?? '';
+            $_SESSION['user_role'] = $pinUser['role'];
+            $_SESSION['pin_auth'] = true;
+            $_SESSION['pin_user_id'] = $pinUser['id'];
+
+            $this->redirect('/pedidos');
+            return;
+        }
+
+        // Fallback: PIN global (configuração antiga)
         $correctPin = Setting::get('orders_pin_code', '');
 
-        if (empty($correctPin)) {
-            $this->setFlash('error', 'PIN não configurado. Contate o administrador.');
+        if (empty($correctPin) && !$pinUser) {
+            $this->setFlash('error', 'PIN não encontrado.');
             $this->redirect('/pedidos/login');
             return;
         }
@@ -817,7 +844,7 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        // Autenticar como "comprador" via sessão
+        // Autenticar como "comprador" via sessão (PIN global)
         $_SESSION['user_id'] = 0;
         $_SESSION['user_name'] = 'Comprador';
         $_SESSION['user_email'] = 'comprador@pin';
