@@ -23,7 +23,7 @@
             </div>
             <hr>
             <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" name="require_pin_login" value="1" id="requirePinLogin" <?= ($settings['require_pin_login'] ?? '0') === '1' ? 'checked' : '' ?>>
+                <input class="form-check-input" type="checkbox" name="orders_require_pin_login" value="1" id="requirePinLogin" <?= ($settings['orders_require_pin_login'] ?? '0') === '1' ? 'checked' : '' ?>>
                 <label class="form-check-label fw-bold" for="requirePinLogin">Exigir login com PIN para acessar links públicos</label>
             </div>
             <p class="text-muted small mt-1 mb-0">

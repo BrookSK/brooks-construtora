@@ -27,7 +27,7 @@ class PurchaseOrderController extends Controller
      */
     private function requirePinIfEnabled(): bool
     {
-        if (Setting::get('require_pin_login', '0') !== '1') return false;
+        if (Setting::get('orders_require_pin_login', '0') !== '1') return false;
         $pinUser = PinAuthController::getLoggedUser();
         if ($pinUser) return false;
         // Não está logado e PIN é obrigatório
