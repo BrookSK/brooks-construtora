@@ -1621,29 +1621,67 @@ class PurchaseOrderController extends Controller
      */
     public function generateInvite(): void
     {
-        if (!$this->isPost()) { $this->json(['error' => 'POST only'], 405); return; }
+        if (!$this->isPost()) { $this->redirect('/admin/orders/pin-users'); return; }
 
         $role = $this->input('role', 'all');
         $validRoles = ['buyer', 'quoter', 'approver', 'payment', 'delivery', 'all'];
         if (!in_array($role, $validRoles)) $role = 'all';
 
         $token = bin2hex(random_bytes(32));
-        $baseUrl = $this->getBaseUrl();
 
         Database::insert('pin_invite_links', [
             'token' => $token,
             'role' => $role,
-            'description' => $this->input('description', ''),
+            'description' => trim($this->input('description', '')),
             'max_uses' => $this->input('max_uses', '') ?: null,
             'created_by' => Auth::id(),
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        $this->json([
-            'success' => true,
-            'url' => "{$baseUrl}/pin/cadastro/{$token}",
-            'token' => $token,
+        $this->setFlash('success', 'Convite criado com sucesso!');
+        $this->redirect('/admin/orders/pin-users');
+    }
+
+    /**
+     * Tela de gerenciamento de usuários PIN e convites
+     */
+    public function pinUsers(): void
+    {
+        $users = Database::fetchAll("SELECT * FROM pin_users ORDER BY created_at DESC");
+        $invites = Database::fetchAll("SELECT * FROM pin_invite_links ORDER BY created_at DESC");
+        $baseUrl = $this->getBaseUrl();
+
+        $this->view('admin.orders.pin_users', [
+            'users' => $users,
+            'invites' => $invites,
+            'baseUrl' => $baseUrl,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
         ]);
+    }
+
+    /**
+     * Excluir convite
+     */
+    public function deleteInvite(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/admin/orders/pin-users'); return; }
+        $id = (int) $this->input('id');
+        Database::delete('pin_invite_links', 'id = ?', [$id]);
+        $this->setFlash('success', 'Convite removido.');
+        $this->redirect('/admin/orders/pin-users');
+    }
+
+    /**
+     * Excluir/desativar usuário PIN
+     */
+    public function deletePinUser(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/admin/orders/pin-users'); return; }
+        $id = (int) $this->input('id');
+        Database::update('pin_users', ['active' => 0, 'session_token' => null], 'id = ?', [$id]);
+        $this->setFlash('success', 'Usuário desativado.');
+        $this->redirect('/admin/orders/pin-users');
     }
 
     // ============================

@@ -118,6 +118,9 @@ class Router
             'orders/resend-notification' => ['PurchaseOrderController', 'resendNotification'],
             'orders/resend-all-phase' => ['PurchaseOrderController', 'resendAllPhase'],
             'orders/generate-invite' => ['PurchaseOrderController', 'generateInvite'],
+            'orders/pin-users' => ['PurchaseOrderController', 'pinUsers'],
+            'orders/delete-invite' => ['PurchaseOrderController', 'deleteInvite'],
+            'orders/delete-pin-user' => ['PurchaseOrderController', 'deletePinUser'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],

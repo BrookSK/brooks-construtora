@@ -4,7 +4,10 @@
 <form method="POST" action="/admin/orders/settings/update">
     <!-- PIN de acesso rápido -->
     <div class="card mb-4">
-        <div class="card-header"><i class="bi bi-key"></i> <strong>Acesso Rápido (PIN)</strong></div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-key"></i> <strong>Acesso Rápido (PIN)</strong></span>
+            <a href="/admin/orders/pin-users" class="btn btn-sm btn-outline-primary"><i class="bi bi-people"></i> Gerenciar Usuários e Convites</a>
+        </div>
         <div class="card-body">
             <div class="row align-items-end">
                 <div class="col-md-4">
