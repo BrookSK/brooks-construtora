@@ -280,7 +280,7 @@ function addItem(prefill = null) {
         </div>
         <div class="d-flex align-items-center gap-2 mt-2">
             <label class="form-label mb-0 small fw-bold">Qtd:</label>
-            <input type="number" class="form-control form-control-sm" style="max-width:100px;" name="items[${idx}][quantity]" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required>
+            <input type="number" class="form-control form-control-sm qty-mobile" style="max-width:100px;" data-idx="${idx}" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required>
             <span class="text-muted small">${prefill?.unit || ''}</span>
         </div>
     `;
@@ -301,6 +301,20 @@ function addItem(prefill = null) {
 
     if (prefill?.id) {
         matSSM.setValue(prefill.id);
+    }
+
+    // Sincronizar quantidade mobile → desktop
+    card.querySelector('.qty-mobile').addEventListener('input', function() {
+        const desktopInput = document.querySelector(`#item-row-${this.dataset.idx} [name="items[${this.dataset.idx}][quantity]"]`);
+        if (desktopInput) desktopInput.value = this.value;
+    });
+    // Sincronizar desktop → mobile
+    const desktopQty = tr.querySelector(`[name="items[${idx}][quantity]"]`);
+    if (desktopQty) {
+        desktopQty.addEventListener('input', function() {
+            const mobileInput = card.querySelector('.qty-mobile');
+            if (mobileInput) mobileInput.value = this.value;
+        });
     }
 
     updateItemCount();
