@@ -202,6 +202,15 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     <?php if ($os['quoted_by_name']): ?>
                     <small class="text-muted d-block mb-2">Cotado por <?= htmlspecialchars($os['quoted_by_name']) ?> em <?= $os['quoted_at'] ? date('d/m/Y H:i', strtotime($os['quoted_at'])) : '' ?></small>
                     <?php endif; ?>
+
+                    <!-- Dados do fornecedor -->
+                    <?php if (!empty($os['cnpj']) || !empty($os['email']) || !empty($os['phone'])): ?>
+                    <div class="small mb-2 text-muted">
+                        <?php if ($os['cnpj']): ?><span class="me-3"><i class="bi bi-building"></i> CNPJ: <?= htmlspecialchars($os['cnpj']) ?></span><?php endif; ?>
+                        <?php if ($os['phone']): ?><span class="me-3"><i class="bi bi-telephone"></i> <?= htmlspecialchars($os['phone']) ?></span><?php endif; ?>
+                        <?php if ($os['email']): ?><span class="me-3"><i class="bi bi-envelope"></i> <?= htmlspecialchars($os['email']) ?></span><?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                     
                     <?php if ($os['vendor_name'] || $os['delivery_days']): ?>
                     <div class="small mb-2">
@@ -209,10 +218,10 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <span class="me-3"><strong>Vendedor:</strong> <?= htmlspecialchars($os['vendor_name']) ?></span>
                         <?php endif; ?>
                         <?php if ($os['vendor_phone']): ?>
-                        <span class="me-3"><i class="bi bi-telephone"></i> <?= htmlspecialchars($os['vendor_phone']) ?></span>
+                        <span class="me-3"><i class="bi bi-telephone-fill"></i> <?= htmlspecialchars($os['vendor_phone']) ?></span>
                         <?php endif; ?>
                         <?php if ($os['vendor_email']): ?>
-                        <span class="me-3"><i class="bi bi-envelope"></i> <?= htmlspecialchars($os['vendor_email']) ?></span>
+                        <span class="me-3"><i class="bi bi-envelope-fill"></i> <?= htmlspecialchars($os['vendor_email']) ?></span>
                         <?php endif; ?>
                         <?php if ($os['delivery_days']): ?>
                         <span><strong>Prazo:</strong> <?= $os['delivery_days'] ?> dias</span>
