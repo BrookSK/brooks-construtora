@@ -316,7 +316,7 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Seu Nome *</label>
-                            <input type="text" class="form-control" name="person_name" required placeholder="Informe seu nome completo">
+                            <input type="text" class="form-control" name="person_name" required placeholder="Informe seu nome completo" value="<?= htmlspecialchars($pinUser['name'] ?? '') ?>" <?= !empty($pinUser) ? 'readonly' : '' ?>>
                         </div>
                     </div>
 

@@ -117,6 +117,7 @@ class Router
             'orders/spare-items/delete' => ['PurchaseOrderController', 'spareItemDelete'],
             'orders/resend-notification' => ['PurchaseOrderController', 'resendNotification'],
             'orders/resend-all-phase' => ['PurchaseOrderController', 'resendAllPhase'],
+            'orders/generate-invite' => ['PurchaseOrderController', 'generateInvite'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],
@@ -206,6 +207,13 @@ class Router
             'pedido/entrega/data' => ['PurchaseOrderController', 'deliveryPublicData'],
             'pedido/aprovacao/comentario' => ['PurchaseOrderController', 'approvalComment'],
             'pedido/cotacao/comentario' => ['PurchaseOrderController', 'quoteComment'],
+
+            // PIN Auth
+            'pin/login' => ['PinAuthController', 'login'],
+            'pin/authenticate' => ['PinAuthController', 'authenticate'],
+            'pin/cadastro' => ['PinAuthController', 'register'],
+            'pin/store' => ['PinAuthController', 'store'],
+            'pin/logout' => ['PinAuthController', 'logout'],
 
             // Painel de pedidos com PIN
             'pedidos' => ['PurchaseOrderController', 'pinPanel'],

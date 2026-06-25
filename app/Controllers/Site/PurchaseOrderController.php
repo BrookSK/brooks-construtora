@@ -72,6 +72,7 @@ class PurchaseOrderController extends Controller
             'comments' => $comments,
             'itemPrices' => $itemPrices,
             'token' => $token,
+            'pinUser' => \App\Controllers\Site\PinAuthController::getLoggedUser(),
             'flash' => $this->getFlash(),
         ]);
     }
@@ -304,6 +305,7 @@ class PurchaseOrderController extends Controller
             'itemPrices' => $itemPrices,
             'comments' => $comments,
             'token' => $token,
+            'pinUser' => \App\Controllers\Site\PinAuthController::getLoggedUser(),
             'flash' => $this->getFlash(),
         ]);
     }

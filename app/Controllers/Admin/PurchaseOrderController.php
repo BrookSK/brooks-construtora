@@ -1616,6 +1616,36 @@ class PurchaseOrderController extends Controller
         $this->redirect($redirect);
     }
 
+    /**
+     * Gerar link de convite para cadastro de PIN user
+     */
+    public function generateInvite(): void
+    {
+        if (!$this->isPost()) { $this->json(['error' => 'POST only'], 405); return; }
+
+        $role = $this->input('role', 'all');
+        $validRoles = ['buyer', 'quoter', 'approver', 'payment', 'delivery', 'all'];
+        if (!in_array($role, $validRoles)) $role = 'all';
+
+        $token = bin2hex(random_bytes(32));
+        $baseUrl = $this->getBaseUrl();
+
+        Database::insert('pin_invite_links', [
+            'token' => $token,
+            'role' => $role,
+            'description' => $this->input('description', ''),
+            'max_uses' => $this->input('max_uses', '') ?: null,
+            'created_by' => Auth::id(),
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->json([
+            'success' => true,
+            'url' => "{$baseUrl}/pin/cadastro/{$token}",
+            'token' => $token,
+        ]);
+    }
+
     // ============================
     // REENVIO DE NOTIFICAÇÕES
     // ============================

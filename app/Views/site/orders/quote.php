@@ -112,7 +112,7 @@
                     <div class="row mb-4">
                         <div class="col-md-6">
                             <label class="form-label">Seu Nome *</label>
-                            <input type="text" class="form-control" name="quoted_by_name" required placeholder="Informe seu nome completo" value="<?= htmlspecialchars($order['quoted_by_name'] ?? '') ?>">
+                            <input type="text" class="form-control" name="quoted_by_name" required placeholder="Informe seu nome completo" value="<?= htmlspecialchars($pinUser['name'] ?? $order['quoted_by_name'] ?? '') ?>" <?= !empty($pinUser) ? 'readonly' : '' ?>>
                         </div>
                     </div>
 
