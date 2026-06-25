@@ -96,7 +96,7 @@ class Auth
             'cotador' => ['dashboard', 'orders', 'orders.quote', 'suppliers', 'materials'],
             'aprovador' => ['dashboard', 'orders', 'orders.approve'],
             'financeiro' => ['dashboard', 'orders', 'orders.payment'],
-            'entrega' => ['dashboard', 'orders'],
+            'entrega' => ['dashboard', 'orders', 'orders.create', 'suppliers', 'materials'],
         ];
 
         if (!isset($permissions[$role])) {

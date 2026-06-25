@@ -840,7 +840,7 @@ class PurchaseOrderController extends Controller
                 'quoter' => 'cotador',
                 'approver' => 'aprovador',
                 'payment' => 'financeiro',
-                'delivery' => 'entrega',
+                'delivery' => 'comprador',
                 'all' => 'comprador',
             ];
             $systemRole = $roleMap[$pinUser['role']] ?? 'comprador';

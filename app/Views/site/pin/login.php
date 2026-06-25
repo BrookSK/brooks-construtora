@@ -28,19 +28,36 @@
                 </div>
                 <?php endif; ?>
 
+                <?php
+                $attempts = (int) ($_SESSION['pin_attempts'] ?? 0);
+                $showRecovery = $attempts >= 3;
+                ?>
+
                 <form method="POST" action="/pin/authenticate" id="pinForm">
                     <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirect) ?>">
                     <input type="text" class="form-control pin-input" name="pin" maxlength="4" pattern="\d{4}" inputmode="numeric" autofocus autocomplete="off" placeholder="····">
                     <button type="submit" class="btn btn-dark btn-lg w-100 mt-3"><i class="bi bi-unlock"></i> Entrar</button>
                 </form>
 
+                <?php if ($showRecovery): ?>
+                <div class="mt-3 pt-3 border-top">
+                    <p class="small text-muted mb-2">Esqueceu seu PIN?</p>
+                    <form method="POST" action="/pin/recover">
+                        <div class="input-group input-group-sm">
+                            <input type="email" class="form-control" name="email" placeholder="Seu e-mail cadastrado" required>
+                            <button type="submit" class="btn btn-outline-primary"><i class="bi bi-envelope"></i> Recuperar</button>
+                        </div>
+                    </form>
+                </div>
+                <?php endif; ?>
+
                 <p class="text-muted small mt-3 mb-0">Sessão mantida por 30 dias.</p>
             </div>
         </div>
     </div>
     <script>
-    // Auto-submit ao digitar 4 dígitos
     document.querySelector('.pin-input').addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '');
         if (this.value.length === 4) {
             setTimeout(() => document.getElementById('pinForm').submit(), 200);
         }

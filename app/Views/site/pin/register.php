@@ -47,12 +47,6 @@
                         <small class="text-muted">Escolha 4 números que só você saiba. Este será seu login.</small>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Frase de recuperação</label>
-                        <input type="text" class="form-control" name="recovery_phrase" placeholder="Ex: nome do seu pet (opcional)">
-                        <small class="text-muted">Caso esqueça o PIN.</small>
-                    </div>
-
                     <button type="submit" class="btn btn-success btn-lg w-100 mt-2">
                         <i class="bi bi-check-circle"></i> Criar Minha Conta
                     </button>
@@ -60,5 +54,10 @@
             </div>
         </div>
     </div>
+    <script>
+    document.querySelector('.pin-input').addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '');
+    });
+    </script>
 </body>
 </html>

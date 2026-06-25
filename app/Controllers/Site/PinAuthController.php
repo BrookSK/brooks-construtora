@@ -45,15 +45,22 @@ class PinAuthController extends Controller
 
         $user = PinUser::findByPin($pin);
         if (!$user) {
-            $this->setFlash('error', 'PIN não encontrado. Verifique ou cadastre-se.');
+            // Incrementar tentativas
+            $_SESSION['pin_attempts'] = ($_SESSION['pin_attempts'] ?? 0) + 1;
+            $attempts = $_SESSION['pin_attempts'];
+            $msg = 'PIN não encontrado.';
+            if ($attempts >= 3) $msg .= ' Use a recuperação por e-mail abaixo.';
+            $this->setFlash('error', $msg);
             $this->redirect('/pin/login?redirect=' . urlencode($redirect));
             return;
         }
 
+        // Login bem-sucedido — reseta tentativas
+        $_SESSION['pin_attempts'] = 0;
+
         // Criar sessão de 30 dias
         $token = PinUser::createSession($user['id']);
 
-        // Cookie persistente de 30 dias
         setcookie('pin_session', $token, [
             'expires' => time() + (30 * 24 * 60 * 60),
             'path' => '/',
@@ -63,6 +70,42 @@ class PinAuthController extends Controller
         ]);
 
         $this->redirect($redirect);
+    }
+
+    /**
+     * Recuperação de PIN por e-mail
+     */
+    public function recover(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/pin/login'); return; }
+
+        $email = trim($this->input('email', ''));
+        if (empty($email)) {
+            $this->setFlash('error', 'Informe seu e-mail.');
+            $this->redirect('/pin/login');
+            return;
+        }
+
+        $user = \App\Core\Database::fetch("SELECT * FROM pin_users WHERE email = ? AND active = 1", [$email]);
+
+        if ($user) {
+            // Envia e-mail com o PIN
+            try {
+                $mail = new \App\Services\MailService();
+                $body = "<p>Olá <strong>{$user['name']}</strong>,</p>"
+                    . "<p>Seu PIN de acesso ao sistema Brooks Construtora é:</p>"
+                    . "<p style='font-size:2rem; font-weight:700; text-align:center; letter-spacing:10px; color:#3a3b4e;'>{$user['pin']}</p>"
+                    . "<p>Use este PIN para acessar o sistema.</p>";
+                $mail->send($email, 'Seu PIN de Acesso - Brooks Construtora', $body, true);
+            } catch (\Exception $e) {
+                // silencioso
+            }
+        }
+
+        // Sempre mostra a mesma mensagem (segurança — não revela se e-mail existe)
+        $_SESSION['pin_attempts'] = 0;
+        $this->setFlash('success', 'Se o e-mail estiver cadastrado, você receberá seu PIN em instantes.');
+        $this->redirect('/pin/login');
     }
 
     /**

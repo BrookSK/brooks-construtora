@@ -1692,6 +1692,63 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Enviar link de convite via webhook para os números da fase correspondente
+     */
+    public function sendInviteWebhook(): void
+    {
+        if (!$this->isPost()) { $this->json(['error' => 'POST only'], 405); return; }
+
+        $token = $this->input('token', '');
+        $role = $this->input('role', '');
+        $baseUrl = $this->getBaseUrl();
+        $inviteUrl = "{$baseUrl}/pin/cadastro/{$token}";
+
+        // Mapear role para qual bloco de webhook usar
+        // buyer/delivery = mesmas pessoas (passo 5 - entrega/checklist)
+        // quoter = cotação (passo 1)
+        // approver = aprovação (passo 2)
+        // payment = pagamento (passo 4)
+        $webhookMap = [
+            'buyer' => ['orders_delivery_webhook', 'orders_delivery_phone', 'orders_delivery_phone_name'],
+            'quoter' => ['orders_quote_webhook', 'orders_quote_phone', 'orders_quote_phone_name'],
+            'approver' => ['orders_approval_webhook', 'orders_approval_phone', 'orders_approval_phone_name'],
+            'payment' => ['orders_payment_webhook', 'orders_payment_phone', 'orders_payment_phone_name'],
+            'delivery' => ['orders_delivery_webhook', 'orders_delivery_phone', 'orders_delivery_phone_name'],
+            'all' => ['orders_delivery_webhook', 'orders_delivery_phone', 'orders_delivery_phone_name'],
+        ];
+
+        $config = $webhookMap[$role] ?? $webhookMap['all'];
+        $webhookUrl = Setting::get($config[0], '');
+        $phone = Setting::get($config[1], '');
+        $phoneName = Setting::get($config[2], '');
+
+        if (empty(trim($webhookUrl))) {
+            $this->json(['error' => 'Webhook não configurado para esta permissão.'], 400);
+            return;
+        }
+
+        $roleLabels = ['buyer'=>'Comprador','quoter'=>'Cotador','approver'=>'Aprovador','payment'=>'Financeiro','delivery'=>'Entrega','all'=>'Completo'];
+        $roleLabel = $roleLabels[$role] ?? $role;
+
+        $message = "*CADASTRO NO SISTEMA*\n\n"
+            . "Acesse o link abaixo para criar sua conta no sistema Brooks Construtora:\n\n"
+            . "*Perfil:* {$roleLabel}\n\n"
+            . "*Link de cadastro:*\n{$inviteUrl}\n\n"
+            . "Crie um PIN de 4 dígitos para acessar o sistema.";
+
+        $this->sendWebhook($webhookUrl, [
+            'event' => 'invite_link',
+            'invite_url' => $inviteUrl,
+            'role' => $role,
+            'phone' => $phone,
+            'phone_name' => $phoneName,
+            'message' => $message,
+        ]);
+
+        $this->json(['success' => true, 'message' => 'Link enviado via webhook!']);
+    }
+
+    /**
      * Atualizar permissão do usuário PIN
      */
     public function updatePinUser(): void

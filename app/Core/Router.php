@@ -122,6 +122,7 @@ class Router
             'orders/delete-invite' => ['PurchaseOrderController', 'deleteInvite'],
             'orders/delete-pin-user' => ['PurchaseOrderController', 'deletePinUser'],
             'orders/update-pin-user' => ['PurchaseOrderController', 'updatePinUser'],
+            'orders/send-invite-webhook' => ['PurchaseOrderController', 'sendInviteWebhook'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],
@@ -217,6 +218,7 @@ class Router
             'pin/authenticate' => ['PinAuthController', 'authenticate'],
             'pin/cadastro' => ['PinAuthController', 'register'],
             'pin/store' => ['PinAuthController', 'store'],
+            'pin/recover' => ['PinAuthController', 'recover'],
             'pin/logout' => ['PinAuthController', 'logout'],
 
             // Painel de pedidos com PIN

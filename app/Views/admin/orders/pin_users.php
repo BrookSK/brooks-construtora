@@ -2,8 +2,8 @@
 <?php ob_start(); ?>
 
 <?php
-$roleLabels = ['buyer'=>'Comprador','quoter'=>'Cotador','approver'=>'Aprovador','payment'=>'Financeiro','delivery'=>'Entrega','all'=>'Completo'];
-$roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','payment'=>'success','delivery'=>'dark','all'=>'secondary'];
+$roleLabels = ['buyer'=>'Comprador/Entrega','quoter'=>'Cotador','approver'=>'Aprovador','payment'=>'Financeiro','delivery'=>'Comprador/Entrega','all'=>'Completo'];
+$roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','payment'=>'success','delivery'=>'primary','all'=>'secondary'];
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -21,11 +21,10 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Permissão *</label>
                         <select class="form-select" name="role" required>
-                            <option value="buyer">Comprador (criar pedidos)</option>
+                            <option value="buyer">Comprador / Entrega (criar pedidos + checklist)</option>
                             <option value="quoter">Cotador (fazer orçamentos)</option>
                             <option value="approver">Aprovador (aprovar pedidos)</option>
                             <option value="payment">Financeiro (NF/Boleto)</option>
-                            <option value="delivery">Entrega (checklist)</option>
                             <option value="all">Acesso Completo</option>
                         </select>
                     </div>
@@ -67,7 +66,8 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
                         </td>
                         <td><?= $inv['uses'] ?><?= $inv['max_uses'] ? '/' . $inv['max_uses'] : '' ?></td>
                         <td><small><?= htmlspecialchars($inv['description'] ?? '-') ?></small></td>
-                        <td>
+                        <td class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-success p-0 px-1" onclick="sendInviteWebhook('<?= $inv['token'] ?>', '<?= $inv['role'] ?>')" title="Enviar via Webhook"><i class="bi bi-send"></i></button>
                             <form method="POST" action="/admin/orders/delete-invite" class="d-inline" onsubmit="return confirm('Excluir?')">
                                 <input type="hidden" name="id" value="<?= $inv['id'] ?>">
                                 <button class="btn btn-sm btn-outline-danger p-0 px-1"><i class="bi bi-trash"></i></button>
@@ -101,9 +101,11 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
                             <form method="POST" action="/admin/orders/update-pin-user" class="d-inline">
                                 <input type="hidden" name="id" value="<?= $u['id'] ?>">
                                 <select class="form-select form-select-sm d-inline-block" name="role" style="width:auto; font-size:0.7rem;" onchange="this.form.submit()">
-                                    <?php foreach ($roleLabels as $rKey => $rLabel): ?>
-                                    <option value="<?= $rKey ?>" <?= $u['role'] === $rKey ? 'selected' : '' ?>><?= $rLabel ?></option>
-                                    <?php endforeach; ?>
+                                    <option value="buyer" <?= in_array($u['role'], ['buyer','delivery']) ? 'selected' : '' ?>>Comprador/Entrega</option>
+                                    <option value="quoter" <?= $u['role'] === 'quoter' ? 'selected' : '' ?>>Cotador</option>
+                                    <option value="approver" <?= $u['role'] === 'approver' ? 'selected' : '' ?>>Aprovador</option>
+                                    <option value="payment" <?= $u['role'] === 'payment' ? 'selected' : '' ?>>Financeiro</option>
+                                    <option value="all" <?= $u['role'] === 'all' ? 'selected' : '' ?>>Completo</option>
                                 </select>
                             </form>
                         </td>
@@ -130,4 +132,22 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
 </div>
 
 <?php $content = ob_get_clean(); ?>
+
+<script>
+function sendInviteWebhook(token, role) {
+    if (!confirm('Enviar link de cadastro via webhook para os números configurados?')) return;
+    fetch('/admin/orders/send-invite-webhook', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'token=' + token + '&role=' + role
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) alert(d.message || 'Enviado!');
+        else alert(d.error || 'Erro ao enviar.');
+    })
+    .catch(() => alert('Erro de conexão.'));
+}
+</script>
+
 <?php require ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>
