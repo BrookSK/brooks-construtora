@@ -818,12 +818,24 @@ class PurchaseOrderController extends Controller
                 'secure' => !empty($_SERVER['HTTPS']),
             ]);
 
+            // Mapear role do PIN para role do sistema de permissões
+            $roleMap = [
+                'buyer' => 'comprador',
+                'quoter' => 'comprador',
+                'approver' => 'comprador',
+                'payment' => 'comprador',
+                'delivery' => 'comprador',
+                'all' => 'comprador',
+            ];
+            $systemRole = $roleMap[$pinUser['role']] ?? 'comprador';
+
             $_SESSION['user_id'] = $pinUser['id'];
             $_SESSION['user_name'] = $pinUser['name'];
             $_SESSION['user_email'] = $pinUser['email'] ?? '';
-            $_SESSION['user_role'] = $pinUser['role'];
+            $_SESSION['user_role'] = $systemRole;
             $_SESSION['pin_auth'] = true;
             $_SESSION['pin_user_id'] = $pinUser['id'];
+            $_SESSION['pin_user_role'] = $pinUser['role'];
 
             $this->redirect('/pedidos');
             return;
