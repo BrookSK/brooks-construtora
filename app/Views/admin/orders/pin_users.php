@@ -97,7 +97,16 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
                     <tr class="<?= !$u['active'] ? 'text-decoration-line-through text-muted' : '' ?>">
                         <td><strong><?= htmlspecialchars($u['name']) ?></strong></td>
                         <td><code><?= $u['pin'] ?></code></td>
-                        <td><span class="badge bg-<?= $roleColors[$u['role']] ?? 'secondary' ?>"><?= $roleLabels[$u['role']] ?? $u['role'] ?></span></td>
+                        <td>
+                            <form method="POST" action="/admin/orders/update-pin-user" class="d-inline">
+                                <input type="hidden" name="id" value="<?= $u['id'] ?>">
+                                <select class="form-select form-select-sm d-inline-block" name="role" style="width:auto; font-size:0.7rem;" onchange="this.form.submit()">
+                                    <?php foreach ($roleLabels as $rKey => $rLabel): ?>
+                                    <option value="<?= $rKey ?>" <?= $u['role'] === $rKey ? 'selected' : '' ?>><?= $rLabel ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </form>
+                        </td>
                         <td><small><?= htmlspecialchars($u['email'] ?? '-') ?></small></td>
                         <td><small><?= $u['last_login_at'] ? date('d/m/Y H:i', strtotime($u['last_login_at'])) : 'Nunca' ?></small></td>
                         <td>

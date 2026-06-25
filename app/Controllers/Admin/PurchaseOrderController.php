@@ -1684,6 +1684,21 @@ class PurchaseOrderController extends Controller
         $this->redirect('/admin/orders/pin-users');
     }
 
+    /**
+     * Atualizar permissão do usuário PIN
+     */
+    public function updatePinUser(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/admin/orders/pin-users'); return; }
+        $id = (int) $this->input('id');
+        $role = $this->input('role', 'all');
+        $validRoles = ['buyer', 'quoter', 'approver', 'payment', 'delivery', 'all'];
+        if (!in_array($role, $validRoles)) $role = 'all';
+        Database::update('pin_users', ['role' => $role], 'id = ?', [$id]);
+        $this->setFlash('success', 'Permissão atualizada.');
+        $this->redirect('/admin/orders/pin-users');
+    }
+
     // ============================
     // REENVIO DE NOTIFICAÇÕES
     // ============================

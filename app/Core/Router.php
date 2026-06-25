@@ -121,6 +121,7 @@ class Router
             'orders/pin-users' => ['PurchaseOrderController', 'pinUsers'],
             'orders/delete-invite' => ['PurchaseOrderController', 'deleteInvite'],
             'orders/delete-pin-user' => ['PurchaseOrderController', 'deletePinUser'],
+            'orders/update-pin-user' => ['PurchaseOrderController', 'updatePinUser'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],
