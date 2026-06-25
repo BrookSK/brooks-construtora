@@ -23,10 +23,25 @@ use App\Services\XlsxService;
 class PurchaseOrderController extends Controller
 {
     /**
+     * Verifica se login por PIN é obrigatório. Se sim e não está logado, redireciona.
+     */
+    private function requirePinIfEnabled(): bool
+    {
+        if (Setting::get('require_pin_login', '0') !== '1') return false;
+        $pinUser = PinAuthController::getLoggedUser();
+        if ($pinUser) return false;
+        // Não está logado e PIN é obrigatório
+        $redirect = $_SERVER['REQUEST_URI'] ?? '/';
+        header('Location: /pin/login?redirect=' . urlencode($redirect));
+        exit;
+    }
+
+    /**
      * Página pública de cotação
      */
     public function quote(string $token = ''): void
     {
+        $this->requirePinIfEnabled();
         if (empty($token)) {
             $this->show404();
             return;
@@ -274,6 +289,7 @@ class PurchaseOrderController extends Controller
      */
     public function approval(string $token = ''): void
     {
+        $this->requirePinIfEnabled();
         if (empty($token)) {
             $this->show404();
             return;
@@ -1274,6 +1290,7 @@ class PurchaseOrderController extends Controller
      */
     public function deliveryPublic(string $token = ''): void
     {
+        $this->requirePinIfEnabled();
         if (empty($token)) { $this->show404(); return; }
 
         $order = Database::fetch("SELECT * FROM purchase_orders WHERE delivery_token = ?", [$token]);

@@ -9,9 +9,9 @@
             <a href="/admin/orders/pin-users" class="btn btn-sm btn-outline-primary"><i class="bi bi-people"></i> Gerenciar Usuários e Convites</a>
         </div>
         <div class="card-body">
-            <div class="row align-items-end">
+            <div class="row align-items-end mb-3">
                 <div class="col-md-4">
-                    <label class="form-label">Senha de 4 dígitos</label>
+                    <label class="form-label">Senha global de 4 dígitos</label>
                     <input type="text" class="form-control" name="orders_pin_code" value="<?= htmlspecialchars($settings['orders_pin_code'] ?? '') ?>" maxlength="4" pattern="\d{4}" placeholder="0000" style="font-size:1.5rem; text-align:center; letter-spacing:8px; max-width:180px;">
                 </div>
                 <div class="col-md-8">
@@ -21,6 +21,15 @@
                     </p>
                 </div>
             </div>
+            <hr>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="require_pin_login" value="1" id="requirePinLogin" <?= ($settings['require_pin_login'] ?? '0') === '1' ? 'checked' : '' ?>>
+                <label class="form-check-label fw-bold" for="requirePinLogin">Exigir login com PIN para acessar links públicos</label>
+            </div>
+            <p class="text-muted small mt-1 mb-0">
+                Quando ativado, os links de cotação, aprovação, checklist e etc. exigirão que a pessoa esteja logada com PIN antes de acessar.<br>
+                Quando desativado, qualquer pessoa com o link pode acessar (comportamento atual).
+            </p>
         </div>
     </div>
 

@@ -582,6 +582,7 @@ class PurchaseOrderController extends Controller
             'orders_spare_phone',
             'orders_spare_phone_name',
             'orders_pin_code',
+            'require_pin_login',
             'spare_items_weekly_budget',
         ];
 
@@ -590,6 +591,11 @@ class PurchaseOrderController extends Controller
             if (isset($_POST[$key])) {
                 $data[$key] = trim($_POST[$key]);
             }
+        }
+
+        // Checkbox: se não veio, é 0
+        if (!isset($_POST['require_pin_login'])) {
+            $data['require_pin_login'] = '0';
         }
 
         Setting::setMultiple($data);
