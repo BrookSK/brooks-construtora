@@ -428,6 +428,30 @@ HTML;
         return self::wrap("Item Sobressalente - {$order['code']}", $body);
     }
 
+    public static function purchaseOrderCancelled(array $order, string $cancelledBy): string
+    {
+        $totalFormatted = number_format($order['total_estimated'] ?? 0, 2, ',', '.');
+        $date = date('d/m/Y \à\s H:i');
+
+        $body = <<<HTML
+<p style="margin-bottom:15px;">O pedido de materiais foi <strong style="color:#dc3545;">CANCELADO</strong>.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8d7da; border-radius:6px; margin-bottom:20px; border:1px solid #f5c6cb;">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#721c24; text-transform:uppercase; font-weight:600;">❌ Pedido Cancelado</p>
+    <p style="margin:0; font-size:17px; color:#721c24; font-weight:600;">{$order['code']}</p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Valor: <strong>R$ {$totalFormatted}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Cancelado por: <strong>{$cancelledBy}</strong></p>
+    <p style="margin:4px 0 0; font-size:13px; color:#555;">Data: {$date}</p>
+</td></tr>
+</table>
+
+<p style="font-size:13px; color:#666;">Este pedido foi cancelado e não precisa mais de nenhuma ação.</p>
+HTML;
+
+        return self::wrap("Pedido Cancelado - {$order['code']}", $body);
+    }
+
     public static function orderReopened(array $order, string $previousSupplier, string $reason, string $approvalUrl, string $reopenedBy): string
     {
         $totalFmt = number_format($order['total_estimated'] ?? 0, 2, ',', '.');

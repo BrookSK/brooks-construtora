@@ -20,11 +20,13 @@
                         <i class="bi bi-check-circle-fill text-success" style="font-size:3.5rem;"></i>
                         <?php elseif ($order['status'] === 'rejected'): ?>
                         <i class="bi bi-x-circle-fill text-danger" style="font-size:3.5rem;"></i>
+                        <?php elseif ($order['status'] === 'cancelled'): ?>
+                        <i class="bi bi-slash-circle-fill text-dark" style="font-size:3.5rem;"></i>
                         <?php else: ?>
                         <i class="bi bi-info-circle-fill text-info" style="font-size:3.5rem;"></i>
                         <?php endif; ?>
                     </div>
-                    <h3 class="mb-2">Pedido Já Processado</h3>
+                    <h3 class="mb-2"><?= $order['status'] === 'cancelled' ? 'Pedido Cancelado' : 'Pedido Já Processado' ?></h3>
                     <p class="text-muted"><?= htmlspecialchars($message) ?></p>
                     
                     <div class="bg-light rounded p-3 text-start">

@@ -57,7 +57,7 @@ class PurchaseOrderController extends Controller
         if (!in_array($order['status'], ['pending_quote', 'pending_approval'])) {
             $this->view('site.orders.already_processed', [
                 'order' => $order,
-                'message' => 'Este pedido já foi processado.',
+                'message' => $order['status'] === 'cancelled' ? 'Este pedido foi cancelado.' : 'Este pedido já foi processado.',
             ]);
             return;
         }
@@ -305,7 +305,7 @@ class PurchaseOrderController extends Controller
         if (!in_array($order['status'], ['pending_approval'])) {
             $this->view('site.orders.already_processed', [
                 'order' => $order,
-                'message' => $order['status'] === 'approved' ? 'Este pedido já foi aprovado.' : 'Este pedido já foi processado.',
+                'message' => $order['status'] === 'approved' ? 'Este pedido já foi aprovado.' : ($order['status'] === 'cancelled' ? 'Este pedido foi cancelado.' : 'Este pedido já foi processado.'),
             ]);
             return;
         }

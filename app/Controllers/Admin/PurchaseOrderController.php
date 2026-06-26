@@ -442,7 +442,7 @@ class PurchaseOrderController extends Controller
         }
 
         $id = (int) $this->input('id', 0);
-        $order = PurchaseOrder::find($id);
+        $order = PurchaseOrder::findFull($id);
 
         if (!$order || in_array($order['status'], ['approved', 'cancelled'])) {
             $this->setFlash('error', 'Pedido não encontrado ou não pode ser cancelado.');
@@ -450,11 +450,69 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        PurchaseOrder::updateById($id, ['status' => 'cancelled']);
-        PurchaseOrderHistory::log($id, 'cancelled', 'Pedido cancelado', Auth::user()['name'], Auth::id());
+        $userName = Auth::user()['name'] ?? 'Admin';
 
-        $this->setFlash('success', 'Pedido cancelado com sucesso.');
+        PurchaseOrder::updateById($id, ['status' => 'cancelled']);
+        PurchaseOrderHistory::log($id, 'cancelled', "Pedido cancelado por {$userName}", $userName, Auth::id());
+
+        // Notificar todos os envolvidos (cotação + aprovação)
+        $this->sendCancelledNotifications($id, $order, $userName);
+
+        $this->setFlash('success', 'Pedido cancelado e notificações enviadas.');
         $this->redirect('/admin/orders');
+    }
+
+    private function sendCancelledNotifications(int $orderId, array $order, string $cancelledBy): void
+    {
+        $totalFmt = 'R$ ' . number_format((float)($order['total_estimated'] ?? 0), 2, ',', '.');
+
+        // E-mail para cotação
+        $emails = Setting::get('orders_quote_emails', '');
+        if (!empty($emails)) {
+            $subject = "❌ Pedido CANCELADO - {$order['code']}";
+            $body = EmailTemplate::purchaseOrderCancelled($order, $cancelledBy);
+            NotificationService::queueEmails($emails, $subject, $body, $orderId, 'order_cancelled');
+        }
+        // E-mail para aprovação
+        $emails2 = Setting::get('orders_approval_emails', '');
+        if (!empty($emails2) && $emails2 !== $emails) {
+            $subject = "❌ Pedido CANCELADO - {$order['code']}";
+            $body = EmailTemplate::purchaseOrderCancelled($order, $cancelledBy);
+            NotificationService::queueEmails($emails2, $subject, $body, $orderId, 'order_cancelled');
+        }
+
+        // Webhook para cotação
+        $webhookUrl = Setting::get('orders_quote_webhook', '');
+        if (!empty(trim($webhookUrl))) {
+            $message = "*❌ PEDIDO CANCELADO*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . "*Valor:* {$totalFmt}\n"
+                . "*Cancelado por:* {$cancelledBy}\n"
+                . "*Data:* " . date('d/m/Y H:i');
+            $this->sendWebhook($webhookUrl, [
+                'event' => 'order_cancelled', 'order_code' => $order['code'],
+                'total' => $order['total_estimated'], 'cancelled_by' => $cancelledBy,
+                'phone' => Setting::get('orders_quote_phone', ''),
+                'phone_name' => Setting::get('orders_quote_phone_name', ''),
+                'message' => $message,
+            ], $orderId);
+        }
+        // Webhook para aprovação
+        $webhookUrl2 = Setting::get('orders_approval_webhook', '');
+        if (!empty(trim($webhookUrl2)) && $webhookUrl2 !== $webhookUrl) {
+            $message = "*❌ PEDIDO CANCELADO*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . "*Valor:* {$totalFmt}\n"
+                . "*Cancelado por:* {$cancelledBy}\n"
+                . "*Data:* " . date('d/m/Y H:i');
+            $this->sendWebhook($webhookUrl2, [
+                'event' => 'order_cancelled', 'order_code' => $order['code'],
+                'total' => $order['total_estimated'], 'cancelled_by' => $cancelledBy,
+                'phone' => Setting::get('orders_approval_phone', ''),
+                'phone_name' => Setting::get('orders_approval_phone_name', ''),
+                'message' => $message,
+            ], $orderId);
+        }
     }
 
     /**
