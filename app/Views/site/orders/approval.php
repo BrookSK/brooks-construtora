@@ -27,10 +27,12 @@
         .map-cell-selectable:hover { background: #e8f5e9 !important; }
         .map-cell-selectable.selected { background: #c8e6c9 !important; }
         .map-supplier-header { min-width: 110px; }
-        .total-display { background: #e8f5e9; border: 1px solid #c3e6cb; border-radius: 8px; padding: 0.75rem;
+        .total-display { background: #e8f5e9; border: 1px solid #c3e6cb; border-radius: 8px; padding: 1rem;
             text-align: center; margin-top: 1rem; }
-        .total-display .total-value { font-size: 1.3rem; font-weight: 700; color: #28a745; }
-        .total-display .total-label { font-size: 0.75rem; color: #6c757d; }
+        .total-display .total-value { font-size: 1.4rem; font-weight: 700; color: #28a745; }
+        .total-display .total-label { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
+        .total-display #totalDetail { font-size: 0.75rem; line-height: 1.6; margin-top: 0.5rem; }
+        .total-display #totalDetail span { display: inline-block; }
         .btn-select-all { font-size: 0.7rem; padding: 0.2rem 0.5rem; }
         @media (min-width: 769px) {
             .item-card { display: flex; align-items: stretch; gap: 0.75rem; }
@@ -339,11 +341,29 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <?php
+    // Preparar dados financeiros para JS
+    $supplierFinancialsJs = [];
+    foreach ($orderSuppliers ?? [] as $os) {
+        $supplierFinancialsJs[$os['supplier_id']] = [
+            'subtotal_items' => (float)($os['subtotal_items'] ?? 0),
+            'discount_value' => (float)($os['discount_value'] ?? 0),
+            'discount_type' => $os['discount_type'] ?? 'percent',
+            'surcharge_value' => (float)($os['surcharge_value'] ?? 0),
+            'surcharge_type' => $os['surcharge_type'] ?? 'percent',
+            'ipi_percent' => (float)($os['ipi_percent'] ?? 0),
+            'icms_percent' => (float)($os['icms_percent'] ?? 0),
+            'freight' => (float)($os['freight'] ?? 0),
+            'total' => (float)($os['subtotal_final'] ?? $os['total'] ?? 0),
+        ];
+    }
+    ?>
     <script>
     // Dados dos preços por item/fornecedor (para cálculo de total)
     const priceData = <?= json_encode($pricesByItem ?? []) ?>;
     const supplierNames = <?= json_encode(array_column($orderSuppliers ?? [], 'supplier_name', 'supplier_id')) ?>;
     const itemIds = <?= json_encode(array_column($items ?? [], 'id')) ?>;
+    const supplierFinancials = <?= json_encode($supplierFinancialsJs) ?>;
 
     // Estado: qual fornecedor está selecionado para cada item
     const selections = {};
@@ -379,18 +399,18 @@
         });
     }
     function updateTotal() {
-        let total = 0;
+        let subtotalInsumos = 0;
         let count = 0;
-        const supplierTotals = {};
+        const supplierItemTotals = {};
 
         for (const itemId in selections) {
             const sid = selections[itemId];
             if (priceData[itemId] && priceData[itemId][sid]) {
                 const price = parseFloat(priceData[itemId][sid]['total_price']) || 0;
-                total += price;
+                subtotalInsumos += price;
                 count++;
-                if (!supplierTotals[sid]) supplierTotals[sid] = 0;
-                supplierTotals[sid] += price;
+                if (!supplierItemTotals[sid]) supplierItemTotals[sid] = 0;
+                supplierItemTotals[sid] += price;
             }
         }
 
@@ -399,18 +419,84 @@
 
         if (count === 0) {
             totalEl.textContent = 'R$ 0,00';
-            detailEl.textContent = 'Selecione os fornecedores para cada item';
-        } else {
-            totalEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-            // Detalhe por fornecedor
-            const details = [];
-            for (const sid in supplierTotals) {
-                const name = supplierNames[sid] || 'Fornecedor';
-                const val = supplierTotals[sid].toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                details.push(name + ': R$ ' + val);
-            }
-            detailEl.textContent = details.join(' | ') + ' (' + count + '/' + itemIds.length + ' itens)';
+            detailEl.innerHTML = '<span class="text-muted">Selecione os fornecedores para cada item</span>';
+            return;
         }
+
+        // Se todos os itens são do mesmo fornecedor, usar os financeiros desse fornecedor
+        const uniqueSuppliers = Object.keys(supplierItemTotals);
+        let totalFinal = subtotalInsumos;
+        let detailParts = [];
+
+        detailParts.push('<span>Insumos: <strong>R$ ' + fmtMoney(subtotalInsumos) + '</strong></span>');
+
+        if (uniqueSuppliers.length === 1) {
+            const sid = uniqueSuppliers[0];
+            const fin = supplierFinancials[sid];
+
+            if (fin) {
+                // Desconto
+                if (fin.discount_value > 0) {
+                    let discountAmt = fin.discount_type === 'percent' ? subtotalInsumos * (fin.discount_value / 100) : fin.discount_value;
+                    totalFinal -= discountAmt;
+                    detailParts.push('<span>Desconto: <strong>-' + fin.discount_value + (fin.discount_type === 'percent' ? '%' : ' R$') + ' (-R$ ' + fmtMoney(discountAmt) + ')</strong></span>');
+                }
+                // Acréscimo
+                if (fin.surcharge_value > 0) {
+                    let surchargeAmt = fin.surcharge_type === 'percent' ? subtotalInsumos * (fin.surcharge_value / 100) : fin.surcharge_value;
+                    totalFinal += surchargeAmt;
+                    detailParts.push('<span>Acréscimo: <strong>+' + fin.surcharge_value + (fin.surcharge_type === 'percent' ? '%' : ' R$') + ' (+R$ ' + fmtMoney(surchargeAmt) + ')</strong></span>');
+                }
+                // IPI
+                if (fin.ipi_percent > 0) {
+                    let ipiAmt = subtotalInsumos * (fin.ipi_percent / 100);
+                    totalFinal += ipiAmt;
+                    detailParts.push('<span>IPI: <strong>' + fin.ipi_percent + '% (+R$ ' + fmtMoney(ipiAmt) + ')</strong></span>');
+                }
+                // ICMS
+                if (fin.icms_percent > 0) {
+                    let icmsAmt = subtotalInsumos * (fin.icms_percent / 100);
+                    totalFinal += icmsAmt;
+                    detailParts.push('<span>ICMS: <strong>' + fin.icms_percent + '% (+R$ ' + fmtMoney(icmsAmt) + ')</strong></span>');
+                }
+                // Frete
+                if (fin.freight > 0) {
+                    totalFinal += fin.freight;
+                    detailParts.push('<span>Frete: <strong>+R$ ' + fmtMoney(fin.freight) + '</strong></span>');
+                }
+            }
+        } else {
+            // Múltiplos fornecedores selecionados — somar financeiros proporcionalmente
+            for (const sid of uniqueSuppliers) {
+                const fin = supplierFinancials[sid];
+                const itemsTotal = supplierItemTotals[sid];
+                if (fin && itemsTotal > 0) {
+                    if (fin.discount_value > 0) {
+                        let amt = fin.discount_type === 'percent' ? itemsTotal * (fin.discount_value / 100) : fin.discount_value;
+                        totalFinal -= amt;
+                    }
+                    if (fin.surcharge_value > 0) {
+                        let amt = fin.surcharge_type === 'percent' ? itemsTotal * (fin.surcharge_value / 100) : fin.surcharge_value;
+                        totalFinal += amt;
+                    }
+                    if (fin.ipi_percent > 0) totalFinal += itemsTotal * (fin.ipi_percent / 100);
+                    if (fin.icms_percent > 0) totalFinal += itemsTotal * (fin.icms_percent / 100);
+                    if (fin.freight > 0) totalFinal += fin.freight;
+                }
+            }
+            // Mostrar resumo por fornecedor
+            for (const sid of uniqueSuppliers) {
+                const name = supplierNames[sid] || 'Fornecedor';
+                detailParts.push('<span>' + name + ': R$ ' + fmtMoney(supplierItemTotals[sid]) + '</span>');
+            }
+        }
+
+        totalEl.textContent = 'R$ ' + fmtMoney(totalFinal);
+        detailEl.innerHTML = detailParts.join('<br>') + '<br><span class="text-muted">(' + count + '/' + itemIds.length + ' itens selecionados)</span>';
+    }
+
+    function fmtMoney(value) {
+        return value.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     }
 
     function updateHiddenInputs() {
