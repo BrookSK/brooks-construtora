@@ -444,8 +444,8 @@ class PurchaseOrderController extends Controller
         $id = (int) $this->input('id', 0);
         $order = PurchaseOrder::findFull($id);
 
-        if (!$order || in_array($order['status'], ['approved', 'cancelled'])) {
-            $this->setFlash('error', 'Pedido não encontrado ou não pode ser cancelado.');
+        if (!$order || in_array($order['status'], ['cancelled'])) {
+            $this->setFlash('error', 'Pedido não encontrado ou já está cancelado.');
             $this->redirect('/admin/orders');
             return;
         }

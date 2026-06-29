@@ -410,6 +410,49 @@ class PurchaseOrderController extends Controller
                         PurchaseOrderSupplier::updateById($os['id'], ['status' => 'rejected']);
                     }
                 }
+
+                // Aplicar financeiros (desconto, acréscimo, IPI, ICMS, frete) ao total aprovado
+                // Agrupa subtotal de itens por fornecedor aprovado
+                $subtotalBySupplier = [];
+                foreach ($itemSuppliers as $itemId => $supplierId) {
+                    $supplierId = (int) $supplierId;
+                    if ($supplierId <= 0) continue;
+                    $prices = PurchaseOrderItemPrice::getByOrderAndSupplier($order['id'], $supplierId);
+                    foreach ($prices as $p) {
+                        if ((int) $p['item_id'] === (int) $itemId) {
+                            if (!isset($subtotalBySupplier[$supplierId])) $subtotalBySupplier[$supplierId] = 0;
+                            $subtotalBySupplier[$supplierId] += (float) $p['total_price'];
+                            break;
+                        }
+                    }
+                }
+
+                // Somar financeiros de cada fornecedor aprovado
+                $totalWithFinancials = $approvedTotal;
+                foreach ($orderSuppliers as $os) {
+                    $sid = $os['supplier_id'];
+                    if (!isset($approvedSupplierIds[$sid]) || !isset($subtotalBySupplier[$sid])) continue;
+                    
+                    $subItems = $subtotalBySupplier[$sid];
+                    $discVal = (float)($os['discount_value'] ?? 0);
+                    $discType = $os['discount_type'] ?? 'percent';
+                    $surVal = (float)($os['surcharge_value'] ?? 0);
+                    $surType = $os['surcharge_type'] ?? 'percent';
+                    $ipi = (float)($os['ipi_percent'] ?? 0);
+                    $icms = (float)($os['icms_percent'] ?? 0);
+                    $freight = (float)($os['freight'] ?? 0);
+
+                    if ($discVal > 0) {
+                        $totalWithFinancials -= ($discType === 'percent') ? $subItems * ($discVal / 100) : $discVal;
+                    }
+                    if ($surVal > 0) {
+                        $totalWithFinancials += ($surType === 'percent') ? $subItems * ($surVal / 100) : $surVal;
+                    }
+                    if ($ipi > 0) $totalWithFinancials += $subItems * ($ipi / 100);
+                    if ($icms > 0) $totalWithFinancials += $subItems * ($icms / 100);
+                    if ($freight > 0) $totalWithFinancials += $freight;
+                }
+                $approvedTotal = $totalWithFinancials;
             }
 
             // Determinar supplier_id principal (o com mais itens, para compatibilidade)

@@ -862,7 +862,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 </div>
                 <?php endif; ?>
 
-                <?php if (!in_array($order['status'], ['approved', 'cancelled'])): ?>
+                <?php if (!in_array($order['status'], ['cancelled'])): ?>
                 <hr>
                 <form method="POST" action="/admin/orders/cancel" onsubmit="return confirm('Tem certeza que deseja cancelar este pedido?')">
                     <input type="hidden" name="id" value="<?= $order['id'] ?>">
