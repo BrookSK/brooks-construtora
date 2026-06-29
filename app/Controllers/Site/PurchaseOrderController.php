@@ -1038,16 +1038,26 @@ class PurchaseOrderController extends Controller
         $pdfUrl = "{$baseUrl}/pedido/pdf/{$orderId}";
         $xlsxUrl = "{$baseUrl}/pedido/xlsx/{$orderId}";
 
+        // Total real (com financeiros)
+        $realTotal = (float)($order['total_estimated'] ?? 0);
+        if (!empty($approvedSuppliers)) {
+            $sumFinal = 0;
+            foreach ($approvedSuppliers as $as) {
+                $sumFinal += (float)($as['subtotal_final'] ?? $as['total'] ?? 0);
+            }
+            if ($sumFinal > 0) $realTotal = $sumFinal;
+        }
+
         $emails = Setting::get('orders_completed_emails', '');
         if (!empty($emails)) {
-            $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
+            $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($realTotal, 2, ',', '.');
             $body = EmailTemplate::purchaseOrderCompleted($order, $items, $pdfUrl, $xlsxUrl, $approvedSuppliers);
             NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'order_approved');
         }
 
         $webhookUrl = Setting::get('orders_completed_webhook', '');
         if (!empty($webhookUrl)) {
-            $totalFormatted = 'R$ ' . number_format($order['total_estimated'], 2, ',', '.');
+            $totalFormatted = 'R$ ' . number_format($realTotal, 2, ',', '.');
 
             // Montar lista de fornecedores aprovados
             $supplierNames = [];
@@ -1068,7 +1078,7 @@ class PurchaseOrderController extends Controller
                 'event' => 'order_approved',
                 'order_code' => $order['code'],
                 'suppliers' => $supplierNames,
-                'total' => $order['total_estimated'],
+                'total' => $realTotal,
                 'approved_by' => $order['approved_by_name'],
                 'pdf_url' => $pdfUrl,
                 'xlsx_url' => $xlsxUrl,

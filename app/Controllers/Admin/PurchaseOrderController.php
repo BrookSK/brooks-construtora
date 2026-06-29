@@ -464,19 +464,25 @@ class PurchaseOrderController extends Controller
 
     private function sendCancelledNotifications(int $orderId, array $order, string $cancelledBy): void
     {
-        $totalFmt = 'R$ ' . number_format((float)($order['total_estimated'] ?? 0), 2, ',', '.');
+        // Buscar total real (com financeiros) do fornecedor aprovado
+        $realTotal = (float)($order['total_estimated'] ?? 0);
+        $approvedSupplier = PurchaseOrderSupplier::getApproved($orderId);
+        if ($approvedSupplier && $approvedSupplier['subtotal_final'] > 0) {
+            $realTotal = (float)$approvedSupplier['subtotal_final'];
+        }
+        $totalFmt = 'R$ ' . number_format($realTotal, 2, ',', '.');
 
         // E-mail para cotação
         $emails = Setting::get('orders_quote_emails', '');
         if (!empty($emails)) {
-            $subject = "❌ Pedido CANCELADO - {$order['code']}";
+            $subject = "Pedido CANCELADO - {$order['code']}";
             $body = EmailTemplate::purchaseOrderCancelled($order, $cancelledBy);
             NotificationService::queueEmails($emails, $subject, $body, $orderId, 'order_cancelled');
         }
         // E-mail para aprovação
         $emails2 = Setting::get('orders_approval_emails', '');
         if (!empty($emails2) && $emails2 !== $emails) {
-            $subject = "❌ Pedido CANCELADO - {$order['code']}";
+            $subject = "Pedido CANCELADO - {$order['code']}";
             $body = EmailTemplate::purchaseOrderCancelled($order, $cancelledBy);
             NotificationService::queueEmails($emails2, $subject, $body, $orderId, 'order_cancelled');
         }
@@ -484,14 +490,14 @@ class PurchaseOrderController extends Controller
         // Webhook para cotação
         $webhookUrl = Setting::get('orders_quote_webhook', '');
         if (!empty(trim($webhookUrl))) {
-            $message = "*❌ PEDIDO CANCELADO*\n\n"
+            $message = "*PEDIDO CANCELADO*\n\n"
                 . "*Pedido:* {$order['code']}\n"
                 . "*Valor:* {$totalFmt}\n"
                 . "*Cancelado por:* {$cancelledBy}\n"
                 . "*Data:* " . date('d/m/Y H:i');
             $this->sendWebhook($webhookUrl, [
                 'event' => 'order_cancelled', 'order_code' => $order['code'],
-                'total' => $order['total_estimated'], 'cancelled_by' => $cancelledBy,
+                'total' => $realTotal, 'cancelled_by' => $cancelledBy,
                 'phone' => Setting::get('orders_quote_phone', ''),
                 'phone_name' => Setting::get('orders_quote_phone_name', ''),
                 'message' => $message,
@@ -500,14 +506,14 @@ class PurchaseOrderController extends Controller
         // Webhook para aprovação
         $webhookUrl2 = Setting::get('orders_approval_webhook', '');
         if (!empty(trim($webhookUrl2)) && $webhookUrl2 !== $webhookUrl) {
-            $message = "*❌ PEDIDO CANCELADO*\n\n"
+            $message = "*PEDIDO CANCELADO*\n\n"
                 . "*Pedido:* {$order['code']}\n"
                 . "*Valor:* {$totalFmt}\n"
                 . "*Cancelado por:* {$cancelledBy}\n"
                 . "*Data:* " . date('d/m/Y H:i');
             $this->sendWebhook($webhookUrl2, [
                 'event' => 'order_cancelled', 'order_code' => $order['code'],
-                'total' => $order['total_estimated'], 'cancelled_by' => $cancelledBy,
+                'total' => $realTotal, 'cancelled_by' => $cancelledBy,
                 'phone' => Setting::get('orders_approval_phone', ''),
                 'phone_name' => Setting::get('orders_approval_phone_name', ''),
                 'message' => $message,
@@ -1289,6 +1295,10 @@ class PurchaseOrderController extends Controller
         $order = PurchaseOrder::findFull($orderId);
         if (!$order) return;
 
+        // Total real (com financeiros)
+        $approvedSup = PurchaseOrderSupplier::getApproved($orderId);
+        $realTotal = ($approvedSup && $approvedSup['subtotal_final'] > 0) ? (float)$approvedSup['subtotal_final'] : (float)($order['total_estimated'] ?? 0);
+
         $baseUrl = $this->getBaseUrl();
         $panelUrl = "{$baseUrl}/pedidos";
         $orderUrl = "{$baseUrl}/admin/orders/show/{$orderId}";
@@ -1326,7 +1336,7 @@ class PurchaseOrderController extends Controller
                 'event' => 'payment_uploaded',
                 'order_code' => $order['code'],
                 'supplier' => $order['supplier_name'] ?? 'N/A',
-                'total' => $order['total_estimated'],
+                'total' => $realTotal,
                 'document_type' => $typeLabel,
                 'document_number' => $docData['number'] ?? '',
                 'amount' => $amount,
