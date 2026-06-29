@@ -369,6 +369,22 @@
     const selections = {};
 
     function selectItemSupplier(itemId, supplierId) {
+        // Toggle: se já está selecionado o mesmo fornecedor, desseleciona
+        if (selections[itemId] === supplierId) {
+            delete selections[itemId];
+
+            // Remover highlights
+            document.querySelectorAll('[id^="opt-' + itemId + '-"]').forEach(el => el.classList.remove('selected'));
+            document.querySelectorAll('[id^="map-cell-' + itemId + '-"]').forEach(el => el.classList.remove('selected'));
+
+            const itemCard = document.getElementById('item-card-' + itemId);
+            if (itemCard) itemCard.style.borderColor = '#dee2e6';
+
+            updateTotal();
+            updateHiddenInputs();
+            return;
+        }
+
         selections[itemId] = supplierId;
 
         // Highlight na lista
