@@ -160,9 +160,16 @@
                 <span><?= htmlspecialchars($order['supplier_cnpj']) ?></span>
             </div>
             <?php endif; ?>
+        <?php
+        // Calcular o total real (com financeiros) usando o fornecedor aprovado se disponível
+        $totalReal = $order['total_estimated'];
+        if ($approvedSupplier && $approvedSupplier['subtotal_final'] > 0) {
+            $totalReal = $approvedSupplier['subtotal_final'];
+        }
+        ?>
             <div class="info-item">
                 <label>Valor Total</label>
-                <span style="color:#28a745; font-size:1.1rem;">R$ <?= number_format($order['total_estimated'], 2, ',', '.') ?></span>
+                <span style="color:#28a745; font-size:1.1rem;">R$ <?= number_format($totalReal, 2, ',', '.') ?></span>
             </div>
         </div>
 
@@ -262,12 +269,12 @@
                 ?>
                 <tr class="total-row">
                     <td colspan="5" style="text-align:right;">
-                        <?php if ($subtotalInsumos != $order['total_estimated']): ?>
+                        <?php if ($subtotalInsumos != $totalReal): ?>
                         <span style="font-size:0.75rem; color:#666; font-weight:normal;">Insumos: R$ <?= number_format($subtotalInsumos, 2, ',', '.') ?></span>
                         <?php endif; ?>
                     </td>
                     <td colspan="2" style="text-align:right;">TOTAL:</td>
-                    <td style="text-align:right; color:#28a745;">R$ <?= number_format($order['total_estimated'], 2, ',', '.') ?></td>
+                    <td style="text-align:right; color:#28a745;">R$ <?= number_format($totalReal, 2, ',', '.') ?></td>
                 </tr>
             </tbody>
         </table>
@@ -295,10 +302,10 @@
             </div>
             <?php endforeach; ?>
             <div style="border-top:2px solid #3a3b4e; padding-top:8px; margin-top:8px; text-align:right;">
-                <?php if ($subtotalInsumos != $order['total_estimated']): ?>
+                <?php if ($subtotalInsumos != $totalReal): ?>
                 <div style="font-size:0.75rem; color:#666; margin-bottom:4px;">Insumos: R$ <?= number_format($subtotalInsumos, 2, ',', '.') ?></div>
                 <?php endif; ?>
-                <strong style="font-size:1rem;">TOTAL: <span style="color:#28a745;">R$ <?= number_format($order['total_estimated'], 2, ',', '.') ?></span></strong>
+                <strong style="font-size:1rem;">TOTAL: <span style="color:#28a745;">R$ <?= number_format($totalReal, 2, ',', '.') ?></span></strong>
             </div>
         </div>
 

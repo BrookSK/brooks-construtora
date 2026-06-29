@@ -81,7 +81,19 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     <?php if ($order['total_estimated'] > 0): ?>
                     <div class="col-sm-6 mb-2">
                         <small class="text-muted d-block">Valor Total</small>
-                        <strong class="text-success fs-5">R$ <?= number_format($order['total_estimated'], 2, ',', '.') ?></strong>
+                        <?php
+                        // Usar subtotal_final do fornecedor aprovado se disponível (mais preciso)
+                        $displayTotal = $order['total_estimated'];
+                        if (!empty($orderSuppliers)) {
+                            foreach ($orderSuppliers as $os) {
+                                if ($os['approved'] && $os['subtotal_final'] > 0) {
+                                    $displayTotal = $os['subtotal_final'];
+                                    break;
+                                }
+                            }
+                        }
+                        ?>
+                        <strong class="text-success fs-5">R$ <?= number_format($displayTotal, 2, ',', '.') ?></strong>
                     </div>
                     <?php endif; ?>
                     <?php if (!empty($order['quoted_by_name'])): ?>
@@ -167,7 +179,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <?php if ($order['total_estimated'] > 0): ?>
                         <tr class="table-light">
                             <td colspan="8" class="text-end fw-bold">TOTAL:</td>
-                            <td class="text-end fw-bold text-success">R$ <?= number_format($order['total_estimated'], 2, ',', '.') ?></td>
+                            <td class="text-end fw-bold text-success">R$ <?= number_format($displayTotal, 2, ',', '.') ?></td>
                         </tr>
                         <?php endif; ?>
                     </tbody>

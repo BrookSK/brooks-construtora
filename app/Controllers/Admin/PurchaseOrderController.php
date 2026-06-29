@@ -823,8 +823,9 @@ class PurchaseOrderController extends Controller
         // Subtotal e Total
         $xlsx->addRow(['', '', '', '', '', '', 'Insumos:', $subtotalInsumos], 'total');
         
-        if ($order['total_estimated'] != $subtotalInsumos && $order['total_estimated'] > 0) {
-            $xlsx->addRow(['', '', '', '', '', '', 'TOTAL:', $order['total_estimated']], 'total');
+        $xlsxTotal = ($approvedSupplier && $approvedSupplier['subtotal_final'] > 0) ? $approvedSupplier['subtotal_final'] : $order['total_estimated'];
+        if ($xlsxTotal != $subtotalInsumos && $xlsxTotal > 0) {
+            $xlsx->addRow(['', '', '', '', '', '', 'TOTAL:', $xlsxTotal], 'total');
         }
 
         // Financeiros do fornecedor aprovado

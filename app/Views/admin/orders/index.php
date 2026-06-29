@@ -75,7 +75,8 @@
                         <td><?= htmlspecialchars($order['supplier_name'] ?? 'N/A') ?></td>
                         <td><span class="badge bg-<?= $label[1] ?>"><?= $label[0] ?></span></td>
                         <td>
-                            <?= $order['total_estimated'] > 0 ? '<strong>R$ ' . number_format($order['total_estimated'], 2, ',', '.') . '</strong>' : '<span class="text-muted">-</span>' ?>
+                            <?php $orderTotal = $order['display_total'] ?? $order['total_estimated']; ?>
+                            <?= $orderTotal > 0 ? '<strong>R$ ' . number_format($orderTotal, 2, ',', '.') . '</strong>' : '<span class="text-muted">-</span>' ?>
                         </td>
                         <td><?= htmlspecialchars($order['created_by_name'] ?? '-') ?></td>
                         <td><small class="text-muted"><?= date('d/m/Y', strtotime($order['created_at'])) ?></small></td>
@@ -114,8 +115,9 @@
                 </div>
                 <div class="d-flex justify-content-between align-items-center mt-1">
                     <span class="text-muted small"><?= htmlspecialchars($order['supplier_name'] ?? 'Sem fornecedor') ?></span>
-                    <?php if ($order['total_estimated'] > 0): ?>
-                    <strong class="text-success small">R$ <?= number_format($order['total_estimated'], 2, ',', '.') ?></strong>
+                    <?php $orderTotal = $order['display_total'] ?? $order['total_estimated']; ?>
+                    <?php if ($orderTotal > 0): ?>
+                    <strong class="text-success small">R$ <?= number_format($orderTotal, 2, ',', '.') ?></strong>
                     <?php endif; ?>
                 </div>
                 <div class="d-flex justify-content-between mt-1">

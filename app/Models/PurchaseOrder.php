@@ -53,7 +53,11 @@ class PurchaseOrder extends Model
     public static function allWithSupplier(string $orderBy = 'po.created_at DESC'): array
     {
         return Database::fetchAll(
-            "SELECT po.*, s.name as supplier_name 
+            "SELECT po.*, s.name as supplier_name,
+             COALESCE(
+                (SELECT pos.subtotal_final FROM purchase_order_suppliers pos WHERE pos.order_id = po.id AND pos.approved = 1 LIMIT 1),
+                po.total_estimated
+             ) as display_total
              FROM purchase_orders po
              LEFT JOIN suppliers s ON po.supplier_id = s.id
              ORDER BY {$orderBy}"
