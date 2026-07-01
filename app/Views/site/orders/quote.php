@@ -1302,11 +1302,11 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
         
         html += `<tr id="svc-mat-${sid}-${idx}">`;
         html += `<td><input type="checkbox" class="svc-mat-check" data-sid="${sid}" data-idx="${idx}" checked></td>`;
-        html += `<td><input type="text" class="form-control form-control-sm p-0 border-0 bg-transparent" value="${escHtml(m.name || '')}" id="svc-name-${sid}-${idx}" style="font-size:0.75rem;"></td>`;
-        html += `<td><input type="text" class="form-control form-control-sm p-0 border-0 bg-transparent" value="${escHtml(m.unit || '')}" id="svc-unit-${sid}-${idx}" style="width:50px;font-size:0.75rem;"></td>`;
-        html += `<td><input type="number" class="form-control form-control-sm p-0 border-0 bg-transparent" value="${m.quantity || 1}" id="svc-qty-${sid}-${idx}" style="width:55px;font-size:0.75rem;" step="0.001"></td>`;
-        html += `<td><input type="text" class="form-control form-control-sm p-0 border-0 bg-transparent" value="${unitPrice}" id="svc-uprice-${sid}-${idx}" style="width:75px;font-size:0.75rem;"></td>`;
-        html += `<td><input type="text" class="form-control form-control-sm p-0 border-0 bg-transparent" value="${totalPrice}" id="svc-tprice-${sid}-${idx}" style="width:80px;font-size:0.75rem;"></td>`;
+        html += `<td><input type="text" class="form-control form-control-sm p-1 bg-white" value="${escHtml(m.name || '')}" id="svc-name-${sid}-${idx}" style="font-size:0.75rem;"></td>`;
+        html += `<td><input type="text" class="form-control form-control-sm p-1 bg-white" value="${escHtml(m.unit || '')}" id="svc-unit-${sid}-${idx}" style="width:50px;font-size:0.75rem;"></td>`;
+        html += `<td><input type="number" class="form-control form-control-sm p-1 bg-white" value="${m.quantity || 1}" id="svc-qty-${sid}-${idx}" style="width:55px;font-size:0.75rem;" step="0.001"></td>`;
+        html += `<td><input type="text" class="form-control form-control-sm p-1 bg-white" value="${unitPrice}" id="svc-uprice-${sid}-${idx}" style="width:75px;font-size:0.75rem;" inputmode="decimal"></td>`;
+        html += `<td><input type="text" class="form-control form-control-sm p-1 bg-white" value="${totalPrice}" id="svc-tprice-${sid}-${idx}" style="width:80px;font-size:0.75rem;" inputmode="decimal"></td>`;
         html += `<td class="text-nowrap"><button type="button" class="btn btn-sm btn-outline-success p-0 px-1" onclick="registerServiceMaterial('${sid}', ${idx})" title="Cadastrar"><i class="bi bi-plus-circle"></i></button> <button type="button" class="btn btn-sm btn-outline-danger p-0 px-1" onclick="removeServiceMaterial('${sid}', ${idx})" title="Remover"><i class="bi bi-x"></i></button></td>`;
         html += `</tr>`;
     });
@@ -1322,7 +1322,7 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
         html += `<div class="d-flex justify-content-between align-items-start mb-1">`;
         html += `<div class="d-flex align-items-center gap-2 flex-grow-1 min-width-0">`;
         html += `<input type="checkbox" class="svc-mat-check-m" data-sid="${sid}" data-idx="${idx}" checked>`;
-        html += `<input type="text" class="form-control form-control-sm border-0 p-0 fw-bold" value="${escHtml(m.name || '')}" id="svc-name-m-${sid}-${idx}" style="font-size:0.8rem;">`;
+        html += `<input type="text" class="form-control form-control-sm border-0 p-0 fw-bold" value="${escHtml(m.name || '')}" id="svc-name-m-${sid}-${idx}" style="font-size:0.8rem;" placeholder="Nome do material">`;
         html += `</div>`;
         html += `<div class="d-flex gap-1 flex-shrink-0 ms-1">`;
         html += `<button type="button" class="btn btn-sm btn-outline-success p-0 px-1" onclick="registerServiceMaterial('${sid}', ${idx})" title="Cadastrar"><i class="bi bi-plus-circle"></i></button>`;
@@ -1330,25 +1330,28 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
         html += `</div>`;
         html += `</div>`;
         html += `<div class="d-flex flex-wrap gap-2 align-items-center" style="font-size:0.75rem;">`;
-        html += `<div><span class="text-muted">Unid:</span> <input type="text" class="form-control form-control-sm d-inline-block border-0 p-0 bg-transparent" value="${escHtml(m.unit || '')}" id="svc-unit-m-${sid}-${idx}" style="width:40px;font-size:0.75rem;"></div>`;
-        html += `<div><span class="text-muted">Qtd:</span> <input type="number" class="form-control form-control-sm d-inline-block border-0 p-0 bg-transparent" value="${m.quantity || 1}" id="svc-qty-m-${sid}-${idx}" style="width:45px;font-size:0.75rem;" step="0.001"></div>`;
-        html += `<div><span class="text-muted">Unit:</span> <input type="text" class="form-control form-control-sm d-inline-block border-0 p-0 bg-transparent" value="${unitPrice}" id="svc-uprice-m-${sid}-${idx}" style="width:65px;font-size:0.75rem;" inputmode="decimal"></div>`;
-        html += `<div class="fw-bold"><span class="text-muted">Total:</span> <input type="text" class="form-control form-control-sm d-inline-block border-0 p-0 bg-transparent fw-bold" value="${totalPrice}" id="svc-tprice-m-${sid}-${idx}" style="width:70px;font-size:0.75rem;" inputmode="decimal"></div>`;
+        html += `<div><span class="text-muted">Unid:</span> <input type="text" class="form-control form-control-sm d-inline-block p-0 bg-transparent" value="${escHtml(m.unit || '')}" id="svc-unit-m-${sid}-${idx}" style="width:40px;font-size:0.75rem;border-bottom:1px dashed #ccc !important;border-top:0;border-left:0;border-right:0;border-radius:0;"></div>`;
+        html += `<div><span class="text-muted">Qtd:</span> <input type="number" class="form-control form-control-sm d-inline-block p-0 bg-transparent" value="${m.quantity || 1}" id="svc-qty-m-${sid}-${idx}" style="width:45px;font-size:0.75rem;border-bottom:1px dashed #ccc !important;border-top:0;border-left:0;border-right:0;border-radius:0;" step="0.001"></div>`;
+        html += `<div><span class="text-muted">Unit:</span> <input type="text" class="form-control form-control-sm d-inline-block p-0 bg-transparent" value="${unitPrice}" id="svc-uprice-m-${sid}-${idx}" style="width:65px;font-size:0.75rem;border-bottom:1px dashed #ccc !important;border-top:0;border-left:0;border-right:0;border-radius:0;" inputmode="decimal"></div>`;
+        html += `<div class="fw-bold"><span class="text-muted">Total:</span> <input type="text" class="form-control form-control-sm d-inline-block p-0 bg-transparent fw-bold" value="${totalPrice}" id="svc-tprice-m-${sid}-${idx}" style="width:70px;font-size:0.75rem;border-bottom:1px dashed #ccc !important;border-top:0;border-left:0;border-right:0;border-radius:0;" inputmode="decimal"></div>`;
         html += `</div></div>`;
     });
     html += `</div>`;
 
-    // Totais (se veio)
-    if (totals) {
-        html += `<div class="p-2 border-top bg-light small d-flex flex-wrap gap-2">`;
-        if (totals.subtotal) html += `<span>Subtotal: <strong>R$ ${parseFloat(totals.subtotal).toFixed(2).replace('.', ',')}</strong></span>`;
-        if (totals.discount) html += `<span>Desc: <strong>R$ ${parseFloat(totals.discount).toFixed(2).replace('.', ',')}</strong></span>`;
-        if (totals.freight) html += `<span>Frete: <strong>R$ ${parseFloat(totals.freight).toFixed(2).replace('.', ',')}</strong></span>`;
-        if (totals.ipi) html += `<span>IPI: <strong>R$ ${parseFloat(totals.ipi).toFixed(2).replace('.', ',')}</strong></span>`;
-        if (totals.icms_st) html += `<span>ST: <strong>R$ ${parseFloat(totals.icms_st).toFixed(2).replace('.', ',')}</strong></span>`;
-        if (totals.grand_total) html += `<span class="fw-bold text-success">Total: R$ ${parseFloat(totals.grand_total).toFixed(2).replace('.', ',')}</span>`;
-        html += `</div>`;
-    }
+    // Totais - calcular a partir dos itens (mais confiável que os totals da IA)
+    let calcSubtotal = 0;
+    materials.forEach(m => { calcSubtotal += parseFloat(m.total_price) || 0; });
+    
+    html += `<div class="p-2 border-top bg-light small d-flex flex-wrap gap-2" id="svc-totals-${sid}">`;
+    html += `<span>Subtotal: <strong>R$ ${calcSubtotal.toFixed(2).replace('.', ',')}</strong></span>`;
+    if (totals && totals.discount) html += `<span>Desc: <strong>R$ ${parseFloat(totals.discount).toFixed(2).replace('.', ',')}</strong></span>`;
+    if (totals && totals.freight) html += `<span>Frete: <strong>R$ ${parseFloat(totals.freight).toFixed(2).replace('.', ',')}</strong></span>`;
+    if (totals && totals.ipi) html += `<span>IPI: <strong>R$ ${parseFloat(totals.ipi).toFixed(2).replace('.', ',')}</strong></span>`;
+    if (totals && totals.icms_st) html += `<span>ST: <strong>R$ ${parseFloat(totals.icms_st).toFixed(2).replace('.', ',')}</strong></span>`;
+    // Total geral = subtotal dos itens + extras
+    let calcTotal = calcSubtotal + (totals ? ((parseFloat(totals.freight) || 0) + (parseFloat(totals.ipi) || 0) + (parseFloat(totals.icms_st) || 0) - (parseFloat(totals.discount) || 0)) : 0);
+    html += `<span class="fw-bold text-success">Total: R$ ${calcTotal.toFixed(2).replace('.', ',')}</span>`;
+    html += `</div>`;
 
     html += `<div class="p-2 border-top d-flex flex-wrap gap-2 justify-content-end">`;
     html += `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="showManualServiceMaterial('${sid}', ${pdfId || 0})"><i class="bi bi-plus"></i> <span class="d-none d-sm-inline">Adicionar</span> manual</button>`;
@@ -1613,6 +1616,22 @@ async function addManualServiceMaterial(sid, pdfId) {
             document.getElementById(`manual-uprice-${sid}`).value = '';
             document.getElementById(`manual-mat-id-${sid}`).value = '';
             
+            // Adicionar item visualmente na tabela/lista
+            const qtyNum = parseFloat(qty) || 1;
+            const upFmt = unitPriceNum ? unitPriceNum.toFixed(2).replace('.', ',') : '-';
+            const tpFmt = totalPriceNum ? totalPriceNum.toFixed(2).replace('.', ',') : '-';
+            
+            // Tentar adicionar na tabela desktop
+            const desktopTable = document.querySelector(`#serviceMaterialsList-${sid} table tbody, #serviceMaterialsListMap-${sid} table tbody`);
+            if (desktopTable) {
+                const newIdx = desktopTable.querySelectorAll('tr').length;
+                const tr = document.createElement('tr');
+                tr.id = `svc-mat-${sid}-manual-${newIdx}`;
+                tr.innerHTML = `<td><input type="checkbox" checked disabled></td><td>${name}</td><td>${unit || 'UN'}</td><td>${qtyNum}</td><td>${upFmt}</td><td>${tpFmt}</td><td><span class="badge bg-success"><i class="bi bi-check"></i></span></td>`;
+                desktopTable.appendChild(tr);
+            }
+            
+            // Feedback
             const form = document.getElementById('manual-svc-form-' + sid);
             if (form) {
                 const msg = document.createElement('div');
