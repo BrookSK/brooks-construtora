@@ -1347,15 +1347,7 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
     });
     html += `</div>`;
 
-    // Totais - calcular a partir dos itens (mais confiável que os totals da IA)
-    let calcSubtotal = 0;
-    materials.forEach(m => { calcSubtotal += parseFloat(m.total_price) || 0; });
-    
-    html += `<div class="p-2 border-top bg-light small d-flex flex-wrap gap-2" id="svc-totals-${sid}">`;
-    html += `<span>Subtotal: <strong>R$ ${calcSubtotal.toFixed(2).replace('.', ',')}</strong></span>`;
-    html += `<span class="fw-bold text-success">Total: R$ ${calcSubtotal.toFixed(2).replace('.', ',')}</span>`;
-    html += `</div>`;
-
+    // Totais removidos - não exibir subtotal/total calculado
     html += `<div class="p-2 border-top d-flex flex-wrap gap-2 justify-content-end">`;
     html += `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="showManualServiceMaterial('${sid}', ${pdfId || 0})"><i class="bi bi-plus"></i> <span class="d-none d-sm-inline">Adicionar</span> manual</button>`;
     html += `<button type="button" class="btn btn-sm btn-success" onclick="saveServiceMaterials('${sid}', ${pdfId || 0})"><i class="bi bi-check-all"></i> Salvar <span class="d-none d-sm-inline">Materiais</span></button>`;
