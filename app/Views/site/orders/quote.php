@@ -49,6 +49,9 @@
             .price-mode-wrap .btn-group { width: 100%; }
             .price-mode-wrap span { margin-bottom: 4px; }
             .history-hint { font-size: 0.65rem; }
+            /* Seção de serviço - PDF e materiais */
+            .svc-pdf-section .form-control-sm { font-size: 14px !important; }
+            .svc-pdf-section .btn-sm { font-size: 0.8rem; padding: 0.3rem 0.5rem; }
         }
     </style>
 </head>
@@ -75,7 +78,12 @@
                         <h5 class="mb-1">Pedido <strong><?= htmlspecialchars($order['code']) ?></strong></h5>
                         <p class="mb-0 text-muted small">Solicitado por: <?= htmlspecialchars($order['created_by_name']) ?> em <?= date('d/m/Y', strtotime($order['created_at'])) ?></p>
                     </div>
-                    <span class="badge bg-warning text-dark p-2">Aguardando Cotação</span>
+                    <div class="d-flex gap-2 align-items-center">
+                        <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
+                        <span class="badge bg-success p-2"><i class="bi bi-wrench"></i> Serviço</span>
+                        <?php endif; ?>
+                        <span class="badge bg-warning text-dark p-2">Aguardando Cotação</span>
+                    </div>
                 </div>
                 <?php if (!empty($order['description'])): ?>
                 <div class="mt-2 p-2 bg-white rounded small">
@@ -143,6 +151,11 @@
 
                     <!-- Fornecedores para cotação -->
                     <h6 class="mb-3"><i class="bi bi-building"></i> Fornecedores</h6>
+                    <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
+                    <div class="alert alert-success small py-2 mb-3">
+                        <i class="bi bi-wrench"></i> <strong>Pedido de Serviço:</strong> Para cada fornecedor, você pode fazer upload de um PDF com a lista de materiais necessários para o serviço. A IA irá identificar os itens automaticamente.
+                    </div>
+                    <?php endif; ?>
                     <p class="text-muted small mb-2">Adicione os fornecedores e informe os valores de cada um.</p>
                     
                     <!-- Toggle Unitário / Total -->
@@ -241,6 +254,8 @@
     <script>
     const items = <?= json_encode($items) ?>;
     const priceHistory = <?= json_encode($priceHistory ?? []) ?>;
+    const orderType = '<?= $order['order_type'] ?? 'material' ?>';
+    const orderId = <?= (int)$order['id'] ?>;
     let supplierCount = 0;
 
     // ─── Helpers de moeda BRL ────────────────────────────────────────────────
@@ -524,6 +539,21 @@
                 </div>
             </div>
 
+            ${orderType === 'service' ? `
+            <!-- Upload PDF de Materiais (Serviço) -->
+            <div class="mb-3 p-2 border rounded bg-warning bg-opacity-10 svc-pdf-section">
+                <h6 class="small fw-bold mb-2"><i class="bi bi-file-earmark-pdf text-danger"></i> PDF de Materiais do Prestador</h6>
+                <p class="text-muted small mb-2">Faça upload do PDF com a lista de materiais do prestador de serviço.</p>
+                <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
+                    <input type="file" class="form-control form-control-sm flex-grow-1" id="servicePdf-${sid}" accept=".pdf,.jpg,.jpeg,.png,.webp" style="min-width:0;">
+                    <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0" onclick="parseServicePdf('${sid}')">
+                        <i class="bi bi-magic"></i> Analisar
+                    </button>
+                </div>
+                <div id="servicePdfStatus-${sid}" style="display:none;"></div>
+                <div id="serviceMaterialsList-${sid}" style="display:none;"></div>
+            </div>
+            ` : ''}
             <!-- Preços por item -->
             ${itemsHtml}
             
@@ -1130,6 +1160,337 @@ function escHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ─── Serviço: Upload e análise de PDF do fornecedor ─────────────────────────
+async function parseServicePdf(sid) {
+    const fileInput = document.getElementById('servicePdf-' + sid);
+    const statusEl = document.getElementById('servicePdfStatus-' + sid);
+    const materialsEl = document.getElementById('serviceMaterialsList-' + sid);
+    
+    if (!fileInput || !fileInput.files.length) {
+        alert('Selecione um arquivo PDF primeiro.');
+        return;
+    }
+
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<div class="alert alert-info small py-2 mb-0"><span class="spinner-border spinner-border-sm me-1"></span> Fazendo upload e analisando PDF com IA... pode levar até 30s.</div>';
+    materialsEl.style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('pdf', fileInput.files[0]);
+    formData.append('order_id', orderId);
+    formData.append('supplier_id', sid);
+    formData.append('uploaded_by', document.querySelector('[name="quoted_by_name"]')?.value || 'Cotador');
+
+    try {
+        const resp = await fetch('/pedido/cotacao/parse-service-pdf', { method: 'POST', body: formData });
+        const data = await resp.json();
+
+        if (data.success) {
+            let html = '';
+            
+            // Mostrar link do PDF salvo
+            if (data.file_path) {
+                html += `<div class="alert alert-success small py-2 mb-2"><i class="bi bi-check-circle"></i> PDF salvo com sucesso. <a href="${data.file_path}" target="_blank" class="fw-bold">Download</a></div>`;
+            }
+
+            if (data.warning) {
+                html += `<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> ${data.warning}</div>`;
+            }
+
+            if (data.materials && data.materials.length > 0) {
+                html += renderServiceMaterials(sid, data.materials, data.totals, data.pdf_id);
+            } else {
+                html += `<div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="showManualServiceMaterial('${sid}', ${data.pdf_id || 0})"><i class="bi bi-plus"></i> Adicionar material manualmente</button></div>`;
+                html += `<div id="manualServiceMat-${sid}" style="display:none;"></div>`;
+            }
+
+            statusEl.innerHTML = '';
+            materialsEl.style.display = 'block';
+            materialsEl.innerHTML = html;
+        } else {
+            statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ${data.error || 'Erro ao processar.'}</div>`;
+        }
+    } catch (e) {
+        statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> Erro de conexão.</div>`;
+    }
+
+    fileInput.value = '';
+}
+
+function renderServiceMaterials(sid, materials, totals, pdfId) {
+    let html = `<div class="card border-success mt-2"><div class="card-header bg-success bg-opacity-10 py-2 d-flex justify-content-between align-items-center">`;
+    html += `<strong class="small"><i class="bi bi-list-check"></i> Materiais identificados (${materials.length})</strong>`;
+    html += `<label class="small mb-0"><input type="checkbox" checked onchange="toggleAllServiceMats(this, '${sid}')" class="me-1">Todos</label>`;
+    html += `</div><div class="card-body p-0">`;
+    
+    // Desktop: Tabela
+    html += `<div class="d-none d-md-block"><div class="table-responsive"><table class="table table-sm mb-0" style="font-size:0.75rem;">`;
+    html += `<thead><tr><th style="width:30px;"></th><th>Material</th><th>Unid.</th><th>Qtd</th><th>Unit.</th><th>Total</th><th style="width:30px;"></th></tr></thead><tbody>`;
+
+    materials.forEach((m, idx) => {
+        const unitPrice = m.unit_price ? parseFloat(m.unit_price).toFixed(2).replace('.', ',') : '-';
+        const totalPrice = m.total_price ? parseFloat(m.total_price).toFixed(2).replace('.', ',') : '-';
+        
+        html += `<tr id="svc-mat-${sid}-${idx}">`;
+        html += `<td><input type="checkbox" class="svc-mat-check" data-sid="${sid}" data-idx="${idx}" checked></td>`;
+        html += `<td><input type="text" class="form-control form-control-sm p-0 border-0 bg-transparent" value="${escHtml(m.name || '')}" id="svc-name-${sid}-${idx}" style="font-size:0.75rem;"></td>`;
+        html += `<td><input type="text" class="form-control form-control-sm p-0 border-0 bg-transparent" value="${escHtml(m.unit || '')}" id="svc-unit-${sid}-${idx}" style="width:50px;font-size:0.75rem;"></td>`;
+        html += `<td><input type="number" class="form-control form-control-sm p-0 border-0 bg-transparent" value="${m.quantity || 1}" id="svc-qty-${sid}-${idx}" style="width:55px;font-size:0.75rem;" step="0.001"></td>`;
+        html += `<td><input type="text" class="form-control form-control-sm p-0 border-0 bg-transparent" value="${unitPrice}" id="svc-uprice-${sid}-${idx}" style="width:75px;font-size:0.75rem;"></td>`;
+        html += `<td><input type="text" class="form-control form-control-sm p-0 border-0 bg-transparent" value="${totalPrice}" id="svc-tprice-${sid}-${idx}" style="width:80px;font-size:0.75rem;"></td>`;
+        html += `<td><button type="button" class="btn btn-sm btn-outline-success p-0 px-1" onclick="registerServiceMaterial('${sid}', ${idx})" title="Cadastrar material"><i class="bi bi-plus-circle"></i></button></td>`;
+        html += `</tr>`;
+    });
+    html += `</tbody></table></div></div>`;
+
+    // Mobile: Cards
+    html += `<div class="d-md-none p-2">`;
+    materials.forEach((m, idx) => {
+        const unitPrice = m.unit_price ? parseFloat(m.unit_price).toFixed(2).replace('.', ',') : '-';
+        const totalPrice = m.total_price ? parseFloat(m.total_price).toFixed(2).replace('.', ',') : '-';
+        
+        html += `<div class="border rounded p-2 mb-2 bg-white" id="svc-mat-m-${sid}-${idx}">`;
+        html += `<div class="d-flex justify-content-between align-items-start mb-1">`;
+        html += `<div class="d-flex align-items-center gap-2 flex-grow-1 min-width-0">`;
+        html += `<input type="checkbox" class="svc-mat-check-m" data-sid="${sid}" data-idx="${idx}" checked>`;
+        html += `<input type="text" class="form-control form-control-sm border-0 p-0 fw-bold" value="${escHtml(m.name || '')}" id="svc-name-m-${sid}-${idx}" style="font-size:0.8rem;">`;
+        html += `</div>`;
+        html += `<button type="button" class="btn btn-sm btn-outline-success p-0 px-1 flex-shrink-0 ms-1" onclick="registerServiceMaterial('${sid}', ${idx})" title="Cadastrar"><i class="bi bi-plus-circle"></i></button>`;
+        html += `</div>`;
+        html += `<div class="d-flex flex-wrap gap-2 align-items-center" style="font-size:0.75rem;">`;
+        html += `<div><span class="text-muted">Unid:</span> <input type="text" class="form-control form-control-sm d-inline-block border-0 p-0 bg-transparent" value="${escHtml(m.unit || '')}" id="svc-unit-m-${sid}-${idx}" style="width:40px;font-size:0.75rem;"></div>`;
+        html += `<div><span class="text-muted">Qtd:</span> <input type="number" class="form-control form-control-sm d-inline-block border-0 p-0 bg-transparent" value="${m.quantity || 1}" id="svc-qty-m-${sid}-${idx}" style="width:45px;font-size:0.75rem;" step="0.001"></div>`;
+        html += `<div><span class="text-muted">Unit:</span> <input type="text" class="form-control form-control-sm d-inline-block border-0 p-0 bg-transparent" value="${unitPrice}" id="svc-uprice-m-${sid}-${idx}" style="width:65px;font-size:0.75rem;" inputmode="decimal"></div>`;
+        html += `<div class="fw-bold"><span class="text-muted">Total:</span> <input type="text" class="form-control form-control-sm d-inline-block border-0 p-0 bg-transparent fw-bold" value="${totalPrice}" id="svc-tprice-m-${sid}-${idx}" style="width:70px;font-size:0.75rem;" inputmode="decimal"></div>`;
+        html += `</div></div>`;
+    });
+    html += `</div>`;
+
+    // Totais (se veio)
+    if (totals) {
+        html += `<div class="p-2 border-top bg-light small d-flex flex-wrap gap-2">`;
+        if (totals.subtotal) html += `<span>Subtotal: <strong>R$ ${parseFloat(totals.subtotal).toFixed(2).replace('.', ',')}</strong></span>`;
+        if (totals.discount) html += `<span>Desc: <strong>R$ ${parseFloat(totals.discount).toFixed(2).replace('.', ',')}</strong></span>`;
+        if (totals.freight) html += `<span>Frete: <strong>R$ ${parseFloat(totals.freight).toFixed(2).replace('.', ',')}</strong></span>`;
+        if (totals.ipi) html += `<span>IPI: <strong>R$ ${parseFloat(totals.ipi).toFixed(2).replace('.', ',')}</strong></span>`;
+        if (totals.icms_st) html += `<span>ST: <strong>R$ ${parseFloat(totals.icms_st).toFixed(2).replace('.', ',')}</strong></span>`;
+        if (totals.grand_total) html += `<span class="fw-bold text-success">Total: R$ ${parseFloat(totals.grand_total).toFixed(2).replace('.', ',')}</span>`;
+        html += `</div>`;
+    }
+
+    html += `<div class="p-2 border-top d-flex flex-wrap gap-2 justify-content-end">`;
+    html += `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="showManualServiceMaterial('${sid}', ${pdfId || 0})"><i class="bi bi-plus"></i> <span class="d-none d-sm-inline">Adicionar</span> manual</button>`;
+    html += `<button type="button" class="btn btn-sm btn-success" onclick="saveServiceMaterials('${sid}', ${pdfId || 0})"><i class="bi bi-check-all"></i> Salvar <span class="d-none d-sm-inline">Materiais</span></button>`;
+    html += `</div></div>`;
+
+    // Armazenar dados para salvar depois
+    html += `<script>window['svcMats_${sid}'] = ${JSON.stringify(materials)};<\/script>`;
+
+    return html;
+}
+
+function toggleAllServiceMats(checkbox, sid) {
+    document.querySelectorAll(`.svc-mat-check[data-sid="${sid}"], .svc-mat-check-m[data-sid="${sid}"]`).forEach(cb => cb.checked = checkbox.checked);
+}
+
+async function saveServiceMaterials(sid, pdfId) {
+    // Pegar de desktop OU mobile (quem estiver visível)
+    let checkboxes = document.querySelectorAll(`.svc-mat-check[data-sid="${sid}"]:checked`);
+    if (checkboxes.length === 0) {
+        checkboxes = document.querySelectorAll(`.svc-mat-check-m[data-sid="${sid}"]:checked`);
+    }
+    const rawMats = window['svcMats_' + sid] || [];
+    const materials = [];
+
+    checkboxes.forEach(cb => {
+        const idx = parseInt(cb.dataset.idx);
+        const raw = rawMats[idx] || {};
+        
+        // Ler valores editados — tentar desktop primeiro, depois mobile
+        const getName = () => document.getElementById(`svc-name-${sid}-${idx}`)?.value || document.getElementById(`svc-name-m-${sid}-${idx}`)?.value || raw.name;
+        const getUnit = () => document.getElementById(`svc-unit-${sid}-${idx}`)?.value || document.getElementById(`svc-unit-m-${sid}-${idx}`)?.value || raw.unit;
+        const getQty = () => document.getElementById(`svc-qty-${sid}-${idx}`)?.value || document.getElementById(`svc-qty-m-${sid}-${idx}`)?.value || raw.quantity;
+        const getUprice = () => document.getElementById(`svc-uprice-${sid}-${idx}`)?.value || document.getElementById(`svc-uprice-m-${sid}-${idx}`)?.value || raw.unit_price;
+        const getTprice = () => document.getElementById(`svc-tprice-${sid}-${idx}`)?.value || document.getElementById(`svc-tprice-m-${sid}-${idx}`)?.value || raw.total_price;
+
+        materials.push({
+            name: getName(),
+            code: raw.code || null,
+            description: raw.description || null,
+            specification: raw.specification || null,
+            classification: raw.classification || null,
+            unit: getUnit(),
+            quantity: parseFloat(getQty()) || 1,
+            weight: raw.weight || null,
+            unit_price: parseBRL(getUprice()) || raw.unit_price || null,
+            total_price: parseBRL(getTprice()) || raw.total_price || null,
+            subtotal: raw.subtotal || null,
+            discount: raw.discount || null,
+            freight: raw.freight || null,
+            ipi: raw.ipi || null,
+            icms_st: raw.icms_st || null,
+            grand_total: raw.grand_total || null,
+            material_id: raw.material_id || null,
+        });
+    });
+
+    if (materials.length === 0) {
+        alert('Selecione pelo menos um material para salvar.');
+        return;
+    }
+
+    try {
+        const resp = await fetch('/pedido/cotacao/save-service-materials', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                order_id: orderId,
+                supplier_id: sid,
+                pdf_id: pdfId || 0,
+                materials: JSON.stringify(materials),
+            })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            const el = document.getElementById('serviceMaterialsList-' + sid);
+            const savedBadge = document.createElement('div');
+            savedBadge.className = 'alert alert-success small py-2 mt-2';
+            savedBadge.innerHTML = `<i class="bi bi-check-circle"></i> ${data.saved} materiais salvos com sucesso!`;
+            el.appendChild(savedBadge);
+        } else {
+            alert(data.error || 'Erro ao salvar materiais.');
+        }
+    } catch (e) {
+        alert('Erro de conexão ao salvar materiais.');
+    }
+}
+
+async function registerServiceMaterial(sid, idx) {
+    const name = document.getElementById(`svc-name-${sid}-${idx}`)?.value || document.getElementById(`svc-name-m-${sid}-${idx}`)?.value;
+    
+    if (!name) { alert('Nome é obrigatório'); return; }
+
+    try {
+        const resp = await fetch('/admin/materials/quick-store', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ name: name, specification: '', classification: '', unit_id: '', category_id: '' })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            // Atualizar dados em memória
+            const rawMats = window['svcMats_' + sid] || [];
+            if (rawMats[idx]) rawMats[idx].material_id = data.material.id;
+            
+            // Marcar visualmente (desktop)
+            const row = document.getElementById(`svc-mat-${sid}-${idx}`);
+            if (row) {
+                const btn = row.querySelector('button');
+                if (btn) {
+                    btn.innerHTML = '<i class="bi bi-check text-white"></i>';
+                    btn.disabled = true;
+                    btn.classList.remove('btn-outline-success');
+                    btn.classList.add('btn-success');
+                }
+            }
+            // Marcar visualmente (mobile)
+            const card = document.getElementById(`svc-mat-m-${sid}-${idx}`);
+            if (card) {
+                const btn = card.querySelector('button');
+                if (btn) {
+                    btn.innerHTML = '<i class="bi bi-check text-white"></i>';
+                    btn.disabled = true;
+                    btn.classList.remove('btn-outline-success');
+                    btn.classList.add('btn-success');
+                }
+                card.classList.add('border-success');
+            }
+        } else {
+            alert(data.error || 'Erro ao cadastrar material.');
+        }
+    } catch (e) {
+        alert('Erro de conexão.');
+    }
+}
+
+function showManualServiceMaterial(sid, pdfId) {
+    const container = document.getElementById('manualServiceMat-' + sid) || document.getElementById('serviceMaterialsList-' + sid);
+    if (!container) return;
+
+    // Verificar se já tem o form de manual
+    if (document.getElementById('manual-svc-form-' + sid)) return;
+
+    const formHtml = `
+        <div id="manual-svc-form-${sid}" class="p-2 border rounded bg-light mt-2">
+            <h6 class="small fw-bold mb-2">Adicionar Material Manualmente</h6>
+            <div class="row g-2">
+                <div class="col-12"><input type="text" class="form-control form-control-sm" id="manual-name-${sid}" placeholder="Nome do material *"></div>
+                <div class="col-4"><input type="text" class="form-control form-control-sm" id="manual-unit-${sid}" placeholder="Unid."></div>
+                <div class="col-4"><input type="number" class="form-control form-control-sm" id="manual-qty-${sid}" placeholder="Qtd" value="1" step="0.01"></div>
+                <div class="col-4"><input type="text" class="form-control form-control-sm" id="manual-uprice-${sid}" placeholder="R$ unit." inputmode="decimal"></div>
+                <div class="col-12">
+                    <button type="button" class="btn btn-sm btn-success w-100" onclick="addManualServiceMaterial('${sid}', ${pdfId})"><i class="bi bi-plus"></i> Adicionar</button>
+                </div>
+            </div>
+        </div>`;
+
+    container.insertAdjacentHTML('beforeend', formHtml);
+    if (container.style.display === 'none') container.style.display = 'block';
+}
+
+async function addManualServiceMaterial(sid, pdfId) {
+    const name = document.getElementById(`manual-name-${sid}`)?.value?.trim();
+    const unit = document.getElementById(`manual-unit-${sid}`)?.value?.trim();
+    const qty = document.getElementById(`manual-qty-${sid}`)?.value || 1;
+    const uprice = document.getElementById(`manual-uprice-${sid}`)?.value;
+
+    if (!name) { alert('Nome é obrigatório'); return; }
+
+    const unitPriceNum = parseBRL(uprice) || 0;
+    const totalPriceNum = unitPriceNum * (parseFloat(qty) || 1);
+
+    const materials = [{
+        name: name,
+        unit: unit || 'UN',
+        quantity: parseFloat(qty) || 1,
+        unit_price: unitPriceNum || null,
+        total_price: totalPriceNum || null,
+    }];
+
+    try {
+        const resp = await fetch('/pedido/cotacao/save-service-materials', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                order_id: orderId,
+                supplier_id: sid,
+                pdf_id: pdfId || 0,
+                materials: JSON.stringify(materials),
+            })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            // Limpar form
+            document.getElementById(`manual-name-${sid}`).value = '';
+            document.getElementById(`manual-unit-${sid}`).value = '';
+            document.getElementById(`manual-qty-${sid}`).value = '1';
+            document.getElementById(`manual-uprice-${sid}`).value = '';
+            
+            // Feedback
+            const container = document.getElementById('serviceMaterialsList-' + sid);
+            const msg = document.createElement('div');
+            msg.className = 'alert alert-success small py-1 mt-1';
+            msg.innerHTML = `<i class="bi bi-check"></i> "${name}" adicionado!`;
+            container.appendChild(msg);
+            setTimeout(() => msg.remove(), 3000);
+        } else {
+            alert(data.error || 'Erro');
+        }
+    } catch (e) {
+        alert('Erro de conexão.');
+    }
 }
 </script>
 </body>

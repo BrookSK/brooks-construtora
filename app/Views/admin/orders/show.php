@@ -25,6 +25,9 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <div>
                     <h5 class="mb-0"><?= $statusInfo[0] ?></h5>
                     <small class="text-muted">Código: <strong><?= $order['code'] ?></strong></small>
+                    <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
+                    <span class="badge bg-success ms-2"><i class="bi bi-wrench"></i> Serviço</span>
+                    <?php endif; ?>
                     <?php if ($order['status'] === 'approved'): ?>
                         <?php
                         $totalPayments = count($payments ?? []);
@@ -301,6 +304,103 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <?php endforeach; ?>
             </div>
         </div>
+        <?php endif; ?>
+
+        <!-- PDFs e Materiais de Serviço -->
+        <?php if (($order['order_type'] ?? 'material') === 'service' && !empty($orderSuppliers)): ?>
+        <?php
+        $supplierPdfs = \App\Models\PurchaseOrderSupplierPdf::getByOrder($order['id']);
+        $supplierMaterials = \App\Models\PurchaseOrderSupplierMaterial::getByOrder($order['id']);
+        ?>
+        <?php if (!empty($supplierPdfs) || !empty($supplierMaterials)): ?>
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-file-earmark-pdf text-danger"></i> Materiais de Serviço (PDFs dos Fornecedores)</div>
+            <div class="card-body p-0">
+                <?php
+                // Agrupar por fornecedor
+                $pdfsBySupplier = [];
+                foreach ($supplierPdfs as $pdf) {
+                    $pdfsBySupplier[$pdf['supplier_id']][] = $pdf;
+                }
+                $matsBySupplier = [];
+                foreach ($supplierMaterials as $mat) {
+                    $matsBySupplier[$mat['supplier_id']][] = $mat;
+                }
+                $allSupplierIds = array_unique(array_merge(array_keys($pdfsBySupplier), array_keys($matsBySupplier)));
+                ?>
+                <?php foreach ($allSupplierIds as $supId): ?>
+                <div class="p-3 border-bottom">
+                    <h6 class="mb-2">
+                        <i class="bi bi-building"></i>
+                        <?php
+                        $supName = '-';
+                        foreach ($orderSuppliers as $os) {
+                            if ($os['supplier_id'] == $supId) { $supName = $os['supplier_name']; break; }
+                        }
+                        echo htmlspecialchars($supName);
+                        ?>
+                    </h6>
+
+                    <!-- PDFs -->
+                    <?php if (!empty($pdfsBySupplier[$supId])): ?>
+                    <div class="mb-2">
+                        <?php foreach ($pdfsBySupplier[$supId] as $pdf): ?>
+                        <a href="<?= htmlspecialchars($pdf['file_path']) ?>" target="_blank" class="btn btn-sm btn-outline-danger me-1 mb-1">
+                            <i class="bi bi-file-pdf"></i> <?= htmlspecialchars($pdf['original_name'] ?? 'PDF') ?>
+                        </a>
+                        <small class="text-muted">(<?= $pdf['uploaded_at'] ? date('d/m/Y H:i', strtotime($pdf['uploaded_at'])) : '' ?>)</small>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Materiais extraídos -->
+                    <?php if (!empty($matsBySupplier[$supId])): ?>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0" style="font-size:0.8rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Material</th>
+                                    <th>Unid.</th>
+                                    <th class="text-center">Qtd</th>
+                                    <th class="text-end">Unit.</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $subTotal = 0; ?>
+                                <?php foreach ($matsBySupplier[$supId] as $mat): ?>
+                                <tr>
+                                    <td>
+                                        <strong><?= htmlspecialchars($mat['material_name']) ?></strong>
+                                        <?php if ($mat['material_id']): ?>
+                                        <span class="badge bg-success bg-opacity-25 text-success ms-1" style="font-size:0.6rem;">Cadastrado</span>
+                                        <?php endif; ?>
+                                        <?php if ($mat['specification']): ?>
+                                        <small class="text-muted d-block"><?= htmlspecialchars($mat['specification']) ?></small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?= htmlspecialchars($mat['unit'] ?? '-') ?></td>
+                                    <td class="text-center"><?= $mat['quantity'] ? number_format($mat['quantity'], $mat['quantity'] == (int)$mat['quantity'] ? 0 : 3) : '-' ?></td>
+                                    <td class="text-end"><?= $mat['unit_price'] ? 'R$ ' . number_format($mat['unit_price'], 2, ',', '.') : '-' ?></td>
+                                    <td class="text-end fw-bold"><?= $mat['total_price'] ? 'R$ ' . number_format($mat['total_price'], 2, ',', '.') : '-' ?></td>
+                                </tr>
+                                <?php $subTotal += (float)($mat['total_price'] ?? 0); ?>
+                                <?php endforeach; ?>
+                                <?php if ($subTotal > 0): ?>
+                                <tr class="table-light">
+                                    <td colspan="4" class="text-end fw-bold">Total materiais:</td>
+                                    <td class="text-end fw-bold text-success">R$ <?= number_format($subTotal, 2, ',', '.') ?></td>
+                                </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
         <?php endif; ?>
 
         <!-- NF e Boleto -->

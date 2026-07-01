@@ -11,6 +11,8 @@ use App\Models\PurchaseOrderSupplier;
 use App\Models\PurchaseOrderItemPrice;
 use App\Models\PurchaseOrderDelivery;
 use App\Models\PurchaseOrderSpareItem;
+use App\Models\PurchaseOrderSupplierPdf;
+use App\Models\PurchaseOrderSupplierMaterial;
 use App\Models\PinUser;
 use App\Models\MaterialPriceHistory;
 use App\Models\Supplier;
@@ -1462,6 +1464,302 @@ class PurchaseOrderController extends Controller
         );
 
         $this->json(['deliveries' => $deliveries, 'history' => $history]);
+    }
+
+    /**
+     * Parse de PDF de fornecedor de serviço (rota pública para tela de cotação)
+     */
+    public function parseServicePdfPublic(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $orderId = (int) ($_POST['order_id'] ?? 0);
+        $supplierId = (int) ($_POST['supplier_id'] ?? 0);
+
+        if (!$orderId || !$supplierId) {
+            $this->json(['error' => 'Pedido e fornecedor são obrigatórios.'], 400);
+            return;
+        }
+
+        $order = PurchaseOrder::find($orderId);
+        if (!$order || $order['order_type'] !== 'service') {
+            $this->json(['error' => 'Pedido não encontrado ou não é do tipo serviço.'], 400);
+            return;
+        }
+
+        if (!isset($_FILES['pdf']) || $_FILES['pdf']['error'] !== UPLOAD_ERR_OK) {
+            $this->json(['error' => 'Erro no upload do arquivo.'], 400);
+            return;
+        }
+
+        $file = $_FILES['pdf'];
+        $allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+        
+        if (!in_array($file['type'], $allowedTypes)) {
+            $this->json(['error' => 'Tipo não permitido. Use PDF, JPG, PNG ou WEBP.'], 400);
+            return;
+        }
+
+        // 1. Salvar o PDF no servidor
+        $uploadDir = ROOT_PATH . '/public/uploads/orders/service_pdfs/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = "order_{$orderId}_supplier_{$supplierId}_" . time() . '.' . $ext;
+        $filePath = $uploadDir . $filename;
+        
+        if (!move_uploaded_file($file['tmp_name'], $filePath)) {
+            $this->json(['error' => 'Falha ao salvar o arquivo.'], 500);
+            return;
+        }
+
+        // 2. Registrar PDF no banco
+        $pdfId = PurchaseOrderSupplierPdf::create([
+            'order_id' => $orderId,
+            'supplier_id' => $supplierId,
+            'file_path' => '/uploads/orders/service_pdfs/' . $filename,
+            'original_name' => $file['name'],
+            'uploaded_by' => $_POST['uploaded_by'] ?? 'Cotador',
+            'uploaded_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        // 3. Analisar PDF com IA
+        try {
+            $openaiKey = Setting::get('openai_api_key', '');
+            $model = Setting::get('openai_model', 'gpt-4o');
+
+            if (empty($openaiKey)) {
+                $this->json(['success' => true, 'pdf_id' => $pdfId, 'file_path' => '/uploads/orders/service_pdfs/' . $filename, 'materials' => [], 'warning' => 'Chave API não configurada.']);
+                return;
+            }
+
+            $result = null;
+            if ($file['type'] === 'application/pdf' || $ext === 'pdf') {
+                $result = $this->parseServicePdfViaApi($filePath, $file['name'], $openaiKey, $model);
+            } else {
+                $result = $this->parseServiceImageViaApi($filePath, $file['type'], $openaiKey, $model);
+            }
+
+            if ($result && isset($result['success']) && !empty($result['materials'])) {
+                $this->json([
+                    'success' => true,
+                    'pdf_id' => $pdfId,
+                    'file_path' => '/uploads/orders/service_pdfs/' . $filename,
+                    'materials' => $result['materials'],
+                    'totals' => $result['totals'] ?? null,
+                ]);
+            } else {
+                $this->json([
+                    'success' => true,
+                    'pdf_id' => $pdfId,
+                    'file_path' => '/uploads/orders/service_pdfs/' . $filename,
+                    'materials' => [],
+                    'warning' => $result['error'] ?? 'Não foi possível extrair materiais.',
+                ]);
+            }
+        } catch (\Exception $e) {
+            $this->json([
+                'success' => true,
+                'pdf_id' => $pdfId,
+                'file_path' => '/uploads/orders/service_pdfs/' . $filename,
+                'materials' => [],
+                'warning' => 'Erro: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Salvar materiais do PDF do fornecedor de serviço (rota pública)
+     */
+    public function saveServiceMaterialsPublic(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $orderId = (int) ($_POST['order_id'] ?? 0);
+        $supplierId = (int) ($_POST['supplier_id'] ?? 0);
+        $pdfId = (int) ($_POST['pdf_id'] ?? 0);
+        $materialsRaw = $_POST['materials'] ?? '[]';
+        $materials = json_decode($materialsRaw, true);
+
+        if (!$orderId || !$supplierId) {
+            $this->json(['error' => 'Dados obrigatórios faltando.'], 400);
+            return;
+        }
+
+        if (empty($materials) || !is_array($materials)) {
+            $this->json(['error' => 'Nenhum material informado.'], 400);
+            return;
+        }
+
+        $saved = 0;
+        foreach ($materials as $mat) {
+            if (empty($mat['name'])) continue;
+
+            PurchaseOrderSupplierMaterial::create([
+                'order_id' => $orderId,
+                'supplier_id' => $supplierId,
+                'pdf_id' => $pdfId ?: null,
+                'material_id' => !empty($mat['material_id']) ? (int) $mat['material_id'] : null,
+                'material_name' => $mat['name'],
+                'description' => $mat['description'] ?? null,
+                'specification' => $mat['specification'] ?? null,
+                'classification' => $mat['classification'] ?? null,
+                'unit' => $mat['unit'] ?? null,
+                'quantity' => !empty($mat['quantity']) ? (float) $mat['quantity'] : 1,
+                'weight' => !empty($mat['weight']) ? (float) $mat['weight'] : null,
+                'unit_price' => !empty($mat['unit_price']) ? (float) $mat['unit_price'] : null,
+                'total_price' => !empty($mat['total_price']) ? (float) $mat['total_price'] : null,
+                'subtotal' => !empty($mat['subtotal']) ? (float) $mat['subtotal'] : null,
+                'discount' => !empty($mat['discount']) ? (float) $mat['discount'] : null,
+                'freight' => !empty($mat['freight']) ? (float) $mat['freight'] : null,
+                'ipi' => !empty($mat['ipi']) ? (float) $mat['ipi'] : null,
+                'icms_st' => !empty($mat['icms_st']) ? (float) $mat['icms_st'] : null,
+                'grand_total' => !empty($mat['grand_total']) ? (float) $mat['grand_total'] : null,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+            $saved++;
+        }
+
+        $this->json(['success' => true, 'saved' => $saved]);
+    }
+
+    /**
+     * Analisar PDF de serviço via OpenAI Responses API (privado)
+     */
+    private function parseServicePdfViaApi(string $filePath, string $fileName, string $apiKey, string $model): ?array
+    {
+        $ch = curl_init('https://api.openai.com/v1/files');
+        $cFile = new \CURLFile($filePath, 'application/pdf', $fileName);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => ['file' => $cFile, 'purpose' => 'user_data'],
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiKey],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 60,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $uploadResp = curl_exec($ch);
+        $uploadCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($uploadCode !== 200) return ['error' => 'Erro no upload do PDF.'];
+
+        $uploadData = json_decode($uploadResp, true);
+        $fileId = $uploadData['id'] ?? null;
+        if (!$fileId) return ['error' => 'Falha ao obter ID do arquivo.'];
+
+        $prompt = 'Analise este PDF de orçamento/proposta de serviço de construção civil. Extraia TODOS os materiais/itens listados. '
+            . 'Retorne APENAS um JSON com a estrutura: {"materials": [...], "totals": {...}}. '
+            . 'Cada material deve ter: name, code, description, specification, classification, unit (UN, M, KG, M2, etc), '
+            . 'quantity (numérico), weight (numérico ou null), unit_price (numérico), total_price (numérico). '
+            . 'Em "totals": subtotal, discount, freight, ipi, icms_st, grand_total (todos numéricos ou null). '
+            . 'Valores monetários devem ser numéricos (ex: 1500.50). Retorne APENAS o JSON.';
+
+        $ch = curl_init('https://api.openai.com/v1/responses');
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode([
+                'model' => $model,
+                'input' => [['role' => 'user', 'content' => [
+                    ['type' => 'input_file', 'file_id' => $fileId],
+                    ['type' => 'input_text', 'text' => $prompt]
+                ]]]
+            ]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . $apiKey],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 120,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // Deletar arquivo da OpenAI
+        $ch = curl_init("https://api.openai.com/v1/files/{$fileId}");
+        curl_setopt_array($ch, [CURLOPT_CUSTOMREQUEST => 'DELETE', CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiKey], CURLOPT_RETURNTRANSFER => true, CURLOPT_SSL_VERIFYPEER => false]);
+        curl_exec($ch);
+        curl_close($ch);
+
+        if ($httpCode !== 200) return ['error' => 'Erro na API OpenAI.'];
+
+        $result = json_decode($response, true);
+        $responseText = '';
+        if (isset($result['output'])) {
+            foreach ($result['output'] as $output) {
+                if (isset($output['content'])) {
+                    foreach ($output['content'] as $content) {
+                        if (isset($content['text'])) $responseText .= $content['text'];
+                    }
+                }
+            }
+        }
+
+        if (empty($responseText)) return ['error' => 'Resposta vazia da IA.'];
+
+        $responseText = preg_replace('/```json\s*/', '', $responseText);
+        $responseText = preg_replace('/```\s*/', '', $responseText);
+        $parsed = json_decode(trim($responseText), true);
+
+        if (!is_array($parsed)) return ['error' => 'Não foi possível interpretar o documento.'];
+
+        if (isset($parsed['materials'])) {
+            return ['success' => true, 'materials' => $parsed['materials'], 'totals' => $parsed['totals'] ?? null];
+        }
+        return ['success' => true, 'materials' => $parsed, 'totals' => null];
+    }
+
+    /**
+     * Analisar imagem de serviço via Chat Completions (privado)
+     */
+    private function parseServiceImageViaApi(string $filePath, string $mimeType, string $apiKey, string $model): ?array
+    {
+        $content = base64_encode(file_get_contents($filePath));
+        $prompt = 'Analise esta imagem de orçamento de serviço de construção. Extraia os materiais. '
+            . 'Retorne JSON: {"materials": [{name, code, description, specification, classification, unit, quantity, weight, unit_price, total_price}], "totals": {subtotal, discount, freight, ipi, icms_st, grand_total}}. Valores numéricos. APENAS JSON.';
+
+        $ch = curl_init('https://api.openai.com/v1/chat/completions');
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode([
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'system', 'content' => 'Extraia materiais de orçamentos de construção. Retorne APENAS JSON válido.'],
+                    ['role' => 'user', 'content' => [
+                        ['type' => 'text', 'text' => $prompt],
+                        ['type' => 'image_url', 'image_url' => ['url' => "data:{$mimeType};base64,{$content}"]]
+                    ]]
+                ],
+                'max_tokens' => 4000,
+                'temperature' => 0.1,
+            ]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . $apiKey],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 90,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) return ['error' => 'Erro na API OpenAI.'];
+
+        $result = json_decode($response, true);
+        $text = $result['choices'][0]['message']['content'] ?? '';
+        $text = preg_replace('/```json\s*/', '', $text);
+        $text = preg_replace('/```\s*/', '', $text);
+        $parsed = json_decode(trim($text), true);
+
+        if (!is_array($parsed)) return ['error' => 'Não foi possível interpretar.'];
+        if (isset($parsed['materials'])) return ['success' => true, 'materials' => $parsed['materials'], 'totals' => $parsed['totals'] ?? null];
+        return ['success' => true, 'materials' => $parsed, 'totals' => null];
     }
 
     private function show404(): void

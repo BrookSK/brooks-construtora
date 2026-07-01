@@ -71,6 +71,9 @@
                             <a href="/admin/orders/show/<?= $order['id'] ?>" class="fw-bold text-decoration-none">
                                 <?= htmlspecialchars($order['code']) ?>
                             </a>
+                            <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
+                            <span class="badge bg-success bg-opacity-25 text-success ms-1" style="font-size:0.6rem;"><i class="bi bi-wrench"></i> Serviço</span>
+                            <?php endif; ?>
                         </td>
                         <td><?= htmlspecialchars($order['supplier_name'] ?? 'N/A') ?></td>
                         <td><span class="badge bg-<?= $label[1] ?>"><?= $label[0] ?></span></td>
