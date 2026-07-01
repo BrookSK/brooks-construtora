@@ -1344,13 +1344,7 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
     
     html += `<div class="p-2 border-top bg-light small d-flex flex-wrap gap-2" id="svc-totals-${sid}">`;
     html += `<span>Subtotal: <strong>R$ ${calcSubtotal.toFixed(2).replace('.', ',')}</strong></span>`;
-    if (totals && totals.discount) html += `<span>Desc: <strong>R$ ${parseFloat(totals.discount).toFixed(2).replace('.', ',')}</strong></span>`;
-    if (totals && totals.freight) html += `<span>Frete: <strong>R$ ${parseFloat(totals.freight).toFixed(2).replace('.', ',')}</strong></span>`;
-    if (totals && totals.ipi) html += `<span>IPI: <strong>R$ ${parseFloat(totals.ipi).toFixed(2).replace('.', ',')}</strong></span>`;
-    if (totals && totals.icms_st) html += `<span>ST: <strong>R$ ${parseFloat(totals.icms_st).toFixed(2).replace('.', ',')}</strong></span>`;
-    // Total geral = subtotal dos itens + extras
-    let calcTotal = calcSubtotal + (totals ? ((parseFloat(totals.freight) || 0) + (parseFloat(totals.ipi) || 0) + (parseFloat(totals.icms_st) || 0) - (parseFloat(totals.discount) || 0)) : 0);
-    html += `<span class="fw-bold text-success">Total: R$ ${calcTotal.toFixed(2).replace('.', ',')}</span>`;
+    html += `<span class="fw-bold text-success">Total: R$ ${calcSubtotal.toFixed(2).replace('.', ',')}</span>`;
     html += `</div>`;
 
     html += `<div class="p-2 border-top d-flex flex-wrap gap-2 justify-content-end">`;
