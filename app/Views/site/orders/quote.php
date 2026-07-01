@@ -1167,6 +1167,57 @@ function confirmSubmit() {
             input.value = formatBRL(unitPrice);
         });
     }
+    
+    // Se é pedido de serviço, incluir materiais de cada fornecedor no form
+    if (orderType === 'service') {
+        addedSuppliers.forEach(sid => {
+            const rawMats = window['svcMats_' + sid] || [];
+            const materialsToSave = [];
+            
+            // Pegar materiais selecionados (checked)
+            const container = document.getElementById('serviceMaterialsListMap-' + sid) || document.getElementById('serviceMaterialsList-' + sid);
+            let checkboxes = [];
+            if (container) {
+                checkboxes = container.querySelectorAll('input[type="checkbox"][data-idx]:checked');
+            }
+            if (checkboxes.length === 0) {
+                checkboxes = document.querySelectorAll(`input[type="checkbox"][data-sid="${sid}"][data-idx]:checked`);
+            }
+            
+            for (const cb of checkboxes) {
+                const idx = parseInt(cb.dataset.idx);
+                const raw = rawMats[idx] || {};
+                if (raw._removed) continue;
+                
+                const getName = () => document.getElementById(`svc-name-${sid}-${idx}`)?.value || document.getElementById(`svc-name-m-${sid}-${idx}`)?.value || raw.name;
+                const getUnit = () => document.getElementById(`svc-unit-${sid}-${idx}`)?.value || document.getElementById(`svc-unit-m-${sid}-${idx}`)?.value || raw.unit;
+                const getQty = () => document.getElementById(`svc-qty-${sid}-${idx}`)?.value || document.getElementById(`svc-qty-m-${sid}-${idx}`)?.value || raw.quantity;
+                const getUprice = () => document.getElementById(`svc-uprice-${sid}-${idx}`)?.value || document.getElementById(`svc-uprice-m-${sid}-${idx}`)?.value || raw.unit_price;
+                const getTprice = () => document.getElementById(`svc-tprice-${sid}-${idx}`)?.value || document.getElementById(`svc-tprice-m-${sid}-${idx}`)?.value || raw.total_price;
+                
+                materialsToSave.push({
+                    name: getName(),
+                    code: raw.code || null,
+                    specification: raw.specification || null,
+                    classification: raw.classification || null,
+                    unit: getUnit(),
+                    quantity: parseFloat(getQty()) || 1,
+                    unit_price: parseBRL(getUprice()) || raw.unit_price || null,
+                    total_price: parseBRL(getTprice()) || raw.total_price || null,
+                    material_id: raw.material_id || null,
+                });
+            }
+            
+            if (materialsToSave.length > 0) {
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = `service_materials[${sid}]`;
+                hidden.value = JSON.stringify(materialsToSave);
+                document.getElementById('quoteForm').appendChild(hidden);
+            }
+        });
+    }
+    
     bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
     document.getElementById('quoteForm').submit();
 }
@@ -1238,6 +1289,7 @@ async function parseServicePdf(sid) {
             html += `<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> ${data.warning}</div>`;
         }
         if (data.materials && data.materials.length > 0) {
+            matchServiceMaterials(data.materials);
             html += renderServiceMaterials(sid, data.materials, data.totals, data.pdf_id);
         } else {
             html += `<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> Não foi possível identificar materiais após ${maxRetries} tentativas.</div>`;
@@ -1311,6 +1363,7 @@ async function parseServicePdfFromMap(sid) {
         if (data.file_path) html += `<div class="alert alert-success small py-2 mb-2"><i class="bi bi-check-circle"></i> PDF salvo. <a href="${data.file_path}" target="_blank" class="fw-bold">Download</a></div>`;
         if (data.warning) html += `<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> ${data.warning}</div>`;
         if (data.materials && data.materials.length > 0) {
+            matchServiceMaterials(data.materials);
             html += renderServiceMaterials(sid, data.materials, data.totals, data.pdf_id);
         } else {
             html += `<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> Não foi possível identificar materiais após ${maxRetries} tentativas.</div>`;
@@ -1328,6 +1381,43 @@ async function parseServicePdfFromMap(sid) {
     }
 
     fileInput.value = '';
+}
+
+// Matching de materiais da IA com cadastro existente
+function matchServiceMaterials(materials) {
+    const normalize = (str) => (str || '').toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ').trim();
+
+    materials.forEach(m => {
+        if (m.material_id) return; // Já vinculado
+        
+        const mNorm = normalize(m.name);
+        const mWords = mNorm.split(' ').filter(w => w.length > 2);
+        let bestMatch = null;
+        let bestScore = 0;
+
+        allMaterials.forEach(mat => {
+            const matNorm = normalize(mat.name);
+            // Match exato
+            if (matNorm === mNorm) { bestMatch = mat; bestScore = 100; return; }
+            // Match por inclusão
+            if (matNorm.includes(mNorm) || mNorm.includes(matNorm)) { if (bestScore < 80) { bestMatch = mat; bestScore = 80; } return; }
+            // Match por palavras em comum
+            const matWords = matNorm.split(' ').filter(w => w.length > 2);
+            let commonWords = 0;
+            mWords.forEach(w => { if (matWords.includes(w)) commonWords++; });
+            const score = mWords.length > 0 ? (commonWords / mWords.length) * 70 : 0;
+            if (score > bestScore && score >= 50) { bestMatch = mat; bestScore = score; }
+        });
+
+        if (bestMatch) {
+            m.material_id = bestMatch.id;
+            m._matched_name = bestMatch.name;
+        }
+    });
+    return materials;
 }
 
 function renderServiceMaterials(sid, materials, totals, pdfId) {
@@ -1384,7 +1474,6 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
     // Totais removidos - não exibir subtotal/total calculado
     html += `<div class="p-2 border-top d-flex flex-wrap gap-2 justify-content-end">`;
     html += `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="showManualServiceMaterial('${sid}', ${pdfId || 0})"><i class="bi bi-plus"></i> <span class="d-none d-sm-inline">Adicionar</span> manual</button>`;
-    html += `<button type="button" class="btn btn-sm btn-success" onclick="saveServiceMaterials('${sid}', ${pdfId || 0})"><i class="bi bi-check-all"></i> Salvar <span class="d-none d-sm-inline">Materiais</span></button>`;
     html += `</div></div>`;
 
     // Dados armazenados pelo caller (parseServicePdf/parseServicePdfFromMap)
