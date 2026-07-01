@@ -373,7 +373,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                                     <td>
                                         <strong><?= htmlspecialchars($mat['material_name']) ?></strong>
                                         <?php if ($mat['material_id']): ?>
-                                        <span class="badge bg-success bg-opacity-25 text-success ms-1" style="font-size:0.6rem;">Cadastrado</span>
+                                        <i class="bi bi-link-45deg text-success" title="Vinculado ao cadastro"></i>
                                         <?php endif; ?>
                                         <?php if ($mat['specification']): ?>
                                         <small class="text-muted d-block"><?= htmlspecialchars($mat['specification']) ?></small>
