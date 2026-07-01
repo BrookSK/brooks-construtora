@@ -91,6 +91,7 @@ class PurchaseOrderController extends Controller
             'itemPrices' => $itemPrices,
             'token' => $token,
             'pinUser' => \App\Controllers\Site\PinAuthController::getLoggedUser(),
+            'allMaterials' => ($order['order_type'] ?? 'material') === 'service' ? \App\Models\Material::allActive() : [],
             'flash' => $this->getFlash(),
         ]);
     }
