@@ -1486,38 +1486,43 @@ async function registerServiceMaterial(sid, idx) {
     }
 }
 
+
 function showManualServiceMaterial(sid, pdfId) {
-    // Buscar container correto (lista ou mapa)
-    let container = document.getElementById('serviceMaterialsList-' + sid);
-    if (!container || container.style.display === 'none') {
-        container = document.getElementById('serviceMaterialsListMap-' + sid);
-    }
-    if (!container || container.style.display === 'none') {
-        // Criar container inline no bloco do mapa
-        const mapSection = document.querySelector(`#mapFin${sid}`)?.closest('.accordion-item');
-        if (mapSection) {
-            let mc = mapSection.querySelector('.svc-manual-container');
+    // Buscar container — tenta lista, depois mapa, depois cria no accordion
+    let container = null;
+    const listC = document.getElementById('serviceMaterialsList-' + sid);
+    const mapC = document.getElementById('serviceMaterialsListMap-' + sid);
+    
+    if (listC && listC.offsetParent !== null) container = listC;
+    else if (mapC && mapC.offsetParent !== null) container = mapC;
+    else if (listC) container = listC;
+    else if (mapC) container = mapC;
+
+    if (!container) {
+        const mapFin = document.getElementById('mapFin' + sid);
+        if (mapFin) {
+            let mc = document.getElementById('svc-manual-wrap-' + sid);
             if (!mc) {
                 mc = document.createElement('div');
-                mc.className = 'svc-manual-container p-2';
-                mapSection.querySelector('.accordion-body')?.appendChild(mc);
+                mc.id = 'svc-manual-wrap-' + sid;
+                mc.className = 'mt-2';
+                mapFin.querySelector('.accordion-body')?.appendChild(mc);
             }
             container = mc;
         }
     }
-    if (!container) return;
+    if (!container) { alert('Erro: container não encontrado.'); return; }
 
-    // Verificar se já tem o form de manual
     if (document.getElementById('manual-svc-form-' + sid)) {
         document.getElementById('manual-svc-form-' + sid).style.display = 'block';
         return;
     }
 
-    // Construir opções de materiais para o datalist
-    let matOptions = '';
+    // Montar options para SearchableSelect
+    let matOpts = '<option value="">-- Selecione --</option>';
     allMaterials.forEach(m => {
         const label = m.name + (m.classification ? ' - ' + m.classification : '') + (m.specification ? ' (' + m.specification + ')' : '');
-        matOptions += `<option value="${label}" data-id="${m.id}" data-unit="${m.unit_abbr || m.unit_name || ''}"></option>`;
+        matOpts += `<option value="${m.id}" data-name="${m.name}" data-spec="${m.specification || ''}" data-class="${m.classification || ''}" data-unit="${m.unit_abbr || m.unit_name || ''}">${label}</option>`;
     });
 
     const formHtml = `
@@ -1525,10 +1530,12 @@ function showManualServiceMaterial(sid, pdfId) {
             <h6 class="small fw-bold mb-2"><i class="bi bi-plus-circle"></i> Adicionar Material</h6>
             <div class="row g-2">
                 <div class="col-12">
-                    <input type="text" class="form-control form-control-sm" id="manual-name-${sid}" placeholder="Buscar ou digitar nome do material *" list="matList-${sid}" autocomplete="off" oninput="onManualMatInput('${sid}')">
-                    <datalist id="matList-${sid}">${matOptions}</datalist>
+                    <select id="manual-mat-select-${sid}" style="display:none;">${matOpts}</select>
+                    <div id="manual-mat-ss-${sid}"></div>
                     <input type="hidden" id="manual-mat-id-${sid}" value="">
-                    <small class="text-muted" id="manual-hint-${sid}">Busque um material cadastrado ou digite um novo nome.</small>
+                </div>
+                <div class="col-12">
+                    <input type="text" class="form-control form-control-sm" id="manual-name-${sid}" placeholder="Ou digite um nome novo aqui (se não achou acima)">
                 </div>
                 <div class="col-4"><input type="text" class="form-control form-control-sm" id="manual-unit-${sid}" placeholder="Unid."></div>
                 <div class="col-4"><input type="number" class="form-control form-control-sm" id="manual-qty-${sid}" placeholder="Qtd" value="1" step="0.01"></div>
@@ -1540,80 +1547,63 @@ function showManualServiceMaterial(sid, pdfId) {
         </div>`;
 
     container.insertAdjacentHTML('beforeend', formHtml);
-    if (container.style.display === 'none') container.style.display = 'block';
-}
+    container.style.display = 'block';
 
-function onManualMatInput(sid) {
-    const input = document.getElementById('manual-name-' + sid);
-    const hiddenId = document.getElementById('manual-mat-id-' + sid);
-    const unitInput = document.getElementById('manual-unit-' + sid);
-    const hint = document.getElementById('manual-hint-' + sid);
-    if (!input) return;
-
-    const val = input.value;
-    const found = allMaterials.find(m => {
-        const label = m.name + (m.classification ? ' - ' + m.classification : '') + (m.specification ? ' (' + m.specification + ')' : '');
-        return label === val;
+    // Inicializar SearchableSelect (igual na tela de pedido)
+    new SearchableSelect(document.getElementById('manual-mat-select-' + sid), {
+        placeholder: 'Buscar material cadastrado...',
+        onSelect: function(value, text, dataset) {
+            document.getElementById('manual-mat-id-' + sid).value = value;
+            document.getElementById('manual-name-' + sid).value = dataset.name || '';
+            document.getElementById('manual-unit-' + sid).value = dataset.unit || '';
+        }
     });
-
-    if (found) {
-        hiddenId.value = found.id;
-        if (unitInput && !unitInput.value) unitInput.value = found.unit_abbr || found.unit_name || '';
-        hint.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Encontrado: ${found.name}</span>`;
-    } else {
-        hiddenId.value = '';
-        hint.innerHTML = 'Busque um material cadastrado ou digite um novo nome.';
-    }
 }
 
 async function addManualServiceMaterial(sid, pdfId) {
-    const name = document.getElementById(`manual-name-${sid}`)?.value?.trim();
+    const materialId = document.getElementById(`manual-mat-id-${sid}`)?.value;
+    const nameInput = document.getElementById(`manual-name-${sid}`)?.value?.trim();
     const unit = document.getElementById(`manual-unit-${sid}`)?.value?.trim();
     const qty = document.getElementById(`manual-qty-${sid}`)?.value || 1;
     const uprice = document.getElementById(`manual-uprice-${sid}`)?.value;
-    const materialId = document.getElementById(`manual-mat-id-${sid}`)?.value;
 
-    if (!name) { alert('Nome é obrigatório'); return; }
+    let name = nameInput;
+    let matId = materialId || null;
+
+    if (!name && !matId) { alert('Selecione um material ou digite um nome.'); return; }
+    
+    if (matId && !name) {
+        const found = allMaterials.find(m => String(m.id) === String(matId));
+        if (found) name = found.name;
+    }
+    if (!name) { alert('Nome é obrigatório.'); return; }
 
     const unitPriceNum = parseBRL(uprice) || 0;
     const totalPriceNum = unitPriceNum * (parseFloat(qty) || 1);
-    let matId = materialId || null;
 
-    // Se não encontrou material existente, cadastrar novo
+    // Se não selecionou existente, cadastrar novo
     if (!matId) {
         try {
             const resp = await fetch('/admin/materials/quick-store', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ name: name, specification: '', classification: '', unit_id: '', category_id: '' })
+                body: new URLSearchParams({ name, specification: '', classification: '', unit_id: '', category_id: '' })
             });
             const data = await resp.json();
             if (data.success) {
                 matId = data.material.id;
                 allMaterials.push({ id: data.material.id, name: data.material.name, specification: '', classification: '', unit_abbr: unit || '', unit_name: '' });
             }
-        } catch (e) { /* segue sem id */ }
+        } catch (e) {}
     }
 
-    const materials = [{
-        name: name,
-        unit: unit || 'UN',
-        quantity: parseFloat(qty) || 1,
-        unit_price: unitPriceNum || null,
-        total_price: totalPriceNum || null,
-        material_id: matId,
-    }];
+    const materials = [{ name, unit: unit || 'UN', quantity: parseFloat(qty) || 1, unit_price: unitPriceNum || null, total_price: totalPriceNum || null, material_id: matId }];
 
     try {
         const resp = await fetch('/pedido/cotacao/save-service-materials', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                order_id: orderId,
-                supplier_id: sid,
-                pdf_id: pdfId || 0,
-                materials: JSON.stringify(materials),
-            })
+            body: new URLSearchParams({ order_id: orderId, supplier_id: sid, pdf_id: pdfId || 0, materials: JSON.stringify(materials) })
         });
         const data = await resp.json();
         if (data.success) {
@@ -1622,15 +1612,13 @@ async function addManualServiceMaterial(sid, pdfId) {
             document.getElementById(`manual-qty-${sid}`).value = '1';
             document.getElementById(`manual-uprice-${sid}`).value = '';
             document.getElementById(`manual-mat-id-${sid}`).value = '';
-            document.getElementById(`manual-hint-${sid}`).innerHTML = 'Busque um material cadastrado ou digite um novo nome.';
             
-            let container = document.getElementById('serviceMaterialsList-' + sid);
-            if (!container || container.style.display === 'none') container = document.getElementById('serviceMaterialsListMap-' + sid);
-            if (container) {
+            const form = document.getElementById('manual-svc-form-' + sid);
+            if (form) {
                 const msg = document.createElement('div');
                 msg.className = 'alert alert-success small py-1 mt-1';
-                msg.innerHTML = `<i class="bi bi-check"></i> "${name}" adicionado!`;
-                container.appendChild(msg);
+                msg.innerHTML = `<i class="bi bi-check"></i> "${name}" salvo!`;
+                form.appendChild(msg);
                 setTimeout(() => msg.remove(), 3000);
             }
         } else {
