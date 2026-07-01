@@ -25,6 +25,9 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <div>
                     <h5 class="mb-0"><?= $statusInfo[0] ?></h5>
                     <small class="text-muted">Código: <strong><?= $order['code'] ?></strong></small>
+                    <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
+                    <span class="badge bg-dark ms-2"><i class="bi bi-wrench"></i> Serviço</span>
+                    <?php endif; ?>
                     <?php if ($order['status'] === 'approved'): ?>
                         <?php
                         $totalPayments = count($payments ?? []);
