@@ -1366,42 +1366,54 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
 
 // Recalcular subtotal/total quando edita valores
 function bindSvcRecalc(sid) {
-    const inputs = document.querySelectorAll(`[id^="svc-tprice-${sid}-"], [id^="svc-tprice-m-${sid}-"], [id^="svc-uprice-${sid}-"], [id^="svc-uprice-m-${sid}-"], [id^="svc-qty-${sid}-"], [id^="svc-qty-m-${sid}-"]`);
-    inputs.forEach(input => {
+    // Bind em todos os inputs de preço/quantidade deste fornecedor
+    document.querySelectorAll(`[id^="svc-tprice-${sid}-"], [id^="svc-tprice-m-${sid}-"], [id^="svc-uprice-${sid}-"], [id^="svc-uprice-m-${sid}-"], [id^="svc-qty-${sid}-"], [id^="svc-qty-m-${sid}-"]`).forEach(input => {
         input.addEventListener('input', () => recalcServiceTotals(sid));
-        input.addEventListener('blur', () => recalcServiceTotals(sid));
+        input.addEventListener('change', () => recalcServiceTotals(sid));
     });
+    // Calcular na inicialização
+    recalcServiceTotals(sid);
 }
 
 function recalcServiceTotals(sid) {
     let subtotal = 0;
-    const rawMats = window['svcMats_' + sid] || [];
     
-    // Somar totais de cada item visível (desktop ou mobile)
-    rawMats.forEach((m, idx) => {
-        if (m._removed) return;
-        
-        // Tentar pegar total editado
-        let totalEl = document.getElementById(`svc-tprice-${sid}-${idx}`) || document.getElementById(`svc-tprice-m-${sid}-${idx}`);
-        if (totalEl) {
-            const val = parseBRL(totalEl.value);
-            if (val !== null && val > 0) {
-                subtotal += val;
-                return;
+    // Somar de todos os inputs de total visíveis (desktop)
+    document.querySelectorAll(`[id^="svc-tprice-${sid}-"]`).forEach(el => {
+        // Ignorar se é mobile (id contém -m-)
+        if (el.id.includes('-m-')) return;
+        const val = parseBRL(el.value);
+        if (val !== null && val > 0) {
+            subtotal += val;
+        } else {
+            // Calcular de qty * unit se total vazio
+            const idx = el.id.replace(`svc-tprice-${sid}-`, '');
+            const qtyEl = document.getElementById(`svc-qty-${sid}-${idx}`);
+            const upriceEl = document.getElementById(`svc-uprice-${sid}-${idx}`);
+            if (qtyEl && upriceEl) {
+                subtotal += (parseFloat(qtyEl.value) || 0) * (parseBRL(upriceEl.value) || 0);
             }
-        }
-        
-        // Se total está vazio/zero, calcular de qty * unit_price
-        let qtyEl = document.getElementById(`svc-qty-${sid}-${idx}`) || document.getElementById(`svc-qty-m-${sid}-${idx}`);
-        let upriceEl = document.getElementById(`svc-uprice-${sid}-${idx}`) || document.getElementById(`svc-uprice-m-${sid}-${idx}`);
-        if (qtyEl && upriceEl) {
-            const q = parseFloat(qtyEl.value) || 0;
-            const u = parseBRL(upriceEl.value) || 0;
-            subtotal += q * u;
         }
     });
     
-    // Atualizar o display de totais
+    // Se não achou nada no desktop, tentar mobile
+    if (subtotal === 0) {
+        document.querySelectorAll(`[id^="svc-tprice-m-${sid}-"]`).forEach(el => {
+            const val = parseBRL(el.value);
+            if (val !== null && val > 0) {
+                subtotal += val;
+            } else {
+                const idx = el.id.replace(`svc-tprice-m-${sid}-`, '');
+                const qtyEl = document.getElementById(`svc-qty-m-${sid}-${idx}`);
+                const upriceEl = document.getElementById(`svc-uprice-m-${sid}-${idx}`);
+                if (qtyEl && upriceEl) {
+                    subtotal += (parseFloat(qtyEl.value) || 0) * (parseBRL(upriceEl.value) || 0);
+                }
+            }
+        });
+    }
+    
+    // Atualizar display
     const totalsEl = document.getElementById('svc-totals-' + sid);
     if (totalsEl) {
         totalsEl.innerHTML = `<span>Subtotal: <strong>R$ ${subtotal.toFixed(2).replace('.', ',')}</strong></span> <span class="fw-bold text-success">Total: R$ ${subtotal.toFixed(2).replace('.', ',')}</span>`;
