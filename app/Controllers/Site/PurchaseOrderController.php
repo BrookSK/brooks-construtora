@@ -229,6 +229,70 @@ class PurchaseOrderController extends Controller
                 // Registrar histórico de preços
                 MaterialPriceHistory::recordFromQuote($order['id'], $sid, $items, $pricesForHistory);
 
+                // Salvar materiais de serviço (se pedido é do tipo serviço)
+                if (($order['order_type'] ?? 'material') === 'service') {
+                    $serviceMaterials = $_POST['service_materials'] ?? [];
+                    if (!empty($serviceMaterials[$sid])) {
+                        $matsList = json_decode($serviceMaterials[$sid], true);
+                        if (is_array($matsList)) {
+                            // Salvar PDF (se teve upload)
+                            $pdfId = null;
+                            if (isset($_FILES["service_pdf_{$sid}"]) && $_FILES["service_pdf_{$sid}"]['error'] === UPLOAD_ERR_OK) {
+                                $uploadDir = ROOT_PATH . '/public/uploads/orders/service_pdfs/';
+                                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                                $ext = pathinfo($_FILES["service_pdf_{$sid}"]['name'], PATHINFO_EXTENSION);
+                                $filename = "order_{$order['id']}_supplier_{$sid}_" . time() . '.' . $ext;
+                                move_uploaded_file($_FILES["service_pdf_{$sid}"]['tmp_name'], $uploadDir . $filename);
+                                $pdfId = PurchaseOrderSupplierPdf::create([
+                                    'order_id' => $order['id'],
+                                    'supplier_id' => $sid,
+                                    'file_path' => '/uploads/orders/service_pdfs/' . $filename,
+                                    'original_name' => $_FILES["service_pdf_{$sid}"]['name'],
+                                    'uploaded_by' => $quotedByName,
+                                    'uploaded_at' => date('Y-m-d H:i:s'),
+                                ]);
+                            }
+
+                            // Limpar materiais anteriores deste fornecedor (evitar duplicatas)
+                            PurchaseOrderSupplierMaterial::deleteByOrderAndSupplier($order['id'], $sid);
+
+                            foreach ($matsList as $mat) {
+                                if (empty($mat['name'])) continue;
+                                
+                                // Tentar vincular com material existente
+                                $materialId = !empty($mat['material_id']) ? (int) $mat['material_id'] : null;
+                                
+                                // Se não tem material_id, tentar cadastrar
+                                if (!$materialId) {
+                                    $newMatId = \App\Models\Material::create([
+                                        'name' => $mat['name'],
+                                        'specification' => $mat['specification'] ?? '',
+                                        'classification' => $mat['classification'] ?? '',
+                                        'active' => 1,
+                                        'created_at' => date('Y-m-d H:i:s'),
+                                    ]);
+                                    $materialId = $newMatId;
+                                }
+
+                                PurchaseOrderSupplierMaterial::create([
+                                    'order_id' => $order['id'],
+                                    'supplier_id' => $sid,
+                                    'pdf_id' => $pdfId,
+                                    'material_id' => $materialId,
+                                    'material_name' => $mat['name'],
+                                    'specification' => $mat['specification'] ?? null,
+                                    'classification' => $mat['classification'] ?? null,
+                                    'unit' => $mat['unit'] ?? null,
+                                    'quantity' => !empty($mat['quantity']) ? (float) $mat['quantity'] : 1,
+                                    'unit_price' => !empty($mat['unit_price']) ? (float) $mat['unit_price'] : null,
+                                    'total_price' => !empty($mat['total_price']) ? (float) $mat['total_price'] : null,
+                                    'created_at' => date('Y-m-d H:i:s'),
+                                ]);
+                            }
+                        }
+                    }
+                }
+
                 if ($finalTotal < $lowestTotal) $lowestTotal = $finalTotal;
             }
         } else {
