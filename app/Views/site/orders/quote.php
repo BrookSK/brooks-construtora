@@ -1332,10 +1332,18 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
 
 // Recalcular subtotal/total quando edita valores
 function bindSvcRecalc(sid) {
-    // Bind em todos os inputs de preço/quantidade deste fornecedor
-    document.querySelectorAll(`[id^="svc-tprice-${sid}-"], [id^="svc-tprice-m-${sid}-"], [id^="svc-uprice-${sid}-"], [id^="svc-uprice-m-${sid}-"], [id^="svc-qty-${sid}-"], [id^="svc-qty-m-${sid}-"]`).forEach(input => {
-        input.addEventListener('input', () => recalcServiceTotals(sid));
-        input.addEventListener('change', () => recalcServiceTotals(sid));
+    // Usar event delegation no container pai para pegar todos os inputs (inclusive futuros)
+    const containers = [
+        document.getElementById('serviceMaterialsList-' + sid),
+        document.getElementById('serviceMaterialsListMap-' + sid)
+    ];
+    containers.forEach(container => {
+        if (!container) return;
+        container.addEventListener('input', (e) => {
+            if (e.target.matches('input[id*="svc-tprice-"], input[id*="svc-uprice-"], input[id*="svc-qty-"]')) {
+                recalcServiceTotals(sid);
+            }
+        });
     });
     // Calcular na inicialização
     recalcServiceTotals(sid);
@@ -1344,40 +1352,34 @@ function bindSvcRecalc(sid) {
 function recalcServiceTotals(sid) {
     let subtotal = 0;
     
-    // Somar de todos os inputs de total visíveis (desktop)
-    document.querySelectorAll(`[id^="svc-tprice-${sid}-"]`).forEach(el => {
-        // Ignorar se é mobile (id contém -m-)
-        if (el.id.includes('-m-')) return;
+    // Buscar todos os inputs de total que existem no DOM para este fornecedor
+    // Desktop: inputs dentro da tabela com id contendo "svc-tprice-{sid}-"
+    const container = document.getElementById('serviceMaterialsList-' + sid) || document.getElementById('serviceMaterialsListMap-' + sid);
+    if (!container) return;
+    
+    // Pegar todos os inputs de total (coluna Total) - são os que têm "tprice" no id
+    const totalInputs = container.querySelectorAll('input[id*="svc-tprice-"]');
+    
+    totalInputs.forEach(el => {
         const val = parseBRL(el.value);
         if (val !== null && val > 0) {
             subtotal += val;
         } else {
-            // Calcular de qty * unit se total vazio
-            const idx = el.id.replace(`svc-tprice-${sid}-`, '');
-            const qtyEl = document.getElementById(`svc-qty-${sid}-${idx}`);
-            const upriceEl = document.getElementById(`svc-uprice-${sid}-${idx}`);
-            if (qtyEl && upriceEl) {
-                subtotal += (parseFloat(qtyEl.value) || 0) * (parseBRL(upriceEl.value) || 0);
+            // Se total vazio, tentar calcular de qty * unit
+            const idParts = el.id.replace('svc-tprice-', '').replace('svc-tprice-m-', '');
+            // Buscar qty e uprice do mesmo row/card
+            const row = el.closest('tr') || el.closest('.border.rounded');
+            if (row) {
+                const qtyInput = row.querySelector('input[id*="svc-qty-"]');
+                const upriceInput = row.querySelector('input[id*="svc-uprice-"]');
+                if (qtyInput && upriceInput) {
+                    const q = parseFloat(qtyInput.value) || 0;
+                    const u = parseBRL(upriceInput.value) || 0;
+                    subtotal += q * u;
+                }
             }
         }
     });
-    
-    // Se não achou nada no desktop, tentar mobile
-    if (subtotal === 0) {
-        document.querySelectorAll(`[id^="svc-tprice-m-${sid}-"]`).forEach(el => {
-            const val = parseBRL(el.value);
-            if (val !== null && val > 0) {
-                subtotal += val;
-            } else {
-                const idx = el.id.replace(`svc-tprice-m-${sid}-`, '');
-                const qtyEl = document.getElementById(`svc-qty-m-${sid}-${idx}`);
-                const upriceEl = document.getElementById(`svc-uprice-m-${sid}-${idx}`);
-                if (qtyEl && upriceEl) {
-                    subtotal += (parseFloat(qtyEl.value) || 0) * (parseBRL(upriceEl.value) || 0);
-                }
-            }
-        });
-    }
     
     // Atualizar display
     const totalsEl = document.getElementById('svc-totals-' + sid);
