@@ -45,6 +45,9 @@
             #mapFinancials .form-control-sm { font-size: 14px !important; padding: 0.25rem 0.4rem; }
             #mapFinancials .form-label { font-size: 0.65rem !important; }
             .view-toggle-wrap .btn-group { width: 100%; }
+            .price-mode-wrap { flex-direction: column; align-items: stretch !important; }
+            .price-mode-wrap .btn-group { width: 100%; }
+            .price-mode-wrap span { margin-bottom: 4px; }
             .history-hint { font-size: 0.65rem; }
         }
     </style>
@@ -141,6 +144,15 @@
                     <!-- Fornecedores para cotação -->
                     <h6 class="mb-3"><i class="bi bi-building"></i> Fornecedores</h6>
                     <p class="text-muted small mb-2">Adicione os fornecedores e informe os valores de cada um.</p>
+                    
+                    <!-- Toggle Unitário / Total -->
+                    <div class="mb-3 d-flex align-items-center gap-2 flex-wrap price-mode-wrap">
+                        <span class="small text-muted">Informar preço por:</span>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary" id="btnModeUnit" onclick="setPriceMode('unit')">Unitário</button>
+                            <button type="button" class="btn btn-outline-secondary active" id="btnModeTotal" onclick="setPriceMode('total')">Total do item</button>
+                        </div>
+                    </div>
                     
                     <div class="mb-3">
                         <select id="addSupplierSelect" style="display:none;">
@@ -283,6 +295,81 @@
         return num.toFixed(2).replace('.', ',');
     }
     // ────────────────────────────────────────────────────────────────────────
+
+    // ─── Modo de entrada de preço (unitário vs total) ────────────────────────
+    let priceMode = 'total'; // 'unit' ou 'total' — padrão: total
+
+    function setPriceMode(mode) {
+        const oldMode = priceMode;
+        priceMode = mode;
+        document.getElementById('btnModeUnit').classList.toggle('active', mode === 'unit');
+        document.getElementById('btnModeTotal').classList.toggle('active', mode === 'total');
+
+        // Converter valores exibidos nos inputs existentes
+        document.querySelectorAll('.price-input').forEach(input => {
+            const currentVal = parseBRL(input.value);
+            if (currentVal === null || currentVal === 0) return;
+            const qty = parseFloat(input.dataset.qty) || 1;
+
+            if (oldMode === 'unit' && mode === 'total') {
+                // Unitário → Total: multiplica pela quantidade
+                input.value = formatBRL(currentVal * qty);
+            } else if (oldMode === 'total' && mode === 'unit') {
+                // Total → Unitário: divide pela quantidade
+                input.value = formatBRL(currentVal / qty);
+            }
+        });
+
+        // Converter valores no mapa também
+        document.querySelectorAll('.map-price-input').forEach(input => {
+            const currentVal = parseBRL(input.value);
+            if (currentVal === null || currentVal === 0) return;
+            const sid = input.dataset.sid;
+            const itemId = input.dataset.item;
+            const item = items.find(i => String(i.id) === String(itemId));
+            const qty = item ? parseFloat(item.quantity) || 1 : 1;
+
+            if (oldMode === 'unit' && mode === 'total') {
+                input.value = formatBRL(currentVal * qty);
+            } else if (oldMode === 'total' && mode === 'unit') {
+                input.value = formatBRL(currentVal / qty);
+            }
+
+            // Sync com a lista
+            const listInput = document.querySelector(`#supplier-block-${sid} [name="supplier_prices[${sid}][${itemId}]"]`);
+            if (listInput) listInput.value = input.value;
+        });
+
+        // Atualizar labels
+        updatePriceLabels();
+        // Recalcular totais
+        addedSuppliers.forEach(sid => calculateSupplierTotal(sid));
+    }
+
+    function updatePriceLabels() {
+        document.querySelectorAll('.price-input-label').forEach(el => {
+            el.textContent = priceMode === 'total' ? 'Total' : 'R$';
+        });
+    }
+
+    // Retorna o unitário a partir do valor digitado (seja unitário ou total)
+    function getUnitPrice(inputValue, qty) {
+        const val = parseBRL(inputValue) || 0;
+        if (priceMode === 'total') {
+            return qty > 0 ? val / qty : val;
+        }
+        return val;
+    }
+
+    // Retorna o total a partir do valor digitado
+    function getTotalPrice(inputValue, qty) {
+        const val = parseBRL(inputValue) || 0;
+        if (priceMode === 'total') {
+            return val;
+        }
+        return val * qty;
+    }
+    // ────────────────────────────────────────────────────────────────────────
     let addedSuppliers = [];
     let supplierNames = {};
 
@@ -381,10 +468,10 @@
                         </div>
                         <div class="item-price-input">
                             <div class="input-group input-group-sm">
-                                <span class="input-group-text">R$</span>
+                                <span class="input-group-text price-input-label">${priceMode === 'total' ? 'Total' : 'R$'}</span>
                                 <input type="text" inputmode="decimal" class="form-control price-input" 
                                     name="supplier_prices[${sid}][${item.id}]" placeholder="0,00" required
-                                    data-qty="${item.quantity}" data-sid="${sid}">
+                                    data-qty="${item.quantity}" data-sid="${sid}" data-item-id="${item.id}">
                             </div>
                         </div>
                     </div>
@@ -524,9 +611,8 @@
 
         let subtotalItems = 0;
         block.querySelectorAll('.price-input').forEach(input => {
-            const val = parseBRL(input.value) || 0;
             const qty = parseFloat(input.dataset.qty) || 0;
-            subtotalItems += val * qty;
+            subtotalItems += getTotalPrice(input.value, qty);
         });
 
         // Financeiros
@@ -966,6 +1052,15 @@ function showReviewModal() {
 }
 
 function confirmSubmit() {
+    // Se está no modo "total", converter todos os preços para unitário antes de enviar
+    if (priceMode === 'total') {
+        document.querySelectorAll('.price-input').forEach(input => {
+            const val = parseBRL(input.value) || 0;
+            const qty = parseFloat(input.dataset.qty) || 1;
+            const unitPrice = qty > 0 ? val / qty : val;
+            input.value = formatBRL(unitPrice);
+        });
+    }
     bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
     document.getElementById('quoteForm').submit();
 }
