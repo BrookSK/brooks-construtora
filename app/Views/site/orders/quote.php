@@ -515,7 +515,7 @@
                         <label class="form-label small text-muted mb-0">Desconto</label>
                         <div class="input-group input-group-sm">
                             <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][discount_value]" placeholder="0" data-sid="${sid}">
-                            <select class="form-select" name="supplier_financials[${sid}][discount_type]" style="max-width:55px;">
+                            <select class="form-select" name="supplier_financials[${sid}][discount_type]" style="max-width:70px;">
                                 <option value="percent">%</option>
                                 <option value="fixed">R$</option>
                             </select>
@@ -525,7 +525,7 @@
                         <label class="form-label small text-muted mb-0">Acréscimo</label>
                         <div class="input-group input-group-sm">
                             <input type="text" inputmode="decimal" class="form-control" name="supplier_financials[${sid}][surcharge_value]" placeholder="0" data-sid="${sid}">
-                            <select class="form-select" name="supplier_financials[${sid}][surcharge_type]" style="max-width:55px;">
+                            <select class="form-select" name="supplier_financials[${sid}][surcharge_type]" style="max-width:70px;">
                                 <option value="percent">%</option>
                                 <option value="fixed">R$</option>
                             </select>
@@ -782,7 +782,7 @@
                                 <label class="form-label small text-muted mb-0">Desconto</label>
                                 <div class="input-group input-group-sm">
                                     <input type="text" class="form-control map-fin-field" data-sid="${sid}" data-field="discount_value" value="${getFieldVal('discount_value')}" placeholder="0">
-                                    <select class="form-select map-fin-select" data-sid="${sid}" data-field="discount_type" style="max-width:50px;">
+                                    <select class="form-select map-fin-select" data-sid="${sid}" data-field="discount_type" style="max-width:70px;">
                                         <option value="percent" ${getFieldVal('discount_type') !== 'fixed' ? 'selected' : ''}>%</option>
                                         <option value="fixed" ${getFieldVal('discount_type') === 'fixed' ? 'selected' : ''}>R$</option>
                                     </select>
@@ -792,7 +792,7 @@
                                 <label class="form-label small text-muted mb-0">Acréscimo</label>
                                 <div class="input-group input-group-sm">
                                     <input type="text" class="form-control map-fin-field" data-sid="${sid}" data-field="surcharge_value" value="${getFieldVal('surcharge_value')}" placeholder="0">
-                                    <select class="form-select map-fin-select" data-sid="${sid}" data-field="surcharge_type" style="max-width:50px;">
+                                    <select class="form-select map-fin-select" data-sid="${sid}" data-field="surcharge_type" style="max-width:70px;">
                                         <option value="percent" ${getFieldVal('surcharge_type') !== 'fixed' ? 'selected' : ''}>%</option>
                                         <option value="fixed" ${getFieldVal('surcharge_type') === 'fixed' ? 'selected' : ''}>R$</option>
                                     </select>
