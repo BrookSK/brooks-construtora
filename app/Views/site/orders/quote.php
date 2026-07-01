@@ -1393,11 +1393,20 @@ function toggleAllServiceMats(checkbox, sid) {
 }
 
 async function saveServiceMaterials(sid, pdfId) {
-    // Buscar checkboxes no container visível
-    const container = document.getElementById('serviceMaterialsList-' + sid) || document.getElementById('serviceMaterialsListMap-' + sid);
+    // Buscar checkboxes no container VISÍVEL
+    let container = document.getElementById('serviceMaterialsListMap-' + sid);
+    if (!container || container.style.display === 'none' || !container.querySelector('input[data-idx]')) {
+        container = document.getElementById('serviceMaterialsList-' + sid);
+    }
     if (!container) { alert('Erro: container não encontrado.'); return; }
     
     let checkboxes = container.querySelectorAll('input[type="checkbox"][data-idx]:checked');
+    
+    // Fallback: buscar em todo o documento por esse sid
+    if (checkboxes.length === 0) {
+        checkboxes = document.querySelectorAll(`input[type="checkbox"][data-sid="${sid}"][data-idx]:checked`);
+    }
+    
     const rawMats = window['svcMats_' + sid] || [];
     const materials = [];
 
