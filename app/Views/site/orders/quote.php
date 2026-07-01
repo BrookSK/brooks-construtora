@@ -896,6 +896,20 @@
                                 <input type="text" class="form-control form-control-sm map-vendor-field" data-sid="${sid}" data-field="payment_notes" value="${getVendorVal('payment_notes')}" placeholder="Observações...">
                             </div>
                         </div>
+                        ${orderType === 'service' ? `
+                        <!-- Upload PDF de Materiais (Serviço) - Mapa -->
+                        <div class="mt-2 pt-2 border-top svc-pdf-section">
+                            <h6 class="small fw-bold mb-2"><i class="bi bi-file-earmark-pdf text-danger"></i> PDF de Materiais do Prestador</h6>
+                            <div class="d-flex gap-2 align-items-center flex-wrap">
+                                <input type="file" class="form-control form-control-sm flex-grow-1" id="servicePdfMap-${sid}" accept=".pdf,.jpg,.jpeg,.png,.webp" style="min-width:0;">
+                                <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0" onclick="parseServicePdfFromMap('${sid}')">
+                                    <i class="bi bi-magic"></i> Analisar
+                                </button>
+                            </div>
+                            <div id="servicePdfStatusMap-${sid}" class="mt-2" style="display:none;"></div>
+                            <div id="serviceMaterialsListMap-${sid}" class="mt-2" style="display:none;"></div>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
             </div>`;
@@ -1211,6 +1225,58 @@ async function parseServicePdf(sid) {
             materialsEl.innerHTML = html;
         } else {
             statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ${data.error || 'Erro ao processar.'}</div>`;
+        }
+    } catch (e) {
+        statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> Erro de conexão.</div>`;
+    }
+
+    fileInput.value = '';
+}
+
+// Versão do parse para o modo Mapa
+async function parseServicePdfFromMap(sid) {
+    const fileInput = document.getElementById('servicePdfMap-' + sid);
+    const statusEl = document.getElementById('servicePdfStatusMap-' + sid);
+    const materialsEl = document.getElementById('serviceMaterialsListMap-' + sid);
+    
+    if (!fileInput || !fileInput.files.length) {
+        alert('Selecione um arquivo PDF primeiro.');
+        return;
+    }
+
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<div class="alert alert-info small py-2 mb-0"><span class="spinner-border spinner-border-sm me-1"></span> Analisando PDF com IA...</div>';
+    materialsEl.style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('pdf', fileInput.files[0]);
+    formData.append('order_id', orderId);
+    formData.append('supplier_id', sid);
+    formData.append('uploaded_by', document.querySelector('[name="quoted_by_name"]')?.value || 'Cotador');
+
+    try {
+        const resp = await fetch('/pedido/cotacao/parse-service-pdf', { method: 'POST', body: formData });
+        const data = await resp.json();
+
+        if (data.success) {
+            let html = '';
+            if (data.file_path) {
+                html += `<div class="alert alert-success small py-2 mb-2"><i class="bi bi-check-circle"></i> PDF salvo. <a href="${data.file_path}" target="_blank" class="fw-bold">Download</a></div>`;
+            }
+            if (data.warning) {
+                html += `<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> ${data.warning}</div>`;
+            }
+            if (data.materials && data.materials.length > 0) {
+                html += renderServiceMaterials(sid, data.materials, data.totals, data.pdf_id);
+            } else {
+                html += `<div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="showManualServiceMaterial('${sid}', ${data.pdf_id || 0})"><i class="bi bi-plus"></i> Adicionar manual</button></div>`;
+                html += `<div id="manualServiceMat-${sid}" style="display:none;"></div>`;
+            }
+            statusEl.innerHTML = '';
+            materialsEl.style.display = 'block';
+            materialsEl.innerHTML = html;
+        } else {
+            statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ${data.error || 'Erro.'}</div>`;
         }
     } catch (e) {
         statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> Erro de conexão.</div>`;
