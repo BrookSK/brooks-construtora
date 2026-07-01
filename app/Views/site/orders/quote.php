@@ -1360,36 +1360,37 @@ function bindSvcRecalc(sid) {
 function recalcServiceTotals(sid) {
     let subtotal = 0;
     
-    // Buscar todos os inputs de total que existem no DOM para este fornecedor
-    // Desktop: inputs dentro da tabela com id contendo "svc-tprice-{sid}-"
     const container = document.getElementById('serviceMaterialsList-' + sid) || document.getElementById('serviceMaterialsListMap-' + sid);
     if (!container) return;
     
-    // Pegar todos os inputs de total (coluna Total) - são os que têm "tprice" no id
-    const totalInputs = container.querySelectorAll('input[id*="svc-tprice-"]');
+    // Pegar inputs de total APENAS da tabela desktop (d-none d-md-block)
+    // Se não achar na tabela desktop, tentar mobile
+    let totalInputs = container.querySelectorAll('.d-none.d-md-block input[id*="svc-tprice-"]');
+    if (totalInputs.length === 0) {
+        totalInputs = container.querySelectorAll('.d-md-none input[id*="svc-tprice-m-"]');
+    }
+    // Fallback: pegar só os que NÃO tem -m- (desktop)
+    if (totalInputs.length === 0) {
+        totalInputs = container.querySelectorAll('input[id*="svc-tprice-"]');
+    }
     
     totalInputs.forEach(el => {
         const val = parseBRL(el.value);
         if (val !== null && val > 0) {
             subtotal += val;
         } else {
-            // Se total vazio, tentar calcular de qty * unit
-            const idParts = el.id.replace('svc-tprice-', '').replace('svc-tprice-m-', '');
-            // Buscar qty e uprice do mesmo row/card
+            // Se total vazio, calcular de qty * unit no mesmo row
             const row = el.closest('tr') || el.closest('.border.rounded');
             if (row) {
                 const qtyInput = row.querySelector('input[id*="svc-qty-"]');
                 const upriceInput = row.querySelector('input[id*="svc-uprice-"]');
                 if (qtyInput && upriceInput) {
-                    const q = parseFloat(qtyInput.value) || 0;
-                    const u = parseBRL(upriceInput.value) || 0;
-                    subtotal += q * u;
+                    subtotal += (parseFloat(qtyInput.value) || 0) * (parseBRL(upriceInput.value) || 0);
                 }
             }
         }
     });
     
-    // Atualizar display
     const totalsEl = document.getElementById('svc-totals-' + sid);
     if (totalsEl) {
         totalsEl.innerHTML = `<span>Subtotal: <strong>R$ ${subtotal.toFixed(2).replace('.', ',')}</strong></span> <span class="fw-bold text-success">Total: R$ ${subtotal.toFixed(2).replace('.', ',')}</span>`;
