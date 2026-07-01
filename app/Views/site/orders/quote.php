@@ -1288,7 +1288,7 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
         html += `<td><input type="number" class="form-control form-control-sm p-1 bg-white" value="${m.quantity || 1}" id="svc-qty-${sid}-${idx}" style="width:55px;font-size:0.75rem;" step="0.001"></td>`;
         html += `<td><input type="text" class="form-control form-control-sm p-1 bg-white" value="${unitPrice}" id="svc-uprice-${sid}-${idx}" style="width:75px;font-size:0.75rem;" inputmode="decimal"></td>`;
         html += `<td><input type="text" class="form-control form-control-sm p-1 bg-white" value="${totalPrice}" id="svc-tprice-${sid}-${idx}" style="width:80px;font-size:0.75rem;" inputmode="decimal"></td>`;
-        html += `<td class="text-nowrap"><button type="button" class="btn btn-sm btn-outline-success p-0 px-1" onclick="registerServiceMaterial('${sid}', ${idx})" title="Cadastrar"><i class="bi bi-plus-circle"></i></button> <button type="button" class="btn btn-sm btn-outline-danger p-0 px-1" onclick="removeServiceMaterial('${sid}', ${idx})" title="Remover"><i class="bi bi-x"></i></button></td>`;
+        html += `<td class="text-nowrap"><button type="button" class="btn btn-sm btn-outline-danger p-0 px-1" onclick="removeServiceMaterial('${sid}', ${idx})" title="Remover"><i class="bi bi-x"></i></button></td>`;
         html += `</tr>`;
     });
     html += `</tbody></table></div></div>`;
@@ -1306,7 +1306,6 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
         html += `<input type="text" class="form-control form-control-sm border-0 p-0 fw-bold" value="${escHtml(m.name || '')}" id="svc-name-m-${sid}-${idx}" style="font-size:0.8rem;" placeholder="Nome do material">`;
         html += `</div>`;
         html += `<div class="d-flex gap-1 flex-shrink-0 ms-1">`;
-        html += `<button type="button" class="btn btn-sm btn-outline-success p-0 px-1" onclick="registerServiceMaterial('${sid}', ${idx})" title="Cadastrar"><i class="bi bi-plus-circle"></i></button>`;
         html += `<button type="button" class="btn btn-sm btn-outline-danger p-0 px-1" onclick="removeServiceMaterial('${sid}', ${idx})" title="Remover"><i class="bi bi-x"></i></button>`;
         html += `</div>`;
         html += `</div>`;
@@ -1402,38 +1401,51 @@ async function saveServiceMaterials(sid, pdfId) {
     const rawMats = window['svcMats_' + sid] || [];
     const materials = [];
 
-    checkboxes.forEach(cb => {
+    for (const cb of checkboxes) {
         const idx = parseInt(cb.dataset.idx);
         const raw = rawMats[idx] || {};
-        if (raw._removed) return; // Item removido, ignorar
+        if (raw._removed) continue;
         
-        // Ler valores editados — tentar desktop primeiro, depois mobile
         const getName = () => document.getElementById(`svc-name-${sid}-${idx}`)?.value || document.getElementById(`svc-name-m-${sid}-${idx}`)?.value || raw.name;
         const getUnit = () => document.getElementById(`svc-unit-${sid}-${idx}`)?.value || document.getElementById(`svc-unit-m-${sid}-${idx}`)?.value || raw.unit;
         const getQty = () => document.getElementById(`svc-qty-${sid}-${idx}`)?.value || document.getElementById(`svc-qty-m-${sid}-${idx}`)?.value || raw.quantity;
         const getUprice = () => document.getElementById(`svc-uprice-${sid}-${idx}`)?.value || document.getElementById(`svc-uprice-m-${sid}-${idx}`)?.value || raw.unit_price;
         const getTprice = () => document.getElementById(`svc-tprice-${sid}-${idx}`)?.value || document.getElementById(`svc-tprice-m-${sid}-${idx}`)?.value || raw.total_price;
 
+        const name = getName();
+        const unit = getUnit();
+        let matId = raw.material_id || null;
+
+        // Auto-cadastrar material se não tem ID
+        if (!matId && name) {
+            try {
+                const resp = await fetch('/admin/materials/quick-store', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ name, specification: raw.specification || '', classification: raw.classification || '', unit_id: '', category_id: '' })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    matId = data.material.id;
+                    if (rawMats[idx]) rawMats[idx].material_id = matId;
+                }
+            } catch (e) {}
+        }
+
         materials.push({
-            name: getName(),
+            name: name,
             code: raw.code || null,
             description: raw.description || null,
             specification: raw.specification || null,
             classification: raw.classification || null,
-            unit: getUnit(),
+            unit: unit,
             quantity: parseFloat(getQty()) || 1,
             weight: raw.weight || null,
             unit_price: parseBRL(getUprice()) || raw.unit_price || null,
             total_price: parseBRL(getTprice()) || raw.total_price || null,
-            subtotal: raw.subtotal || null,
-            discount: raw.discount || null,
-            freight: raw.freight || null,
-            ipi: raw.ipi || null,
-            icms_st: raw.icms_st || null,
-            grand_total: raw.grand_total || null,
-            material_id: raw.material_id || null,
+            material_id: matId,
         });
-    });
+    }
 
     if (materials.length === 0) {
         alert('Selecione pelo menos um material para salvar.');
@@ -1453,11 +1465,13 @@ async function saveServiceMaterials(sid, pdfId) {
         });
         const data = await resp.json();
         if (data.success) {
-            const el = document.getElementById('serviceMaterialsList-' + sid);
-            const savedBadge = document.createElement('div');
-            savedBadge.className = 'alert alert-success small py-2 mt-2';
-            savedBadge.innerHTML = `<i class="bi bi-check-circle"></i> ${data.saved} materiais salvos com sucesso!`;
-            el.appendChild(savedBadge);
+            const el = document.getElementById('serviceMaterialsList-' + sid) || document.getElementById('serviceMaterialsListMap-' + sid);
+            if (el) {
+                const savedBadge = document.createElement('div');
+                savedBadge.className = 'alert alert-success small py-2 mt-2';
+                savedBadge.innerHTML = `<i class="bi bi-check-circle"></i> ${data.saved} materiais salvos e cadastrados com sucesso!`;
+                el.appendChild(savedBadge);
+            }
         } else {
             alert(data.error || 'Erro ao salvar materiais.');
         }
