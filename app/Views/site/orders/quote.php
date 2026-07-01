@@ -1145,6 +1145,7 @@ function confirmSubmit() {
         addedSuppliers.forEach(sid => {
             const rawMats = window['svcMats_' + sid] || [];
             const materialsToSave = [];
+            const processedIdx = new Set(); // Evitar duplicatas desktop/mobile
             
             // Pegar materiais selecionados (checked)
             const container = document.getElementById('serviceMaterialsListMap-' + sid) || document.getElementById('serviceMaterialsList-' + sid);
@@ -1158,6 +1159,9 @@ function confirmSubmit() {
             
             for (const cb of checkboxes) {
                 const idx = parseInt(cb.dataset.idx);
+                if (processedIdx.has(idx)) continue; // Já processado (evita duplicata desktop/mobile)
+                processedIdx.add(idx);
+                
                 const raw = rawMats[idx] || {};
                 if (raw._removed) continue;
                 
