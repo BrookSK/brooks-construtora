@@ -1160,52 +1160,70 @@ async function parseServicePdf(sid) {
         return;
     }
 
+    const file = fileInput.files[0];
     statusEl.style.display = 'block';
-    statusEl.innerHTML = '<div class="alert alert-info small py-2 mb-0"><span class="spinner-border spinner-border-sm me-1"></span> Fazendo upload e analisando PDF com IA... pode levar até 30s.</div>';
     materialsEl.style.display = 'none';
 
-    const formData = new FormData();
-    formData.append('pdf', fileInput.files[0]);
-    formData.append('order_id', orderId);
-    formData.append('supplier_id', sid);
-    formData.append('uploaded_by', document.querySelector('[name="quoted_by_name"]')?.value || 'Cotador');
+    const maxRetries = 3;
+    let attempt = 0;
+    let data = null;
 
-    try {
-        const resp = await fetch('/pedido/cotacao/parse-service-pdf', { method: 'POST', body: formData });
-        const data = await resp.json();
+    while (attempt < maxRetries) {
+        attempt++;
+        statusEl.innerHTML = `<div class="alert alert-info small py-2 mb-0"><span class="spinner-border spinner-border-sm me-1"></span> Analisando PDF com IA...${attempt > 1 ? ' (tentativa ' + attempt + '/' + maxRetries + ')' : ''}</div>`;
 
-        if (data.success) {
-            let html = '';
-            
-            // Mostrar link do PDF salvo
-            if (data.file_path) {
-                html += `<div class="alert alert-success small py-2 mb-2"><i class="bi bi-check-circle"></i> PDF salvo com sucesso. <a href="${data.file_path}" target="_blank" class="fw-bold">Download</a></div>`;
+        const formData = new FormData();
+        formData.append('pdf', file);
+        formData.append('order_id', orderId);
+        formData.append('supplier_id', sid);
+        formData.append('uploaded_by', document.querySelector('[name="quoted_by_name"]')?.value || 'Cotador');
+
+        try {
+            const resp = await fetch('/pedido/cotacao/parse-service-pdf', { method: 'POST', body: formData });
+            data = await resp.json();
+
+            if (data.success && data.materials && data.materials.length > 0) {
+                break; // Sucesso, sai do loop
             }
-
-            if (data.warning) {
-                html += `<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> ${data.warning}</div>`;
+            // Se salvou PDF mas não achou materiais, tentar de novo (sem re-upload)
+            if (data.success && (!data.materials || data.materials.length === 0) && attempt < maxRetries) {
+                await new Promise(r => setTimeout(r, 1000)); // Esperar 1s antes de retry
+                continue;
             }
-
-            if (data.materials && data.materials.length > 0) {
-                html += renderServiceMaterials(sid, data.materials, data.totals, data.pdf_id);
-            } else {
-                html += `<div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="showManualServiceMaterial('${sid}', ${data.pdf_id || 0})"><i class="bi bi-plus"></i> Adicionar material manualmente</button></div>`;
-                html += `<div id="manualServiceMat-${sid}" style="display:none;"></div>`;
+            break; // Não tentar mais
+        } catch (e) {
+            if (attempt >= maxRetries) {
+                statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> Erro de conexão após ${maxRetries} tentativas.</div>`;
+                fileInput.value = '';
+                return;
             }
-
-            statusEl.innerHTML = '';
-            materialsEl.style.display = 'block';
-            materialsEl.innerHTML = html;
-            // Bind recalc e armazenar dados
-            if (data.materials && data.materials.length > 0) {
-                window['svcMats_' + sid] = data.materials;
-                setTimeout(() => bindSvcRecalc(sid), 100);
-            }
-        } else {
-            statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ${data.error || 'Erro ao processar.'}</div>`;
+            await new Promise(r => setTimeout(r, 1000));
         }
-    } catch (e) {
-        statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> Erro de conexão.</div>`;
+    }
+
+    if (data && data.success) {
+        let html = '';
+        if (data.file_path) {
+            html += `<div class="alert alert-success small py-2 mb-2"><i class="bi bi-check-circle"></i> PDF salvo com sucesso. <a href="${data.file_path}" target="_blank" class="fw-bold">Download</a></div>`;
+        }
+        if (data.warning) {
+            html += `<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> ${data.warning}</div>`;
+        }
+        if (data.materials && data.materials.length > 0) {
+            html += renderServiceMaterials(sid, data.materials, data.totals, data.pdf_id);
+        } else {
+            html += `<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> Não foi possível identificar materiais após ${maxRetries} tentativas.</div>`;
+            html += `<div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="showManualServiceMaterial('${sid}', ${data.pdf_id || 0})"><i class="bi bi-plus"></i> Adicionar material manualmente</button></div>`;
+        }
+        statusEl.innerHTML = '';
+        materialsEl.style.display = 'block';
+        materialsEl.innerHTML = html;
+        if (data.materials && data.materials.length > 0) {
+            window['svcMats_' + sid] = data.materials;
+            setTimeout(() => bindSvcRecalc(sid), 100);
+        }
+    } else {
+        statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ${data?.error || 'Erro ao processar.'}</div>`;
     }
 
     fileInput.value = '';
@@ -1222,46 +1240,63 @@ async function parseServicePdfFromMap(sid) {
         return;
     }
 
+    const file = fileInput.files[0];
     statusEl.style.display = 'block';
-    statusEl.innerHTML = '<div class="alert alert-info small py-2 mb-0"><span class="spinner-border spinner-border-sm me-1"></span> Analisando PDF com IA...</div>';
     materialsEl.style.display = 'none';
 
-    const formData = new FormData();
-    formData.append('pdf', fileInput.files[0]);
-    formData.append('order_id', orderId);
-    formData.append('supplier_id', sid);
-    formData.append('uploaded_by', document.querySelector('[name="quoted_by_name"]')?.value || 'Cotador');
+    const maxRetries = 3;
+    let attempt = 0;
+    let data = null;
 
-    try {
-        const resp = await fetch('/pedido/cotacao/parse-service-pdf', { method: 'POST', body: formData });
-        const data = await resp.json();
+    while (attempt < maxRetries) {
+        attempt++;
+        statusEl.innerHTML = `<div class="alert alert-info small py-2 mb-0"><span class="spinner-border spinner-border-sm me-1"></span> Analisando...${attempt > 1 ? ' (tentativa ' + attempt + '/' + maxRetries + ')' : ''}</div>`;
 
-        if (data.success) {
-            let html = '';
-            if (data.file_path) {
-                html += `<div class="alert alert-success small py-2 mb-2"><i class="bi bi-check-circle"></i> PDF salvo. <a href="${data.file_path}" target="_blank" class="fw-bold">Download</a></div>`;
+        const formData = new FormData();
+        formData.append('pdf', file);
+        formData.append('order_id', orderId);
+        formData.append('supplier_id', sid);
+        formData.append('uploaded_by', document.querySelector('[name="quoted_by_name"]')?.value || 'Cotador');
+
+        try {
+            const resp = await fetch('/pedido/cotacao/parse-service-pdf', { method: 'POST', body: formData });
+            data = await resp.json();
+
+            if (data.success && data.materials && data.materials.length > 0) break;
+            if (data.success && (!data.materials || data.materials.length === 0) && attempt < maxRetries) {
+                await new Promise(r => setTimeout(r, 1000));
+                continue;
             }
-            if (data.warning) {
-                html += `<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> ${data.warning}</div>`;
+            break;
+        } catch (e) {
+            if (attempt >= maxRetries) {
+                statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> Erro após ${maxRetries} tentativas.</div>`;
+                fileInput.value = '';
+                return;
             }
-            if (data.materials && data.materials.length > 0) {
-                html += renderServiceMaterials(sid, data.materials, data.totals, data.pdf_id);
-            } else {
-                html += `<div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="showManualServiceMaterial('${sid}', ${data.pdf_id || 0})"><i class="bi bi-plus"></i> Adicionar manual</button></div>`;
-                html += `<div id="manualServiceMat-${sid}" style="display:none;"></div>`;
-            }
-            statusEl.innerHTML = '';
-            materialsEl.style.display = 'block';
-            materialsEl.innerHTML = html;
-            if (data.materials && data.materials.length > 0) {
-                window['svcMats_' + sid] = data.materials;
-                setTimeout(() => bindSvcRecalc(sid), 100);
-            }
-        } else {
-            statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ${data.error || 'Erro.'}</div>`;
+            await new Promise(r => setTimeout(r, 1000));
         }
-    } catch (e) {
-        statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> Erro de conexão.</div>`;
+    }
+
+    if (data && data.success) {
+        let html = '';
+        if (data.file_path) html += `<div class="alert alert-success small py-2 mb-2"><i class="bi bi-check-circle"></i> PDF salvo. <a href="${data.file_path}" target="_blank" class="fw-bold">Download</a></div>`;
+        if (data.warning) html += `<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> ${data.warning}</div>`;
+        if (data.materials && data.materials.length > 0) {
+            html += renderServiceMaterials(sid, data.materials, data.totals, data.pdf_id);
+        } else {
+            html += `<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> Não foi possível identificar materiais após ${maxRetries} tentativas.</div>`;
+            html += `<div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="showManualServiceMaterial('${sid}', ${data.pdf_id || 0})"><i class="bi bi-plus"></i> Adicionar manual</button></div>`;
+        }
+        statusEl.innerHTML = '';
+        materialsEl.style.display = 'block';
+        materialsEl.innerHTML = html;
+        if (data.materials && data.materials.length > 0) {
+            window['svcMats_' + sid] = data.materials;
+            setTimeout(() => bindSvcRecalc(sid), 100);
+        }
+    } else {
+        statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ${data?.error || 'Erro.'}</div>`;
     }
 
     fileInput.value = '';
