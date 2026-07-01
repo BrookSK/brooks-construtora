@@ -1331,9 +1331,53 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
     html += `</div></div>`;
 
     // Armazenar dados para salvar depois
-    html += `<script>window['svcMats_${sid}'] = ${JSON.stringify(materials)};<\/script>`;
+    html += `<script>window['svcMats_${sid}'] = ${JSON.stringify(materials)}; setTimeout(function(){ bindSvcRecalc('${sid}'); }, 200);<\/script>`;
 
     return html;
+}
+
+// Recalcular subtotal/total quando edita valores
+function bindSvcRecalc(sid) {
+    const inputs = document.querySelectorAll(`[id^="svc-tprice-${sid}-"], [id^="svc-tprice-m-${sid}-"], [id^="svc-uprice-${sid}-"], [id^="svc-uprice-m-${sid}-"], [id^="svc-qty-${sid}-"], [id^="svc-qty-m-${sid}-"]`);
+    inputs.forEach(input => {
+        input.addEventListener('input', () => recalcServiceTotals(sid));
+        input.addEventListener('blur', () => recalcServiceTotals(sid));
+    });
+}
+
+function recalcServiceTotals(sid) {
+    let subtotal = 0;
+    const rawMats = window['svcMats_' + sid] || [];
+    
+    // Somar totais de cada item visível (desktop ou mobile)
+    rawMats.forEach((m, idx) => {
+        if (m._removed) return;
+        
+        // Tentar pegar total editado
+        let totalEl = document.getElementById(`svc-tprice-${sid}-${idx}`) || document.getElementById(`svc-tprice-m-${sid}-${idx}`);
+        if (totalEl) {
+            const val = parseBRL(totalEl.value);
+            if (val !== null && val > 0) {
+                subtotal += val;
+                return;
+            }
+        }
+        
+        // Se total está vazio/zero, calcular de qty * unit_price
+        let qtyEl = document.getElementById(`svc-qty-${sid}-${idx}`) || document.getElementById(`svc-qty-m-${sid}-${idx}`);
+        let upriceEl = document.getElementById(`svc-uprice-${sid}-${idx}`) || document.getElementById(`svc-uprice-m-${sid}-${idx}`);
+        if (qtyEl && upriceEl) {
+            const q = parseFloat(qtyEl.value) || 0;
+            const u = parseBRL(upriceEl.value) || 0;
+            subtotal += q * u;
+        }
+    });
+    
+    // Atualizar o display de totais
+    const totalsEl = document.getElementById('svc-totals-' + sid);
+    if (totalsEl) {
+        totalsEl.innerHTML = `<span>Subtotal: <strong>R$ ${subtotal.toFixed(2).replace('.', ',')}</strong></span> <span class="fw-bold text-success">Total: R$ ${subtotal.toFixed(2).replace('.', ',')}</span>`;
+    }
 }
 
 function toggleAllServiceMats(checkbox, sid) {
@@ -1625,6 +1669,7 @@ function removeServiceMaterial(sid, idx) {
     document.getElementById(`svc-mat-m-${sid}-${idx}`)?.remove();
     const rawMats = window['svcMats_' + sid] || [];
     if (rawMats[idx]) rawMats[idx]._removed = true;
+    recalcServiceTotals(sid);
 }
 </script>
 </body>
