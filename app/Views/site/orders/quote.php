@@ -1224,6 +1224,11 @@ async function parseServicePdf(sid) {
             statusEl.innerHTML = '';
             materialsEl.style.display = 'block';
             materialsEl.innerHTML = html;
+            // Bind recalc e armazenar dados
+            if (data.materials && data.materials.length > 0) {
+                window['svcMats_' + sid] = data.materials;
+                setTimeout(() => bindSvcRecalc(sid), 100);
+            }
         } else {
             statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ${data.error || 'Erro ao processar.'}</div>`;
         }
@@ -1276,6 +1281,10 @@ async function parseServicePdfFromMap(sid) {
             statusEl.innerHTML = '';
             materialsEl.style.display = 'block';
             materialsEl.innerHTML = html;
+            if (data.materials && data.materials.length > 0) {
+                window['svcMats_' + sid] = data.materials;
+                setTimeout(() => bindSvcRecalc(sid), 100);
+            }
         } else {
             statusEl.innerHTML = `<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ${data.error || 'Erro.'}</div>`;
         }
@@ -1352,8 +1361,7 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
     html += `<button type="button" class="btn btn-sm btn-success" onclick="saveServiceMaterials('${sid}', ${pdfId || 0})"><i class="bi bi-check-all"></i> Salvar <span class="d-none d-sm-inline">Materiais</span></button>`;
     html += `</div></div>`;
 
-    // Armazenar dados para salvar depois
-    html += `<script>window['svcMats_${sid}'] = ${JSON.stringify(materials)}; setTimeout(function(){ bindSvcRecalc('${sid}'); }, 200);<\/script>`;
+    // Dados armazenados pelo caller (parseServicePdf/parseServicePdfFromMap)
 
     return html;
 }
