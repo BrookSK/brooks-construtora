@@ -369,6 +369,25 @@
         }
         return val * qty;
     }
+
+    // Valida limite de 100% nos campos de desconto/acréscimo
+    function validatePercentLimit(input) {
+        const name = input.name || '';
+        if (!name.includes('discount_value') && !name.includes('surcharge_value')) return;
+        
+        // Encontrar o select de tipo correspondente
+        const group = input.closest('.input-group');
+        if (!group) return;
+        const typeSelect = group.querySelector('select');
+        if (!typeSelect || typeSelect.value !== 'percent') return;
+        
+        const val = parseBRL(input.value) || 0;
+        if (val > 100) {
+            input.value = '100';
+            input.classList.add('is-invalid');
+            setTimeout(() => input.classList.remove('is-invalid'), 2000);
+        }
+    }
     // ────────────────────────────────────────────────────────────────────────
     let addedSuppliers = [];
     let supplierNames = {};
@@ -593,6 +612,16 @@
             input.addEventListener('blur', function() {
                 const parsed = parseBRL(this.value);
                 if (parsed !== null) this.value = formatBRL(parsed);
+                // Validar limite de % para desconto/acréscimo
+                validatePercentLimit(this);
+                calculateSupplierTotal(sid);
+            });
+        });
+        // Validar ao trocar tipo (% ↔ R$)
+        block.querySelectorAll('select[name*="discount_type"], select[name*="surcharge_type"]').forEach(sel => {
+            sel.addEventListener('change', function() {
+                const valueInput = this.closest('.input-group').querySelector('input');
+                if (valueInput) validatePercentLimit(valueInput);
                 calculateSupplierTotal(sid);
             });
         });
@@ -855,6 +884,28 @@
                     listInput.value = this.value;
                     calculateSupplierTotal(sid);
                     setTimeout(renderMapFooter, 100);
+                }
+            });
+            input.addEventListener('blur', function() {
+                // Validar % nos campos de desconto/acréscimo do mapa
+                const field = this.dataset.field;
+                if (field === 'discount_value' || field === 'surcharge_value') {
+                    const sid = this.dataset.sid;
+                    const typeField = field.replace('_value', '_type');
+                    const typeSelect = container.querySelector(`.map-fin-select[data-sid="${sid}"][data-field="${typeField}"]`);
+                    if (typeSelect && typeSelect.value === 'percent') {
+                        const val = parseBRL(this.value) || 0;
+                        if (val > 100) {
+                            this.value = '100';
+                            this.classList.add('is-invalid');
+                            setTimeout(() => this.classList.remove('is-invalid'), 2000);
+                            // Sync
+                            const listInput = document.querySelector(`#supplier-block-${sid} [name="supplier_financials[${sid}][${field}]"]`);
+                            if (listInput) listInput.value = '100';
+                            calculateSupplierTotal(sid);
+                            setTimeout(renderMapFooter, 100);
+                        }
+                    }
                 }
             });
         });

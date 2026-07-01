@@ -184,6 +184,10 @@ class PurchaseOrderController extends Controller
                 $discountValue = (float) str_replace(['.', ','], ['', '.'], $fin['discount_value'] ?? '0');
                 $surchargeType = $fin['surcharge_type'] ?? 'percent';
                 $surchargeValue = (float) str_replace(['.', ','], ['', '.'], $fin['surcharge_value'] ?? '0');
+                
+                // Limitar a 100 quando tipo é porcentagem
+                if ($discountType === 'percent' && $discountValue > 100) $discountValue = 100;
+                if ($surchargeType === 'percent' && $surchargeValue > 100) $surchargeValue = 100;
                 $ipiPercent = (float) str_replace(',', '.', $fin['ipi_percent'] ?? '0');
                 $icmsPercent = (float) str_replace(',', '.', $fin['icms_percent'] ?? '0');
                 $freight = (float) str_replace(['.', ','], ['', '.'], $fin['freight'] ?? '0');
