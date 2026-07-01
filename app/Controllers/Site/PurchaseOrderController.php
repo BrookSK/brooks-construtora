@@ -1655,15 +1655,18 @@ class PurchaseOrderController extends Controller
         if (!$fileId) return ['error' => 'Falha ao obter ID do arquivo.'];
 
         $prompt = 'Analise este PDF de orçamento/nota de materiais de construção civil. '
-            . 'IMPORTANTE: Extraia APENAS os itens da TABELA DE MATERIAIS/PRODUTOS (geralmente tem colunas como "Código", "Descrição do Material", "Peso", "Qtde", "UN", "Preço", "Preço Total" ou similar). '
-            . 'NÃO extraia dados do cabeçalho como "Ref. Pedido", "Cliente", "Endereço", "Tipo Pedido" ou outros metadados do documento. '
-            . 'Para o campo "name" de cada material, use SEMPRE o valor da coluna "DESCRIÇÃO DO MATERIAL" ou "Descrição" ou "Item" da tabela (ex: "CA 50 10,0 MMR PA", "ARAME RECOZIDO TORCIDO PA BWG 18 RL - 1KG"). '
-            . 'NÃO use referências do cabeçalho (como "Estaca C.D", "OBRA CAMPOS") como nome de material. '
-            . 'Retorne APENAS um JSON com a estrutura: {"materials": [...], "totals": {...}}. '
-            . 'Cada material deve ter: name (DESCRIÇÃO DO MATERIAL da tabela), code (código do produto se houver na tabela), description (complemento se houver), specification (tipo), classification (medida/classificação), unit (UN, M, KG, M2, etc), '
-            . 'quantity (quantidade numérica da coluna QTDE ou QTD), weight (peso numérico se houver coluna PESO), unit_price (preço unitário numérico), total_price (preço total numérico). '
-            . 'Em "totals": subtotal, discount, freight, ipi, icms_st, grand_total (todos numéricos ou null, extrair do "Resumo do Pedido" se existir). '
-            . 'Valores monetários devem ser numéricos (ex: 1500.50, não "1.500,50"). Retorne APENAS o JSON.';
+            . 'Extraia APENAS os itens da TABELA de produtos/materiais do documento. '
+            . "\n\nREGRA CRÍTICA: Na tabela, existe uma coluna CÓDIGO (com valores alfanuméricos tipo '10050ROL_PA', '06350ROL_PA', 'ARATORCIDO_') "
+            . "e uma coluna DESCRIÇÃO DO MATERIAL (com textos descritivos tipo 'CA 50 10,0 MMR PA', 'ARAME RECOZIDO TORCIDO PA BWG 18 RL - 1KG'). "
+            . "O campo 'name' DEVE conter o valor da coluna DESCRIÇÃO DO MATERIAL (texto descritivo legível). "
+            . "O campo 'code' DEVE conter o valor da coluna CÓDIGO (alfanumérico). "
+            . "NUNCA coloque códigos alfanuméricos no campo 'name'. NUNCA.\n\n"
+            . 'NÃO extraia dados do cabeçalho (Ref. Pedido, Cliente, Endereço, OBS PED). '
+            . 'Retorne APENAS JSON: {"materials": [...], "totals": {...}}. '
+            . 'Cada material: name (DESCRIÇÃO textual, nunca código), code (CÓDIGO alfanumérico), description (complemento), specification, classification, unit (UN, M, KG, etc), '
+            . 'quantity (QTDE numérico), weight (PESO numérico ou null), unit_price (preço unitário numérico), total_price (preço total numérico). '
+            . 'Em "totals": subtotal, discount, freight, ipi, icms_st, grand_total (numéricos ou null). '
+            . 'Valores monetários numéricos (ex: 1500.50). APENAS JSON, sem markdown.';
 
         $ch = curl_init('https://api.openai.com/v1/responses');
         curl_setopt_array($ch, [
@@ -1725,10 +1728,10 @@ class PurchaseOrderController extends Controller
     {
         $content = base64_encode(file_get_contents($filePath));
         $prompt = 'Analise esta imagem de orçamento/nota de materiais de construção. '
-            . 'IMPORTANTE: Extraia APENAS os itens da TABELA DE MATERIAIS (coluna "Descrição do Material" ou similar). '
-            . 'NÃO use dados do cabeçalho (Ref. Pedido, Cliente, Endereço) como nome de material. '
-            . 'Use a coluna "DESCRIÇÃO DO MATERIAL" para o campo "name" de cada item. '
-            . 'Retorne JSON: {"materials": [{name (descrição do material da tabela), code, description, specification, classification, unit, quantity, weight, unit_price, total_price}], "totals": {subtotal, discount, freight, ipi, icms_st, grand_total}}. Valores numéricos. APENAS JSON.';
+            . "REGRA CRÍTICA: O campo 'name' DEVE conter a DESCRIÇÃO DO MATERIAL (texto descritivo como 'CA 50 10,0 MMR PA'), "
+            . "NUNCA o CÓDIGO do produto (como '10050ROL_PA'). Códigos vão no campo 'code'. "
+            . 'Extraia APENAS itens da TABELA DE MATERIAIS. NÃO use dados do cabeçalho. '
+            . 'Retorne JSON: {"materials": [{name (DESCRIÇÃO textual, nunca código), code (CÓDIGO alfanumérico), description, specification, classification, unit, quantity, weight, unit_price, total_price}], "totals": {subtotal, discount, freight, ipi, icms_st, grand_total}}. Valores numéricos. APENAS JSON.';
 
         $ch = curl_init('https://api.openai.com/v1/chat/completions');
         curl_setopt_array($ch, [
