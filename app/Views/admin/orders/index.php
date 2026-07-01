@@ -1,17 +1,17 @@
 <?php $pageTitle = 'Pedidos de Materiais'; $currentPage = 'orders'; ?>
 <?php ob_start(); ?>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <span class="badge bg-secondary"><?= count($orders) ?> pedidos</span>
-    <div class="d-flex gap-2">
+    <div class="d-flex flex-wrap gap-1 justify-content-end">
         <a href="/admin/orders/tracking" class="btn btn-outline-dark btn-sm">
-            <i class="bi bi-clipboard-check"></i> Acompanhamento
+            <i class="bi bi-clipboard-check"></i> <span class="d-none d-sm-inline">Acompanhamento</span><span class="d-sm-none">Acomp.</span>
         </a>
         <a href="/admin/orders/spare-items" class="btn btn-outline-warning btn-sm">
-            <i class="bi bi-bag-plus"></i> Sobressalentes
+            <i class="bi bi-bag-plus"></i> <span class="d-none d-sm-inline">Sobressalentes</span><span class="d-sm-none">Sobress.</span>
         </a>
         <a href="/admin/orders/create" class="btn btn-primary btn-sm">
-            <i class="bi bi-plus-lg"></i> Novo Pedido
+            <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">Novo Pedido</span><span class="d-sm-none">Novo</span>
         </a>
     </div>
 </div>
