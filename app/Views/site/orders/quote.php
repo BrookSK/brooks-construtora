@@ -1031,15 +1031,25 @@ function showReviewModal() {
         html += '<table class="table table-sm mb-0" style="font-size:0.75rem;"><thead><tr><th>Material</th><th class="text-end">Unit.</th><th class="text-end">Total</th></tr></thead><tbody>';
         const priceInputs = block.querySelectorAll('.price-input');
         priceInputs.forEach(input => {
-            const row = input.closest('tr') || input.closest('.row');
-            if (!row) return;
-            const matName = row.querySelector('strong')?.textContent || row.querySelector('td:first-child')?.textContent || '';
-            const unitPrice = input.value || '0';
-            const qty = row.querySelector('[readonly]')?.textContent || '';
-            const total = (parseFloat(unitPrice.replace(',', '.')) * (parseFloat(qty) || 1)).toFixed(2).replace('.', ',');
-            if (unitPrice && unitPrice !== '0') {
-                html += '<tr><td>' + escHtml(matName.trim()) + '</td><td class="text-end">R$ ' + escHtml(unitPrice) + '</td><td class="text-end fw-bold">R$ ' + total + '</td></tr>';
+            const val = parseBRL(input.value) || 0;
+            if (val === 0) return;
+            const qty = parseFloat(input.dataset.qty) || 1;
+            const itemId = input.dataset.itemId || '';
+            const item = items.find(i => String(i.id) === String(itemId));
+            const matName = item ? item.material_name : 'Material';
+            
+            let unitPrice, totalPrice;
+            if (priceMode === 'total') {
+                totalPrice = val;
+                unitPrice = qty > 0 ? val / qty : val;
+            } else {
+                unitPrice = val;
+                totalPrice = val * qty;
             }
+            
+            html += '<tr><td>' + escHtml(matName) + ' <small class="text-muted">(x' + qty + ')</small></td>';
+            html += '<td class="text-end">R$ ' + formatBRL(unitPrice) + '</td>';
+            html += '<td class="text-end fw-bold">R$ ' + formatBRL(totalPrice) + '</td></tr>';
         });
         html += '</tbody></table>';
         html += '</div></div>';
