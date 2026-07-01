@@ -1656,12 +1656,16 @@ class PurchaseOrderController extends Controller
         $fileId = $uploadData['id'] ?? null;
         if (!$fileId) return ['error' => 'Falha ao obter ID do arquivo.'];
 
-        $prompt = 'Analise este PDF de orçamento/proposta de serviço de construção civil. Extraia TODOS os materiais/itens listados. '
+        $prompt = 'Analise este PDF de orçamento/nota de materiais de construção civil. '
+            . 'IMPORTANTE: Extraia APENAS os itens da TABELA DE MATERIAIS/PRODUTOS (geralmente tem colunas como "Código", "Descrição do Material", "Peso", "Qtde", "UN", "Preço", "Preço Total" ou similar). '
+            . 'NÃO extraia dados do cabeçalho como "Ref. Pedido", "Cliente", "Endereço", "Tipo Pedido" ou outros metadados do documento. '
+            . 'Para o campo "name" de cada material, use SEMPRE o valor da coluna "DESCRIÇÃO DO MATERIAL" ou "Descrição" ou "Item" da tabela (ex: "CA 50 10,0 MMR PA", "ARAME RECOZIDO TORCIDO PA BWG 18 RL - 1KG"). '
+            . 'NÃO use referências do cabeçalho (como "Estaca C.D", "OBRA CAMPOS") como nome de material. '
             . 'Retorne APENAS um JSON com a estrutura: {"materials": [...], "totals": {...}}. '
-            . 'Cada material deve ter: name, code, description, specification, classification, unit (UN, M, KG, M2, etc), '
-            . 'quantity (numérico), weight (numérico ou null), unit_price (numérico), total_price (numérico). '
-            . 'Em "totals": subtotal, discount, freight, ipi, icms_st, grand_total (todos numéricos ou null). '
-            . 'Valores monetários devem ser numéricos (ex: 1500.50). Retorne APENAS o JSON.';
+            . 'Cada material deve ter: name (DESCRIÇÃO DO MATERIAL da tabela), code (código do produto se houver na tabela), description (complemento se houver), specification (tipo), classification (medida/classificação), unit (UN, M, KG, M2, etc), '
+            . 'quantity (quantidade numérica da coluna QTDE ou QTD), weight (peso numérico se houver coluna PESO), unit_price (preço unitário numérico), total_price (preço total numérico). '
+            . 'Em "totals": subtotal, discount, freight, ipi, icms_st, grand_total (todos numéricos ou null, extrair do "Resumo do Pedido" se existir). '
+            . 'Valores monetários devem ser numéricos (ex: 1500.50, não "1.500,50"). Retorne APENAS o JSON.';
 
         $ch = curl_init('https://api.openai.com/v1/responses');
         curl_setopt_array($ch, [
@@ -1722,8 +1726,11 @@ class PurchaseOrderController extends Controller
     private function parseServiceImageViaApi(string $filePath, string $mimeType, string $apiKey, string $model): ?array
     {
         $content = base64_encode(file_get_contents($filePath));
-        $prompt = 'Analise esta imagem de orçamento de serviço de construção. Extraia os materiais. '
-            . 'Retorne JSON: {"materials": [{name, code, description, specification, classification, unit, quantity, weight, unit_price, total_price}], "totals": {subtotal, discount, freight, ipi, icms_st, grand_total}}. Valores numéricos. APENAS JSON.';
+        $prompt = 'Analise esta imagem de orçamento/nota de materiais de construção. '
+            . 'IMPORTANTE: Extraia APENAS os itens da TABELA DE MATERIAIS (coluna "Descrição do Material" ou similar). '
+            . 'NÃO use dados do cabeçalho (Ref. Pedido, Cliente, Endereço) como nome de material. '
+            . 'Use a coluna "DESCRIÇÃO DO MATERIAL" para o campo "name" de cada item. '
+            . 'Retorne JSON: {"materials": [{name (descrição do material da tabela), code, description, specification, classification, unit, quantity, weight, unit_price, total_price}], "totals": {subtotal, discount, freight, ipi, icms_st, grand_total}}. Valores numéricos. APENAS JSON.';
 
         $ch = curl_init('https://api.openai.com/v1/chat/completions');
         curl_setopt_array($ch, [

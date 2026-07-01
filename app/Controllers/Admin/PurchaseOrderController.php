@@ -2655,15 +2655,18 @@ class PurchaseOrderController extends Controller
         if (!$fileId) return ['error' => 'Falha ao obter ID do arquivo.'];
 
         // 2. Analisar com Responses API
-        $prompt = 'Analise este PDF de orçamento/proposta de serviço de construção civil. Extraia TODOS os materiais/itens listados. '
-            . 'Retorne APENAS um JSON com a estrutura: {"materials": [...], "totals": {...}}. '
-            . 'Cada material deve ter: name (nome), code (código se houver), description (descrição), specification (tipo), '
+        $prompt = 'Analise este PDF de orçamento/nota de materiais de construção civil. '
+            . 'IMPORTANTE: Extraia APENAS os itens da TABELA DE MATERIAIS/PRODUTOS do documento. '
+            . 'A tabela geralmente tem colunas como "Código", "Descrição do Material", "Peso", "Qtde", "UN", "Preço", "Preço Total" ou similar. '
+            . 'NÃO extraia dados do cabeçalho como "Ref. Pedido", "Cliente", "Endereço", "Tipo Pedido", "OBS PED" ou outros metadados. '
+            . 'Para o campo "name" de cada material, use SEMPRE o valor da coluna "DESCRIÇÃO DO MATERIAL" ou "Descrição" ou "Item" (ex: "CA 50 10,0 MMR PA", "ARAME RECOZIDO TORCIDO PA BWG 18 RL - 1KG"). '
+            . 'NÃO use referências do cabeçalho (como "Estaca C.D", nomes de obra, endereços) como nome de material. '
+            . 'Retorne APENAS um JSON: {"materials": [...], "totals": {...}}. '
+            . 'Cada material: name (DESCRIÇÃO DO MATERIAL da tabela), code (código do produto), description (complemento se houver), specification (tipo), '
             . 'classification (medida/classificação), unit (unidade: UN, M, KG, M2, M3, L, etc), '
-            . 'quantity (quantidade numérica), weight (peso se houver), unit_price (preço unitário numérico), total_price (preço total numérico). '
-            . 'Em "totals" inclua se disponível: subtotal (numérico), discount (desconto numérico), freight (frete numérico), '
-            . 'ipi (IPI numérico), icms_st (ICMS-ST numérico), grand_total (total geral numérico). '
-            . 'Todos os valores monetários devem ser numéricos (ex: 1500.50, não "1.500,50"). '
-            . 'Se algum campo não estiver disponível, use null. Retorne APENAS o JSON, sem markdown.';
+            . 'quantity (quantidade numérica da coluna QTDE), weight (peso numérico se houver), unit_price (preço unitário numérico), total_price (preço total numérico). '
+            . 'Em "totals": subtotal, discount, freight, ipi, icms_st, grand_total (numéricos, do "Resumo do Pedido" se existir). '
+            . 'Valores monetários devem ser numéricos (ex: 1500.50, não "1.500,50"). Se indisponível, use null. APENAS JSON, sem markdown.';
 
         $ch = curl_init('https://api.openai.com/v1/responses');
         curl_setopt_array($ch, [
@@ -2747,15 +2750,14 @@ class PurchaseOrderController extends Controller
     {
         $content = base64_encode(file_get_contents($filePath));
 
-        $prompt = 'Analise esta imagem de orçamento/proposta de serviço de construção civil. Extraia TODOS os materiais/itens listados. '
-            . 'Retorne APENAS um JSON com a estrutura: {"materials": [...], "totals": {...}}. '
-            . 'Cada material deve ter: name (nome), code (código se houver), description (descrição), specification (tipo), '
-            . 'classification (medida/classificação), unit (unidade: UN, M, KG, M2, M3, L, etc), '
-            . 'quantity (quantidade numérica), weight (peso se houver), unit_price (preço unitário numérico), total_price (preço total numérico). '
-            . 'Em "totals" inclua se disponível: subtotal (numérico), discount (desconto numérico), freight (frete numérico), '
-            . 'ipi (IPI numérico), icms_st (ICMS-ST numérico), grand_total (total geral numérico). '
-            . 'Todos os valores monetários devem ser numéricos (ex: 1500.50, não "1.500,50"). '
-            . 'Se algum campo não estiver disponível, use null. Retorne APENAS o JSON, sem markdown.';
+        $prompt = 'Analise esta imagem de orçamento/nota de materiais de construção civil. '
+            . 'IMPORTANTE: Extraia APENAS os itens da TABELA DE MATERIAIS/PRODUTOS. '
+            . 'NÃO extraia dados do cabeçalho (Ref. Pedido, Cliente, Endereço, OBS PED, Tipo Pedido). '
+            . 'Para "name", use SEMPRE a coluna "DESCRIÇÃO DO MATERIAL" da tabela (ex: "CA 50 10,0 MMR PA"). '
+            . 'NÃO use referências do cabeçalho como nome de material. '
+            . 'Retorne JSON: {"materials": [{name (descrição do material da tabela), code, description, specification, classification, unit, quantity, weight, unit_price, total_price}], '
+            . '"totals": {subtotal, discount, freight, ipi, icms_st, grand_total}}. '
+            . 'Valores monetários numéricos (1500.50). Se indisponível, null. APENAS JSON.';
 
         $messages = [
             ['role' => 'system', 'content' => 'Você é um assistente que analisa orçamentos de prestadores de serviço de construção civil. Extraia os materiais e valores. Retorne APENAS JSON válido.'],
