@@ -353,6 +353,64 @@
         </div>
         <?php endif; ?>
 
+        <!-- Materiais de Serviço -->
+        <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
+        <?php
+        $supplierMaterials = \App\Models\PurchaseOrderSupplierMaterial::getByOrder($order['id']);
+        $supplierPdfs = \App\Models\PurchaseOrderSupplierPdf::getByOrder($order['id']);
+        $matsBySup = [];
+        foreach ($supplierMaterials as $mat) { $matsBySup[$mat['supplier_id']][] = $mat; }
+        $pdfsBySup = [];
+        foreach ($supplierPdfs as $pdf) { $pdfsBySup[$pdf['supplier_id']][] = $pdf; }
+        // Mostrar apenas do fornecedor aprovado
+        $approvedSids = [];
+        if (!empty($orderSuppliers)) {
+            foreach ($orderSuppliers as $os) {
+                if (!empty($os['approved'])) $approvedSids[] = $os['supplier_id'];
+            }
+        }
+        $sidsToShow = !empty($approvedSids) ? $approvedSids : array_keys($matsBySup);
+        ?>
+        <?php if (!empty($supplierMaterials)): ?>
+        <div style="margin-top:1.5rem;">
+            <h6 style="font-size:0.85rem;"><i class="bi bi-wrench"></i> Materiais de Serviço</h6>
+            <?php foreach ($sidsToShow as $supId): ?>
+            <?php if (empty($matsBySup[$supId])) continue; ?>
+            <div style="margin-bottom:1rem;">
+                <?php
+                $supName = '-';
+                foreach ($orderSuppliers as $os) { if ($os['supplier_id'] == $supId) { $supName = $os['supplier_name']; break; } }
+                ?>
+                <p style="font-size:0.75rem; margin-bottom:0.3rem;"><strong><?= htmlspecialchars($supName) ?></strong>
+                <?php if (!empty($pdfsBySup[$supId])): ?>
+                 — <a href="<?= htmlspecialchars($pdfsBySup[$supId][0]['file_path']) ?>" target="_blank">PDF do orçamento</a>
+                <?php endif; ?>
+                </p>
+                <table class="items-table-desktop" style="font-size:0.75rem;">
+                    <thead><tr><th>Material</th><th>Unid.</th><th style="text-align:center;">Qtd</th><th style="text-align:right;">Unit.</th><th style="text-align:right;">Total</th></tr></thead>
+                    <tbody>
+                    <?php $svcTotal = 0; ?>
+                    <?php foreach ($matsBySup[$supId] as $mat): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($mat['material_name']) ?></td>
+                        <td><?= htmlspecialchars($mat['unit'] ?? '-') ?></td>
+                        <td style="text-align:center;"><?= $mat['quantity'] ? number_format($mat['quantity'], $mat['quantity'] == (int)$mat['quantity'] ? 0 : 2) : '-' ?></td>
+                        <td style="text-align:right;"><?= $mat['unit_price'] ? 'R$ ' . number_format($mat['unit_price'], 2, ',', '.') : '-' ?></td>
+                        <td style="text-align:right;"><?= $mat['total_price'] ? 'R$ ' . number_format($mat['total_price'], 2, ',', '.') : '-' ?></td>
+                    </tr>
+                    <?php $svcTotal += (float)($mat['total_price'] ?? 0); ?>
+                    <?php endforeach; ?>
+                    <?php if ($svcTotal > 0): ?>
+                    <tr class="total-row"><td colspan="4" style="text-align:right;">Total Materiais:</td><td style="text-align:right;">R$ <?= number_format($svcTotal, 2, ',', '.') ?></td></tr>
+                    <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+        <?php endif; ?>
+
         <!-- Aprovação -->
         <div class="approval-section">
             <h6><i class="bi bi-check-circle-fill"></i> Aprovação</h6>
