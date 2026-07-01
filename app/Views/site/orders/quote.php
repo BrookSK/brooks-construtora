@@ -1421,11 +1421,11 @@ function toggleAllServiceMats(checkbox, sid) {
 }
 
 async function saveServiceMaterials(sid, pdfId) {
-    // Pegar de desktop OU mobile (quem estiver visível)
-    let checkboxes = document.querySelectorAll(`.svc-mat-check[data-sid="${sid}"]:checked`);
-    if (checkboxes.length === 0) {
-        checkboxes = document.querySelectorAll(`.svc-mat-check-m[data-sid="${sid}"]:checked`);
-    }
+    // Buscar checkboxes no container visível
+    const container = document.getElementById('serviceMaterialsList-' + sid) || document.getElementById('serviceMaterialsListMap-' + sid);
+    if (!container) { alert('Erro: container não encontrado.'); return; }
+    
+    let checkboxes = container.querySelectorAll('input[type="checkbox"][data-idx]:checked');
     const rawMats = window['svcMats_' + sid] || [];
     const materials = [];
 
@@ -1493,13 +1493,10 @@ async function saveServiceMaterials(sid, pdfId) {
         });
         const data = await resp.json();
         if (data.success) {
-            const el = document.getElementById('serviceMaterialsList-' + sid) || document.getElementById('serviceMaterialsListMap-' + sid);
-            if (el) {
-                const savedBadge = document.createElement('div');
-                savedBadge.className = 'alert alert-success small py-2 mt-2';
-                savedBadge.innerHTML = `<i class="bi bi-check-circle"></i> ${data.saved} materiais salvos e cadastrados com sucesso!`;
-                el.appendChild(savedBadge);
-            }
+            const savedBadge = document.createElement('div');
+            savedBadge.className = 'alert alert-success small py-2 mt-2';
+            savedBadge.innerHTML = `<i class="bi bi-check-circle"></i> ${data.saved} materiais salvos e cadastrados!`;
+            container.appendChild(savedBadge);
         } else {
             alert(data.error || 'Erro ao salvar materiais.');
         }
