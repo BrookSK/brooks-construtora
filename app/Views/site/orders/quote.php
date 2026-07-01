@@ -230,6 +230,59 @@
     const items = <?= json_encode($items) ?>;
     const priceHistory = <?= json_encode($priceHistory ?? []) ?>;
     let supplierCount = 0;
+
+    // ─── Helpers de moeda BRL ────────────────────────────────────────────────
+    // Aceita: "4997,85" | "4.997,85" | "4997.85" | "4,997.85" | "4997" | "5"
+    function parseBRL(raw) {
+        if (raw === null || raw === undefined) return null;
+        let s = String(raw).trim();
+        if (s === '' || s === '0,00' || s === '0.00') return 0;
+
+        // Detecta o formato: se tem vírgula E ponto
+        const hasDot   = s.includes('.');
+        const hasComma = s.includes(',');
+
+        if (hasDot && hasComma) {
+            // Descobrir qual é separador decimal: o que vem DEPOIS
+            const dotIdx   = s.lastIndexOf('.');
+            const commaIdx = s.lastIndexOf(',');
+            if (commaIdx > dotIdx) {
+                // "4.997,85" → ponto=milhar, vírgula=decimal
+                s = s.replace(/\./g, '').replace(',', '.');
+            } else {
+                // "4,997.85" → vírgula=milhar, ponto=decimal
+                s = s.replace(/,/g, '');
+            }
+        } else if (hasComma) {
+            // Só vírgula: pode ser decimal ("4997,85") ou milhar ("4,997")
+            const parts = s.split(',');
+            if (parts.length === 2 && parts[1].length <= 2) {
+                // Decimal: "4997,85" → "4997.85"
+                s = s.replace(',', '.');
+            } else {
+                // Milhar: "4,997" → "4997"
+                s = s.replace(/,/g, '');
+            }
+        }
+        // Só ponto: pode ser decimal ("4997.85") ou milhar ("4.997")
+        else if (hasDot) {
+            const parts = s.split('.');
+            if (parts.length === 2 && parts[1].length <= 2) {
+                // Decimal: "4997.85" → já ok
+            } else {
+                // Milhar: "4.997" → "4997"
+                s = s.replace(/\./g, '');
+            }
+        }
+
+        const num = parseFloat(s);
+        return isNaN(num) ? null : num;
+    }
+
+    function formatBRL(num) {
+        return num.toFixed(2).replace('.', ',');
+    }
+    // ────────────────────────────────────────────────────────────────────────
     let addedSuppliers = [];
     let supplierNames = {};
 
@@ -451,8 +504,8 @@
         block.querySelectorAll('.price-input, input[name*="financials"]').forEach(input => {
             input.addEventListener('input', () => calculateSupplierTotal(sid));
             input.addEventListener('blur', function() {
-                let val = this.value.replace(/[^\d,\.]/g, '').replace(',', '.');
-                if (val && !isNaN(parseFloat(val))) this.value = parseFloat(val).toFixed(2).replace('.', ',');
+                const parsed = parseBRL(this.value);
+                if (parsed !== null) this.value = formatBRL(parsed);
                 calculateSupplierTotal(sid);
             });
         });
@@ -471,13 +524,13 @@
 
         let subtotalItems = 0;
         block.querySelectorAll('.price-input').forEach(input => {
-            const val = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
+            const val = parseBRL(input.value) || 0;
             const qty = parseFloat(input.dataset.qty) || 0;
             subtotalItems += val * qty;
         });
 
         // Financeiros
-        const getVal = (name) => parseFloat((block.querySelector(`[name="supplier_financials[${sid}][${name}]"]`)?.value || '0').replace(/\./g, '').replace(',', '.')) || 0;
+        const getVal = (name) => parseBRL(block.querySelector(`[name="supplier_financials[${sid}][${name}]"]`)?.value) || 0;
         const getType = (name) => block.querySelector(`[name="supplier_financials[${sid}][${name}]"]`)?.value || 'percent';
         
         const discountVal = getVal('discount_value');
@@ -490,23 +543,18 @@
 
         let total = subtotalItems;
         
-        // Desconto
         if (discountType === 'percent') total -= subtotalItems * (discountVal / 100);
         else total -= discountVal;
         
-        // Acréscimo
         if (surchargeType === 'percent') total += subtotalItems * (surchargeVal / 100);
         else total += surchargeVal;
         
-        // IPI e ICMS
         total += subtotalItems * (ipi / 100);
         total += subtotalItems * (icms / 100);
-        
-        // Frete
         total += freight;
 
-        document.getElementById('subtotal-items-' + sid).textContent = 'R$ ' + subtotalItems.toFixed(2).replace('.', ',');
-        document.getElementById('subtotal-final-' + sid).textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+        document.getElementById('subtotal-items-' + sid).textContent = 'R$ ' + formatBRL(subtotalItems);
+        document.getElementById('subtotal-final-' + sid).textContent = 'R$ ' + formatBRL(total);
     }
 
     // --- Modo de visualização (Lista vs Mapa) ---
@@ -587,9 +635,9 @@
                 setTimeout(renderMapFooter, 100);
             });
             input.addEventListener('blur', function() {
-                let val = this.value.replace(/[^\d,\.]/g, '').replace(',', '.');
-                if (val && !isNaN(parseFloat(val))) {
-                    this.value = parseFloat(val).toFixed(2).replace('.', ',');
+                const parsed = parseBRL(this.value);
+                if (parsed !== null) {
+                    this.value = formatBRL(parsed);
                     // Sync com lista também no blur
                     const sid = this.dataset.sid;
                     const itemId = this.dataset.item;
