@@ -308,6 +308,62 @@
                     </div>
                 </div>
 
+                <!-- Materiais de Serviço (se aplicável) -->
+                <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
+                <?php
+                $supplierMaterials = \App\Models\PurchaseOrderSupplierMaterial::getByOrder($order['id']);
+                $supplierPdfs = \App\Models\PurchaseOrderSupplierPdf::getByOrder($order['id']);
+                ?>
+                <?php if (!empty($supplierMaterials) || !empty($supplierPdfs)): ?>
+                <div class="mb-4">
+                    <h6 class="small fw-bold mb-2"><i class="bi bi-file-earmark-pdf text-danger"></i> Materiais de Serviço dos Fornecedores</h6>
+                    <?php
+                    $matsBySup = [];
+                    foreach ($supplierMaterials as $mat) { $matsBySup[$mat['supplier_id']][] = $mat; }
+                    $pdfsBySup = [];
+                    foreach ($supplierPdfs as $pdf) { $pdfsBySup[$pdf['supplier_id']][] = $pdf; }
+                    $allSids = array_unique(array_merge(array_keys($matsBySup), array_keys($pdfsBySup)));
+                    ?>
+                    <?php foreach ($allSids as $supId): ?>
+                    <div class="border rounded p-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="small">
+                                <?php
+                                $supName = '-';
+                                foreach ($orderSuppliers as $os) { if ($os['supplier_id'] == $supId) { $supName = $os['supplier_name']; break; } }
+                                echo htmlspecialchars($supName);
+                                ?>
+                            </strong>
+                            <?php if (!empty($pdfsBySup[$supId])): ?>
+                            <a href="<?= htmlspecialchars($pdfsBySup[$supId][0]['file_path']) ?>" target="_blank" class="btn btn-sm btn-outline-danger py-0 px-1">
+                                <i class="bi bi-file-pdf"></i> PDF
+                            </a>
+                            <?php endif; ?>
+                        </div>
+                        <?php if (!empty($matsBySup[$supId])): ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0" style="font-size:0.72rem;">
+                                <thead class="table-light"><tr><th>Material</th><th>Unid.</th><th class="text-center">Qtd</th><th class="text-end">Unit.</th><th class="text-end">Total</th></tr></thead>
+                                <tbody>
+                                <?php foreach ($matsBySup[$supId] as $mat): ?>
+                                <tr>
+                                    <td><strong><?= htmlspecialchars($mat['material_name']) ?></strong></td>
+                                    <td><?= htmlspecialchars($mat['unit'] ?? '-') ?></td>
+                                    <td class="text-center"><?= $mat['quantity'] ? number_format($mat['quantity'], $mat['quantity'] == (int)$mat['quantity'] ? 0 : 2) : '-' ?></td>
+                                    <td class="text-end"><?= $mat['unit_price'] ? 'R$ ' . number_format($mat['unit_price'], 2, ',', '.') : '-' ?></td>
+                                    <td class="text-end fw-bold"><?= $mat['total_price'] ? 'R$ ' . number_format($mat['total_price'], 2, ',', '.') : '-' ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+                <?php endif; ?>
+
                 <!-- Formulário de decisão -->
                 <form method="POST" action="/pedido/aprovacao/enviar/<?= $token ?>" id="approvalForm">
                     <!-- Inputs ocultos para seleção por item (preenchidos via JS) -->
