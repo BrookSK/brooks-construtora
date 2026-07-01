@@ -1581,7 +1581,11 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        // 2. Registrar PDF no banco
+        // 2. Limpar PDFs e materiais anteriores deste fornecedor (evitar duplicatas)
+        Database::delete('purchase_order_supplier_materials', 'order_id = ? AND supplier_id = ?', [$orderId, $supplierId]);
+        Database::delete('purchase_order_supplier_pdfs', 'order_id = ? AND supplier_id = ?', [$orderId, $supplierId]);
+
+        // 3. Registrar PDF no banco
         $pdfId = PurchaseOrderSupplierPdf::create([
             'order_id' => $orderId,
             'supplier_id' => $supplierId,
