@@ -1460,20 +1460,46 @@ async function saveServiceMaterials(sid, pdfId) {
         const unit = getUnit();
         let matId = raw.material_id || null;
 
-        // Auto-cadastrar material se não tem ID
+        // Auto-cadastrar material se não tem ID (primeiro tenta encontrar existente)
         if (!matId && name) {
-            try {
-                const resp = await fetch('/admin/materials/quick-store', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ name, specification: raw.specification || '', classification: raw.classification || '', unit_id: '', category_id: '' })
-                });
-                const data = await resp.json();
-                if (data.success) {
-                    matId = data.material.id;
-                    if (rawMats[idx]) rawMats[idx].material_id = matId;
-                }
-            } catch (e) {}
+            // Tentar encontrar material existente por nome similar
+            const normalize = (str) => (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+            const nameNorm = normalize(name);
+            const nameWords = nameNorm.split(' ').filter(w => w.length > 2);
+            
+            let bestMatch = null;
+            let bestScore = 0;
+            
+            allMaterials.forEach(m => {
+                const mNorm = normalize(m.name);
+                if (mNorm === nameNorm) { bestMatch = m; bestScore = 100; return; }
+                if (mNorm.includes(nameNorm) || nameNorm.includes(mNorm)) { if (bestScore < 80) { bestMatch = m; bestScore = 80; } return; }
+                const mWords = mNorm.split(' ').filter(w => w.length > 2);
+                let common = 0;
+                nameWords.forEach(w => { if (mWords.includes(w)) common++; });
+                const score = nameWords.length > 0 ? (common / nameWords.length) * 70 : 0;
+                if (score > bestScore && score >= 50) { bestMatch = m; bestScore = score; }
+            });
+
+            if (bestMatch && bestScore >= 50) {
+                matId = bestMatch.id;
+                if (rawMats[idx]) rawMats[idx].material_id = matId;
+            } else {
+                // Não encontrou: cadastrar novo
+                try {
+                    const resp = await fetch('/admin/materials/quick-store', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ name, specification: raw.specification || '', classification: raw.classification || '', unit_id: '', category_id: '' })
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        matId = data.material.id;
+                        if (rawMats[idx]) rawMats[idx].material_id = matId;
+                        allMaterials.push({ id: data.material.id, name: data.material.name, specification: '', classification: '', unit_abbr: unit || '', unit_name: '' });
+                    }
+                } catch (e) {}
+            }
         }
 
         materials.push({
@@ -1513,6 +1539,11 @@ async function saveServiceMaterials(sid, pdfId) {
             savedBadge.className = 'alert alert-success small py-2 mt-2';
             savedBadge.innerHTML = `<i class="bi bi-check-circle"></i> ${data.saved} materiais salvos e cadastrados!`;
             container.appendChild(savedBadge);
+            // Esconder botões de salvar e adicionar manual
+            container.querySelectorAll('button[onclick*="saveServiceMaterials"], button[onclick*="showManualServiceMaterial"]').forEach(btn => btn.style.display = 'none');
+            // Desabilitar edição
+            container.querySelectorAll('input[id*="svc-"]').forEach(inp => { inp.readOnly = true; inp.style.opacity = '0.7'; });
+            container.querySelectorAll('button[onclick*="removeServiceMaterial"]').forEach(btn => btn.style.display = 'none');
         } else {
             alert(data.error || 'Erro ao salvar materiais.');
         }
