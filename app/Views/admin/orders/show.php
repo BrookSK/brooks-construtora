@@ -1016,6 +1016,9 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <i class="bi bi-clipboard"></i>
                         </button>
                     </div>
+                    <a href="<?= $baseUrl ?>/pedido/cotacao/<?= $order['quote_token'] ?>" target="_blank" class="btn btn-outline-primary btn-sm w-100 mt-2">
+                        <i class="bi bi-pencil-square"></i> Editar Cotação
+                    </a>
                 </div>
                 <div>
                     <label class="form-label small fw-bold">Link de Aprovação</label>
