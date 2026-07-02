@@ -1,4 +1,4 @@
-<?php $pageTitle = 'Novo Pedido de Materiais'; $currentPage = 'orders'; ?>
+<?php $pageTitle = 'Novo Pedido'; $currentPage = 'orders'; ?>
 <?php ob_start(); ?>
 
 <link rel="stylesheet" href="/assets/css/searchable-select.css">
@@ -6,6 +6,24 @@
 <form method="POST" action="/admin/orders/store" id="orderForm">
     <div class="row">
         <div class="col-lg-9">
+            <!-- Tipo do Pedido -->
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-tag"></i> Tipo do Pedido</div>
+                <div class="card-body">
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="order_type" id="typeMaterial" value="material" checked>
+                        <label class="btn btn-outline-primary" for="typeMaterial">
+                            <i class="bi bi-box-seam"></i> Material
+                        </label>
+                        <input type="radio" class="btn-check" name="order_type" id="typeService" value="service">
+                        <label class="btn btn-outline-success" for="typeService">
+                            <i class="bi bi-wrench"></i> Serviço
+                        </label>
+                    </div>
+                    <small class="text-muted d-block mt-2" id="orderTypeHint">Pedido de materiais: siga o fluxo padrão de cotação.</small>
+                </div>
+            </div>
+
             <!-- Upload PDF com IA -->
             <div class="card mb-3">
                 <div class="card-header"><i class="bi bi-file-earmark-pdf"></i> Importar Materiais (opcional)</div>
@@ -603,6 +621,18 @@ async function saveQuickAdd() {
     }
 }
 document.getElementById('newMaterialModal').addEventListener('hidden.bs.modal', function(){backToMatStep1();['newMatName','newMatClassification'].forEach(id=>document.getElementById(id).value='');document.getElementById('newMatSpec').value='';document.getElementById('newMatUnit').value='';});
+
+// Tipo do pedido toggle
+document.querySelectorAll('input[name="order_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const hint = document.getElementById('orderTypeHint');
+        if (this.value === 'service') {
+            hint.textContent = 'Pedido de serviço: na cotação, o fornecedor poderá enviar um PDF com a lista de materiais necessários.';
+        } else {
+            hint.textContent = 'Pedido de materiais: siga o fluxo padrão de cotação.';
+        }
+    });
+});
 </script>
 
 <?php $content = ob_get_clean(); ?>
