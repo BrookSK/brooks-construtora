@@ -340,7 +340,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     }
                 }
                 ?>
-                <div class="p-3 border-bottom <?= $isApprovedSup ? 'bg-success bg-opacity-10 border-start border-success border-3' : '' ?>">
+                <div class="p-3 border-bottom <?= $isApprovedSup ? 'bg-success bg-opacity-10' : '' ?>">
                     <h6 class="mb-2">
                         <i class="bi bi-building"></i>
                         <?= htmlspecialchars($supName) ?>
