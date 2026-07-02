@@ -13,6 +13,8 @@ use App\Models\PurchaseOrderItemPrice;
 use App\Models\PurchaseOrderPayment;
 use App\Models\PurchaseOrderDelivery;
 use App\Models\PurchaseOrderSpareItem;
+use App\Models\PurchaseOrderSupplierPdf;
+use App\Models\PurchaseOrderSupplierMaterial;
 use App\Models\MaterialPriceHistory;
 use App\Models\Supplier;
 use App\Models\Material;

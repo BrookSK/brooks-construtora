@@ -49,6 +49,9 @@
             .price-mode-wrap .btn-group { width: 100%; }
             .price-mode-wrap span { margin-bottom: 4px; }
             .history-hint { font-size: 0.65rem; }
+            /* Seção de serviço - PDF e materiais */
+            .svc-pdf-section .form-control-sm { font-size: 14px !important; }
+            .svc-pdf-section .btn-sm { font-size: 0.8rem; padding: 0.3rem 0.5rem; }
         }
     </style>
 </head>
@@ -75,7 +78,12 @@
                         <h5 class="mb-1">Pedido <strong><?= htmlspecialchars($order['code']) ?></strong></h5>
                         <p class="mb-0 text-muted small">Solicitado por: <?= htmlspecialchars($order['created_by_name']) ?> em <?= date('d/m/Y', strtotime($order['created_at'])) ?></p>
                     </div>
-                    <span class="badge bg-warning text-dark p-2">Aguardando Cotação</span>
+                    <div class="d-flex gap-2 align-items-center">
+                        <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
+                        <span class="badge bg-success p-2"><i class="bi bi-wrench"></i> Serviço</span>
+                        <?php endif; ?>
+                        <span class="badge bg-warning text-dark p-2">Aguardando Cotação</span>
+                    </div>
                 </div>
                 <?php if (!empty($order['description'])): ?>
                 <div class="mt-2 p-2 bg-white rounded small">
@@ -143,6 +151,11 @@
 
                     <!-- Fornecedores para cotação -->
                     <h6 class="mb-3"><i class="bi bi-building"></i> Fornecedores</h6>
+                    <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
+                    <div class="alert alert-success small py-2 mb-3">
+                        <i class="bi bi-wrench"></i> <strong>Pedido de Serviço:</strong> Para cada fornecedor, você pode fazer upload de um PDF com a lista de materiais necessários para o serviço. A IA irá identificar os itens automaticamente.
+                    </div>
+                    <?php endif; ?>
                     <p class="text-muted small mb-2">Adicione os fornecedores e informe os valores de cada um.</p>
                     
                     <!-- Toggle Unitário / Total -->
@@ -527,6 +540,21 @@
                 </div>
             </div>
 
+            ${orderType === 'service' ? `
+            <!-- Upload PDF de Materiais (Serviço) -->
+            <div class="mb-3 p-2 border rounded bg-warning bg-opacity-10 svc-pdf-section">
+                <h6 class="small fw-bold mb-2"><i class="bi bi-file-earmark-pdf text-danger"></i> PDF de Materiais do Prestador</h6>
+                <p class="text-muted small mb-2">Faça upload do PDF com a lista de materiais do prestador de serviço.</p>
+                <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
+                    <input type="file" class="form-control form-control-sm flex-grow-1" id="servicePdf-${sid}" accept=".pdf,.jpg,.jpeg,.png,.webp" style="min-width:0;">
+                    <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0" onclick="parseServicePdf('${sid}')">
+                        <i class="bi bi-magic"></i> Analisar
+                    </button>
+                </div>
+                <div id="servicePdfStatus-${sid}" style="display:none;"></div>
+                <div id="serviceMaterialsList-${sid}" style="display:none;"></div>
+            </div>
+            ` : ''}
             <!-- Preços por item -->
             ${itemsHtml}
             

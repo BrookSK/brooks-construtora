@@ -11,6 +11,8 @@ use App\Models\PurchaseOrderSupplier;
 use App\Models\PurchaseOrderItemPrice;
 use App\Models\PurchaseOrderDelivery;
 use App\Models\PurchaseOrderSpareItem;
+use App\Models\PurchaseOrderSupplierPdf;
+use App\Models\PurchaseOrderSupplierMaterial;
 use App\Models\PinUser;
 use App\Models\MaterialPriceHistory;
 use App\Models\Supplier;
