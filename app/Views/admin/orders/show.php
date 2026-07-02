@@ -329,16 +329,24 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 $allSupplierIds = array_unique(array_merge(array_keys($pdfsBySupplier), array_keys($matsBySupplier)));
                 ?>
                 <?php foreach ($allSupplierIds as $supId): ?>
-                <div class="p-3 border-bottom">
+                <?php
+                $isApprovedSup = false;
+                $supName = '-';
+                foreach ($orderSuppliers as $os) {
+                    if ($os['supplier_id'] == $supId) {
+                        $supName = $os['supplier_name'];
+                        if (!empty($os['approved'])) $isApprovedSup = true;
+                        break;
+                    }
+                }
+                ?>
+                <div class="p-3 border-bottom <?= $isApprovedSup ? 'bg-success bg-opacity-10 border-start border-success border-3' : '' ?>">
                     <h6 class="mb-2">
                         <i class="bi bi-building"></i>
-                        <?php
-                        $supName = '-';
-                        foreach ($orderSuppliers as $os) {
-                            if ($os['supplier_id'] == $supId) { $supName = $os['supplier_name']; break; }
-                        }
-                        echo htmlspecialchars($supName);
-                        ?>
+                        <?= htmlspecialchars($supName) ?>
+                        <?php if ($isApprovedSup): ?>
+                        <span class="badge bg-success ms-1">Aprovado</span>
+                        <?php endif; ?>
                     </h6>
 
                     <!-- PDFs -->
