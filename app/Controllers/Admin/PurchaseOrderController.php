@@ -84,6 +84,8 @@ class PurchaseOrderController extends Controller
         }
 
         $description = trim($this->input('description', ''));
+        $orderType = $this->input('order_type', 'material');
+        if (!in_array($orderType, ['material', 'service'])) $orderType = 'material';
         $items = $_POST['items'] ?? [];
 
         if (empty($items)) {
@@ -98,6 +100,7 @@ class PurchaseOrderController extends Controller
 
         $orderId = PurchaseOrder::create([
             'code' => $code,
+            'order_type' => $orderType,
             'supplier_id' => null,
             'status' => 'pending_quote',
             'description' => $description,
