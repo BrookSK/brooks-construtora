@@ -21,6 +21,12 @@ class DashboardController extends Controller
 
     public function index(): void
     {
+        // Usuário EPI não precisa do Dashboard — redireciona direto pra área de EPI
+        if (Auth::role() === 'epi') {
+            $this->redirect('/registro-de-entrega');
+            return;
+        }
+
         $data = [
             'totalSubscribers' => Newsletter::count('active = 1'),
             'totalMagazines' => Magazine::count(),
