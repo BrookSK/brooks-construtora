@@ -112,14 +112,14 @@
     </div>
 
     <!-- Mobile: Botão fixo inferior -->
-    <div class="d-lg-none position-fixed bottom-0 start-0 end-0 bg-white border-top shadow" style="z-index:1100;">
+    <div class="d-lg-none position-fixed start-0 end-0 bg-white border-top shadow" style="z-index:1100; bottom: env(safe-area-inset-bottom, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);">
         <div class="p-2">
             <button type="button" class="btn btn-primary w-100 py-2" onclick="showReview()" style="font-size:1rem;">
                 <i class="bi bi-eye"></i> Revisar e Enviar Pedido
             </button>
         </div>
     </div>
-    <div class="d-lg-none" style="height:65px;"></div>
+    <div class="d-lg-none" style="height:80px;"></div>
 </form>
 
 <!-- Modal de Revisão do Pedido -->
@@ -133,11 +133,11 @@
             <div class="modal-body" id="reviewBody">
                 <!-- Preenchido via JS -->
             </div>
-            <div class="modal-footer d-flex justify-content-between">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <div class="modal-footer flex-column flex-sm-row gap-2" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));">
+                <button type="button" class="btn btn-outline-secondary w-100 order-2 order-sm-1" data-bs-dismiss="modal" style="flex:1;">
                     <i class="bi bi-pencil"></i> Voltar e Editar
                 </button>
-                <button type="button" class="btn btn-primary" onclick="confirmSubmit()">
+                <button type="button" class="btn btn-primary w-100 order-1 order-sm-2" onclick="confirmSubmit()" style="flex:1;">
                     <i class="bi bi-send"></i> Confirmar e Enviar
                 </button>
             </div>
