@@ -15,16 +15,19 @@ class EpiDeliveryItem extends Model
     }
 
     /**
-     * EPIs ativos (não substituídos) recebidos por um colaborador (por documento),
-     * incluindo dados da entrega para cálculo de elegibilidade.
+     * EPIs recebidos por um colaborador (por documento), com dados da entrega,
+     * data da última substituição e total de substituições, para cálculo de
+     * elegibilidade e numeração das trocas.
      */
     public static function activeForWorker(string $document): array
     {
         return Database::fetchAll(
-            "SELECT i.*, d.worker_name, d.worker_document
+            "SELECT i.*, d.worker_name, d.worker_document,
+                    (SELECT COUNT(*) FROM epi_replacements r WHERE r.delivery_item_id = i.id) AS replacement_count,
+                    (SELECT MAX(r.created_at) FROM epi_replacements r WHERE r.delivery_item_id = i.id) AS last_replaced_at
              FROM epi_delivery_items i
              INNER JOIN epi_deliveries d ON d.id = i.delivery_id
-             WHERE d.worker_document = ? AND i.replaced = 0
+             WHERE d.worker_document = ?
              ORDER BY i.delivered_at DESC",
             [$document]
         );

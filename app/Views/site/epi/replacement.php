@@ -106,6 +106,10 @@ function loadItems(doc, name) {
         .catch(() => { list.innerHTML = '<p class="text-danger small text-center mb-0">Erro ao carregar.</p>'; });
 }
 
+function ordinal(n) {
+    return n + 'ª';
+}
+
 function renderItems(items) {
     const list = document.getElementById('epiList');
     if (items.length === 0) { list.innerHTML = '<p class="text-muted small text-center mb-0">Nenhum EPI ativo para este colaborador.</p>'; return; }
@@ -114,20 +118,31 @@ function renderItems(items) {
         const div = document.createElement('div');
         div.className = 'epi-item' + (it.eligible ? ' eligible' : '');
         const deliveredDate = new Date(it.delivered_at.replace(' ', 'T')).toLocaleDateString('pt-BR');
+        const btnLabel = it.replacement_count > 0
+            ? `Fazer ${ordinal(it.next_sequence)} substituição`
+            : 'Fazer substituição';
         let statusHtml, btnHtml;
         if (it.eligible) {
             statusHtml = '<span class="badge bg-success">Liberado para troca</span>';
-            btnHtml = `<button class="btn btn-warning btn-sm" onclick='openReplacement(${JSON.stringify(it)})'><i class="bi bi-arrow-repeat"></i> Fazer substituição</button>`;
+            btnHtml = `<button class="btn btn-warning btn-sm" onclick='openReplacement(${JSON.stringify(it)})'><i class="bi bi-arrow-repeat"></i> ${btnLabel}</button>`;
         } else {
             statusHtml = `<span class="badge bg-secondary">Faltam ${it.days_remaining} dia(s)</span>`;
-            btnHtml = `<button class="btn btn-warning btn-sm" disabled><i class="bi bi-lock"></i> Fazer substituição</button>`;
+            btnHtml = `<button class="btn btn-warning btn-sm" disabled><i class="bi bi-lock"></i> ${btnLabel}</button>`;
         }
+        let countBadge = '';
+        if (it.replacement_count > 0) {
+            const lastDate = it.last_replaced_at ? new Date(it.last_replaced_at.replace(' ', 'T')).toLocaleDateString('pt-BR') : '';
+            countBadge = `<span class="badge bg-info text-dark ms-1"><i class="bi bi-arrow-repeat"></i> ${it.replacement_count} troca(s)</span>`;
+        }
+        const refInfo = it.replacement_count > 0
+            ? `Última troca: ${it.last_replaced_at ? new Date(it.last_replaced_at.replace(' ', 'T')).toLocaleDateString('pt-BR') : '-'}`
+            : `Entregue: ${deliveredDate}`;
         div.innerHTML = `
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
-                    <div class="fw-bold">${it.epi_name}</div>
-                    <div class="small text-muted">${it.ca ? 'CA ' + it.ca + ' · ' : ''}Qtd: ${it.quantity} · Entregue: ${deliveredDate}</div>
-                    <div class="small text-muted">Prazo mínimo: ${it.min_days} dia(s) · Decorridos: ${it.days_elapsed} dia(s)</div>
+                    <div class="fw-bold">${it.epi_name} ${countBadge}</div>
+                    <div class="small text-muted">${it.ca ? 'CA ' + it.ca + ' · ' : ''}Qtd: ${it.quantity} · ${refInfo}</div>
+                    <div class="small text-muted">Prazo mínimo: ${it.min_days} dia(s) · Decorridos desde a referência: ${it.days_elapsed} dia(s)</div>
                     <div class="mt-1">${statusHtml}</div>
                 </div>
                 <div>${btnHtml}</div>
@@ -138,7 +153,8 @@ function renderItems(items) {
 
 function openReplacement(it) {
     document.getElementById('repItemId').value = it.id;
-    document.getElementById('repEpiName').textContent = it.epi_name + (it.ca ? ' (CA ' + it.ca + ')' : '');
+    const seqLabel = it.next_sequence > 1 ? ` — ${ordinal(it.next_sequence)} substituição` : '';
+    document.getElementById('repEpiName').textContent = it.epi_name + (it.ca ? ' (CA ' + it.ca + ')' : '') + seqLabel;
     const qtyInput = document.getElementById('repQuantity');
     qtyInput.value = it.quantity;
     qtyInput.max = it.quantity;

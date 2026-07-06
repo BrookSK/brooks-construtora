@@ -66,7 +66,7 @@
             <div class="evt-body">
                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                     <div>
-                        <span class="badge bg-warning text-dark mb-1"><i class="bi bi-arrow-repeat"></i> Substituição</span>
+                        <span class="badge bg-warning text-dark mb-1"><i class="bi bi-arrow-repeat"></i> Substituição<?= !empty($r['sequence_number']) && $r['sequence_number'] > 1 ? ' · ' . (int)$r['sequence_number'] . 'ª' : '' ?></span>
                         <div class="fw-bold"><?= htmlspecialchars($r['epi_name']) ?><?= $r['ca'] ? ' <span class="text-muted small">· CA ' . htmlspecialchars($r['ca']) . '</span>' : '' ?></div>
                         <div class="small text-muted"><i class="bi bi-person"></i> <?= htmlspecialchars($r['worker_name']) ?> · <?= htmlspecialchars($r['worker_document']) ?> · Qtd: <?= rtrim(rtrim(number_format($r['quantity'], 2, ',', '.'), '0'), ',') ?></div>
                         <div class="small text-muted">Responsável: <?= htmlspecialchars($r['performed_by']) ?></div>

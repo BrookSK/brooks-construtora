@@ -220,9 +220,13 @@ class EpiController extends Controller
         $now = time();
         $out = [];
         foreach ($items as $it) {
-            $deliveredTs = strtotime($it['delivered_at']);
-            $daysElapsed = (int) floor(($now - $deliveredTs) / 86400);
+            // A elegibilidade conta a partir da última substituição; se nunca
+            // houve troca, conta a partir da entrega.
+            $referenceDate = !empty($it['last_replaced_at']) ? $it['last_replaced_at'] : $it['delivered_at'];
+            $referenceTs = strtotime($referenceDate);
+            $daysElapsed = (int) floor(($now - $referenceTs) / 86400);
             $minDays = (int) $it['min_replacement_days'];
+            $replacementCount = (int) $it['replacement_count'];
             $out[] = [
                 'id' => (int) $it['id'],
                 'epi_id' => (int) $it['epi_id'],
@@ -230,10 +234,14 @@ class EpiController extends Controller
                 'ca' => $it['ca'],
                 'quantity' => (float) $it['quantity'],
                 'delivered_at' => $it['delivered_at'],
+                'last_replaced_at' => $it['last_replaced_at'],
+                'reference_date' => $referenceDate,
                 'days_elapsed' => $daysElapsed,
                 'min_days' => $minDays,
                 'eligible' => $daysElapsed >= $minDays,
                 'days_remaining' => max(0, $minDays - $daysElapsed),
+                'replacement_count' => $replacementCount,
+                'next_sequence' => $replacementCount + 1,
             ];
         }
         $this->json(['items' => $out]);
@@ -247,10 +255,15 @@ class EpiController extends Controller
         $itemId = (int) $this->input('delivery_item_id', 0);
         $item = EpiDeliveryItem::find($itemId);
         if (!$item) { $this->json(['error' => 'Item de entrega não encontrado.'], 404); return; }
-        if ((int) $item['replaced'] === 1) { $this->json(['error' => 'Este EPI já foi substituído.'], 400); return; }
 
-        // Reconferir elegibilidade no servidor
-        $daysElapsed = (int) floor((time() - strtotime($item['delivered_at'])) / 86400);
+        // Reconferir elegibilidade no servidor: conta a partir da última troca
+        // (ou da entrega, se nunca houve troca).
+        $lastReplacedAt = \App\Core\Database::fetch(
+            "SELECT MAX(created_at) AS last FROM epi_replacements WHERE delivery_item_id = ?",
+            [$item['id']]
+        )['last'] ?? null;
+        $referenceTs = strtotime($lastReplacedAt ?: $item['delivered_at']);
+        $daysElapsed = (int) floor((time() - $referenceTs) / 86400);
         if ($daysElapsed < (int) $item['min_replacement_days']) {
             $this->json(['error' => 'Ainda não é possível substituir este EPI (prazo mínimo não atingido).'], 400);
             return;
@@ -269,8 +282,16 @@ class EpiController extends Controller
 
         $delivery = EpiDelivery::find((int) $item['delivery_id']);
 
+        // Número sequencial desta substituição para o mesmo item
+        $count = (int) (\App\Core\Database::fetch(
+            "SELECT COUNT(*) AS total FROM epi_replacements WHERE delivery_item_id = ?",
+            [$item['id']]
+        )['total'] ?? 0);
+        $sequence = $count + 1;
+
         EpiReplacement::create([
             'delivery_item_id' => $item['id'],
+            'sequence_number' => $sequence,
             'epi_id' => $item['epi_id'],
             'epi_name' => $item['epi_name'],
             'ca' => $item['ca'],
@@ -284,14 +305,9 @@ class EpiController extends Controller
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        // Se substituiu tudo, marca como substituído; senão, reduz a quantidade restante
-        if ($qty >= $available) {
-            EpiDeliveryItem::updateById($item['id'], ['replaced' => 1]);
-        } else {
-            EpiDeliveryItem::updateById($item['id'], ['quantity' => $available - $qty]);
-        }
-
-        $this->json(['success' => true]);
+        // O item permanece disponível para novas substituições; a contagem de
+        // dias é reiniciada a partir desta troca (last_replaced_at).
+        $this->json(['success' => true, 'sequence' => $sequence]);
     }
 
     // ===================================================================
