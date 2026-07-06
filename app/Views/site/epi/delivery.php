@@ -17,7 +17,25 @@
             <div class="card-body row g-2">
                 <div class="col-md-6"><label class="form-label small fw-bold">Nome *</label><input type="text" class="form-control" name="worker_name" required></div>
                 <div class="col-md-3"><label class="form-label small fw-bold">CPF ou Matrícula *</label><input type="text" class="form-control" name="worker_document" required></div>
-                <div class="col-md-3"><label class="form-label small fw-bold">Cargo *</label><input type="text" class="form-control" name="worker_role" required></div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Cargo *</label>
+                    <select class="form-select" name="worker_role" required>
+                        <option value="">Selecione...</option>
+                        <?php
+                        $cargos = [
+                            'Servente', 'Ajudante Geral', 'Pedreiro', 'Meio-Oficial', 'Carpinteiro',
+                            'Armador', 'Pintor', 'Eletricista', 'Encanador', 'Gesseiro',
+                            'Azulejista', 'Ferreiro', 'Soldador', 'Operador de Máquinas',
+                            'Operador de Guindaste', 'Motorista', 'Almoxarife', 'Apontador',
+                            'Mestre de Obras', 'Encarregado', 'Técnico em Segurança do Trabalho',
+                            'Técnico em Edificações', 'Engenheiro Civil', 'Arquiteto',
+                            'Estagiário', 'Vigia', 'Auxiliar Administrativo',
+                        ];
+                        foreach ($cargos as $c): ?>
+                        <option value="<?= htmlspecialchars($c) ?>"><?= htmlspecialchars($c) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
             </div>
         </div>
 
