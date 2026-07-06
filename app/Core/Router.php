@@ -225,6 +225,18 @@ class Router
             'pin/recover' => ['PinAuthController', 'recover'],
             'pin/logout' => ['PinAuthController', 'logout'],
 
+            // Controle de EPIs (protegido por PIN individual)
+            'cadastro-de-epi' => ['EpiController', 'catalog'],
+            'cadastro-de-epi/salvar' => ['EpiController', 'catalogStore'],
+            'cadastro-de-epi/atualizar' => ['EpiController', 'catalogUpdate'],
+            'cadastro-de-epi/excluir' => ['EpiController', 'catalogDelete'],
+            'registro-de-entrega' => ['EpiController', 'deliveryForm'],
+            'registro-de-entrega/salvar' => ['EpiController', 'deliveryStore'],
+            'substituicao-de-epi' => ['EpiController', 'replacementForm'],
+            'substituicao-de-epi/itens' => ['EpiController', 'replacementItems'],
+            'substituicao-de-epi/salvar' => ['EpiController', 'replacementStore'],
+            'historico-de-epi' => ['EpiController', 'history'],
+
             // Painel de pedidos com PIN
             'pedidos' => ['PurchaseOrderController', 'pinPanel'],
             'pedidos/login' => ['PurchaseOrderController', 'pinLogin'],

@@ -227,8 +227,34 @@
                 </a>
             </li>
             <?php endif; ?>
-            <?php if (\App\Core\Auth::hasPermission('users')): ?>
+            <?php if (\App\Core\Auth::hasPermission('orders')): ?>
+            <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
+                <small class="text-uppercase px-3 opacity-50" style="font-size:0.65rem; letter-spacing:1px;">EPIs</small>
+            </li>
             <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'epi_delivery' ? 'active' : '' ?>" href="/registro-de-entrega">
+                    <i class="bi bi-box-seam"></i> Registro de Entrega
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'epi_replacement' ? 'active' : '' ?>" href="/substituicao-de-epi">
+                    <i class="bi bi-arrow-repeat"></i> Substituição de EPI
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'epi_catalog' ? 'active' : '' ?>" href="/cadastro-de-epi">
+                    <i class="bi bi-shield-check"></i> Cadastro de EPI
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'epi_history' ? 'active' : '' ?>" href="/historico-de-epi">
+                    <i class="bi bi-clock-history"></i> Histórico de EPI
+                </a>
+            </li>
+            <?php endif; ?>
+
+            <?php if (\App\Core\Auth::hasPermission('users')): ?>
+            <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
                 <a class="nav-link <?= ($currentPage ?? '') === 'users' ? 'active' : '' ?>" href="/admin/users">
                     <i class="bi bi-people"></i> Usuários
                 </a>
