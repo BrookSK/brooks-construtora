@@ -7,11 +7,15 @@
         <div class="card-header bg-white fw-bold"><i class="bi bi-plus-circle text-primary"></i> Novo EPI</div>
         <div class="card-body">
             <form method="POST" action="/cadastro-de-epi/salvar" class="row g-2 align-items-end">
-                <div class="col-md-5">
+                <div class="col-md-4">
                     <label class="form-label small fw-bold">Nome do EPI *</label>
                     <input type="text" class="form-control" name="name" required placeholder="Ex: Capacete, Luva, Botina...">
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label small fw-bold">Categoria</label>
+                    <input type="text" class="form-control" name="category" list="categoryList" placeholder="Ex: Proteção da Cabeça">
+                </div>
+                <div class="col-md-2">
                     <label class="form-label small fw-bold">CA</label>
                     <input type="text" class="form-control" name="ca" placeholder="Ex: 12345">
                 </div>
@@ -19,11 +23,16 @@
                     <label class="form-label small fw-bold">Dias mín. p/ troca *</label>
                     <input type="number" class="form-control" name="min_replacement_days" min="0" value="0" required>
                 </div>
-                <div class="col-md-2 d-grid">
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+                <div class="col-md-1 d-grid">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i></button>
                 </div>
                 <div class="col-12"><small class="text-muted">Dias mínimos que o colaborador precisa esperar antes de solicitar a substituição deste EPI.</small></div>
             </form>
+            <datalist id="categoryList">
+                <?php foreach (($categories ?? []) as $cat): ?>
+                <option value="<?= htmlspecialchars($cat) ?>">
+                <?php endforeach; ?>
+            </datalist>
         </div>
     </div>
 
@@ -35,13 +44,21 @@
             <?php if (empty($active)): ?>
             <p class="text-muted text-center py-4 mb-0"><i class="bi bi-inbox"></i> Nenhum EPI cadastrado ainda.</p>
             <?php else: ?>
+            <?php
+            $grouped = [];
+            foreach ($active as $e) { $grouped[$e['category'] ?: 'Outros'][] = $e; }
+            ksort($grouped);
+            ?>
+            <div class="p-2 border-bottom bg-light small text-muted"><i class="bi bi-info-circle"></i> <?= count($active) ?> EPIs cadastrados em <?= count($grouped) ?> categorias.</div>
             <div class="table-responsive">
                 <table class="table table-sm mb-0 align-middle">
                     <thead class="table-light">
                         <tr><th>Nome</th><th>CA</th><th>Dias mín. troca</th><th style="width:120px;"></th></tr>
                     </thead>
                     <tbody>
-                    <?php foreach ($active as $e): ?>
+                    <?php foreach ($grouped as $cat => $catEpis): ?>
+                        <tr class="table-secondary"><td colspan="4" class="fw-bold small text-uppercase"><?= htmlspecialchars($cat) ?></td></tr>
+                        <?php foreach ($catEpis as $e): ?>
                         <tr>
                             <td><?= htmlspecialchars($e['name']) ?></td>
                             <td><?= htmlspecialchars($e['ca'] ?? '—') ?></td>
@@ -54,6 +71,7 @@
                                 </form>
                             </td>
                         </tr>
+                        <?php endforeach; ?>
                     <?php endforeach; ?>
                     </tbody>
                 </table>
@@ -70,6 +88,7 @@
         <div class="modal-body">
             <input type="hidden" name="id" id="editId">
             <div class="mb-2"><label class="form-label small fw-bold">Nome *</label><input type="text" class="form-control" name="name" id="editName" required></div>
+            <div class="mb-2"><label class="form-label small fw-bold">Categoria</label><input type="text" class="form-control" name="category" id="editCategory" list="categoryList"></div>
             <div class="mb-2"><label class="form-label small fw-bold">CA</label><input type="text" class="form-control" name="ca" id="editCa"></div>
             <div class="mb-2"><label class="form-label small fw-bold">Dias mín. p/ troca *</label><input type="number" class="form-control" name="min_replacement_days" id="editDays" min="0" required></div>
         </div>
@@ -81,6 +100,7 @@
 function editEpi(e) {
     document.getElementById('editId').value = e.id;
     document.getElementById('editName').value = e.name;
+    document.getElementById('editCategory').value = e.category || '';
     document.getElementById('editCa').value = e.ca || '';
     document.getElementById('editDays').value = e.min_replacement_days;
     new bootstrap.Modal(document.getElementById('editModal')).show();

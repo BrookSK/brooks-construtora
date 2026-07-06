@@ -51,10 +51,17 @@
                 <label class="form-label small fw-bold">Adicionar EPI</label>
                 <select id="epiSelect">
                     <option value="">Selecione um EPI...</option>
-                    <?php foreach ($epis as $e): ?>
-                    <option value="<?= $e['id'] ?>" data-name="<?= htmlspecialchars($e['name']) ?>" data-ca="<?= htmlspecialchars($e['ca'] ?? '') ?>">
-                        <?= htmlspecialchars($e['name']) ?><?= $e['ca'] ? ' (CA ' . htmlspecialchars($e['ca']) . ')' : '' ?>
-                    </option>
+                    <?php
+                    $episByCat = [];
+                    foreach ($epis as $e) { $episByCat[$e['category'] ?: 'Outros'][] = $e; }
+                    foreach ($episByCat as $cat => $catEpis): ?>
+                    <optgroup label="<?= htmlspecialchars($cat) ?>">
+                        <?php foreach ($catEpis as $e): ?>
+                        <option value="<?= $e['id'] ?>" data-name="<?= htmlspecialchars($e['name']) ?>" data-ca="<?= htmlspecialchars($e['ca'] ?? '') ?>">
+                            <?= htmlspecialchars($e['name']) ?><?= $e['ca'] ? ' (CA ' . htmlspecialchars($e['ca']) . ')' : '' ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </optgroup>
                     <?php endforeach; ?>
                 </select>
                 <?php if (empty($epis)): ?>

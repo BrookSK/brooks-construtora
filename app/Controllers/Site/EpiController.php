@@ -31,7 +31,8 @@ class EpiController extends Controller
     {
         $this->requireUser();
         $this->view('site.epi.catalog', [
-            'epis' => Epi::all('name ASC'),
+            'epis' => Epi::all('category ASC, name ASC'),
+            'categories' => Epi::distinctCategories(),
             'flash' => $this->getFlash(),
         ]);
     }
@@ -42,6 +43,7 @@ class EpiController extends Controller
         if (!$this->isPost()) { $this->redirect('/cadastro-de-epi'); return; }
 
         $name = trim($this->input('name', ''));
+        $category = trim($this->input('category', ''));
         $ca = trim($this->input('ca', ''));
         $minDays = (int) $this->input('min_replacement_days', 0);
 
@@ -54,6 +56,7 @@ class EpiController extends Controller
 
         Epi::create([
             'name' => $name,
+            'category' => $category ?: null,
             'ca' => $ca ?: null,
             'min_replacement_days' => $minDays,
             'active' => 1,
@@ -75,6 +78,7 @@ class EpiController extends Controller
         if (!$epi) { $this->setFlash('error', 'EPI não encontrado.'); $this->redirect('/cadastro-de-epi'); return; }
 
         $name = trim($this->input('name', ''));
+        $category = trim($this->input('category', ''));
         $ca = trim($this->input('ca', ''));
         $minDays = (int) $this->input('min_replacement_days', 0);
         if ($name === '') { $this->setFlash('error', 'Informe o nome do EPI.'); $this->redirect('/cadastro-de-epi'); return; }
@@ -82,6 +86,7 @@ class EpiController extends Controller
 
         Epi::updateById($id, [
             'name' => $name,
+            'category' => $category ?: null,
             'ca' => $ca ?: null,
             'min_replacement_days' => $minDays,
         ]);
