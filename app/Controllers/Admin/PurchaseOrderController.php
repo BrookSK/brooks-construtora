@@ -65,6 +65,22 @@ class PurchaseOrderController extends Controller
         $categories = MaterialCategory::all('name ASC');
         $units = MeasurementUnit::all('name ASC');
 
+        // EPIs cadastrados também ficam disponíveis para seleção num novo pedido.
+        // Entram como itens não vinculados (material_id nulo), seguindo o mesmo
+        // fluxo padrão dos demais itens.
+        foreach (\App\Models\Epi::allActive() as $epi) {
+            $materials[] = [
+                'id' => 'epi-' . $epi['id'],
+                'name' => $epi['name'],
+                'specification' => $epi['category'] ?? 'EPI',
+                'category_name' => $epi['category'] ?? 'EPI',
+                'classification' => $epi['ca'] ? 'CA ' . $epi['ca'] : '',
+                'unit_abbr' => 'un',
+                'unit_name' => 'Unidade',
+                'is_epi' => true,
+            ];
+        }
+
         $this->view('admin.orders.create', [
             'suppliers' => $suppliers,
             'materials' => $materials,

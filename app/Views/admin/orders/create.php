@@ -267,7 +267,8 @@ function addItem(prefill = null) {
     const matSS = new SearchableSelect(document.getElementById('mat-select-' + idx), {
         placeholder: 'Buscar material...',
         onSelect: function(value, text, dataset) {
-            document.getElementById('mid-' + idx).value = value;
+            // EPIs entram como itens não vinculados (material_id nulo)
+            document.getElementById('mid-' + idx).value = String(value).startsWith('epi-') ? '' : value;
             document.getElementById('mname-' + idx).value = dataset.name || '';
             document.getElementById('spec-' + idx).value = dataset.spec || '';
             document.getElementById('class-' + idx).value = dataset.class || '';
@@ -308,7 +309,8 @@ function addItem(prefill = null) {
     const matSSM = new SearchableSelect(document.getElementById('mat-select-m-' + idx), {
         placeholder: 'Buscar material...',
         onSelect: function(value, text, dataset) {
-            document.getElementById('mid-' + idx).value = value;
+            // EPIs entram como itens não vinculados (material_id nulo)
+            document.getElementById('mid-' + idx).value = String(value).startsWith('epi-') ? '' : value;
             document.getElementById('mname-' + idx).value = dataset.name || '';
             document.getElementById('spec-' + idx).value = dataset.spec || '';
             document.getElementById('class-' + idx).value = dataset.class || '';
@@ -379,7 +381,7 @@ document.getElementById('saveMaterialBtn').addEventListener('click', async funct
 document.getElementById('orderForm').addEventListener('submit', function(e) {
     if (!document.querySelectorAll('#itemsBodyDesktop tr').length) { e.preventDefault(); alert('Adicione pelo menos um item.'); return; }
     let valid = true;
-    document.querySelectorAll('[id^="mid-"]').forEach(input => {
+    document.querySelectorAll('[id^="mname-"]').forEach(input => {
         if (!input.value) { valid = false; }
     });
     if (!valid) { e.preventDefault(); alert('Selecione um material para cada item.'); }
