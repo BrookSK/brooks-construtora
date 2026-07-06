@@ -957,6 +957,7 @@ class PurchaseOrderController extends Controller
                 'approver' => 'aprovador',
                 'payment' => 'financeiro',
                 'delivery' => 'comprador',
+                'epi' => 'epi',
                 'all' => 'comprador',
             ];
             $systemRole = $roleMap[$pinUser['role']] ?? 'comprador';

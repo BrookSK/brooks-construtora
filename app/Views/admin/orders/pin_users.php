@@ -2,8 +2,8 @@
 <?php ob_start(); ?>
 
 <?php
-$roleLabels = ['buyer'=>'Comprador/Entrega','quoter'=>'Cotador','approver'=>'Aprovador','payment'=>'Financeiro','delivery'=>'Comprador/Entrega','all'=>'Completo'];
-$roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','payment'=>'success','delivery'=>'primary','all'=>'secondary'];
+$roleLabels = ['buyer'=>'Comprador/Entrega','quoter'=>'Cotador','approver'=>'Aprovador','payment'=>'Financeiro','delivery'=>'Comprador/Entrega','epi'=>'EPI','all'=>'Completo'];
+$roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','payment'=>'success','delivery'=>'primary','epi'=>'dark','all'=>'secondary'];
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -25,6 +25,7 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
                             <option value="quoter">Cotador (fazer orçamentos)</option>
                             <option value="approver">Aprovador (aprovar pedidos)</option>
                             <option value="payment">Financeiro (NF/Boleto)</option>
+                            <option value="epi">EPI (controle de EPIs)</option>
                             <option value="all">Acesso Completo</option>
                         </select>
                     </div>
@@ -105,6 +106,7 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
                                     <option value="quoter" <?= $u['role'] === 'quoter' ? 'selected' : '' ?>>Cotador</option>
                                     <option value="approver" <?= $u['role'] === 'approver' ? 'selected' : '' ?>>Aprovador</option>
                                     <option value="payment" <?= $u['role'] === 'payment' ? 'selected' : '' ?>>Financeiro</option>
+                                    <option value="epi" <?= $u['role'] === 'epi' ? 'selected' : '' ?>>EPI</option>
                                     <option value="all" <?= $u['role'] === 'all' ? 'selected' : '' ?>>Completo</option>
                                 </select>
                             </form>

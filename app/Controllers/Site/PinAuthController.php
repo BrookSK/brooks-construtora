@@ -69,6 +69,11 @@ class PinAuthController extends Controller
             'secure' => !empty($_SERVER['HTTPS']),
         ]);
 
+        // Redireciona para área correta com base no role
+        if ($redirect === '/pedidos' && $user['role'] === 'epi') {
+            $redirect = '/registro-de-entrega';
+        }
+
         $this->redirect($redirect);
     }
 
@@ -126,7 +131,7 @@ class PinAuthController extends Controller
             return;
         }
 
-        $roleLabels = ['buyer'=>'Comprador (criar pedidos)','quoter'=>'Cotador (fazer orçamentos)','approver'=>'Aprovador (aprovar pedidos)','payment'=>'Financeiro (NF/Boleto)','delivery'=>'Entrega (checklist)','all'=>'Acesso completo'];
+        $roleLabels = ['buyer'=>'Comprador (criar pedidos)','quoter'=>'Cotador (fazer orçamentos)','approver'=>'Aprovador (aprovar pedidos)','payment'=>'Financeiro (NF/Boleto)','delivery'=>'Entrega (checklist)','epi'=>'EPI (controle de EPIs)','all'=>'Acesso completo'];
 
         $this->view('site.pin.register', [
             'invite' => $invite,
@@ -188,7 +193,8 @@ class PinAuthController extends Controller
         ]);
 
         $this->setFlash('success', "Cadastro realizado! Seu PIN é: {$pin}. Memorize-o.");
-        $this->redirect('/pedidos');
+        $redirectAfter = $invite['role'] === 'epi' ? '/registro-de-entrega' : '/pedidos';
+        $this->redirect($redirectAfter);
     }
 
     /**

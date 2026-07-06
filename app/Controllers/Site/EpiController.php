@@ -11,16 +11,36 @@ use App\Models\EpiReplacement;
 class EpiController extends Controller
 {
     /**
-     * Middleware: exige usuário logado (sessão do Auth).
+     * Middleware: exige usuário logado (PIN ou Admin) com permissão de EPI.
      * Retorna o usuário logado.
      */
     private function requireUser(): array
     {
-        if (!\App\Core\Auth::check()) {
-            $this->redirect('/admin/login');
-            exit;
+        // Primeiro tenta PIN auth (usuários de EPI acessam por PIN)
+        $pinUser = PinAuthController::getLoggedUser();
+        if ($pinUser) {
+            // Permite acesso se a role for 'epi' ou 'all'
+            if ($pinUser['role'] !== 'epi' && $pinUser['role'] !== 'all') {
+                http_response_code(403);
+                echo '<h1>Sem permissão</h1><p>Você não tem acesso à funcionalidade de EPI.</p>';
+                exit;
+            }
+            return [
+                'id' => $pinUser['id'],
+                'name' => $pinUser['name'],
+                'email' => $pinUser['email'] ?? '',
+                'role' => 'epi',
+            ];
         }
-        return \App\Core\Auth::user();
+
+        // Fallback: admin auth (super_admin/admin sempre pode acessar)
+        if (\App\Core\Auth::check()) {
+            return \App\Core\Auth::user();
+        }
+
+        // Nenhum dos dois → redireciona para login PIN
+        $this->redirect('/pin/login?redirect=' . urlencode($_SERVER['REQUEST_URI'] ?? '/cadastro-de-epi'));
+        exit;
     }
 
     // ===================================================================
