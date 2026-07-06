@@ -112,7 +112,7 @@
     </div>
 
     <!-- Mobile: Botão fixo inferior -->
-    <div class="d-lg-none position-fixed start-0 end-0 bg-white border-top shadow" style="z-index:1100; bottom: env(safe-area-inset-bottom, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);">
+    <div class="d-lg-none position-fixed start-0 end-0 bg-white border-top shadow" id="mobileReviewBtn" style="z-index:1100; bottom: env(safe-area-inset-bottom, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);">
         <div class="p-2">
             <button type="button" class="btn btn-primary w-100 py-2" onclick="showReview()" style="font-size:1rem;">
                 <i class="bi bi-eye"></i> Revisar e Enviar Pedido
@@ -635,6 +635,14 @@ document.querySelectorAll('input[name="order_type"]').forEach(radio => {
         }
     });
 });
+
+// Esconder botão fixo mobile quando o modal de revisão estiver aberto
+const reviewModal = document.getElementById('reviewModal');
+const mobileBtn = document.getElementById('mobileReviewBtn');
+if (reviewModal && mobileBtn) {
+    reviewModal.addEventListener('show.bs.modal', () => { mobileBtn.style.display = 'none'; });
+    reviewModal.addEventListener('hidden.bs.modal', () => { mobileBtn.style.display = ''; });
+}
 </script>
 
 <?php $content = ob_get_clean(); ?>
