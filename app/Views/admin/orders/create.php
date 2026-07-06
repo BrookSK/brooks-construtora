@@ -564,9 +564,9 @@ function showReview() {
     const rows = document.querySelectorAll('#itemsBodyDesktop tr');
     if (rows.length === 0) { alert('Adicione pelo menos um item.'); return; }
     
-    // Validar que todos têm material selecionado
+    // Validar que todos têm material selecionado (EPIs são itens não vinculados: valida pelo nome)
     let valid = true;
-    document.querySelectorAll('[id^="mid-"]').forEach(input => { if (!input.value) valid = false; });
+    document.querySelectorAll('[id^="mname-"]').forEach(input => { if (!input.value) valid = false; });
     if (!valid) { alert('Selecione um material para cada item.'); return; }
 
     // Montar resumo
