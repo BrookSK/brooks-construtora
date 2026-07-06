@@ -154,13 +154,11 @@
             <p>Painel Admin</p>
         </div>
         <ul class="nav flex-column mt-3">
-            <?php if (\App\Core\Auth::role() !== 'epi'): ?>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'dashboard' ? 'active' : '' ?>" href="/admin/dashboard">
                     <i class="bi bi-grid-1x2-fill"></i> Dashboard
                 </a>
             </li>
-            <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('magazines')): ?>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'magazines' ? 'active' : '' ?>" href="/admin/magazines">
