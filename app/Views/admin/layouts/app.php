@@ -227,7 +227,7 @@
                 </a>
             </li>
             <?php endif; ?>
-            <?php if (\App\Core\Auth::hasPermission('orders')): ?>
+            <?php if (\App\Core\Auth::hasPermission('orders') || \App\Core\Auth::hasPermission('epi')): ?>
             <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
                 <small class="text-uppercase px-3 opacity-50" style="font-size:0.65rem; letter-spacing:1px;">EPIs</small>
             </li>

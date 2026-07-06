@@ -25,6 +25,15 @@ class EpiController extends Controller
                 echo '<h1>Sem permissão</h1><p>Você não tem acesso à funcionalidade de EPI.</p>';
                 exit;
             }
+            // Configura sessão para que o layout/sidebar funcione corretamente
+            $_SESSION['user_id'] = $pinUser['id'];
+            $_SESSION['user_name'] = $pinUser['name'];
+            $_SESSION['user_email'] = $pinUser['email'] ?? '';
+            $_SESSION['user_role'] = 'epi';
+            $_SESSION['pin_auth'] = true;
+            $_SESSION['pin_user_id'] = $pinUser['id'];
+            $_SESSION['pin_user_role'] = $pinUser['role'];
+
             return [
                 'id' => $pinUser['id'],
                 'name' => $pinUser['name'],
@@ -49,8 +58,9 @@ class EpiController extends Controller
 
     public function catalog(): void
     {
-        $this->requireUser();
+        $user = $this->requireUser();
         $this->view('site.epi.catalog', [
+            'user' => $user,
             'epis' => Epi::all('category ASC, name ASC'),
             'categories' => Epi::distinctCategories(),
             'flash' => $this->getFlash(),
