@@ -11,32 +11,16 @@ use App\Models\EpiReplacement;
 class EpiController extends Controller
 {
     /**
-     * Middleware: exige login por PIN individual (pin_users).
-     * Retorna o usuário logado e hidrata a sessão do Auth para o layout admin.
+     * Middleware: exige usuário logado (sessão do Auth).
+     * Retorna o usuário logado.
      */
     private function requireUser(): array
     {
-        $user = PinAuthController::requireAuth();
-
-        // Hidrata a sessão do sistema de permissões (usada pelo layout admin)
-        // mapeando o papel do PIN individual para o papel interno.
-        if (empty($_SESSION['user_role'])) {
-            $roleMap = [
-                'buyer' => 'comprador',
-                'quoter' => 'cotador',
-                'approver' => 'aprovador',
-                'payment' => 'financeiro',
-                'delivery' => 'comprador',
-                'all' => 'comprador',
-            ];
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_name'] = $user['name'];
-            $_SESSION['user_email'] = $user['email'] ?? '';
-            $_SESSION['user_role'] = $roleMap[$user['role']] ?? 'comprador';
-            $_SESSION['pin_auth'] = true;
+        if (!\App\Core\Auth::check()) {
+            $this->redirect('/admin/login');
+            exit;
         }
-
-        return $user;
+        return \App\Core\Auth::user();
     }
 
     // ===================================================================
