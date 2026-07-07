@@ -1,4 +1,10 @@
-<?php $pageTitle = 'Histórico de EPIs'; $currentPage = 'epi_history'; $user = $user ?? \App\Core\Auth::user(); ?>
+<?php
+$recipientType = $recipientType ?? 'worker';
+$isThird = $recipientType === 'third_party';
+$pageTitle = 'Histórico de EPIs' . ($isThird ? ' — Terceiros' : '');
+$currentPage = 'epi_history';
+$user = $user ?? \App\Core\Auth::user();
+?>
 <?php ob_start(); ?>
 
 <style>
@@ -6,13 +12,20 @@
     .evt-card .evt-body { padding: 0.9rem 1rem; }
     .evt-delivery { border-left: 4px solid #0d6efd; }
     .evt-replacement { border-left: 4px solid #ffc107; }
+    .evt-return { border-left: 4px solid #0dcaf0; }
     .thumb { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; border: 1px solid #dee2e6; cursor: pointer; }
     .thumb-label { font-size: 0.62rem; text-align: center; color: #6c757d; margin-top: 2px; }
 </style>
 
 <div style="max-width: 900px;">
+    <!-- Alternância colaboradores / terceiros -->
+    <div class="btn-group mb-3 d-block" role="group">
+        <a href="/historico-de-epi?tipo=colaboradores" class="btn btn-sm <?= $isThird ? 'btn-outline-dark' : 'btn-dark' ?>"><i class="bi bi-person-badge"></i> Colaboradores</a>
+        <a href="/historico-de-epi?tipo=terceiros" class="btn btn-sm <?= $isThird ? 'btn-dark' : 'btn-outline-dark' ?>"><i class="bi bi-people-fill"></i> Terceiros</a>
+    </div>
+
     <?php
-    // Combina entregas e substituições em uma linha do tempo única
+    // Combina entregas, substituições e devoluções em uma linha do tempo única
     $events = [];
     foreach ($deliveries as $d) {
         $events[] = ['type' => 'delivery', 'at' => $d['created_at'], 'data' => $d];
@@ -20,14 +33,18 @@
     foreach ($replacements as $r) {
         $events[] = ['type' => 'replacement', 'at' => $r['created_at'], 'data' => $r];
     }
+    foreach (($returns ?? []) as $rt) {
+        $events[] = ['type' => 'return', 'at' => $rt['created_at'], 'data' => $rt];
+    }
     usort($events, fn($a, $b) => strtotime($b['at']) <=> strtotime($a['at']));
     ?>
 
     <!-- Filtro -->
-    <div class="btn-group mb-3" role="group">
-        <button type="button" class="btn btn-sm btn-primary" onclick="filterEvents('all', this)">Tudo</button>
-        <button type="button" class="btn btn-sm btn-outline-primary" onclick="filterEvents('delivery', this)"><i class="bi bi-box-seam"></i> Entregas</button>
-        <button type="button" class="btn btn-sm btn-outline-warning" onclick="filterEvents('replacement', this)"><i class="bi bi-arrow-repeat"></i> Substituições</button>
+    <div class="btn-group mb-3 flex-wrap" role="group" id="eventFilter">
+        <button type="button" class="btn btn-sm btn-primary" data-filter="all" onclick="filterEvents('all', this)">Tudo</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" data-filter="delivery" onclick="filterEvents('delivery', this)"><i class="bi bi-box-seam"></i> <?= $isThird ? 'Distribuições' : 'Entregas' ?></button>
+        <button type="button" class="btn btn-sm btn-outline-warning" data-filter="replacement" onclick="filterEvents('replacement', this)"><i class="bi bi-arrow-repeat"></i> Substituições</button>
+        <button type="button" class="btn btn-sm btn-outline-info" data-filter="return" onclick="filterEvents('return', this)"><i class="bi bi-box-arrow-in-left"></i> Devoluções</button>
     </div>
 
     <?php if (empty($events)): ?>
@@ -61,7 +78,7 @@
                 </div>
             </div>
         </div>
-        <?php else: $r = $ev['data']; ?>
+        <?php elseif ($ev['type'] === 'replacement'): $r = $ev['data']; ?>
         <div class="evt-card evt-replacement" data-type="replacement">
             <div class="evt-body">
                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
@@ -76,6 +93,25 @@
                 <div class="mt-2 d-flex gap-3">
                     <?php if (!empty($r['old_item_photo_path'])): ?><div><img src="<?= htmlspecialchars($r['old_item_photo_path']) ?>" class="thumb" onclick="zoom(this.src)"><div class="thumb-label">Devolvido</div></div><?php endif; ?>
                     <?php if (!empty($r['new_delivery_photo_path'])): ?><div><img src="<?= htmlspecialchars($r['new_delivery_photo_path']) ?>" class="thumb" onclick="zoom(this.src)"><div class="thumb-label">Nova entrega</div></div><?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <?php else: $rt = $ev['data']; ?>
+        <div class="evt-card evt-return" data-type="return">
+            <div class="evt-body">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <span class="badge bg-info text-dark mb-1"><i class="bi bi-box-arrow-in-left"></i> Devolução</span>
+                        <div class="fw-bold"><?= htmlspecialchars($rt['epi_name']) ?><?= $rt['ca'] ? ' <span class="text-muted small">· CA ' . htmlspecialchars($rt['ca']) . '</span>' : '' ?></div>
+                        <div class="small text-muted"><i class="bi bi-person"></i> <?= htmlspecialchars($rt['worker_name']) ?> · <?= htmlspecialchars($rt['worker_document']) ?> · Qtd: <?= rtrim(rtrim(number_format($rt['quantity'], 2, ',', '.'), '0'), ',') ?></div>
+                        <div class="small text-muted">Responsável: <?= htmlspecialchars($rt['performed_by']) ?></div>
+                        <?php if (!empty($rt['notes'])): ?><div class="small text-muted mt-1"><i class="bi bi-chat-left-text"></i> <?= htmlspecialchars($rt['notes']) ?></div><?php endif; ?>
+                    </div>
+                    <div class="text-end small text-muted"><i class="bi bi-calendar3"></i> <?= date('d/m/Y H:i', strtotime($rt['created_at'])) ?></div>
+                </div>
+                <div class="mt-2 d-flex gap-3">
+                    <?php if (!empty($rt['photo_path'])): ?><div><img src="<?= htmlspecialchars($rt['photo_path']) ?>" class="thumb" onclick="zoom(this.src)"><div class="thumb-label">Devolvido</div></div><?php endif; ?>
+                    <?php if (!empty($rt['signature_path'])): ?><div><img src="<?= htmlspecialchars($rt['signature_path']) ?>" class="thumb" style="object-fit:contain;background:#fff;" onclick="zoom(this.src)"><div class="thumb-label">Assinatura</div></div><?php endif; ?>
                 </div>
             </div>
         </div>
@@ -96,14 +132,18 @@ function zoom(src) {
     new bootstrap.Modal(document.getElementById('zoomModal')).show();
 }
 function filterEvents(type, btn) {
-    document.querySelectorAll('.btn-group .btn').forEach(b => {
-        b.classList.remove('btn-primary', 'btn-warning');
-        if (b.textContent.includes('Entregas')) b.classList.add('btn-outline-primary');
-        else if (b.textContent.includes('Substituições')) b.classList.add('btn-outline-warning');
+    // Reseta apenas os botões de filtro de tipo (não os de alternância colaborador/terceiro)
+    document.querySelectorAll('#eventFilter .btn').forEach(b => {
+        b.classList.remove('btn-primary', 'btn-warning', 'btn-info');
+        if (b.dataset.filter === 'delivery') b.classList.add('btn-outline-primary');
+        else if (b.dataset.filter === 'replacement') b.classList.add('btn-outline-warning');
+        else if (b.dataset.filter === 'return') b.classList.add('btn-outline-info');
         else b.classList.add('btn-outline-primary');
     });
-    btn.classList.remove('btn-outline-primary', 'btn-outline-warning');
-    btn.classList.add(type === 'replacement' ? 'btn-warning' : 'btn-primary');
+    btn.classList.remove('btn-outline-primary', 'btn-outline-warning', 'btn-outline-info');
+    if (type === 'replacement') btn.classList.add('btn-warning');
+    else if (type === 'return') btn.classList.add('btn-info');
+    else btn.classList.add('btn-primary');
     document.querySelectorAll('#eventList .evt-card').forEach(card => {
         card.style.display = (type === 'all' || card.dataset.type === type) ? 'block' : 'none';
     });

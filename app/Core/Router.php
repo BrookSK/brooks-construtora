@@ -232,9 +232,14 @@ class Router
             'cadastro-de-epi/excluir' => ['EpiController', 'catalogDelete'],
             'registro-de-entrega' => ['EpiController', 'deliveryForm'],
             'registro-de-entrega/salvar' => ['EpiController', 'deliveryStore'],
+            'registro-de-entrega/buscar-colaborador' => ['EpiController', 'searchWorkers'],
             'substituicao-de-epi' => ['EpiController', 'replacementForm'],
             'substituicao-de-epi/itens' => ['EpiController', 'replacementItems'],
             'substituicao-de-epi/salvar' => ['EpiController', 'replacementStore'],
+            'substituicao-de-epi/devolver' => ['EpiController', 'returnStore'],
+            'distribuicao-terceiros' => ['EpiController', 'thirdPartyForm'],
+            'distribuicao-terceiros/salvar' => ['EpiController', 'thirdPartyStore'],
+            'distribuicao-terceiros/buscar' => ['EpiController', 'searchWorkers'],
             'historico-de-epi' => ['EpiController', 'history'],
 
             // Painel de pedidos com PIN

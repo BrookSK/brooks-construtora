@@ -7,6 +7,7 @@ use App\Models\Epi;
 use App\Models\EpiDelivery;
 use App\Models\EpiDeliveryItem;
 use App\Models\EpiReplacement;
+use App\Models\EpiReturn;
 
 class EpiController extends Controller
 {
@@ -147,14 +148,65 @@ class EpiController extends Controller
         $this->view('site.epi.delivery', [
             'user' => $user,
             'epis' => Epi::allActive(),
+            'recipientType' => 'worker',
             'flash' => $this->getFlash(),
         ]);
     }
 
-    public function deliveryStore(): void
+    /**
+     * Distribuição de EPIs para terceiros (mesma tela/lógica da entrega,
+     * porém com destinatário não vinculado ao quadro de colaboradores).
+     */
+    public function thirdPartyForm(): void
     {
         $user = $this->requireUser();
-        if (!$this->isPost()) { $this->redirect('/registro-de-entrega'); return; }
+        $this->view('site.epi.delivery', [
+            'user' => $user,
+            'epis' => Epi::allActive(),
+            'recipientType' => 'third_party',
+            'flash' => $this->getFlash(),
+        ]);
+    }
+
+    /**
+     * Busca dinâmica de destinatários já cadastrados (JSON).
+     */
+    public function searchWorkers(): void
+    {
+        $this->requireUser();
+        $term = trim($this->input('q', ''));
+        $recipientType = $this->input('recipient_type', 'worker') === 'third_party' ? 'third_party' : 'worker';
+        if (strlen($term) < 1) { $this->json(['workers' => []]); return; }
+
+        $workers = EpiDelivery::searchWorkers($term, $recipientType);
+        $this->json(['workers' => array_map(fn($w) => [
+            'name' => $w['worker_name'],
+            'document' => $w['worker_document'],
+            'role' => $w['worker_role'],
+        ], $workers)]);
+    }
+
+    public function deliveryStore(): void
+    {
+        $this->processDeliveryStore('worker', '/registro-de-entrega');
+    }
+
+    public function thirdPartyStore(): void
+    {
+        $this->processDeliveryStore('third_party', '/distribuicao-terceiros');
+    }
+
+    /**
+     * Processa o registro de entrega, reutilizado tanto para colaboradores
+     * quanto para terceiros.
+     */
+    private function processDeliveryStore(string $recipientType, string $redirect): void
+    {
+        $user = $this->requireUser();
+        if (!$this->isPost()) { $this->redirect($redirect); return; }
+
+        $isThird = $recipientType === 'third_party';
+        $workerLabel = $isThird ? 'terceiro' : 'colaborador';
 
         $workerName = trim($this->input('worker_name', ''));
         $workerDoc = trim($this->input('worker_document', ''));
@@ -167,7 +219,7 @@ class EpiController extends Controller
         $quantities = $_POST['quantity'] ?? [];
 
         $errors = [];
-        if ($workerName === '') $errors[] = 'Nome do colaborador';
+        if ($workerName === '') $errors[] = 'Nome do ' . $workerLabel;
         if ($workerDoc === '') $errors[] = 'CPF ou Matrícula';
         if ($workerRole === '') $errors[] = 'Cargo';
         if (empty($epiIds)) $errors[] = 'Ao menos um EPI';
@@ -178,17 +230,18 @@ class EpiController extends Controller
         $episPhoto = $this->saveDataUrlImage($this->input('epis_photo_data', ''), 'epis');
         $signature = $this->saveDataUrlImage($this->input('signature_data', ''), 'signature');
 
-        if (!$selfie) $errors[] = 'Selfie do colaborador';
-        if (!$episPhoto) $errors[] = 'Foto do colaborador com os EPIs';
+        if (!$selfie) $errors[] = 'Selfie do ' . $workerLabel;
+        if (!$episPhoto) $errors[] = 'Foto do ' . $workerLabel . ' com os EPIs';
         if (!$signature) $errors[] = 'Assinatura';
 
         if (!empty($errors)) {
             $this->setFlash('error', 'Preencha os campos obrigatórios: ' . implode(', ', $errors) . '.');
-            $this->redirect('/registro-de-entrega');
+            $this->redirect($redirect);
             return;
         }
 
         $deliveryId = EpiDelivery::create([
+            'recipient_type' => $recipientType,
             'worker_name' => $workerName,
             'worker_document' => $workerDoc,
             'worker_role' => $workerRole,
@@ -219,8 +272,8 @@ class EpiController extends Controller
             ]);
         }
 
-        $this->setFlash('success', "Entrega registrada para {$workerName}.");
-        $this->redirect('/registro-de-entrega');
+        $this->setFlash('success', ucfirst($isThird ? 'distribuição' : 'entrega') . " registrada para {$workerName}.");
+        $this->redirect($redirect);
     }
 
     // ===================================================================
@@ -257,12 +310,17 @@ class EpiController extends Controller
             $daysElapsed = (int) floor(($now - $referenceTs) / 86400);
             $minDays = (int) $it['min_replacement_days'];
             $replacementCount = (int) $it['replacement_count'];
+            $delivered = (float) $it['quantity'];
+            $returned = (float) $it['returned_quantity'];
+            $availableToReturn = max(0, $delivered - $returned);
             $out[] = [
                 'id' => (int) $it['id'],
                 'epi_id' => (int) $it['epi_id'],
                 'epi_name' => $it['epi_name'],
                 'ca' => $it['ca'],
-                'quantity' => (float) $it['quantity'],
+                'quantity' => $delivered,
+                'returned_quantity' => $returned,
+                'available_to_return' => $availableToReturn,
                 'delivered_at' => $it['delivered_at'],
                 'last_replaced_at' => $it['last_replaced_at'],
                 'reference_date' => $referenceDate,
@@ -340,21 +398,80 @@ class EpiController extends Controller
         $this->json(['success' => true, 'sequence' => $sequence]);
     }
 
+    /**
+     * Registra a devolução de um EPI. Só permite devolver o que o colaborador
+     * de fato ainda possui (quantidade entregue menos o já devolvido).
+     */
+    public function returnStore(): void
+    {
+        $user = $this->requireUser();
+        if (!$this->isPost()) { $this->json(['error' => 'Método inválido'], 405); return; }
+
+        $itemId = (int) $this->input('delivery_item_id', 0);
+        $item = EpiDeliveryItem::find($itemId);
+        if (!$item) { $this->json(['error' => 'Item de entrega não encontrado.'], 404); return; }
+
+        $delivered = (float) $item['quantity'];
+        $alreadyReturned = EpiDeliveryItem::returnedQuantity($item['id']);
+        $available = max(0, $delivered - $alreadyReturned);
+
+        if ($available <= 0) {
+            $this->json(['error' => 'Este EPI já foi totalmente devolvido.'], 400);
+            return;
+        }
+
+        $qty = (float) $this->input('quantity', $available);
+        if ($qty <= 0) { $this->json(['error' => 'Informe uma quantidade válida.'], 400); return; }
+        if ($qty > $available) {
+            $this->json(['error' => 'Quantidade superior à que o colaborador ainda possui (disponível: ' . $available . ').'], 400);
+            return;
+        }
+
+        $photo = $this->saveDataUrlImage($this->input('photo_data', ''), 'return');
+        $signature = $this->saveDataUrlImage($this->input('signature_data', ''), 'return_sign');
+        $notes = trim($this->input('notes', ''));
+
+        $delivery = EpiDelivery::find((int) $item['delivery_id']);
+
+        EpiReturn::create([
+            'delivery_item_id' => $item['id'],
+            'epi_id' => $item['epi_id'],
+            'epi_name' => $item['epi_name'],
+            'ca' => $item['ca'],
+            'quantity' => $qty,
+            'worker_name' => $delivery['worker_name'] ?? '',
+            'worker_document' => $delivery['worker_document'] ?? '',
+            'performed_by' => $user['name'] ?? '',
+            'performed_by_id' => $user['id'] ?? null,
+            'photo_path' => $photo,
+            'signature_path' => $signature,
+            'notes' => $notes ?: null,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->json(['success' => true]);
+    }
+
     // ===================================================================
-    // /historico-de-epi  — histórico de entregas e substituições
+    // /historico-de-epi  — histórico de entregas, substituições e devoluções
     // ===================================================================
 
     public function history(): void
     {
         $user = $this->requireUser();
 
+        // recipient_type do histórico: 'worker' (padrão) ou 'third_party'
+        $recipientType = $this->input('tipo', 'worker') === 'terceiros' ? 'third_party' : 'worker';
+
         $deliveries = \App\Core\Database::fetchAll(
             "SELECT d.*, COUNT(i.id) AS item_count
              FROM epi_deliveries d
              LEFT JOIN epi_delivery_items i ON i.delivery_id = d.id
+             WHERE d.recipient_type = ?
              GROUP BY d.id
              ORDER BY d.created_at DESC
-             LIMIT 200"
+             LIMIT 200",
+            [$recipientType]
         );
         // Itens por entrega
         $deliveryItems = [];
@@ -368,15 +485,32 @@ class EpiController extends Controller
             foreach ($rows as $r) { $deliveryItems[$r['delivery_id']][] = $r; }
         }
 
+        // Substituições e devoluções: filtradas pelo tipo de destinatário através do JOIN
         $replacements = \App\Core\Database::fetchAll(
-            "SELECT * FROM epi_replacements ORDER BY created_at DESC LIMIT 200"
+            "SELECT r.* FROM epi_replacements r
+             INNER JOIN epi_delivery_items i ON i.id = r.delivery_item_id
+             INNER JOIN epi_deliveries d ON d.id = i.delivery_id
+             WHERE d.recipient_type = ?
+             ORDER BY r.created_at DESC LIMIT 200",
+            [$recipientType]
+        );
+
+        $returns = \App\Core\Database::fetchAll(
+            "SELECT rt.* FROM epi_returns rt
+             INNER JOIN epi_delivery_items i ON i.id = rt.delivery_item_id
+             INNER JOIN epi_deliveries d ON d.id = i.delivery_id
+             WHERE d.recipient_type = ?
+             ORDER BY rt.created_at DESC LIMIT 200",
+            [$recipientType]
         );
 
         $this->view('site.epi.history', [
             'user' => $user,
+            'recipientType' => $recipientType,
             'deliveries' => $deliveries,
             'deliveryItems' => $deliveryItems,
             'replacements' => $replacements,
+            'returns' => $returns,
             'flash' => $this->getFlash(),
         ]);
     }

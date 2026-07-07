@@ -238,7 +238,12 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'epi_replacement' ? 'active' : '' ?>" href="/substituicao-de-epi">
-                    <i class="bi bi-arrow-repeat"></i> Substituição de EPI
+                    <i class="bi bi-arrow-repeat"></i> Devoluções e Substituições
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'epi_thirdparty' ? 'active' : '' ?>" href="/distribuicao-terceiros">
+                    <i class="bi bi-people-fill"></i> Distribuição para Terceiros
                 </a>
             </li>
             <li class="nav-item">

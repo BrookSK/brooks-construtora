@@ -1,4 +1,13 @@
-<?php $pageTitle = 'Registro de Entrega de EPIs'; $currentPage = 'epi_delivery'; $user = $user ?? \App\Core\Auth::user(); ?>
+<?php
+$recipientType = $recipientType ?? 'worker';
+$isThird = $recipientType === 'third_party';
+$pageTitle = $isThird ? 'Distribuição de EPIs para Terceiros' : 'Registro de Entrega de EPIs';
+$currentPage = $isThird ? 'epi_thirdparty' : 'epi_delivery';
+$formAction = $isThird ? '/distribuicao-terceiros/salvar' : '/registro-de-entrega/salvar';
+$searchAction = $isThird ? '/distribuicao-terceiros/buscar' : '/registro-de-entrega/buscar-colaborador';
+$recipientLabel = $isThird ? 'Terceiro' : 'Colaborador';
+$user = $user ?? \App\Core\Auth::user();
+?>
 <?php ob_start(); ?>
 
 <style>
@@ -10,16 +19,23 @@
 </style>
 
 <div style="max-width: 800px;">
-    <form method="POST" action="/registro-de-entrega/salvar" id="deliveryForm">
-        <!-- Dados do colaborador -->
+    <?php if ($isThird): ?>
+    <div class="alert alert-info py-2 small"><i class="bi bi-info-circle"></i> Distribuição para pessoas fora do quadro de colaboradores (prestadores, visitantes, terceirizadas). Os dados são cadastrados manualmente e não ficam vinculados ao cadastro de colaboradores.</div>
+    <?php endif; ?>
+    <form method="POST" action="<?= $formAction ?>" id="deliveryForm">
+        <!-- Dados do destinatário -->
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white fw-bold"><i class="bi bi-person-badge text-primary"></i> Dados do Colaborador</div>
+            <div class="card-header bg-white fw-bold"><i class="bi bi-person-badge text-primary"></i> Dados do <?= $recipientLabel ?></div>
             <div class="card-body row g-2">
-                <div class="col-md-6"><label class="form-label small fw-bold">Nome *</label><input type="text" class="form-control" name="worker_name" required></div>
-                <div class="col-md-3"><label class="form-label small fw-bold">CPF ou Matrícula *</label><input type="text" class="form-control" name="worker_document" required></div>
+                <div class="col-md-6 position-relative">
+                    <label class="form-label small fw-bold">Nome *</label>
+                    <input type="text" class="form-control" name="worker_name" id="workerName" autocomplete="off" placeholder="Digite para buscar ou cadastrar..." required>
+                    <div id="workerSuggestions" class="list-group position-absolute w-100 shadow-sm" style="z-index:1050; display:none; max-height:240px; overflow-y:auto;"></div>
+                </div>
+                <div class="col-md-3"><label class="form-label small fw-bold">CPF ou Matrícula *</label><input type="text" class="form-control" name="worker_document" id="workerDocument" required></div>
                 <div class="col-md-3">
                     <label class="form-label small fw-bold">Cargo *</label>
-                    <select class="form-select" name="worker_role" required>
+                    <select class="form-select" name="worker_role" id="workerRole" required>
                         <option value="">Selecione...</option>
                         <?php
                         $cargos = [
@@ -130,6 +146,57 @@
 
 <script src="/assets/js/searchable-select.js"></script>
 <script>
+// ---- Busca dinâmica de colaboradores ----
+(function() {
+    const input = document.getElementById('workerName');
+    const box = document.getElementById('workerSuggestions');
+    const docField = document.getElementById('workerDocument');
+    const roleField = document.getElementById('workerRole');
+    let timer = null;
+
+    function hide() { box.style.display = 'none'; box.innerHTML = ''; }
+
+    function selectWorker(w) {
+        input.value = w.name;
+        docField.value = w.document;
+        // Define o cargo se existir na lista de opções
+        if (w.role) {
+            const opt = Array.from(roleField.options).find(o => o.value === w.role);
+            if (opt) roleField.value = w.role;
+        }
+        hide();
+    }
+
+    input.addEventListener('input', function() {
+        const term = this.value.trim();
+        clearTimeout(timer);
+        if (term.length < 1) { hide(); return; }
+        timer = setTimeout(() => {
+            fetch('<?= $searchAction ?>?q=' + encodeURIComponent(term))
+                .then(r => r.json())
+                .then(d => {
+                    const workers = d.workers || [];
+                    if (workers.length === 0) { hide(); return; }
+                    box.innerHTML = '';
+                    workers.forEach(w => {
+                        const a = document.createElement('button');
+                        a.type = 'button';
+                        a.className = 'list-group-item list-group-item-action py-2';
+                        a.innerHTML = `<strong>${w.name}</strong> <span class="text-muted small">· ${w.document}${w.role ? ' · ' + w.role : ''}</span>`;
+                        a.addEventListener('click', () => selectWorker(w));
+                        box.appendChild(a);
+                    });
+                    box.style.display = 'block';
+                })
+                .catch(hide);
+        }, 250);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target !== input && !box.contains(e.target)) hide();
+    });
+})();
+
 // ---- Seleção de EPIs ----
 let epiItems = [];
 const epiSelectEl = document.getElementById('epiSelect');
