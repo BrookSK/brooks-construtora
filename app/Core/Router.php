@@ -246,6 +246,8 @@ class Router
             'lista-de-presenca' => ['PresenceController', 'index'],
             'lista-de-presenca/buscar-prestador' => ['PresenceController', 'searchProviders'],
             'lista-de-presenca/salvar-prestador' => ['PresenceController', 'storeProvider'],
+            'lista-de-presenca/buscar-obra' => ['PresenceController', 'searchSites'],
+            'lista-de-presenca/salvar-obra' => ['PresenceController', 'storeSite'],
             'lista-de-presenca/salvar' => ['PresenceController', 'store'],
             'historico-presenca' => ['PresenceController', 'history'],
 

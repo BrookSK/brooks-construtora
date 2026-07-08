@@ -14,7 +14,7 @@
                     <label class="form-label small fw-bold">Obra</label>
                     <input type="text" class="form-control form-control-sm" name="site" list="siteList" value="<?= htmlspecialchars($filters['site'] ?? '') ?>">
                     <datalist id="siteList">
-                        <?php foreach (($sites ?? []) as $s): ?><option value="<?= htmlspecialchars($s) ?>"><?php endforeach; ?>
+                        <?php foreach (($sites ?? []) as $s): ?><option value="<?= htmlspecialchars(is_array($s) ? $s['name'] : $s) ?>"><?php endforeach; ?>
                     </datalist>
                 </div>
                 <div class="col-md-2"><label class="form-label small fw-bold">Empresa</label><input type="text" class="form-control form-control-sm" name="company" value="<?= htmlspecialchars($filters['company'] ?? '') ?>"></div>

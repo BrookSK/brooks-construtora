@@ -25,12 +25,11 @@
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-header bg-white fw-bold"><i class="bi bi-clipboard-check text-primary"></i> Registro</div>
             <div class="card-body row g-2">
-                <div class="col-md-6">
+                <div class="col-md-6 position-relative">
                     <label class="form-label small fw-bold">Obra *</label>
-                    <input type="text" class="form-control" name="site" list="siteList" required placeholder="Nome da obra">
-                    <datalist id="siteList">
-                        <?php foreach (($sites ?? []) as $s): ?><option value="<?= htmlspecialchars($s) ?>"><?php endforeach; ?>
-                    </datalist>
+                    <input type="text" class="form-control" name="site" id="siteName" autocomplete="off" required placeholder="Digite para buscar...">
+                    <input type="hidden" name="site_id" id="siteId">
+                    <div id="siteSuggestions" class="list-group position-absolute w-100 shadow-sm" style="z-index:1050; display:none; max-height:240px; overflow-y:auto;"></div>
                 </div>
                 <div class="col-md-3"><label class="form-label small fw-bold">Data *</label><input type="date" class="form-control" name="presence_date" value="<?= date('Y-m-d') ?>" required></div>
                 <div class="col-md-3"><label class="form-label small fw-bold">Hora *</label><input type="time" class="form-control" name="presence_time" value="<?= date('H:i') ?>" required></div>
@@ -67,6 +66,18 @@
         <div class="mb-2"><label class="form-label small fw-bold">Observações</label><textarea class="form-control" id="pmNotes" rows="2"></textarea></div>
     </div>
     <div class="modal-footer py-2"><button type="button" class="btn btn-primary w-100" id="pmSaveBtn" onclick="saveProvider()"><i class="bi bi-check-lg"></i> Salvar e continuar</button></div>
+</div></div></div>
+
+<!-- Modal Cadastro Rápido de Obra -->
+<div class="modal fade" id="siteModal" tabindex="-1" data-bs-backdrop="static"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header py-2"><h6 class="modal-title"><i class="bi bi-building-add"></i> Cadastro rápido de obra</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <p class="small text-muted">Obra não encontrada. Cadastre os dados abaixo para continuar.</p>
+        <div class="mb-2"><label class="form-label small fw-bold">Nome da obra *</label><input type="text" class="form-control" id="smName" required></div>
+        <div class="mb-2"><label class="form-label small fw-bold">Endereço / Local</label><input type="text" class="form-control" id="smAddress"></div>
+        <div class="mb-2"><label class="form-label small fw-bold">Observações</label><textarea class="form-control" id="smNotes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer py-2"><button type="button" class="btn btn-primary w-100" id="smSaveBtn" onclick="saveSite()"><i class="bi bi-check-lg"></i> Salvar e continuar</button></div>
 </div></div></div>
 
 <script src="/assets/js/signature-pad.js"></script>
@@ -157,6 +168,92 @@ function saveProvider() {
             if (d.success) {
                 window._presenceSelectProvider(d.provider);
                 providerModal.hide();
+            } else {
+                alert(d.error || 'Erro ao cadastrar.');
+            }
+        })
+        .catch(() => alert('Sem conexão.'))
+        .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Salvar e continuar'; });
+}
+
+let siteModal = null;
+
+// ---- Autocomplete de obras ----
+(function() {
+    const input = document.getElementById('siteName');
+    const box = document.getElementById('siteSuggestions');
+    let timer = null, lastTerm = '';
+
+    function hide() { box.style.display = 'none'; box.innerHTML = ''; }
+
+    function selectSite(s) {
+        document.getElementById('siteId').value = s.id;
+        input.value = s.name;
+        hide();
+    }
+
+    function showQuickAdd() {
+        document.getElementById('smName').value = input.value.trim();
+        ['smAddress','smNotes'].forEach(id => document.getElementById(id).value = '');
+        siteModal = new bootstrap.Modal(document.getElementById('siteModal'));
+        siteModal.show();
+    }
+
+    input.addEventListener('input', function() {
+        document.getElementById('siteId').value = ''; // limpa vínculo ao editar
+        const term = this.value.trim();
+        lastTerm = term;
+        clearTimeout(timer);
+        if (term.length < 1) { hide(); return; }
+        timer = setTimeout(() => {
+            fetch('/lista-de-presenca/buscar-obra?q=' + encodeURIComponent(term))
+                .then(r => r.json())
+                .then(d => {
+                    const sites = d.sites || [];
+                    box.innerHTML = '';
+                    sites.forEach(s => {
+                        const a = document.createElement('button');
+                        a.type = 'button';
+                        a.className = 'list-group-item list-group-item-action py-2';
+                        a.innerHTML = `<strong>${s.name}</strong>${s.address ? ' <span class="text-muted small">· ' + s.address + '</span>' : ''}`;
+                        a.addEventListener('click', () => selectSite(s));
+                        box.appendChild(a);
+                    });
+                    const add = document.createElement('button');
+                    add.type = 'button';
+                    add.className = 'list-group-item list-group-item-action py-2 text-primary';
+                    add.innerHTML = `<i class="bi bi-building-add"></i> Cadastrar "<strong>${lastTerm}</strong>" como nova obra`;
+                    add.addEventListener('click', showQuickAdd);
+                    box.appendChild(add);
+                    box.style.display = 'block';
+                })
+                .catch(hide);
+        }, 250);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target !== input && !box.contains(e.target)) hide();
+    });
+
+    window._presenceSelectSite = selectSite;
+})();
+
+function saveSite() {
+    const name = document.getElementById('smName').value.trim();
+    if (!name) { alert('Informe o nome da obra.'); return; }
+    const btn = document.getElementById('smSaveBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Salvando...';
+    const fd = new URLSearchParams({
+        name,
+        address: document.getElementById('smAddress').value,
+        notes: document.getElementById('smNotes').value,
+    });
+    fetch('/lista-de-presenca/salvar-obra', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: fd })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                window._presenceSelectSite(d.site);
+                siteModal.hide();
             } else {
                 alert(d.error || 'Erro ao cadastrar.');
             }

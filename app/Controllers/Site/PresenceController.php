@@ -5,6 +5,7 @@ namespace App\Controllers\Site;
 use App\Core\Controller;
 use App\Models\PresenceProvider;
 use App\Models\PresenceRecord;
+use App\Models\PresenceSite;
 
 class PresenceController extends Controller
 {
@@ -48,7 +49,7 @@ class PresenceController extends Controller
         $user = $this->requireUser();
         $this->view('site.presence.index', [
             'user' => $user,
-            'sites' => PresenceRecord::distinctSites(),
+            'sites' => PresenceSite::allActive(),
             'flash' => $this->getFlash(),
         ]);
     }
@@ -71,6 +72,62 @@ class PresenceController extends Controller
             'role' => $p['role'],
             'phone' => $p['phone'],
         ], $providers)]);
+    }
+
+    /**
+     * Busca dinâmica de obras (JSON).
+     */
+    public function searchSites(): void
+    {
+        $this->requireUser();
+        $term = trim($this->input('q', ''));
+        if (strlen($term) < 1) { $this->json(['sites' => []]); return; }
+
+        $sites = PresenceSite::search($term);
+        $this->json(['sites' => array_map(fn($s) => [
+            'id' => (int) $s['id'],
+            'name' => $s['name'],
+            'address' => $s['address'],
+        ], $sites)]);
+    }
+
+    /**
+     * Cadastro rápido de obra (JSON).
+     */
+    public function storeSite(): void
+    {
+        $user = $this->requireUser();
+        if (!$this->isPost()) { $this->json(['error' => 'Método inválido'], 405); return; }
+
+        $name = trim($this->input('name', ''));
+        if ($name === '') { $this->json(['error' => 'Informe o nome da obra.'], 400); return; }
+
+        // Evita duplicar: se já existir com o mesmo nome, retorna o existente
+        $existing = PresenceSite::findByName($name);
+        if ($existing) {
+            $this->json(['success' => true, 'site' => [
+                'id' => (int) $existing['id'],
+                'name' => $existing['name'],
+                'address' => $existing['address'],
+            ]]);
+            return;
+        }
+
+        $id = PresenceSite::create([
+            'name' => $name,
+            'address' => trim($this->input('address', '')) ?: null,
+            'notes' => trim($this->input('notes', '')) ?: null,
+            'active' => 1,
+            'created_by' => $user['name'] ?? null,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $site = PresenceSite::find($id);
+        $this->json(['success' => true, 'site' => [
+            'id' => (int) $site['id'],
+            'name' => $site['name'],
+            'address' => $site['address'],
+        ]]);
     }
 
     /**
@@ -119,6 +176,7 @@ class PresenceController extends Controller
         $providerId = (int) $this->input('provider_id', 0) ?: null;
         $providerName = trim($this->input('provider_name', ''));
         $company = trim($this->input('company', ''));
+        $siteId = (int) $this->input('site_id', 0) ?: null;
         $site = trim($this->input('site', ''));
         $date = trim($this->input('presence_date', '')) ?: date('Y-m-d');
         $time = trim($this->input('presence_time', '')) ?: date('H:i');
@@ -136,9 +194,25 @@ class PresenceController extends Controller
             return;
         }
 
+        // Garante que a obra fique cadastrada: se não veio vinculada, cria/reaproveita pelo nome.
+        if (!$siteId && $site !== '') {
+            $existingSite = PresenceSite::findByName($site);
+            if ($existingSite) {
+                $siteId = (int) $existingSite['id'];
+            } else {
+                $siteId = PresenceSite::create([
+                    'name' => $site,
+                    'active' => 1,
+                    'created_by' => $user['name'] ?? null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+            }
+        }
+
         PresenceRecord::create([
             'provider_id' => $providerId,
             'provider_name' => $providerName,
+            'site_id' => $siteId,
             'company' => $company ?: null,
             'site' => $site,
             'presence_date' => $date,
@@ -177,7 +251,7 @@ class PresenceController extends Controller
             'user' => $user,
             'records' => $records,
             'filters' => $filters,
-            'sites' => PresenceRecord::distinctSites(),
+            'sites' => PresenceSite::allActive(),
             'flash' => $this->getFlash(),
         ]);
     }
