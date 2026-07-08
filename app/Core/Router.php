@@ -242,6 +242,13 @@ class Router
             'distribuicao-terceiros/buscar' => ['EpiController', 'searchWorkers'],
             'historico-de-epi' => ['EpiController', 'history'],
 
+            // Lista de Presença
+            'lista-de-presenca' => ['PresenceController', 'index'],
+            'lista-de-presenca/buscar-prestador' => ['PresenceController', 'searchProviders'],
+            'lista-de-presenca/salvar-prestador' => ['PresenceController', 'storeProvider'],
+            'lista-de-presenca/salvar' => ['PresenceController', 'store'],
+            'historico-presenca' => ['PresenceController', 'history'],
+
             // Painel de pedidos com PIN
             'pedidos' => ['PurchaseOrderController', 'pinPanel'],
             'pedidos/login' => ['PurchaseOrderController', 'pinLogin'],

@@ -71,6 +71,18 @@
                 <img class="evidence-preview" id="preview_new" style="display:none;">
             </div>
         </div>
+        <div class="row g-2 mt-1">
+            <div class="col-6">
+                <label class="form-label small fw-bold">Assinatura do colaborador *</label>
+                <canvas id="repSigWorker" style="border:1px solid #ced4da; border-radius:8px; width:100%; height:130px; touch-action:none; background:#fff;"></canvas>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="repPadWorker && repPadWorker.clear()"><i class="bi bi-eraser"></i></button>
+            </div>
+            <div class="col-6">
+                <label class="form-label small fw-bold">Assinatura do responsável *</label>
+                <canvas id="repSigResp" style="border:1px solid #ced4da; border-radius:8px; width:100%; height:130px; touch-action:none; background:#fff;"></canvas>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="repPadResp && repPadResp.clear()"><i class="bi bi-eraser"></i></button>
+            </div>
+        </div>
     </div>
     <div class="modal-footer py-2"><button type="button" class="btn btn-warning w-100" id="repSubmitBtn" onclick="submitReplacement()"><i class="bi bi-check-lg"></i> Registrar substituição</button></div>
 </div></div></div>
@@ -100,6 +112,18 @@
                 <img class="evidence-preview" id="preview_ret" style="display:none;">
             </div>
         </div>
+        <div class="row g-2 mt-1">
+            <div class="col-6">
+                <label class="form-label small fw-bold">Assinatura do colaborador *</label>
+                <canvas id="retSigWorker" style="border:1px solid #ced4da; border-radius:8px; width:100%; height:130px; touch-action:none; background:#fff;"></canvas>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="retPadWorker && retPadWorker.clear()"><i class="bi bi-eraser"></i></button>
+            </div>
+            <div class="col-6">
+                <label class="form-label small fw-bold">Assinatura do responsável *</label>
+                <canvas id="retSigResp" style="border:1px solid #ced4da; border-radius:8px; width:100%; height:130px; touch-action:none; background:#fff;"></canvas>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="retPadResp && retPadResp.clear()"><i class="bi bi-eraser"></i></button>
+            </div>
+        </div>
     </div>
     <div class="modal-footer py-2"><button type="button" class="btn btn-info text-white w-100" id="retSubmitBtn" onclick="submitReturn()"><i class="bi bi-check-lg"></i> Registrar devolução</button></div>
 </div></div></div>
@@ -115,10 +139,13 @@
 </div></div></div>
 
 <script src="/assets/js/searchable-select.js"></script>
+<script src="/assets/js/signature-pad.js"></script>
 <script>
 const photos = { old: null, new: null, ret: null };
 let repModal = null;
 let retModal = null;
+let repPadWorker = null, repPadResp = null;
+let retPadWorker = null, retPadResp = null;
 
 const ss = new SearchableSelect(document.getElementById('workerSelect'), {
     placeholder: 'Buscar operário...',
@@ -209,6 +236,13 @@ function openReplacement(it) {
         document.getElementById('box_' + t).classList.remove('filled');
     });
     repModal = new bootstrap.Modal(document.getElementById('repModal'));
+    // (Re)inicializa os pads quando o modal termina de abrir (canvas visível)
+    const el = document.getElementById('repModal');
+    el.addEventListener('shown.bs.modal', function initRepPads() {
+        repPadWorker = new SignaturePad(document.getElementById('repSigWorker'));
+        repPadResp = new SignaturePad(document.getElementById('repSigResp'));
+        el.removeEventListener('shown.bs.modal', initRepPads);
+    }, { once: true });
     repModal.show();
 }
 
@@ -252,6 +286,8 @@ function submitReplacement() {
     if (qty < 1) { alert('Informe a quantidade a substituir.'); return; }
     if (!photos.old) { alert('Foto do material substituído é obrigatória.'); return; }
     if (!photos.new) { alert('Foto da entrega ao operário é obrigatória.'); return; }
+    if (!repPadWorker || repPadWorker.isEmpty()) { alert('A assinatura do colaborador é obrigatória.'); return; }
+    if (!repPadResp || repPadResp.isEmpty()) { alert('A assinatura do responsável é obrigatória.'); return; }
     const btn = document.getElementById('repSubmitBtn');
     btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Salvando...';
     const fd = new FormData();
@@ -259,6 +295,8 @@ function submitReplacement() {
     fd.append('quantity', qty);
     fd.append('old_item_photo_data', photos.old);
     fd.append('new_delivery_photo_data', photos.new);
+    fd.append('worker_signature_data', repPadWorker.toDataURL());
+    fd.append('responsible_signature_data', repPadResp.toDataURL());
     fetch('/substituicao-de-epi/salvar', { method: 'POST', body: fd })
         .then(r => r.json())
         .then(d => {
@@ -288,6 +326,12 @@ function openReturn(it) {
     document.getElementById('preview_ret').style.display = 'none';
     document.getElementById('box_ret').classList.remove('filled');
     retModal = new bootstrap.Modal(document.getElementById('retModal'));
+    const el = document.getElementById('retModal');
+    el.addEventListener('shown.bs.modal', function initRetPads() {
+        retPadWorker = new SignaturePad(document.getElementById('retSigWorker'));
+        retPadResp = new SignaturePad(document.getElementById('retSigResp'));
+        el.removeEventListener('shown.bs.modal', initRetPads);
+    }, { once: true });
     retModal.show();
 }
 
@@ -296,12 +340,16 @@ function submitReturn() {
     const max = parseInt(document.getElementById('retMaxQty').textContent) || 0;
     if (qty < 1) { alert('Informe a quantidade a devolver.'); return; }
     if (qty > max) { alert('Quantidade superior à que o colaborador ainda possui.'); return; }
+    if (!retPadWorker || retPadWorker.isEmpty()) { alert('A assinatura do colaborador é obrigatória.'); return; }
+    if (!retPadResp || retPadResp.isEmpty()) { alert('A assinatura do responsável é obrigatória.'); return; }
     const btn = document.getElementById('retSubmitBtn');
     btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Salvando...';
     const fd = new FormData();
     fd.append('delivery_item_id', document.getElementById('retItemId').value);
     fd.append('quantity', qty);
     fd.append('notes', document.getElementById('retNotes').value);
+    fd.append('worker_signature_data', retPadWorker.toDataURL());
+    fd.append('responsible_signature_data', retPadResp.toDataURL());
     if (photos.ret) fd.append('photo_data', photos.ret);
     fetch('/substituicao-de-epi/devolver', { method: 'POST', body: fd })
         .then(r => r.json())

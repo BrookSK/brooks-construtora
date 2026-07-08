@@ -117,16 +117,26 @@ $user = $user ?? \App\Core\Auth::user();
 
         <!-- Confirmação -->
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white fw-bold"><i class="bi bi-check2-square text-primary"></i> Confirmação do Responsável</div>
+            <div class="card-header bg-white fw-bold"><i class="bi bi-check2-square text-primary"></i> Confirmação e Assinaturas</div>
             <div class="card-body">
                 <div class="form-check mb-3">
                     <input type="checkbox" class="form-check-input" name="confirmed" id="confirmChk" value="1" required>
-                    <label class="form-check-label small" for="confirmChk">Confirmo que realizei a entrega dos EPIs acima ao colaborador identificado neste registro.</label>
+                    <label class="form-check-label small" for="confirmChk">Confirmo que realizei a entrega dos EPIs acima ao <?= strtolower($recipientLabel) ?> identificado neste registro.</label>
                 </div>
-                <label class="form-label small fw-bold">Assinatura do responsável *</label>
-                <canvas id="signaturePad"></canvas>
-                <div class="mt-1"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSignature()"><i class="bi bi-eraser"></i> Limpar</button></div>
-                <input type="hidden" name="signature_data" id="input_signature">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Assinatura do <?= strtolower($recipientLabel) ?> *</label>
+                        <canvas id="signatureWorker" class="signature-canvas" style="border:1px solid #ced4da; border-radius:8px; width:100%; height:170px; touch-action:none; background:#fff;"></canvas>
+                        <div class="mt-1"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="padWorker.clear()"><i class="bi bi-eraser"></i> Limpar</button></div>
+                        <input type="hidden" name="worker_signature_data" id="input_worker_signature">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Assinatura do responsável *</label>
+                        <canvas id="signaturePad" class="signature-canvas" style="border:1px solid #ced4da; border-radius:8px; width:100%; height:170px; touch-action:none; background:#fff;"></canvas>
+                        <div class="mt-1"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="padResponsible.clear()"><i class="bi bi-eraser"></i> Limpar</button></div>
+                        <input type="hidden" name="signature_data" id="input_signature">
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -145,6 +155,7 @@ $user = $user ?? \App\Core\Auth::user();
 </div></div></div>
 
 <script src="/assets/js/searchable-select.js"></script>
+<script src="/assets/js/signature-pad.js"></script>
 <script>
 // ---- Busca dinâmica de colaboradores ----
 (function() {
@@ -265,42 +276,19 @@ function capturePhoto() {
     camModal.hide();
 }
 
-// ---- Assinatura ----
-const sigCanvas = document.getElementById('signaturePad');
-const sigCtx = sigCanvas.getContext('2d');
-let drawing = false, sigDirty = false;
-function resizeSig() {
-    const ratio = window.devicePixelRatio || 1;
-    sigCanvas.width = sigCanvas.offsetWidth * ratio;
-    sigCanvas.height = sigCanvas.offsetHeight * ratio;
-    sigCtx.scale(ratio, ratio);
-    sigCtx.lineWidth = 2; sigCtx.lineCap = 'round'; sigCtx.strokeStyle = '#000';
-}
-setTimeout(resizeSig, 100);
-function sigPos(e) {
-    const r = sigCanvas.getBoundingClientRect();
-    const p = e.touches ? e.touches[0] : e;
-    return { x: p.clientX - r.left, y: p.clientY - r.top };
-}
-function startDraw(e) { drawing = true; sigDirty = true; const p = sigPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); e.preventDefault(); }
-function moveDraw(e) { if (!drawing) return; const p = sigPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); e.preventDefault(); }
-function endDraw() { drawing = false; }
-sigCanvas.addEventListener('mousedown', startDraw);
-sigCanvas.addEventListener('mousemove', moveDraw);
-sigCanvas.addEventListener('mouseup', endDraw);
-sigCanvas.addEventListener('mouseleave', endDraw);
-sigCanvas.addEventListener('touchstart', startDraw);
-sigCanvas.addEventListener('touchmove', moveDraw);
-sigCanvas.addEventListener('touchend', endDraw);
-function clearSignature() { sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height); sigDirty = false; }
+// ---- Assinaturas (componente reutilizável) ----
+const padWorker = new SignaturePad(document.getElementById('signatureWorker'), { hiddenInput: document.getElementById('input_worker_signature') });
+const padResponsible = new SignaturePad(document.getElementById('signaturePad'), { hiddenInput: document.getElementById('input_signature') });
 
 // ---- Submit ----
 document.getElementById('deliveryForm').addEventListener('submit', function(e) {
     if (epiItems.length === 0) { e.preventDefault(); alert('Adicione ao menos um EPI.'); return; }
     if (!document.getElementById('input_selfie').value) { e.preventDefault(); alert('Capture a selfie do colaborador.'); return; }
     if (!document.getElementById('input_epis').value) { e.preventDefault(); alert('Capture a foto do colaborador com os EPIs.'); return; }
-    if (!sigDirty) { e.preventDefault(); alert('A assinatura é obrigatória.'); return; }
-    document.getElementById('input_signature').value = sigCanvas.toDataURL('image/png');
+    if (padWorker.isEmpty()) { e.preventDefault(); alert('A assinatura do colaborador é obrigatória.'); return; }
+    if (padResponsible.isEmpty()) { e.preventDefault(); alert('A assinatura do responsável é obrigatória.'); return; }
+    padWorker.sync();
+    padResponsible.sync();
 });
 </script>
 

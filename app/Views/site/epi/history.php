@@ -74,7 +74,8 @@ $user = $user ?? \App\Core\Auth::user();
                 <div class="mt-2 d-flex gap-3">
                     <?php if (!empty($d['selfie_path'])): ?><div><img src="<?= htmlspecialchars($d['selfie_path']) ?>" class="thumb" onclick="zoom(this.src)"><div class="thumb-label">Selfie</div></div><?php endif; ?>
                     <?php if (!empty($d['epis_photo_path'])): ?><div><img src="<?= htmlspecialchars($d['epis_photo_path']) ?>" class="thumb" onclick="zoom(this.src)"><div class="thumb-label">Com EPIs</div></div><?php endif; ?>
-                    <?php if (!empty($d['signature_path'])): ?><div><img src="<?= htmlspecialchars($d['signature_path']) ?>" class="thumb" style="object-fit:contain;background:#fff;" onclick="zoom(this.src)"><div class="thumb-label">Assinatura</div></div><?php endif; ?>
+                    <?php if (!empty($d['worker_signature_path'])): ?><div><img src="<?= htmlspecialchars($d['worker_signature_path']) ?>" class="thumb" style="object-fit:contain;background:#fff;" onclick="zoom(this.src)"><div class="thumb-label">Assin. colab.</div></div><?php endif; ?>
+                    <?php if (!empty($d['signature_path'])): ?><div><img src="<?= htmlspecialchars($d['signature_path']) ?>" class="thumb" style="object-fit:contain;background:#fff;" onclick="zoom(this.src)"><div class="thumb-label">Assin. resp.</div></div><?php endif; ?>
                 </div>
             </div>
         </div>
@@ -93,6 +94,8 @@ $user = $user ?? \App\Core\Auth::user();
                 <div class="mt-2 d-flex gap-3">
                     <?php if (!empty($r['old_item_photo_path'])): ?><div><img src="<?= htmlspecialchars($r['old_item_photo_path']) ?>" class="thumb" onclick="zoom(this.src)"><div class="thumb-label">Devolvido</div></div><?php endif; ?>
                     <?php if (!empty($r['new_delivery_photo_path'])): ?><div><img src="<?= htmlspecialchars($r['new_delivery_photo_path']) ?>" class="thumb" onclick="zoom(this.src)"><div class="thumb-label">Nova entrega</div></div><?php endif; ?>
+                    <?php if (!empty($r['worker_signature_path'])): ?><div><img src="<?= htmlspecialchars($r['worker_signature_path']) ?>" class="thumb" style="object-fit:contain;background:#fff;" onclick="zoom(this.src)"><div class="thumb-label">Assin. colab.</div></div><?php endif; ?>
+                    <?php if (!empty($r['responsible_signature_path'])): ?><div><img src="<?= htmlspecialchars($r['responsible_signature_path']) ?>" class="thumb" style="object-fit:contain;background:#fff;" onclick="zoom(this.src)"><div class="thumb-label">Assin. resp.</div></div><?php endif; ?>
                 </div>
             </div>
         </div>
@@ -111,7 +114,8 @@ $user = $user ?? \App\Core\Auth::user();
                 </div>
                 <div class="mt-2 d-flex gap-3">
                     <?php if (!empty($rt['photo_path'])): ?><div><img src="<?= htmlspecialchars($rt['photo_path']) ?>" class="thumb" onclick="zoom(this.src)"><div class="thumb-label">Devolvido</div></div><?php endif; ?>
-                    <?php if (!empty($rt['signature_path'])): ?><div><img src="<?= htmlspecialchars($rt['signature_path']) ?>" class="thumb" style="object-fit:contain;background:#fff;" onclick="zoom(this.src)"><div class="thumb-label">Assinatura</div></div><?php endif; ?>
+                    <?php if (!empty($rt['worker_signature_path'])): ?><div><img src="<?= htmlspecialchars($rt['worker_signature_path']) ?>" class="thumb" style="object-fit:contain;background:#fff;" onclick="zoom(this.src)"><div class="thumb-label">Assin. colab.</div></div><?php endif; ?>
+                    <?php if (!empty($rt['responsible_signature_path'])): ?><div><img src="<?= htmlspecialchars($rt['responsible_signature_path']) ?>" class="thumb" style="object-fit:contain;background:#fff;" onclick="zoom(this.src)"><div class="thumb-label">Assin. resp.</div></div><?php endif; ?>
                 </div>
             </div>
         </div>

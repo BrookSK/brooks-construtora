@@ -229,10 +229,12 @@ class EpiController extends Controller
         $selfie = $this->saveDataUrlImage($this->input('selfie_data', ''), 'selfie');
         $episPhoto = $this->saveDataUrlImage($this->input('epis_photo_data', ''), 'epis');
         $signature = $this->saveDataUrlImage($this->input('signature_data', ''), 'signature');
+        $workerSignature = $this->saveDataUrlImage($this->input('worker_signature_data', ''), 'worker_sign');
 
         if (!$selfie) $errors[] = 'Selfie do ' . $workerLabel;
         if (!$episPhoto) $errors[] = 'Foto do ' . $workerLabel . ' com os EPIs';
-        if (!$signature) $errors[] = 'Assinatura';
+        if (!$workerSignature) $errors[] = 'Assinatura do ' . $workerLabel;
+        if (!$signature) $errors[] = 'Assinatura do responsável';
 
         if (!empty($errors)) {
             $this->setFlash('error', 'Preencha os campos obrigatórios: ' . implode(', ', $errors) . '.');
@@ -250,6 +252,7 @@ class EpiController extends Controller
             'selfie_path' => $selfie,
             'epis_photo_path' => $episPhoto,
             'signature_path' => $signature,
+            'worker_signature_path' => $workerSignature,
             'confirmed' => $confirmed,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
@@ -364,9 +367,13 @@ class EpiController extends Controller
 
         $oldPhoto = $this->saveDataUrlImage($this->input('old_item_photo_data', ''), 'replace_old');
         $newPhoto = $this->saveDataUrlImage($this->input('new_delivery_photo_data', ''), 'replace_new');
+        $workerSign = $this->saveDataUrlImage($this->input('worker_signature_data', ''), 'replace_wsign');
+        $respSign = $this->saveDataUrlImage($this->input('responsible_signature_data', ''), 'replace_rsign');
 
         if (!$oldPhoto) { $this->json(['error' => 'Foto do material substituído é obrigatória.'], 400); return; }
         if (!$newPhoto) { $this->json(['error' => 'Foto da entrega ao operário é obrigatória.'], 400); return; }
+        if (!$workerSign) { $this->json(['error' => 'Assinatura do colaborador é obrigatória.'], 400); return; }
+        if (!$respSign) { $this->json(['error' => 'Assinatura do responsável é obrigatória.'], 400); return; }
 
         $delivery = EpiDelivery::find((int) $item['delivery_id']);
 
@@ -390,6 +397,8 @@ class EpiController extends Controller
             'performed_by_id' => $user['id'] ?? null,
             'old_item_photo_path' => $oldPhoto,
             'new_delivery_photo_path' => $newPhoto,
+            'worker_signature_path' => $workerSign,
+            'responsible_signature_path' => $respSign,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
@@ -428,8 +437,12 @@ class EpiController extends Controller
         }
 
         $photo = $this->saveDataUrlImage($this->input('photo_data', ''), 'return');
-        $signature = $this->saveDataUrlImage($this->input('signature_data', ''), 'return_sign');
+        $workerSign = $this->saveDataUrlImage($this->input('worker_signature_data', ''), 'return_wsign');
+        $respSign = $this->saveDataUrlImage($this->input('responsible_signature_data', ''), 'return_rsign');
         $notes = trim($this->input('notes', ''));
+
+        if (!$workerSign) { $this->json(['error' => 'Assinatura do colaborador é obrigatória.'], 400); return; }
+        if (!$respSign) { $this->json(['error' => 'Assinatura do responsável é obrigatória.'], 400); return; }
 
         $delivery = EpiDelivery::find((int) $item['delivery_id']);
 
@@ -444,7 +457,9 @@ class EpiController extends Controller
             'performed_by' => $user['name'] ?? '',
             'performed_by_id' => $user['id'] ?? null,
             'photo_path' => $photo,
-            'signature_path' => $signature,
+            'signature_path' => $workerSign,
+            'worker_signature_path' => $workerSign,
+            'responsible_signature_path' => $respSign,
             'notes' => $notes ?: null,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
