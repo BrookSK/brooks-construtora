@@ -28,7 +28,11 @@ class ProjectController extends Controller
         }
 
         $settings = $siteSettings;
-        include ROOT_PATH . '/app/Views/site/projects/index.php';
+        if (defined('ANTIGO_PREFIX')) {
+            include ROOT_PATH . '/app/Views/site/projects/index.php';
+        } else {
+            include ROOT_PATH . '/app/Views/site/projects/new-index.php';
+        }
     }
 
     public function show(string $slug = ''): void

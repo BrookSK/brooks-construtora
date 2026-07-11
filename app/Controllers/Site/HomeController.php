@@ -23,7 +23,12 @@ class HomeController extends Controller
             $settings = [];
         }
 
-        include ROOT_PATH . '/app/Views/site/home/index.php';
+        // Novo site institucional (antigo usa ANTIGO_PREFIX)
+        if (defined('ANTIGO_PREFIX')) {
+            include ROOT_PATH . '/app/Views/site/home/index.php';
+        } else {
+            include ROOT_PATH . '/app/Views/site/home/new-index.php';
+        }
     }
 
     public function sobre(): void
@@ -34,7 +39,11 @@ class HomeController extends Controller
             $settings = [];
         }
 
-        include ROOT_PATH . '/app/Views/site/home/sobre.php';
+        if (defined('ANTIGO_PREFIX')) {
+            include ROOT_PATH . '/app/Views/site/home/sobre.php';
+        } else {
+            include ROOT_PATH . '/app/Views/site/home/new-sobre.php';
+        }
     }
 
     public function contato(): void
@@ -46,7 +55,11 @@ class HomeController extends Controller
         }
 
         $flash = $this->getFlash();
-        include ROOT_PATH . '/app/Views/site/home/contato.php';
+        if (defined('ANTIGO_PREFIX')) {
+            include ROOT_PATH . '/app/Views/site/home/contato.php';
+        } else {
+            include ROOT_PATH . '/app/Views/site/home/new-contato.php';
+        }
     }
 
     public function enviarContato(): void
@@ -88,5 +101,38 @@ class HomeController extends Controller
         }
 
         $this->redirect('/contato');
+    }
+
+    public function vetrix(): void
+    {
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
+
+        include ROOT_PATH . '/app/Views/site/pages/vetrix.php';
+    }
+
+    public function forcaEstrutural(): void
+    {
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
+
+        include ROOT_PATH . '/app/Views/site/pages/forca-estrutural.php';
+    }
+
+    public function academy(): void
+    {
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
+
+        include ROOT_PATH . '/app/Views/site/pages/academy.php';
     }
 }
