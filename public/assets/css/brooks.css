@@ -203,7 +203,7 @@ p:last-child {
 
 /* === TYPOGRAPHY === */
 .headline-hero {
-    font-family: var(--font-display);
+    font-family: var(--font-primary);
     font-size: clamp(2.5rem, 6vw, var(--text-7xl));
     font-weight: 700;
     line-height: 1.05;
