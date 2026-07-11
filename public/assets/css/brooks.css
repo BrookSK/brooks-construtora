@@ -754,9 +754,26 @@ p:last-child {
 @media (max-width: 768px) {
     .container * {
         max-width: 100%;
+        box-sizing: border-box;
     }
     
     .btn--lg {
         box-sizing: border-box;
+    }
+    
+    /* Disable horizontal transforms that cause overflow */
+    .reveal-left,
+    .reveal-right {
+        transform: translateY(30px);
+    }
+    
+    .reveal-left.revealed,
+    .reveal-right.revealed {
+        transform: translateY(0);
+    }
+    
+    /* Fix word-break for long emails/urls */
+    a {
+        word-break: break-word;
     }
 }

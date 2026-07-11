@@ -59,7 +59,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             
             <!-- Info -->
             <div class="reveal-right">
-                <div style="background: var(--brooks-off-white); border-radius: var(--radius-xl); padding: var(--space-2xl); margin-bottom: var(--space-xl);">
+                <div style="background: var(--brooks-off-white); border-radius: var(--radius-xl); padding: var(--space-xl); margin-bottom: var(--space-xl);">
                     <h3 style="font-size: var(--text-lg); font-weight: 600; margin-bottom: var(--space-lg);">Informações de Contato</h3>
                     
                     <?php $whatsappContato = !empty($settings['site_whatsapp']) ? $settings['site_whatsapp'] : '5511993392659'; ?>
