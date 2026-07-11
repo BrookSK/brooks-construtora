@@ -260,7 +260,7 @@ class Router
             'projeto' => ['ProjectController', 'show'],
             'contato' => ['HomeController', 'contato'],
             'contato/enviar' => ['HomeController', 'enviarContato'],
-            'vetrix' => ['HomeController', 'vetrix'],
+            'vetriks' => ['HomeController', 'vetriks'],
             'forca-estrutural' => ['HomeController', 'forcaEstrutural'],
             'academy' => ['HomeController', 'academy'],
             'newsletter/subscribe' => ['NewsletterController', 'subscribe'],

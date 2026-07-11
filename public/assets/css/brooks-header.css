@@ -157,7 +157,7 @@
 }
 
 .mega-menu__icon--brooks { background: linear-gradient(135deg, var(--brooks-blue-accent), var(--brooks-blue)); color: white; }
-.mega-menu__icon--vetrix { background: linear-gradient(135deg, var(--vetrix-accent), var(--vetrix-blue)); color: white; }
+.mega-menu__icon--vetriks { background: linear-gradient(135deg, var(--vetriks-accent), var(--vetriks-blue)); color: white; }
 .mega-menu__icon--forca { background: linear-gradient(135deg, var(--forca-teal), var(--forca-ocean)); color: white; }
 .mega-menu__icon--academy { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; }
 

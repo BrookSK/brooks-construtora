@@ -63,7 +63,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <div class="card delay-6" style="text-align: center;">
                 <div class="card__icon" style="margin: 0 auto var(--space-lg); background: linear-gradient(135deg, var(--forca-teal), var(--forca-ocean));"><i data-lucide="heart-handshake"></i></div>
                 <h3 class="card__title">Comunidade</h3>
-                <p class="card__text">Onde concorrentes se tornam aliados. O grupo foi validador da ferramenta Vetrix, comprovando sua excelência.</p>
+                <p class="card__text">Onde concorrentes se tornam aliados. O grupo foi validador da ferramenta Vetriks, comprovando sua excelência.</p>
             </div>
         </div>
     </div>

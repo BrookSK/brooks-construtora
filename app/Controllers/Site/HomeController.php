@@ -103,7 +103,7 @@ class HomeController extends Controller
         $this->redirect('/contato');
     }
 
-    public function vetrix(): void
+    public function vetriks(): void
     {
         try {
             $settings = Setting::getGroup('site_');
@@ -111,7 +111,7 @@ class HomeController extends Controller
             $settings = [];
         }
 
-        include ROOT_PATH . '/app/Views/site/pages/vetrix.php';
+        include ROOT_PATH . '/app/Views/site/pages/vetriks.php';
     }
 
     public function forcaEstrutural(): void

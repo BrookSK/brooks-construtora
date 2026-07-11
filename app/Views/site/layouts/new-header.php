@@ -86,17 +86,17 @@
             
             <!-- Mega Menu: Ecossistema -->
             <li class="header-nav__item header-nav__item--mega">
-                <a href="#" class="header-nav__link <?= in_array($currentPage ?? '', ['vetrix','forca','academy']) ? 'active' : '' ?>" aria-expanded="false" aria-haspopup="true">
+                <a href="#" class="header-nav__link <?= in_array($currentPage ?? '', ['vetriks','forca','academy']) ? 'active' : '' ?>" aria-expanded="false" aria-haspopup="true">
                     Ecossistema
                     <svg class="header-nav__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </a>
                 <div class="mega-menu" role="menu">
                     <div class="mega-menu__inner">
-                        <a href="/vetrix" class="mega-menu__item" role="menuitem">
-                            <div class="mega-menu__icon mega-menu__icon--vetrix">
+                        <a href="/vetriks" class="mega-menu__item" role="menuitem">
+                            <div class="mega-menu__icon mega-menu__icon--vetriks">
                                 <i data-lucide="cpu"></i>
                             </div>
-                            <div class="mega-menu__title">Vetrix</div>
+                            <div class="mega-menu__title">Vetriks</div>
                             <div class="mega-menu__desc">Tecnologia própria de gestão de obras. Criada no campo, para resolver problemas reais.</div>
                         </a>
                         <a href="/forca-estrutural" class="mega-menu__item" role="menuitem">
@@ -145,7 +145,7 @@
         <li><a href="/" class="mobile-nav__link">Home</a></li>
         <li><a href="/sobre" class="mobile-nav__link">Sobre</a></li>
         <li><a href="/projetos" class="mobile-nav__link">Projetos</a></li>
-        <li><a href="/vetrix" class="mobile-nav__link">Vetrix</a></li>
+        <li><a href="/vetriks" class="mobile-nav__link">Vetriks</a></li>
         <li><a href="/forca-estrutural" class="mobile-nav__link">Força Estrutural</a></li>
         <li><a href="/academy" class="mobile-nav__link">Brooks Academy</a></li>
         <li><a href="/revista" class="mobile-nav__link">Revista</a></li>

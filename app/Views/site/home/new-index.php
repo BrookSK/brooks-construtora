@@ -200,11 +200,11 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         </div>
         
         <div class="grid grid--3 reveal" style="gap: var(--space-lg);">
-            <a href="/vetrix" class="eco-card eco-card--vetrix">
+            <a href="/vetriks" class="eco-card eco-card--vetriks">
                 <span class="eco-card__tag">Tecnologia</span>
-                <h3 class="eco-card__title">Vetrix</h3>
+                <h3 class="eco-card__title">Vetriks</h3>
                 <p class="eco-card__text">Sistema de gestão de obra completo, vertical e integrado. Criado no campo, nas dores reais da construção. Com IA e interface moderna.</p>
-                <span class="eco-card__link">Conhecer a Vetrix <i data-lucide="arrow-right" style="width:16px;height:16px;"></i></span>
+                <span class="eco-card__link">Conhecer a Vetriks <i data-lucide="arrow-right" style="width:16px;height:16px;"></i></span>
             </a>
             <a href="/forca-estrutural" class="eco-card eco-card--forca">
                 <span class="eco-card__tag">Comunidade</span>

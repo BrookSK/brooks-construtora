@@ -49,10 +49,10 @@
             <div class="footer-col">
                 <h4 class="footer-col__title">Ecossistema</h4>
                 <ul class="footer-col__list">
-                    <li><a href="/vetrix">Vetrix</a></li>
+                    <li><a href="/vetriks">Vetriks</a></li>
                     <li><a href="/forca-estrutural">Força Estrutural</a></li>
                     <li><a href="/academy">Brooks Academy</a></li>
-                    <li><a href="https://vetriks.com.br/" target="_blank" rel="noopener">Vetrix App</a></li>
+                    <li><a href="https://vetriks.com.br/" target="_blank" rel="noopener">Vetriks App</a></li>
                 </ul>
             </div>
             
