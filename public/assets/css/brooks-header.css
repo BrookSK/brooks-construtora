@@ -16,17 +16,24 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: transparent;
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
+    background: rgba(26, 35, 50, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     transition: all var(--transition-base);
 }
 
 .site-header.scrolled::before {
-    background: rgba(26, 35, 50, 0.95);
+    background: rgba(26, 35, 50, 0.98);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Transparent header only on homepage hero */
+.page-home .site-header:not(.scrolled)::before {
+    background: transparent;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
 }
 
 .site-header.scrolled {
@@ -67,10 +74,14 @@
     display: flex;
     align-items: center;
     gap: var(--space-xs);
+    list-style: none;
+    margin: 0;
+    padding: 0;
 }
 
 .header-nav__item {
     position: relative;
+    list-style: none;
 }
 
 .header-nav__link {

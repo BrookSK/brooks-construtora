@@ -73,7 +73,7 @@
         </a>
         
         <!-- Navigation -->
-        <nav class="header-nav" role="navigation" aria-label="Navegação principal">
+        <ul class="header-nav" role="navigation" aria-label="Navegação principal">
             <li class="header-nav__item">
                 <a href="/" class="header-nav__link <?= ($currentPage ?? '') === 'home' ? 'active' : '' ?>">Home</a>
             </li>
@@ -123,7 +123,7 @@
             <li class="header-nav__item">
                 <a href="/contato" class="header-nav__link <?= ($currentPage ?? '') === 'contato' ? 'active' : '' ?>">Contato</a>
             </li>
-        </nav>
+        </ul>
         
         <!-- CTA -->
         <div class="header-cta">
