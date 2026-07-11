@@ -134,6 +134,12 @@
 
 <!-- Scripts -->
 <script src="/assets/js/brooks.js"></script>
-<script>lucide.createIcons();</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
 </body>
 </html>
