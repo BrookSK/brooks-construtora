@@ -341,3 +341,27 @@
         display: flex;
     }
 }
+
+@media (max-width: 768px) {
+    .header-inner {
+        padding: 0 var(--space-md);
+    }
+    
+    .header-logo img {
+        height: 38px;
+    }
+    
+    .site-header.scrolled .header-logo img {
+        height: 32px;
+    }
+    
+    .mobile-nav {
+        max-width: 100%;
+        padding: var(--space-2xl) var(--space-lg);
+    }
+    
+    .mobile-nav__link {
+        font-size: var(--text-base);
+        padding: var(--space-md) 0;
+    }
+}

@@ -636,7 +636,134 @@
     }
     .floating-btn--whatsapp { left: 16px; }
     .floating-btn--chat { right: 16px; }
-    .chat-widget { bottom: 80px; right: 16px; }
+    .chat-widget { 
+        bottom: 80px; 
+        right: 16px; 
+        width: calc(100vw - 32px);
+        max-width: none;
+    }
+    .chat-widget__body {
+        max-height: 250px;
+    }
     .hero__title { max-width: 100%; }
-    .back-to-top.visible { right: 80px; bottom: 80px; }
+    
+    /* Project cards mobile */
+    .project-card__title {
+        font-size: var(--text-base);
+    }
+    .project-card__overlay {
+        padding: var(--space-lg);
+    }
+    
+    /* Ecosystem cards */
+    .eco-card__title {
+        font-size: var(--text-xl);
+    }
+}
+
+
+/* ============================================================
+   ADDITIONAL MOBILE FIXES
+   ============================================================ */
+@media (max-width: 480px) {
+    .floating-btn {
+        width: 46px;
+        height: 46px;
+        bottom: 16px;
+    }
+    .floating-btn--whatsapp { left: 12px; }
+    .floating-btn--chat { right: 12px; }
+    .floating-btn svg,
+    .floating-btn i {
+        width: 20px !important;
+        height: 20px !important;
+    }
+    
+    .chat-widget {
+        bottom: 72px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+    }
+    
+    .hero {
+        min-height: 80vh;
+    }
+    
+    .hero__badge {
+        font-size: 11px;
+        padding: 6px 12px;
+    }
+    
+    .hero__subtitle {
+        font-size: var(--text-sm);
+    }
+    
+    .counter-grid {
+        gap: var(--space-md);
+    }
+}
+
+/* Touch-friendly tap targets */
+@media (hover: none) and (pointer: coarse) {
+    .btn {
+        min-height: 44px;
+    }
+    
+    .header-nav__link {
+        min-height: 44px;
+        padding: 12px 16px;
+    }
+    
+    .chat-widget__question-btn {
+        min-height: 44px;
+        padding: 12px 14px;
+    }
+    
+    .footer-col__list a {
+        padding: 6px 0;
+    }
+    
+    .mobile-nav__link {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+    }
+}
+
+/* Landscape mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+    .hero {
+        min-height: 100vh;
+        padding: var(--space-xl) 0;
+    }
+    
+    .hero__content {
+        padding-top: calc(var(--header-height) + var(--space-md));
+    }
+}
+
+/* Prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .reveal, .reveal-left, .reveal-right, .reveal-scale {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+    
+    .hero__scroll {
+        animation: none;
+    }
+    
+    .hero__badge__dot {
+        animation: none;
+    }
+    
+    .card:hover {
+        transform: none;
+    }
+    
+    .floating-btn:hover {
+        transform: none;
+    }
 }
