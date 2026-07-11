@@ -112,6 +112,11 @@
     position: static;
 }
 
+.header-nav__item--mega > .header-nav__link {
+    padding-bottom: 20px;
+    margin-bottom: -12px;
+}
+
 .mega-menu {
     position: absolute;
     top: 100%;
@@ -127,6 +132,7 @@
     transform: translateY(-8px);
     transition: all var(--transition-base);
     pointer-events: none;
+    padding-top: calc(var(--space-2xl) + 12px);
 }
 
 .header-nav__item--mega:hover .mega-menu,
