@@ -135,4 +135,26 @@ class HomeController extends Controller
 
         include ROOT_PATH . '/app/Views/site/pages/academy.php';
     }
+
+    public function politicaPrivacidade(): void
+    {
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
+
+        include ROOT_PATH . '/app/Views/site/pages/politica-privacidade.php';
+    }
+
+    public function termos(): void
+    {
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
+
+        include ROOT_PATH . '/app/Views/site/pages/termos.php';
+    }
 }
