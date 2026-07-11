@@ -6,9 +6,10 @@
 		<div class="row align-center">
 			<div class="col medium-8 small-12 large-6" style="width: 100%; max-width: 600px; margin: 0 auto;">
 				<div class="text-center">
+					<?php $prefix = defined('ANTIGO_PREFIX') ? ANTIGO_PREFIX : ''; ?>
 					<h3 style="color: #fff; margin-bottom: 8px; font-weight: 400;">Assine a Revista Brooks</h3>
 					<p style="color: rgba(255,255,255,0.7); margin-bottom: 20px; font-size: 0.9rem;">Receba edições exclusivas sobre construção sustentável, reformas de alto padrão e tendências de arquitetura.</p>
-					<form action="/newsletter/subscribe" method="POST" class="newsletter-form">
+					<form action="<?= $prefix ?>/newsletter/subscribe" method="POST" class="newsletter-form">
 						<div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
 							<input type="text" name="name" placeholder="Seu nome" style="flex: 1; min-width: 140px; padding: 10px 15px; border: none; border-radius: 4px; font-size: 14px;">
 							<input type="email" name="email" placeholder="Seu e-mail" required style="flex: 1; min-width: 180px; padding: 10px 15px; border: none; border-radius: 4px; font-size: 14px;">
@@ -127,12 +128,13 @@
 <!-- Mobile Menu -->
 <div id="main-menu" class="mobile-sidebar no-scrollbar mfp-hide">
 	<div class="sidebar-menu no-scrollbar">
+		<?php $prefix = defined('ANTIGO_PREFIX') ? ANTIGO_PREFIX : ''; ?>
 		<ul class="nav nav-sidebar nav-vertical nav-uppercase" data-tab="1">
-			<li class="menu-item"><a href="/">Home</a></li>
-			<li class="menu-item"><a href="/sobre">Sobre</a></li>
-			<li class="menu-item"><a href="/projetos">Projetos</a></li>
-			<li class="menu-item"><a href="/revista">Revista</a></li>
-			<li class="menu-item"><a href="/contato">Contato</a></li>
+			<li class="menu-item"><a href="<?= $prefix ?>/">Home</a></li>
+			<li class="menu-item"><a href="<?= $prefix ?>/sobre">Sobre</a></li>
+			<li class="menu-item"><a href="<?= $prefix ?>/projetos">Projetos</a></li>
+			<li class="menu-item"><a href="<?= $prefix ?>/revista">Revista</a></li>
+			<li class="menu-item"><a href="<?= $prefix ?>/contato">Contato</a></li>
 			<?php $whatsappFooter = !empty($settings['site_whatsapp']) ? $settings['site_whatsapp'] : '5511993392659'; ?>
 			<li class="menu-item has-icon-left">
 				<a href="https://api.whatsapp.com/send?phone=<?= $whatsappFooter ?>&amp;text=Oi!" target="_blank">

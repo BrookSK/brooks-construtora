@@ -1,4 +1,4 @@
-<?php $pageTitle = 'Sobre'; $currentPage = 'sobre'; include ROOT_PATH . '/app/Views/site/layouts/header.php'; ?>
+<?php $pageTitle = 'Sobre'; $currentPage = 'sobre'; $prefix = defined('ANTIGO_PREFIX') ? ANTIGO_PREFIX : ''; include ROOT_PATH . '/app/Views/site/layouts/header.php'; ?>
 
 <div id="content" role="main" class="content-area">
 
@@ -169,7 +169,7 @@
 				<div class="col-inner text-center" style="padding: 40px 0;">
 					<h3 style="color: #fff;">Pronto para transformar seu espaço?</h3>
 					<p style="color: rgba(255,255,255,0.8); margin-bottom: 20px;">Entre em contato e solicite um orçamento sem compromisso.</p>
-					<a href="/contato" class="button secondary" style="padding: 12px 30px;">Solicitar Orçamento</a>
+					<a href="<?= $prefix ?>/contato" class="button secondary" style="padding: 12px 30px;">Solicitar Orçamento</a>
 				</div>
 			</div>
 		</div>

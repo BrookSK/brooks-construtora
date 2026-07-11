@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR" class="loading-site no-js">
 <head>
+	<?php $prefix = defined('ANTIGO_PREFIX') ? ANTIGO_PREFIX : ''; ?>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<title><?= $pageTitle ?? 'Brooks Construtora' ?> &ndash; Reformas e Construções de Alto Padrão</title>
@@ -149,7 +150,7 @@
 
 					<!-- Logo -->
 					<div id="logo" class="flex-col logo">
-						<a href="/" title="Brooks Construtora - Reformas e Construções de Alto Padrão" rel="home">
+						<a href="<?= $prefix ?>/" title="Brooks Construtora - Reformas e Construções de Alto Padrão" rel="home">
 							<img width="1020" height="289" src="/assets/images/wp/2024/11/logo-brooks-1400x396.webp" class="header_logo header-logo" alt="Brooks Construtora"/>
 							<img width="1020" height="289" src="/assets/images/wp/2024/11/logo-brooks-1400x396.webp" class="header-logo-dark" alt="Brooks Construtora"/>
 						</a>
@@ -164,11 +165,11 @@
 					<!-- Left Elements -->
 					<div class="flex-col hide-for-medium flex-left flex-grow">
 						<ul class="header-nav header-nav-main nav nav-left nav-size-xlarge nav-spacing-xlarge nav-uppercase">
-							<li class="menu-item <?= ($currentPage ?? '') === 'home' ? 'current' : '' ?>"><a href="/" class="nav-top-link">Home</a></li>
-							<li class="menu-item <?= ($currentPage ?? '') === 'sobre' ? 'current' : '' ?>"><a href="/sobre" class="nav-top-link">Sobre</a></li>
-							<li class="menu-item <?= ($currentPage ?? '') === 'projetos' ? 'current' : '' ?>"><a href="/projetos" class="nav-top-link">Projetos</a></li>
-							<li class="menu-item <?= ($currentPage ?? '') === 'revista' ? 'current' : '' ?>"><a href="/revista" class="nav-top-link">Revista</a></li>
-							<li class="menu-item <?= ($currentPage ?? '') === 'contato' ? 'current' : '' ?>"><a href="/contato" class="nav-top-link">Contato</a></li>
+							<li class="menu-item <?= ($currentPage ?? '') === 'home' ? 'current' : '' ?>"><a href="<?= $prefix ?>/" class="nav-top-link">Home</a></li>
+							<li class="menu-item <?= ($currentPage ?? '') === 'sobre' ? 'current' : '' ?>"><a href="<?= $prefix ?>/sobre" class="nav-top-link">Sobre</a></li>
+							<li class="menu-item <?= ($currentPage ?? '') === 'projetos' ? 'current' : '' ?>"><a href="<?= $prefix ?>/projetos" class="nav-top-link">Projetos</a></li>
+							<li class="menu-item <?= ($currentPage ?? '') === 'revista' ? 'current' : '' ?>"><a href="<?= $prefix ?>/revista" class="nav-top-link">Revista</a></li>
+							<li class="menu-item <?= ($currentPage ?? '') === 'contato' ? 'current' : '' ?>"><a href="<?= $prefix ?>/contato" class="nav-top-link">Contato</a></li>
 						</ul>
 					</div>
 

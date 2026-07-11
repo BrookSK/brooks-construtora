@@ -1,4 +1,4 @@
-<?php include __DIR__ . '/../layouts/header.php'; ?>
+<?php $prefix = defined('ANTIGO_PREFIX') ? ANTIGO_PREFIX : ''; include __DIR__ . '/../layouts/header.php'; ?>
 
 <div id="content" role="main" class="content-area">
 
@@ -104,7 +104,7 @@
 			<div class="row align-center">
 				<div class="col medium-10 small-12 large-10">
 					<div class="col-inner text-center">
-						<a href="/projetos" class="button secondary" style="padding: 10px 30px;">
+						<a href="<?= $prefix ?>/projetos" class="button secondary" style="padding: 10px 30px;">
 							<span>&larr; Voltar para Projetos</span>
 						</a>
 					</div>

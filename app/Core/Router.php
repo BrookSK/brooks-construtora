@@ -32,6 +32,13 @@ class Router
             return;
         }
 
+        // Rotas do site antigo (institucional preservado em /antigo)
+        if (!empty($segments[0]) && $segments[0] === 'antigo') {
+            array_shift($segments); // Remove 'antigo' do início
+            $this->handleAntigoRoute($segments);
+            return;
+        }
+
         // Rotas do site institucional
         $this->handleSiteRoute($segments);
     }
@@ -175,6 +182,64 @@ class Router
                 $this->show404();
                 return;
             }
+        }
+
+        $this->executeController($controllerName, $methodName);
+    }
+
+    /**
+     * Rotas do site institucional antigo (preservado em /antigo para histórico)
+     */
+    private function handleAntigoRoute(array $segments): void
+    {
+        // Redirect /antigo/projetos/slug → /antigo/projeto/slug
+        if (count($segments) >= 2 && $segments[0] === 'projetos') {
+            header('Location: /antigo/projeto/' . $segments[1], true, 301);
+            exit;
+        }
+
+        $routes = [
+            '' => ['HomeController', 'index'],
+            'sobre' => ['HomeController', 'sobre'],
+            'projetos' => ['ProjectController', 'index'],
+            'projeto' => ['ProjectController', 'show'],
+            'contato' => ['HomeController', 'contato'],
+            'contato/enviar' => ['HomeController', 'enviarContato'],
+            'newsletter/subscribe' => ['NewsletterController', 'subscribe'],
+            'newsletter/unsubscribe' => ['NewsletterController', 'unsubscribe'],
+            'revista' => ['MagazineController', 'index'],
+            'revista/ver' => ['MagazineController', 'show'],
+            'revista/image-proxy' => ['MagazineController', 'imageProxy'],
+        ];
+
+        $path = implode('/', $segments);
+
+        if (isset($routes[$path])) {
+            $controllerName = 'App\\Controllers\\Site\\' . $routes[$path][0];
+            $methodName = $routes[$path][1];
+        } else {
+            // Tenta encontrar com parâmetro
+            $found = false;
+            for ($i = count($segments); $i > 0; $i--) {
+                $testPath = implode('/', array_slice($segments, 0, $i));
+                if (isset($routes[$testPath])) {
+                    $controllerName = 'App\\Controllers\\Site\\' . $routes[$testPath][0];
+                    $methodName = $routes[$testPath][1];
+                    $this->params = array_slice($segments, $i);
+                    $found = true;
+                    break;
+                }
+            }
+
+            if (!$found) {
+                $this->show404();
+                return;
+            }
+        }
+
+        // Define constante para que views saibam que estão no contexto "antigo"
+        if (!defined('ANTIGO_PREFIX')) {
+            define('ANTIGO_PREFIX', '/antigo');
         }
 
         $this->executeController($controllerName, $methodName);

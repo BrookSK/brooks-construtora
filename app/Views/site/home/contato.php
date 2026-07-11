@@ -1,4 +1,4 @@
-<?php $pageTitle = 'Contato'; $currentPage = 'contato'; include ROOT_PATH . '/app/Views/site/layouts/header.php'; ?>
+<?php $pageTitle = 'Contato'; $currentPage = 'contato'; $prefix = defined('ANTIGO_PREFIX') ? ANTIGO_PREFIX : ''; include ROOT_PATH . '/app/Views/site/layouts/header.php'; ?>
 
 <div id="content" role="main" class="content-area">
 
@@ -38,7 +38,7 @@
 						</div>
 					<?php endif; ?>
 
-					<form method="POST" action="/contato/enviar">
+					<form method="POST" action="<?= $prefix ?>/contato/enviar">
 						<div class="row">
 							<div class="col medium-6 small-12 large-6">
 								<div class="col-inner" style="margin-bottom: 15px;">

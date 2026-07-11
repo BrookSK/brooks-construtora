@@ -1,4 +1,4 @@
-<?php $pageTitle = 'Projetos'; $currentPage = 'projetos'; include ROOT_PATH . '/app/Views/site/layouts/header.php'; ?>
+<?php $pageTitle = 'Projetos'; $currentPage = 'projetos'; $prefix = defined('ANTIGO_PREFIX') ? ANTIGO_PREFIX : ''; include ROOT_PATH . '/app/Views/site/layouts/header.php'; ?>
 
 <div id="content" role="main" class="content-area">
 
@@ -33,7 +33,7 @@
 				<div class="col-inner" style="padding: 0; margin: 0;">
 					<div class="box has-hover box-default box-text-bottom">
 						<div class="box-image">
-							<a href="/projeto/projeto-rocha-andrade">
+							<a href="<?= $prefix ?>/projeto/projeto-rocha-andrade">
 								<div class="image-zoom image-cover" style="padding-top:335px;">
 									<img src="/assets/images/wp/2024/11/IMG_2477-1-jpg.webp" alt="Projeto Rocha Andrade" />
 								</div>
@@ -55,7 +55,7 @@
 				<div class="col-inner" style="padding: 0; margin: 0;">
 					<div class="box has-hover box-default box-text-bottom">
 						<div class="box-image">
-							<a href="/projeto/projeto-norah-carneiro">
+							<a href="<?= $prefix ?>/projeto/projeto-norah-carneiro">
 								<div class="image-zoom image-cover" style="padding-top:335px;">
 									<img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-51-1-scaled.webp" alt="Projeto Norah Carneiro" />
 								</div>
@@ -77,7 +77,7 @@
 				<div class="col-inner" style="padding: 0; margin: 0;">
 					<div class="box has-hover box-default box-text-bottom">
 						<div class="box-image">
-							<a href="/projeto/projeto-joia-bergamo-reforma-rsvp">
+							<a href="<?= $prefix ?>/projeto/projeto-joia-bergamo-reforma-rsvp">
 								<div class="image-zoom image-cover" style="padding-top:335px;">
 									<img src="/assets/images/wp/2023/01/GUR1123-HDR-2-scaled.jpg" alt="Projeto Jóia Bergamo" />
 								</div>
@@ -99,7 +99,7 @@
 				<div class="col-inner" style="padding: 0; margin: 0;">
 					<div class="box has-hover box-default box-text-bottom">
 						<div class="box-image">
-							<a href="/projeto/reforma-corporativa-cafeteria-do-palacio-dos-bandeirantes">
+							<a href="<?= $prefix ?>/projeto/reforma-corporativa-cafeteria-do-palacio-dos-bandeirantes">
 								<div class="image-zoom image-cover" style="padding-top:335px;">
 									<img src="/assets/images/wp/2024/11/palacio-bandeirantes-jpg.webp" alt="Reforma Corporativa" />
 								</div>
@@ -121,7 +121,7 @@
 				<div class="col-inner">
 					<div class="box has-hover box-default box-text-bottom">
 						<div class="box-image">
-							<a href="/projeto/reforma-corporativa-de-escritorio-no-itaim-bibi">
+							<a href="<?= $prefix ?>/projeto/reforma-corporativa-de-escritorio-no-itaim-bibi">
 								<div class="image-zoom image-cover" style="padding-top:335px;">
 									<img src="/assets/images/wp/2024/11/escritorio-itaim-jpeg.webp" alt="Reforma Corporativa Itaim" />
 								</div>
@@ -143,7 +143,7 @@
 				<div class="col-inner">
 					<div class="box has-hover box-default box-text-bottom">
 						<div class="box-image">
-							<a href="/projeto/reforma-completa-de-mansao-no-alphaville">
+							<a href="<?= $prefix ?>/projeto/reforma-completa-de-mansao-no-alphaville">
 								<div class="image-zoom image-cover" style="padding-top:335px;">
 									<img src="/assets/images/wp/2024/11/mansao-alphaville-jpeg.webp" alt="Mansão Alphaville" />
 								</div>
@@ -165,7 +165,7 @@
 				<div class="col-inner">
 					<div class="box has-hover box-default box-text-bottom">
 						<div class="box-image">
-							<a href="/projeto/projeto-joia-bergamo-2">
+							<a href="<?= $prefix ?>/projeto/projeto-joia-bergamo-2">
 								<div class="image-zoom image-cover" style="padding-top:335px;">
 									<img src="/assets/images/wp/2024/11/bergamo2-jpg.webp" alt="Projeto Jóia Bergamo 2" />
 								</div>

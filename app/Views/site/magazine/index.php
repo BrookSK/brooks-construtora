@@ -1,4 +1,4 @@
-<?php $pageTitle = 'Revista Digital'; $currentPage = 'revista'; include ROOT_PATH . '/app/Views/site/layouts/header.php'; ?>
+<?php $pageTitle = 'Revista Digital'; $currentPage = 'revista'; $prefix = defined('ANTIGO_PREFIX') ? ANTIGO_PREFIX : ''; include ROOT_PATH . '/app/Views/site/layouts/header.php'; ?>
 
 <div id="content" role="main" class="content-area">
 
@@ -42,7 +42,7 @@
 							<?php foreach ($magazines as $mag): ?>
 							<div class="col medium-4 small-6 large-4">
 								<div class="col-inner">
-									<a href="/revista/ver/<?= $mag['id'] ?>" style="text-decoration: none; color: inherit;">
+									<a href="<?= $prefix ?>/revista/ver/<?= $mag['id'] ?>" style="text-decoration: none; color: inherit;">
 										<div class="box has-hover box-default" style="margin-bottom: 20px;">
 											<div class="box-image" style="aspect-ratio: 3/4; overflow: hidden; border-radius: 4px; box-shadow: 0 5px 20px rgba(0,0,0,0.15);">
 												<?php if ($mag['cover_image']): ?>

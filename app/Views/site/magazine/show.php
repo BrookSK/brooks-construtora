@@ -1,6 +1,7 @@
 ﻿<?php
 $pageTitle = htmlspecialchars($magazine['title']);
 $currentPage = 'revista';
+$prefix = defined('ANTIGO_PREFIX') ? ANTIGO_PREFIX : '';
 $siteUrl = 'WWW.BROOKSCONSTRUTORA.COM.BR';
 $year = date('Y');
 try { $magazineLogo = \App\Models\Setting::get('magazine_logo', ''); } catch (\Exception $e) { $magazineLogo = ''; }
@@ -195,7 +196,7 @@ foreach ($pages as $page):
 </style>
 <div id="mag-actions">
     <button onclick="generatePDF()" id="btn-pdf">Baixar PDF</button>
-    <a href="/revista">Voltar</a>
+    <a href="<?= $prefix ?>/revista">Voltar</a>
 </div>
 <div id="pdf-loading">
     <div class="spinner"></div>

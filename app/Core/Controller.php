@@ -18,6 +18,10 @@ abstract class Controller
 
     protected function redirect(string $url): void
     {
+        // Se estamos no contexto "antigo", adiciona o prefixo nos redirects internos do site
+        if (defined('ANTIGO_PREFIX') && str_starts_with($url, '/') && !str_starts_with($url, '/admin') && !str_starts_with($url, '/antigo')) {
+            $url = ANTIGO_PREFIX . $url;
+        }
         header("Location: {$url}");
         exit;
     }
