@@ -180,8 +180,14 @@
     .footer-newsletter__form {
         flex-direction: column;
     }
+    .footer-newsletter__input {
+        width: 100%;
+    }
     .site-footer {
         padding-top: var(--space-3xl);
-        padding-bottom: 80px;
+        padding-bottom: 100px;
+    }
+    .footer-brand {
+        padding-bottom: var(--space-lg);
     }
 }

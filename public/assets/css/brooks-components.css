@@ -444,6 +444,18 @@
     padding-top: var(--header-height);
 }
 
+@media (max-width: 768px) {
+    .hero__content {
+        padding-top: calc(var(--header-height) + var(--space-lg));
+        padding-bottom: var(--space-3xl);
+    }
+    
+    .hero .container {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
+
 .hero__badge {
     display: inline-flex;
     align-items: center;
@@ -513,6 +525,12 @@
     color: rgba(255, 255, 255, 0.4);
     font-size: var(--text-xs);
     animation: bounce 2s infinite;
+}
+
+@media (max-width: 768px) {
+    .hero__scroll {
+        display: none;
+    }
 }
 
 @keyframes bounce {
