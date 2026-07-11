@@ -749,3 +749,14 @@ p:last-child {
 @media (max-width: 768px) {
     /* Already handled by grid mobile overrides above */
 }
+
+/* Global overflow safety */
+@media (max-width: 768px) {
+    .container * {
+        max-width: 100%;
+    }
+    
+    .btn--lg {
+        box-sizing: border-box;
+    }
+}

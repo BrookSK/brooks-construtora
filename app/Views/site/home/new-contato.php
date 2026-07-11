@@ -52,7 +52,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                         <textarea name="message" required rows="6" style="width: 100%; padding: 14px 16px; border: 1px solid var(--brooks-gray-200); border-radius: var(--radius-md); font-size: var(--text-sm); outline: none; resize: vertical; font-family: inherit; transition: border-color var(--transition-fast);"></textarea>
                     </div>
                     <div>
-                        <button type="submit" class="btn btn--primary btn--lg" style="width: 100%;">Enviar Mensagem</button>
+                        <button type="submit" class="btn btn--primary btn--lg">Enviar Mensagem</button>
                     </div>
                 </form>
             </div>

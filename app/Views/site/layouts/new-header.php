@@ -29,10 +29,10 @@
     <script src="/assets/js/lucide.min.js"></script>
     
     <!-- Styles -->
-    <link rel="stylesheet" href="/assets/css/brooks.css?v=3">
-    <link rel="stylesheet" href="/assets/css/brooks-header.css?v=3">
-    <link rel="stylesheet" href="/assets/css/brooks-footer.css?v=3">
-    <link rel="stylesheet" href="/assets/css/brooks-components.css?v=3">
+    <link rel="stylesheet" href="/assets/css/brooks.css?v=4">
+    <link rel="stylesheet" href="/assets/css/brooks-header.css?v=4">
+    <link rel="stylesheet" href="/assets/css/brooks-footer.css?v=4">
+    <link rel="stylesheet" href="/assets/css/brooks-components.css?v=4">
     
     <!-- Schema.org -->
     <script type="application/ld+json">
