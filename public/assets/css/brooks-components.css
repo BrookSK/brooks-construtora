@@ -659,6 +659,22 @@
     .eco-card__title {
         font-size: var(--text-xl);
     }
+    
+    /* Fix inline flex forms on mobile */
+    form[style*="display: flex"][style*="gap"] {
+        flex-direction: column !important;
+    }
+    
+    /* Fix inline flex with wrap for newsletter */
+    form[style*="flex-wrap: wrap"] {
+        flex-direction: column !important;
+    }
+    
+    form[style*="flex-wrap: wrap"] input,
+    form[style*="flex-wrap: wrap"] button {
+        width: 100% !important;
+        min-width: unset !important;
+    }
 }
 
 

@@ -531,7 +531,7 @@ p:last-child {
     }
     
     .container {
-        padding: 0 var(--space-md);
+        padding: 0 20px;
     }
     
     .section {
@@ -570,15 +570,17 @@ p:last-child {
         padding: 14px 28px;
         font-size: var(--text-sm);
         width: 100%;
+        justify-content: center;
     }
     
     /* Hero mobile */
     .hero {
-        min-height: 85vh;
+        min-height: 100svh;
     }
     
     .hero__content {
-        padding-top: calc(var(--header-height) + var(--space-xl));
+        padding-top: calc(var(--header-height) + var(--space-lg));
+        padding-bottom: var(--space-4xl);
     }
     
     .hero__actions {
@@ -594,9 +596,19 @@ p:last-child {
         display: none;
     }
     
-    /* Grid mobile */
+    .hero__badge {
+        font-size: 11px;
+    }
+    
+    /* Grid mobile - force single column */
     .grid {
         gap: var(--space-lg);
+    }
+    
+    .grid--2,
+    .grid--3,
+    .grid--4 {
+        grid-template-columns: 1fr !important;
     }
     
     /* Cards mobile */
@@ -612,7 +624,7 @@ p:last-child {
     
     /* Counter mobile */
     .counter-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr) !important;
         gap: var(--space-xl);
     }
     
@@ -627,7 +639,7 @@ p:last-child {
     
     /* Project cards mobile */
     .project-card {
-        aspect-ratio: 3/2;
+        aspect-ratio: 16/10;
     }
     
     /* Eco cards mobile */
@@ -635,9 +647,9 @@ p:last-child {
         padding: var(--space-xl);
     }
     
-    /* Inline grids with style attribute */
-    [style*="grid-template-columns: 1fr 1fr"] {
-        grid-template-columns: 1fr !important;
+    /* Gallery - single column on mobile, no span */
+    [style*="grid-column: span 2"] {
+        grid-column: span 1 !important;
     }
     
     /* Testimonials */
@@ -647,6 +659,28 @@ p:last-child {
     
     .testimonial-card__quote {
         font-size: var(--text-base);
+    }
+    
+    /* Fix inline grid styles */
+    [style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+    }
+    
+    /* Fix inline gap overrides */
+    [style*="gap: var(--space-4xl)"] {
+        gap: var(--space-xl) !important;
+    }
+    
+    [style*="gap: var(--space-3xl)"] {
+        gap: var(--space-xl) !important;
+    }
+    
+    /* Reverse order on mobile for image-first sections */
+    [style*="order: 2"] {
+        order: 0 !important;
+    }
+    [style*="order: 1"] {
+        order: 0 !important;
     }
 }
 
@@ -671,7 +705,7 @@ p:last-child {
     }
     
     .counter-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr !important;
         gap: var(--space-lg);
     }
     
@@ -694,27 +728,15 @@ p:last-child {
     .eco-card__title {
         font-size: var(--text-xl);
     }
+    
+    .btn--lg {
+        padding: 14px 20px;
+    }
 }
 
 /* ============================================================
    RESPONSIVE FIXES FOR INLINE STYLES
    ============================================================ */
 @media (max-width: 768px) {
-    /* Fix grid--2 with inline gap overrides */
-    .grid.grid--2[style*="gap"] {
-        gap: var(--space-lg) !important;
-    }
-    
-    /* Fix alignment on mobile for two-column sections */
-    .grid.grid--2[style*="align-items: center"] {
-        gap: var(--space-xl) !important;
-    }
-    
-    /* Order fix for culture section */
-    [style*="order: 2"] {
-        order: 1 !important;
-    }
-    [style*="order: 1"] {
-        order: 2 !important;
-    }
+    /* Already handled by grid mobile overrides above */
 }

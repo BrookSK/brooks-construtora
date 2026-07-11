@@ -171,6 +171,7 @@
 @media (max-width: 640px) {
     .footer-main {
         grid-template-columns: 1fr;
+        gap: var(--space-2xl);
     }
     .footer-bottom {
         flex-direction: column;
@@ -178,5 +179,9 @@
     }
     .footer-newsletter__form {
         flex-direction: column;
+    }
+    .site-footer {
+        padding-top: var(--space-3xl);
+        padding-bottom: 80px;
     }
 }
