@@ -53,7 +53,11 @@ class MagazineController extends Controller
             $settings = [];
         }
 
-        include ROOT_PATH . '/app/Views/site/magazine/index.php';
+        if (defined('ANTIGO_PREFIX')) {
+            include ROOT_PATH . '/app/Views/site/magazine/index.php';
+        } else {
+            include ROOT_PATH . '/app/Views/site/magazine/new-index.php';
+        }
     }
 
     public function show(string $id = ''): void
@@ -80,6 +84,10 @@ class MagazineController extends Controller
             $settings = [];
         }
 
-        include ROOT_PATH . '/app/Views/site/magazine/show.php';
+        if (defined('ANTIGO_PREFIX')) {
+            include ROOT_PATH . '/app/Views/site/magazine/show.php';
+        } else {
+            include ROOT_PATH . '/app/Views/site/magazine/new-show.php';
+        }
     }
 }
