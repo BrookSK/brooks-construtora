@@ -165,6 +165,56 @@
     background: var(--brooks-gray-50);
 }
 
+/* Chat FAQ Questions */
+.chat-widget__questions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+}
+
+.chat-widget__question-btn {
+    text-align: left;
+    padding: 10px 14px;
+    background: white;
+    border: 1px solid var(--brooks-gray-200);
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+    color: var(--brooks-blue);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    line-height: 1.4;
+}
+
+.chat-widget__question-btn:hover {
+    background: var(--brooks-blue);
+    color: white;
+    border-color: var(--brooks-blue);
+}
+
+.chat-widget__answer {
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    background: var(--brooks-gray-50);
+    color: var(--brooks-gray-700);
+    margin-top: var(--space-sm);
+    animation: fadeInUp 0.3s ease;
+}
+
+.chat-widget__question-sent {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-xs);
+    background: var(--brooks-blue);
+    color: white;
+    margin-top: var(--space-sm);
+    margin-left: auto;
+    max-width: 80%;
+    text-align: right;
+}
+
 /* === BACK TO TOP === */
 .back-to-top {
     position: fixed;

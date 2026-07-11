@@ -101,36 +101,37 @@
     <i data-lucide="message-circle" style="width:24px;height:24px;"></i>
 </button>
 
-<!-- Chat Widget (prepared for future AI integration) -->
+<!-- Chat Widget (FAQ rápido) -->
 <div class="chat-widget" id="chat-widget" aria-hidden="true">
     <div class="chat-widget__header">
         <div class="chat-widget__avatar">
-            <i data-lucide="bot" style="width:20px;height:20px;"></i>
+            <i data-lucide="message-circle" style="width:20px;height:20px;"></i>
         </div>
         <div>
-            <div class="chat-widget__name">Assistente Brooks</div>
-            <div class="chat-widget__status">Online</div>
+            <div class="chat-widget__name">Dúvidas Rápidas</div>
+            <div class="chat-widget__status">Selecione uma pergunta</div>
         </div>
         <button class="chat-widget__close" id="chat-close" aria-label="Fechar chat">&times;</button>
     </div>
-    <div class="chat-widget__body">
+    <div class="chat-widget__body" id="chat-body">
         <div class="chat-widget__message chat-widget__message--bot">
-            <p>Olá! 👋 Como posso ajudar? Estou aqui para tirar dúvidas sobre nossos serviços, projetos ou ecossistema.</p>
+            <p>Olá! 👋 Selecione uma das perguntas abaixo ou fale conosco pelo WhatsApp.</p>
+        </div>
+        <div class="chat-widget__questions" id="chat-questions">
+            <button class="chat-widget__question-btn" data-answer="Realizamos reformas completas de alto padrão em imóveis totalmente desocupados — residenciais, corporativos e outros. Atendemos São Paulo e região.">Quais serviços vocês oferecem?</button>
+            <button class="chat-widget__question-btn" data-answer="A Brooks atua há mais de 10 anos no mercado. Temos centenas de obras entregues, 5 estrelas no Google e zero reclamações no Reclame Aqui.">Há quanto tempo a Brooks existe?</button>
+            <button class="chat-widget__question-btn" data-answer="Atendemos São Paulo e região metropolitana. Nosso escritório fica na Av. Brigadeiro Faria Lima, 1811 - Jardim Paulistano.">Qual a área de atuação?</button>
+            <button class="chat-widget__question-btn" data-answer="Sim! Solicite um orçamento sem compromisso pelo nosso formulário de contato ou WhatsApp: (11) 99339-2659.">Como solicitar um orçamento?</button>
+            <button class="chat-widget__question-btn" data-answer="A Vetriks é nossa tecnologia própria de gestão de obras. Um sistema completo, integrado e com IA, criado dentro da Brooks para resolver problemas reais da construção.">O que é a Vetriks?</button>
         </div>
     </div>
-    <div class="chat-widget__footer">
-        <input type="text" placeholder="Digite sua mensagem..." class="chat-widget__input" disabled>
-        <button class="chat-widget__send" disabled aria-label="Enviar mensagem">
-            <i data-lucide="send" style="width:18px;height:18px;"></i>
-        </button>
+    <div class="chat-widget__footer" style="justify-content: center; padding: var(--space-md);">
+        <?php $whatsappChat = !empty($settings['site_whatsapp']) ? $settings['site_whatsapp'] : '5511993392659'; ?>
+        <a href="https://api.whatsapp.com/send?phone=<?= $whatsappChat ?>&text=Ol%C3%A1!" target="_blank" class="btn btn--primary btn--sm" style="width: 100%; border-radius: var(--radius-full); font-size: var(--text-xs);">
+            Falar pelo WhatsApp
+        </a>
     </div>
-    <p class="chat-widget__coming-soon">Em breve com inteligência artificial</p>
 </div>
-
-<!-- Back to Top -->
-<button class="back-to-top" id="back-to-top" aria-label="Voltar ao topo">
-    <i data-lucide="chevron-up" style="width:20px;height:20px;"></i>
-</button>
 
 <!-- Scripts -->
 <script src="/assets/js/brooks.js"></script>

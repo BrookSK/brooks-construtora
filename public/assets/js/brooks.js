@@ -123,6 +123,44 @@
         });
     }
 
+    // FAQ question buttons
+    var chatBody = document.getElementById('chat-body');
+    var chatQuestions = document.querySelectorAll('.chat-widget__question-btn');
+    
+    chatQuestions.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var question = this.textContent;
+            var answer = this.getAttribute('data-answer');
+            
+            // Hide questions
+            var questionsContainer = document.getElementById('chat-questions');
+            if (questionsContainer) questionsContainer.style.display = 'none';
+            
+            // Show question as sent message
+            var questionEl = document.createElement('div');
+            questionEl.className = 'chat-widget__question-sent';
+            questionEl.textContent = question;
+            chatBody.appendChild(questionEl);
+            
+            // Show answer
+            var answerEl = document.createElement('div');
+            answerEl.className = 'chat-widget__answer';
+            answerEl.textContent = answer;
+            chatBody.appendChild(answerEl);
+            
+            // Show questions again after a delay
+            setTimeout(function () {
+                if (questionsContainer) {
+                    questionsContainer.style.display = 'flex';
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                }
+            }, 1500);
+            
+            // Scroll to bottom
+            chatBody.scrollTop = chatBody.scrollHeight;
+        });
+    });
+
     // === BACK TO TOP ===
     const backToTop = document.getElementById('back-to-top');
 
