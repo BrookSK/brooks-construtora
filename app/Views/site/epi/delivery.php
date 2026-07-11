@@ -1,4 +1,13 @@
-<?php $pageTitle = 'Registro de Entrega de EPIs'; $currentPage = 'epi_delivery'; $user = $user ?? \App\Core\Auth::user(); ?>
+<?php
+$recipientType = $recipientType ?? 'worker';
+$isThird = $recipientType === 'third_party';
+$pageTitle = $isThird ? 'Distribuição de EPIs para Terceiros' : 'Registro de Entrega de EPIs';
+$currentPage = $isThird ? 'epi_thirdparty' : 'epi_delivery';
+$formAction = $isThird ? '/distribuicao-terceiros/salvar' : '/registro-de-entrega/salvar';
+$searchAction = $isThird ? '/distribuicao-terceiros/buscar' : '/registro-de-entrega/buscar-colaborador';
+$recipientLabel = $isThird ? 'Terceiro' : 'Colaborador';
+$user = $user ?? \App\Core\Auth::user();
+?>
 <?php ob_start(); ?>
 
 <style>
@@ -10,16 +19,23 @@
 </style>
 
 <div style="max-width: 800px;">
-    <form method="POST" action="/registro-de-entrega/salvar" id="deliveryForm">
-        <!-- Dados do colaborador -->
+    <?php if ($isThird): ?>
+    <div class="alert alert-info py-2 small"><i class="bi bi-info-circle"></i> Distribuição para pessoas fora do quadro de colaboradores (prestadores, visitantes, terceirizadas). Os dados são cadastrados manualmente e não ficam vinculados ao cadastro de colaboradores.</div>
+    <?php endif; ?>
+    <form method="POST" action="<?= $formAction ?>" id="deliveryForm">
+        <!-- Dados do destinatário -->
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white fw-bold"><i class="bi bi-person-badge text-primary"></i> Dados do Colaborador</div>
+            <div class="card-header bg-white fw-bold"><i class="bi bi-person-badge text-primary"></i> Dados do <?= $recipientLabel ?></div>
             <div class="card-body row g-2">
-                <div class="col-md-6"><label class="form-label small fw-bold">Nome *</label><input type="text" class="form-control" name="worker_name" required></div>
-                <div class="col-md-3"><label class="form-label small fw-bold">CPF ou Matrícula *</label><input type="text" class="form-control" name="worker_document" required></div>
+                <div class="col-md-6 position-relative">
+                    <label class="form-label small fw-bold">Nome *</label>
+                    <input type="text" class="form-control" name="worker_name" id="workerName" autocomplete="off" placeholder="Digite para buscar ou cadastrar..." required>
+                    <div id="workerSuggestions" class="list-group position-absolute w-100 shadow-sm" style="z-index:1050; display:none; max-height:240px; overflow-y:auto;"></div>
+                </div>
+                <div class="col-md-3"><label class="form-label small fw-bold">CPF ou Matrícula *</label><input type="text" class="form-control" name="worker_document" id="workerDocument" required></div>
                 <div class="col-md-3">
                     <label class="form-label small fw-bold">Cargo *</label>
-                    <select class="form-select" name="worker_role" required>
+                    <select class="form-select" name="worker_role" id="workerRole" required>
                         <option value="">Selecione...</option>
                         <?php
                         $cargos = [
@@ -101,16 +117,26 @@
 
         <!-- Confirmação -->
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white fw-bold"><i class="bi bi-check2-square text-primary"></i> Confirmação do Responsável</div>
+            <div class="card-header bg-white fw-bold"><i class="bi bi-check2-square text-primary"></i> Confirmação e Assinaturas</div>
             <div class="card-body">
                 <div class="form-check mb-3">
                     <input type="checkbox" class="form-check-input" name="confirmed" id="confirmChk" value="1" required>
-                    <label class="form-check-label small" for="confirmChk">Confirmo que realizei a entrega dos EPIs acima ao colaborador identificado neste registro.</label>
+                    <label class="form-check-label small" for="confirmChk">Confirmo que realizei a entrega dos EPIs acima ao <?= strtolower($recipientLabel) ?> identificado neste registro.</label>
                 </div>
-                <label class="form-label small fw-bold">Assinatura do responsável *</label>
-                <canvas id="signaturePad"></canvas>
-                <div class="mt-1"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSignature()"><i class="bi bi-eraser"></i> Limpar</button></div>
-                <input type="hidden" name="signature_data" id="input_signature">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Assinatura do <?= strtolower($recipientLabel) ?> *</label>
+                        <canvas id="signatureWorker" class="signature-canvas" style="border:1px solid #ced4da; border-radius:8px; width:100%; height:170px; touch-action:none; background:#fff;"></canvas>
+                        <div class="mt-1"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="padWorker.clear()"><i class="bi bi-eraser"></i> Limpar</button></div>
+                        <input type="hidden" name="worker_signature_data" id="input_worker_signature">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Assinatura do responsável *</label>
+                        <canvas id="signaturePad" class="signature-canvas" style="border:1px solid #ced4da; border-radius:8px; width:100%; height:170px; touch-action:none; background:#fff;"></canvas>
+                        <div class="mt-1"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="padResponsible.clear()"><i class="bi bi-eraser"></i> Limpar</button></div>
+                        <input type="hidden" name="signature_data" id="input_signature">
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -129,7 +155,59 @@
 </div></div></div>
 
 <script src="/assets/js/searchable-select.js"></script>
+<script src="/assets/js/signature-pad.js"></script>
 <script>
+// ---- Busca dinâmica de colaboradores ----
+(function() {
+    const input = document.getElementById('workerName');
+    const box = document.getElementById('workerSuggestions');
+    const docField = document.getElementById('workerDocument');
+    const roleField = document.getElementById('workerRole');
+    let timer = null;
+
+    function hide() { box.style.display = 'none'; box.innerHTML = ''; }
+
+    function selectWorker(w) {
+        input.value = w.name;
+        docField.value = w.document;
+        // Define o cargo se existir na lista de opções
+        if (w.role) {
+            const opt = Array.from(roleField.options).find(o => o.value === w.role);
+            if (opt) roleField.value = w.role;
+        }
+        hide();
+    }
+
+    input.addEventListener('input', function() {
+        const term = this.value.trim();
+        clearTimeout(timer);
+        if (term.length < 1) { hide(); return; }
+        timer = setTimeout(() => {
+            fetch('<?= $searchAction ?>?q=' + encodeURIComponent(term))
+                .then(r => r.json())
+                .then(d => {
+                    const workers = d.workers || [];
+                    if (workers.length === 0) { hide(); return; }
+                    box.innerHTML = '';
+                    workers.forEach(w => {
+                        const a = document.createElement('button');
+                        a.type = 'button';
+                        a.className = 'list-group-item list-group-item-action py-2';
+                        a.innerHTML = `<strong>${w.name}</strong> <span class="text-muted small">· ${w.document}${w.role ? ' · ' + w.role : ''}</span>`;
+                        a.addEventListener('click', () => selectWorker(w));
+                        box.appendChild(a);
+                    });
+                    box.style.display = 'block';
+                })
+                .catch(hide);
+        }, 250);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target !== input && !box.contains(e.target)) hide();
+    });
+})();
+
 // ---- Seleção de EPIs ----
 let epiItems = [];
 const epiSelectEl = document.getElementById('epiSelect');
@@ -198,42 +276,19 @@ function capturePhoto() {
     camModal.hide();
 }
 
-// ---- Assinatura ----
-const sigCanvas = document.getElementById('signaturePad');
-const sigCtx = sigCanvas.getContext('2d');
-let drawing = false, sigDirty = false;
-function resizeSig() {
-    const ratio = window.devicePixelRatio || 1;
-    sigCanvas.width = sigCanvas.offsetWidth * ratio;
-    sigCanvas.height = sigCanvas.offsetHeight * ratio;
-    sigCtx.scale(ratio, ratio);
-    sigCtx.lineWidth = 2; sigCtx.lineCap = 'round'; sigCtx.strokeStyle = '#000';
-}
-setTimeout(resizeSig, 100);
-function sigPos(e) {
-    const r = sigCanvas.getBoundingClientRect();
-    const p = e.touches ? e.touches[0] : e;
-    return { x: p.clientX - r.left, y: p.clientY - r.top };
-}
-function startDraw(e) { drawing = true; sigDirty = true; const p = sigPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); e.preventDefault(); }
-function moveDraw(e) { if (!drawing) return; const p = sigPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); e.preventDefault(); }
-function endDraw() { drawing = false; }
-sigCanvas.addEventListener('mousedown', startDraw);
-sigCanvas.addEventListener('mousemove', moveDraw);
-sigCanvas.addEventListener('mouseup', endDraw);
-sigCanvas.addEventListener('mouseleave', endDraw);
-sigCanvas.addEventListener('touchstart', startDraw);
-sigCanvas.addEventListener('touchmove', moveDraw);
-sigCanvas.addEventListener('touchend', endDraw);
-function clearSignature() { sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height); sigDirty = false; }
+// ---- Assinaturas (componente reutilizável) ----
+const padWorker = new SignaturePad(document.getElementById('signatureWorker'), { hiddenInput: document.getElementById('input_worker_signature') });
+const padResponsible = new SignaturePad(document.getElementById('signaturePad'), { hiddenInput: document.getElementById('input_signature') });
 
 // ---- Submit ----
 document.getElementById('deliveryForm').addEventListener('submit', function(e) {
     if (epiItems.length === 0) { e.preventDefault(); alert('Adicione ao menos um EPI.'); return; }
     if (!document.getElementById('input_selfie').value) { e.preventDefault(); alert('Capture a selfie do colaborador.'); return; }
     if (!document.getElementById('input_epis').value) { e.preventDefault(); alert('Capture a foto do colaborador com os EPIs.'); return; }
-    if (!sigDirty) { e.preventDefault(); alert('A assinatura é obrigatória.'); return; }
-    document.getElementById('input_signature').value = sigCanvas.toDataURL('image/png');
+    if (padWorker.isEmpty()) { e.preventDefault(); alert('A assinatura do colaborador é obrigatória.'); return; }
+    if (padResponsible.isEmpty()) { e.preventDefault(); alert('A assinatura do responsável é obrigatória.'); return; }
+    padWorker.sync();
+    padResponsible.sync();
 });
 </script>
 

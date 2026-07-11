@@ -1,4 +1,4 @@
-<?php $pageTitle = 'Substituição de EPIs'; $currentPage = 'epi_replacement'; $user = $user ?? \App\Core\Auth::user(); ?>
+<?php $pageTitle = 'Devoluções e Substituições'; $currentPage = 'epi_replacement'; $user = $user ?? \App\Core\Auth::user(); ?>
 <?php ob_start(); ?>
 
 <style>
@@ -71,8 +71,61 @@
                 <img class="evidence-preview" id="preview_new" style="display:none;">
             </div>
         </div>
+        <div class="row g-2 mt-1">
+            <div class="col-6">
+                <label class="form-label small fw-bold">Assinatura do colaborador *</label>
+                <canvas id="repSigWorker" style="border:1px solid #ced4da; border-radius:8px; width:100%; height:130px; touch-action:none; background:#fff;"></canvas>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="repPadWorker && repPadWorker.clear()"><i class="bi bi-eraser"></i></button>
+            </div>
+            <div class="col-6">
+                <label class="form-label small fw-bold">Assinatura do responsável *</label>
+                <canvas id="repSigResp" style="border:1px solid #ced4da; border-radius:8px; width:100%; height:130px; touch-action:none; background:#fff;"></canvas>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="repPadResp && repPadResp.clear()"><i class="bi bi-eraser"></i></button>
+            </div>
+        </div>
     </div>
     <div class="modal-footer py-2"><button type="button" class="btn btn-warning w-100" id="repSubmitBtn" onclick="submitReplacement()"><i class="bi bi-check-lg"></i> Registrar substituição</button></div>
+</div></div></div>
+
+<!-- Modal Devolução -->
+<div class="modal fade" id="retModal" tabindex="-1" data-bs-backdrop="static"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header py-2 bg-info text-white"><h6 class="modal-title"><i class="bi bi-box-arrow-in-left"></i> Registrar devolução</h6><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="hidden" id="retItemId">
+        <p class="small mb-3">Devolvendo: <strong id="retEpiName"></strong></p>
+        <div class="mb-3">
+            <label class="form-label small fw-bold">Quantidade a devolver *</label>
+            <input type="number" class="form-control" id="retQuantity" min="1" step="1" value="1">
+            <small class="text-muted">Em posse do colaborador: <span id="retMaxQty">1</span></small>
+        </div>
+        <div class="mb-3">
+            <label class="form-label small fw-bold">Observações</label>
+            <textarea class="form-control" id="retNotes" rows="2" placeholder="Motivo, estado do EPI, etc. (opcional)"></textarea>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small fw-bold">📷 Foto do EPI devolvido (opcional)</label>
+            <div class="evidence-box" id="box_ret">
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="openCamera('ret', 'environment')"><i class="bi bi-camera"></i> Câmera</button>
+                    <label class="btn btn-outline-secondary btn-sm mb-0"><i class="bi bi-upload"></i> Upload<input type="file" accept="image/*" hidden onchange="uploadFile(event,'ret')"></label>
+                </div>
+                <img class="evidence-preview" id="preview_ret" style="display:none;">
+            </div>
+        </div>
+        <div class="row g-2 mt-1">
+            <div class="col-6">
+                <label class="form-label small fw-bold">Assinatura do colaborador *</label>
+                <canvas id="retSigWorker" style="border:1px solid #ced4da; border-radius:8px; width:100%; height:130px; touch-action:none; background:#fff;"></canvas>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="retPadWorker && retPadWorker.clear()"><i class="bi bi-eraser"></i></button>
+            </div>
+            <div class="col-6">
+                <label class="form-label small fw-bold">Assinatura do responsável *</label>
+                <canvas id="retSigResp" style="border:1px solid #ced4da; border-radius:8px; width:100%; height:130px; touch-action:none; background:#fff;"></canvas>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="retPadResp && retPadResp.clear()"><i class="bi bi-eraser"></i></button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer py-2"><button type="button" class="btn btn-info text-white w-100" id="retSubmitBtn" onclick="submitReturn()"><i class="bi bi-check-lg"></i> Registrar devolução</button></div>
 </div></div></div>
 
 <!-- Modal Câmera -->
@@ -86,9 +139,13 @@
 </div></div></div>
 
 <script src="/assets/js/searchable-select.js"></script>
+<script src="/assets/js/signature-pad.js"></script>
 <script>
-const photos = { old: null, new: null };
+const photos = { old: null, new: null, ret: null };
 let repModal = null;
+let retModal = null;
+let repPadWorker = null, repPadResp = null;
+let retPadWorker = null, retPadResp = null;
 
 const ss = new SearchableSelect(document.getElementById('workerSelect'), {
     placeholder: 'Buscar operário...',
@@ -121,18 +178,32 @@ function renderItems(items) {
         const btnLabel = it.replacement_count > 0
             ? `Fazer ${ordinal(it.next_sequence)} substituição`
             : 'Fazer substituição';
-        let statusHtml, btnHtml;
+        // Substituição
+        let repBtnHtml;
         if (it.eligible) {
-            statusHtml = '<span class="badge bg-success">Liberado para troca</span>';
-            btnHtml = `<button class="btn btn-warning btn-sm" onclick='openReplacement(${JSON.stringify(it)})'><i class="bi bi-arrow-repeat"></i> ${btnLabel}</button>`;
+            repBtnHtml = `<button class="btn btn-warning btn-sm" onclick='openReplacement(${JSON.stringify(it)})'><i class="bi bi-arrow-repeat"></i> ${btnLabel}</button>`;
         } else {
-            statusHtml = `<span class="badge bg-secondary">Faltam ${it.days_remaining} dia(s)</span>`;
-            btnHtml = `<button class="btn btn-warning btn-sm" disabled><i class="bi bi-lock"></i> ${btnLabel}</button>`;
+            repBtnHtml = `<button class="btn btn-warning btn-sm" disabled title="Prazo mínimo não atingido"><i class="bi bi-lock"></i> ${btnLabel}</button>`;
         }
+        // Devolução: só habilita se ainda houver quantidade em posse
+        let retBtnHtml;
+        if (it.available_to_return > 0) {
+            retBtnHtml = `<button class="btn btn-info btn-sm text-white" onclick='openReturn(${JSON.stringify(it)})'><i class="bi bi-box-arrow-in-left"></i> Devolver</button>`;
+        } else {
+            retBtnHtml = `<button class="btn btn-info btn-sm text-white" disabled title="Nada a devolver"><i class="bi bi-lock"></i> Devolver</button>`;
+        }
+
+        const statusHtml = it.eligible
+            ? '<span class="badge bg-success">Liberado para troca</span>'
+            : `<span class="badge bg-secondary">Troca em ${it.days_remaining} dia(s)</span>`;
+
         let countBadge = '';
         if (it.replacement_count > 0) {
-            const lastDate = it.last_replaced_at ? new Date(it.last_replaced_at.replace(' ', 'T')).toLocaleDateString('pt-BR') : '';
-            countBadge = `<span class="badge bg-info text-dark ms-1"><i class="bi bi-arrow-repeat"></i> ${it.replacement_count} troca(s)</span>`;
+            countBadge = `<span class="badge bg-warning text-dark ms-1"><i class="bi bi-arrow-repeat"></i> ${it.replacement_count} troca(s)</span>`;
+        }
+        let posseBadge = `<span class="badge bg-light text-dark border ms-1">Em posse: ${it.available_to_return}</span>`;
+        if (it.returned_quantity > 0) {
+            posseBadge += `<span class="badge bg-secondary ms-1">Devolvido: ${it.returned_quantity}</span>`;
         }
         const refInfo = it.replacement_count > 0
             ? `Última troca: ${it.last_replaced_at ? new Date(it.last_replaced_at.replace(' ', 'T')).toLocaleDateString('pt-BR') : '-'}`
@@ -140,12 +211,12 @@ function renderItems(items) {
         div.innerHTML = `
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
-                    <div class="fw-bold">${it.epi_name} ${countBadge}</div>
-                    <div class="small text-muted">${it.ca ? 'CA ' + it.ca + ' · ' : ''}Qtd: ${it.quantity} · ${refInfo}</div>
+                    <div class="fw-bold">${it.epi_name} ${countBadge}${posseBadge}</div>
+                    <div class="small text-muted">${it.ca ? 'CA ' + it.ca + ' · ' : ''}Entregue: ${it.quantity} · ${refInfo}</div>
                     <div class="small text-muted">Prazo mínimo: ${it.min_days} dia(s) · Decorridos desde a referência: ${it.days_elapsed} dia(s)</div>
                     <div class="mt-1">${statusHtml}</div>
                 </div>
-                <div>${btnHtml}</div>
+                <div class="d-flex flex-column gap-1">${repBtnHtml}${retBtnHtml}</div>
             </div>`;
         list.appendChild(div);
     });
@@ -165,6 +236,13 @@ function openReplacement(it) {
         document.getElementById('box_' + t).classList.remove('filled');
     });
     repModal = new bootstrap.Modal(document.getElementById('repModal'));
+    // (Re)inicializa os pads quando o modal termina de abrir (canvas visível)
+    const el = document.getElementById('repModal');
+    el.addEventListener('shown.bs.modal', function initRepPads() {
+        repPadWorker = new SignaturePad(document.getElementById('repSigWorker'));
+        repPadResp = new SignaturePad(document.getElementById('repSigResp'));
+        el.removeEventListener('shown.bs.modal', initRepPads);
+    }, { once: true });
     repModal.show();
 }
 
@@ -208,6 +286,8 @@ function submitReplacement() {
     if (qty < 1) { alert('Informe a quantidade a substituir.'); return; }
     if (!photos.old) { alert('Foto do material substituído é obrigatória.'); return; }
     if (!photos.new) { alert('Foto da entrega ao operário é obrigatória.'); return; }
+    if (!repPadWorker || repPadWorker.isEmpty()) { alert('A assinatura do colaborador é obrigatória.'); return; }
+    if (!repPadResp || repPadResp.isEmpty()) { alert('A assinatura do responsável é obrigatória.'); return; }
     const btn = document.getElementById('repSubmitBtn');
     btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Salvando...';
     const fd = new FormData();
@@ -215,6 +295,8 @@ function submitReplacement() {
     fd.append('quantity', qty);
     fd.append('old_item_photo_data', photos.old);
     fd.append('new_delivery_photo_data', photos.new);
+    fd.append('worker_signature_data', repPadWorker.toDataURL());
+    fd.append('responsible_signature_data', repPadResp.toDataURL());
     fetch('/substituicao-de-epi/salvar', { method: 'POST', body: fd })
         .then(r => r.json())
         .then(d => {
@@ -229,6 +311,60 @@ function submitReplacement() {
         })
         .catch(() => alert('Sem conexão.'))
         .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Registrar substituição'; });
+}
+
+// ---- Devolução ----
+function openReturn(it) {
+    document.getElementById('retItemId').value = it.id;
+    document.getElementById('retEpiName').textContent = it.epi_name + (it.ca ? ' (CA ' + it.ca + ')' : '');
+    const qtyInput = document.getElementById('retQuantity');
+    qtyInput.value = it.available_to_return;
+    qtyInput.max = it.available_to_return;
+    document.getElementById('retMaxQty').textContent = it.available_to_return;
+    document.getElementById('retNotes').value = '';
+    photos.ret = null;
+    document.getElementById('preview_ret').style.display = 'none';
+    document.getElementById('box_ret').classList.remove('filled');
+    retModal = new bootstrap.Modal(document.getElementById('retModal'));
+    const el = document.getElementById('retModal');
+    el.addEventListener('shown.bs.modal', function initRetPads() {
+        retPadWorker = new SignaturePad(document.getElementById('retSigWorker'));
+        retPadResp = new SignaturePad(document.getElementById('retSigResp'));
+        el.removeEventListener('shown.bs.modal', initRetPads);
+    }, { once: true });
+    retModal.show();
+}
+
+function submitReturn() {
+    const qty = parseInt(document.getElementById('retQuantity').value) || 0;
+    const max = parseInt(document.getElementById('retMaxQty').textContent) || 0;
+    if (qty < 1) { alert('Informe a quantidade a devolver.'); return; }
+    if (qty > max) { alert('Quantidade superior à que o colaborador ainda possui.'); return; }
+    if (!retPadWorker || retPadWorker.isEmpty()) { alert('A assinatura do colaborador é obrigatória.'); return; }
+    if (!retPadResp || retPadResp.isEmpty()) { alert('A assinatura do responsável é obrigatória.'); return; }
+    const btn = document.getElementById('retSubmitBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Salvando...';
+    const fd = new FormData();
+    fd.append('delivery_item_id', document.getElementById('retItemId').value);
+    fd.append('quantity', qty);
+    fd.append('notes', document.getElementById('retNotes').value);
+    fd.append('worker_signature_data', retPadWorker.toDataURL());
+    fd.append('responsible_signature_data', retPadResp.toDataURL());
+    if (photos.ret) fd.append('photo_data', photos.ret);
+    fetch('/substituicao-de-epi/devolver', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                retModal.hide();
+                const doc = document.getElementById('workerSelect').value;
+                const name = document.getElementById('workerNameLabel').textContent;
+                loadItems(doc, name);
+            } else {
+                alert(d.error || 'Erro ao registrar.');
+            }
+        })
+        .catch(() => alert('Sem conexão.'))
+        .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Registrar devolução'; });
 }
 </script>
 

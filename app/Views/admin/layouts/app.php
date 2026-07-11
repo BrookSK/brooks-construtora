@@ -238,7 +238,12 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'epi_replacement' ? 'active' : '' ?>" href="/substituicao-de-epi">
-                    <i class="bi bi-arrow-repeat"></i> Substituição de EPI
+                    <i class="bi bi-arrow-repeat"></i> Devoluções e Substituições
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'epi_thirdparty' ? 'active' : '' ?>" href="/distribuicao-terceiros">
+                    <i class="bi bi-people-fill"></i> Distribuição para Terceiros
                 </a>
             </li>
             <li class="nav-item">
@@ -249,6 +254,22 @@
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'epi_history' ? 'active' : '' ?>" href="/historico-de-epi">
                     <i class="bi bi-clock-history"></i> Histórico de EPI
+                </a>
+            </li>
+            <?php endif; ?>
+
+            <?php if (\App\Core\Auth::hasPermission('orders')): ?>
+            <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
+                <small class="text-uppercase px-3 opacity-50" style="font-size:0.65rem; letter-spacing:1px;">Presença</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'presence' ? 'active' : '' ?>" href="/lista-de-presenca">
+                    <i class="bi bi-clipboard-check"></i> Lista de Presença
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'presence_history' ? 'active' : '' ?>" href="/historico-presenca">
+                    <i class="bi bi-calendar2-week"></i> Histórico de Presença
                 </a>
             </li>
             <?php endif; ?>

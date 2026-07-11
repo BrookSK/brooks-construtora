@@ -297,10 +297,24 @@ class Router
             'cadastro-de-epi/excluir' => ['EpiController', 'catalogDelete'],
             'registro-de-entrega' => ['EpiController', 'deliveryForm'],
             'registro-de-entrega/salvar' => ['EpiController', 'deliveryStore'],
+            'registro-de-entrega/buscar-colaborador' => ['EpiController', 'searchWorkers'],
             'substituicao-de-epi' => ['EpiController', 'replacementForm'],
             'substituicao-de-epi/itens' => ['EpiController', 'replacementItems'],
             'substituicao-de-epi/salvar' => ['EpiController', 'replacementStore'],
+            'substituicao-de-epi/devolver' => ['EpiController', 'returnStore'],
+            'distribuicao-terceiros' => ['EpiController', 'thirdPartyForm'],
+            'distribuicao-terceiros/salvar' => ['EpiController', 'thirdPartyStore'],
+            'distribuicao-terceiros/buscar' => ['EpiController', 'searchWorkers'],
             'historico-de-epi' => ['EpiController', 'history'],
+
+            // Lista de Presença
+            'lista-de-presenca' => ['PresenceController', 'index'],
+            'lista-de-presenca/buscar-prestador' => ['PresenceController', 'searchProviders'],
+            'lista-de-presenca/salvar-prestador' => ['PresenceController', 'storeProvider'],
+            'lista-de-presenca/buscar-obra' => ['PresenceController', 'searchSites'],
+            'lista-de-presenca/salvar-obra' => ['PresenceController', 'storeSite'],
+            'lista-de-presenca/salvar' => ['PresenceController', 'store'],
+            'historico-presenca' => ['PresenceController', 'history'],
 
             // Painel de pedidos com PIN
             'pedidos' => ['PurchaseOrderController', 'pinPanel'],
