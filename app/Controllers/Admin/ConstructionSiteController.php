@@ -23,15 +23,53 @@ class ConstructionSiteController extends Controller
     }
 
     /**
-     * Verifica se a tabela construction_sites existe no banco
+     * Verifica se a tabela construction_sites existe no banco. Se não, cria automaticamente.
      */
     private function ensureTableExists(): bool
     {
         $result = Database::fetch("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'construction_sites' LIMIT 1");
         if (empty($result)) {
-            $this->setFlash('error', 'A tabela de obras ainda não foi criada no banco de dados. Execute a migration SQL: database/migrations/create_construction_sites_table.sql');
-            $this->redirect('/admin/dashboard');
-            return false;
+            // Auto-criar a tabela
+            try {
+                Database::getConnection()->exec("
+                    CREATE TABLE IF NOT EXISTS construction_sites (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(255) NOT NULL,
+                        code VARCHAR(50) NULL,
+                        address VARCHAR(500) NULL,
+                        city VARCHAR(100) NULL,
+                        state VARCHAR(2) NULL,
+                        responsible_name VARCHAR(255) NULL,
+                        responsible_phone VARCHAR(30) NULL,
+                        client_name VARCHAR(255) NULL,
+                        description TEXT NULL,
+                        status ENUM('active', 'inactive', 'completed') NOT NULL DEFAULT 'active',
+                        started_at DATE NULL,
+                        expected_end_at DATE NULL,
+                        completed_at DATE NULL,
+                        created_by INT NULL,
+                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_status (status),
+                        INDEX idx_code (code),
+                        INDEX idx_name (name)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                ");
+            } catch (\Exception $e) {
+                $this->setFlash('error', 'Erro ao criar tabela de obras: ' . $e->getMessage());
+                $this->redirect('/admin/dashboard');
+                return false;
+            }
+
+            // Adicionar coluna em purchase_orders se não existir
+            try {
+                $colCheck = Database::fetch("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_orders' AND COLUMN_NAME = 'construction_site_id' LIMIT 1");
+                if (empty($colCheck)) {
+                    Database::getConnection()->exec("ALTER TABLE purchase_orders ADD COLUMN construction_site_id INT NULL AFTER order_type, ADD INDEX idx_construction_site (construction_site_id)");
+                }
+            } catch (\Exception $e) {
+                // Não fatal - a coluna pode ser adicionada depois
+            }
         }
         return true;
     }
@@ -43,8 +81,14 @@ class ConstructionSiteController extends Controller
     {
         if (!$this->ensureTableExists()) return;
 
-        $status = $this->input('status');
-        $sites = ConstructionSite::allWithFilter($status);
+        try {
+            $status = $this->input('status');
+            $sites = ConstructionSite::allWithFilter($status);
+        } catch (\Exception $e) {
+            $this->setFlash('error', 'A tabela de obras ainda não foi criada. Execute a migration SQL.');
+            $this->redirect('/admin/dashboard');
+            return;
+        }
 
         $this->view('admin.obras.index', [
             'sites' => $sites,
@@ -76,6 +120,8 @@ class ConstructionSiteController extends Controller
             $this->redirect('/admin/obras');
             return;
         }
+
+        if (!$this->ensureTableExists()) return;
 
         $name = trim($this->input('name', ''));
         if (empty($name)) {
