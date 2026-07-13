@@ -98,7 +98,6 @@
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>
-                <?php endif; ?>
             </div>
 
             <?php if (!empty($comments)): ?>
