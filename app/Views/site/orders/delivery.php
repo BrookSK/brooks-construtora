@@ -54,6 +54,9 @@
                     <div class="progress-bar bg-success" id="progressBarFill" style="width:0%; transition:width 0.5s;"></div>
                 </div>
                 <div class="d-flex flex-wrap gap-1 mb-1">
+                    <?php if (!empty($order['construction_site_name'])): ?>
+                    <span class="info-pill"><i class="bi bi-buildings text-dark"></i> <?= htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']) ?></span>
+                    <?php endif; ?>
                     <span class="info-pill"><i class="bi bi-box-seam text-primary"></i> <?= count($deliveries) ?> itens</span>
                     <span class="info-pill"><i class="bi bi-cash-stack text-success"></i> R$ <?= number_format($order['total_estimated'] ?? 0, 2, ',', '.') ?></span>
                     <?php if ($order['approved_by_name']): ?><span class="info-pill"><i class="bi bi-person-check text-info"></i> <?= htmlspecialchars($order['approved_by_name']) ?></span><?php endif; ?>

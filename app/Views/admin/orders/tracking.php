@@ -87,6 +87,9 @@ $totalItems = array_sum(array_column($trackingData, 'total_count'));
     <div class="card-header py-2 d-flex justify-content-between align-items-center flex-wrap gap-1 <?= $td['late_count'] > 0 ? 'bg-danger bg-opacity-10' : '' ?>">
         <div>
             <a href="/admin/orders/show/<?= $order['id'] ?>" class="fw-bold text-decoration-none"><?= $order['code'] ?></a>
+            <?php if (!empty($order['construction_site_name'])): ?>
+            <span class="badge bg-light text-dark ms-1" style="font-size:0.7rem;"><i class="bi bi-buildings"></i> <?= htmlspecialchars($order['construction_site_name']) ?></span>
+            <?php endif; ?>
             <span class="text-muted small ms-2">R$ <?= number_format($order['total_estimated'], 2, ',', '.') ?></span>
         </div>
         <div class="d-flex gap-1 align-items-center">

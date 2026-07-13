@@ -194,6 +194,13 @@
                 </a>
             </li>
             <?php endif; ?>
+            <?php if (\App\Core\Auth::hasPermission('obras')): ?>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'obras' ? 'active' : '' ?>" href="/admin/obras">
+                    <i class="bi bi-buildings"></i> Obras
+                </a>
+            </li>
+            <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('suppliers')): ?>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'suppliers' ? 'active' : '' ?>" href="/admin/suppliers">

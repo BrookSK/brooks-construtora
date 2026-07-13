@@ -122,7 +122,7 @@ HTML;
         return self::wrap('Nova Revista: ' . $displayTitle, $body);
     }
 
-    public static function purchaseOrderQuote(array $order, array $items, string $quoteUrl): string
+    public static function purchaseOrderQuote(array $order, array $items, string $quoteUrl, array $orderSuppliers = []): string
     {
         $itemsHtml = '';
         foreach ($items as $i => $item) {
@@ -136,6 +136,27 @@ HTML;
             $itemsHtml .= '</tr>';
         }
 
+        // Informação da obra
+        $obraHtml = '';
+        if (!empty($order['construction_site_name'])) {
+            $obraLabel = htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']);
+            $obraAddress = '';
+            if (!empty($order['construction_site_address'])) {
+                $obraAddress = htmlspecialchars($order['construction_site_address']);
+                if (!empty($order['construction_site_city'])) $obraAddress .= ' - ' . htmlspecialchars($order['construction_site_city']) . '/' . htmlspecialchars($order['construction_site_state'] ?? '');
+            }
+            $obraHtml = <<<HTML
+    <p style="margin:8px 0 0; font-size:13px; color:#666;">Obra: <strong>{$obraLabel}</strong></p>
+    {$obraAddress}
+HTML;
+            if ($obraAddress) {
+                $obraHtml = <<<HTML
+    <p style="margin:8px 0 0; font-size:13px; color:#666;">Obra: <strong>{$obraLabel}</strong></p>
+    <p style="margin:2px 0 0; font-size:12px; color:#888;">{$obraAddress}</p>
+HTML;
+            }
+        }
+
         $body = <<<HTML
 <p style="margin-bottom:15px;">Um novo pedido de materiais foi criado e aguarda cotação de preços.</p>
 
@@ -145,6 +166,7 @@ HTML;
     <p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">{$order['code']}</p>
     <p style="margin:8px 0 0; font-size:13px; color:#666;">Solicitado por: <strong>{$order['created_by_name']}</strong></p>
     <p style="margin:4px 0 0; font-size:13px; color:#666;">Data: {$order['created_at']}</p>
+    {$obraHtml}
 </td></tr>
 </table>
 
@@ -209,6 +231,15 @@ HTML;
     <p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">{$order['code']}</p>
     <p style="margin:8px 0 0; font-size:13px; color:#666;">Cotado por: <strong>{$order['quoted_by_name']}</strong></p>
     <p style="margin:4px 0 0; font-size:13px; color:#666;">Solicitado por: {$order['created_by_name']}</p>
+HTML;
+        // Obra info no email de aprovação
+        if (!empty($order['construction_site_name'])) {
+            $obraName = htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']);
+            $body .= <<<HTML
+    <p style="margin:8px 0 0; font-size:13px; color:#666;">Obra: <strong>{$obraName}</strong></p>
+HTML;
+        }
+        $body .= <<<HTML
 </td></tr>
 </table>
 
@@ -252,6 +283,12 @@ HTML;
             $supplierLine = '<p style="margin:8px 0 0; font-size:13px; color:#555;">Fornecedor(es): <strong>' . htmlspecialchars(implode(', ', $names)) . '</strong></p>';
         }
 
+        $obraLine = '';
+        if (!empty($order['construction_site_name'])) {
+            $obraName = htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']);
+            $obraLine = '<p style="margin:8px 0 0; font-size:13px; color:#555;">Obra: <strong>' . $obraName . '</strong></p>';
+        }
+
         $body = <<<HTML
 <p style="margin-bottom:15px;">O pedido de materiais foi <strong style="color:#28a745;">APROVADO</strong> com sucesso!</p>
 
@@ -260,6 +297,7 @@ HTML;
     <p style="margin:0 0 5px; font-size:13px; color:#388e3c; text-transform:uppercase; font-weight:600;">✓ Pedido Aprovado</p>
     <p style="margin:0; font-size:17px; color:#2e7d32; font-weight:600;">{$order['code']}</p>
     {$supplierLine}
+    {$obraLine}
     <p style="margin:8px 0 0; font-size:13px; color:#555;">Aprovado por: <strong>{$order['approved_by_name']}</strong></p>
     <p style="margin:4px 0 0; font-size:13px; color:#555;">Data: {$order['approved_at']}</p>
     <p style="margin:10px 0 0; font-size:20px; color:#2e7d32; font-weight:700;">Total: R$ {$totalFormatted}</p>

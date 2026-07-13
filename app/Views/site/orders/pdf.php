@@ -125,6 +125,18 @@
                 <label>Solicitado por</label>
                 <span><?= htmlspecialchars($order['created_by_name']) ?></span>
             </div>
+            <?php if (!empty($order['construction_site_name'])): ?>
+            <div class="info-item">
+                <label>Obra</label>
+                <span><?= htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']) ?></span>
+            </div>
+            <?php if (!empty($order['construction_site_address'])): ?>
+            <div class="info-item">
+                <label>Local da Obra</label>
+                <span><?= htmlspecialchars($order['construction_site_address']) ?><?= !empty($order['construction_site_city']) ? ' - ' . $order['construction_site_city'] . '/' . ($order['construction_site_state'] ?? '') : '' ?></span>
+            </div>
+            <?php endif; ?>
+            <?php endif; ?>
             <div class="info-item">
                 <label>Cotado por</label>
                 <span><?= htmlspecialchars($order['quoted_by_name'] ?? '-') ?> <?= $order['quoted_at'] ? '(' . date('d/m/Y', strtotime($order['quoted_at'])) . ')' : '' ?></span>

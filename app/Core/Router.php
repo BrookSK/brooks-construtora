@@ -133,6 +133,15 @@ class Router
             'orders/update-pin-user' => ['PurchaseOrderController', 'updatePinUser'],
             'orders/send-invite-webhook' => ['PurchaseOrderController', 'sendInviteWebhook'],
 
+            // Obras
+            'obras' => ['ConstructionSiteController', 'index'],
+            'obras/create' => ['ConstructionSiteController', 'create'],
+            'obras/store' => ['ConstructionSiteController', 'store'],
+            'obras/edit' => ['ConstructionSiteController', 'edit'],
+            'obras/update' => ['ConstructionSiteController', 'update'],
+            'obras/delete' => ['ConstructionSiteController', 'delete'],
+            'obras/search' => ['ConstructionSiteController', 'search'],
+
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],
             'suppliers/create' => ['SupplierController', 'create'],

@@ -44,6 +44,7 @@
                 <thead>
                     <tr>
                         <th>Código</th>
+                        <th>Obra</th>
                         <th>Fornecedor</th>
                         <th>Status</th>
                         <th>Valor</th>
@@ -73,6 +74,13 @@
                             </a>
                             <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
                             <span class="badge bg-dark ms-1" style="font-size:0.65rem;"><i class="bi bi-wrench"></i> Serviço</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (!empty($order['construction_site_name'])): ?>
+                            <small><i class="bi bi-buildings"></i> <?= htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']) ?></small>
+                            <?php else: ?>
+                            <small class="text-muted">-</small>
                             <?php endif; ?>
                         </td>
                         <td><?= htmlspecialchars($order['supplier_name'] ?? 'N/A') ?></td>
@@ -123,6 +131,11 @@
                     <strong class="text-success small">R$ <?= number_format($orderTotal, 2, ',', '.') ?></strong>
                     <?php endif; ?>
                 </div>
+                <?php if (!empty($order['construction_site_name'])): ?>
+                <div class="mt-1">
+                    <span class="text-muted" style="font-size:0.7rem;"><i class="bi bi-buildings"></i> <?= htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']) ?></span>
+                </div>
+                <?php endif; ?>
                 <div class="d-flex justify-content-between mt-1">
                     <span class="text-muted" style="font-size:0.7rem;"><?= htmlspecialchars($order['created_by_name'] ?? '') ?></span>
                     <span class="text-muted" style="font-size:0.7rem;"><?= date('d/m/Y', strtotime($order['created_at'])) ?></span>

@@ -24,6 +24,20 @@
                 </div>
             </div>
 
+            <!-- Obra -->
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-buildings"></i> Obra</div>
+                <div class="card-body">
+                    <select class="form-select" name="construction_site_id" id="constructionSiteSelect">
+                        <option value="">-- Selecione a obra (opcional) --</option>
+                        <?php foreach ($constructionSites as $site): ?>
+                        <option value="<?= $site['id'] ?>"><?= htmlspecialchars($site['code'] . ' - ' . $site['name']) ?><?= !empty($site['client_name']) ? ' (' . htmlspecialchars($site['client_name']) . ')' : '' ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted d-block mt-1">Vincule este pedido a uma obra para rastreamento.</small>
+                </div>
+            </div>
+
             <!-- Upload PDF com IA -->
             <div class="card mb-3">
                 <div class="card-header"><i class="bi bi-file-earmark-pdf"></i> Importar Materiais (opcional)</div>
@@ -571,6 +585,14 @@ function showReview() {
 
     // Montar resumo
     let html = '<h6 class="mb-3">Itens do pedido:</h6>';
+
+    // Mostrar obra selecionada
+    const siteSelect = document.getElementById('constructionSiteSelect');
+    if (siteSelect && siteSelect.value) {
+        const siteName = siteSelect.options[siteSelect.selectedIndex].text;
+        html += `<div class="alert alert-light py-2 mb-3"><i class="bi bi-buildings"></i> <strong>Obra:</strong> ${siteName}</div>`;
+    }
+
     html += '<table class="table table-sm table-bordered"><thead><tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th class="text-center">Qtd</th></tr></thead><tbody>';
     
     let count = 0;

@@ -90,6 +90,15 @@
                     <strong>Obs:</strong> <?= nl2br(htmlspecialchars($order['description'])) ?>
                 </div>
                 <?php endif; ?>
+                <?php if (!empty($order['construction_site_name'])): ?>
+                <div class="mt-2 p-2 bg-white rounded small">
+                    <i class="bi bi-buildings"></i> <strong>Obra:</strong> <?= htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']) ?>
+                    <?php if (!empty($order['construction_site_address'])): ?>
+                    <span class="text-muted ms-2"><?= htmlspecialchars($order['construction_site_address']) ?><?= !empty($order['construction_site_city']) ? ' - ' . $order['construction_site_city'] . '/' . ($order['construction_site_state'] ?? '') : '' ?></span>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+                <?php endif; ?>
             </div>
 
             <?php if (!empty($comments)): ?>

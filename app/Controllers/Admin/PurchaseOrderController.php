@@ -64,6 +64,7 @@ class PurchaseOrderController extends Controller
         $materials = Material::allActive();
         $categories = MaterialCategory::all('name ASC');
         $units = MeasurementUnit::all('name ASC');
+        $constructionSites = \App\Models\ConstructionSite::allActive();
 
         // EPIs cadastrados também ficam disponíveis para seleção num novo pedido.
         // Entram como itens não vinculados (material_id nulo), seguindo o mesmo
@@ -86,6 +87,7 @@ class PurchaseOrderController extends Controller
             'materials' => $materials,
             'categories' => $categories,
             'units' => $units,
+            'constructionSites' => $constructionSites,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);
@@ -116,9 +118,13 @@ class PurchaseOrderController extends Controller
         $quoteToken = PurchaseOrder::generateToken();
         $approvalToken = PurchaseOrder::generateToken();
 
+        $constructionSiteId = $this->input('construction_site_id');
+        $constructionSiteId = !empty($constructionSiteId) ? (int) $constructionSiteId : null;
+
         $orderId = PurchaseOrder::create([
             'code' => $code,
             'order_type' => $orderType,
+            'construction_site_id' => $constructionSiteId,
             'supplier_id' => null,
             'status' => 'pending_quote',
             'description' => $description,
@@ -1130,10 +1136,25 @@ class PurchaseOrderController extends Controller
         $baseUrl = $this->getBaseUrl();
         $quoteUrl = "{$baseUrl}/pedido/cotacao/{$token}";
 
+        // Informação da obra
+        $obraInfo = '';
+        if (!empty($order['construction_site_name'])) {
+            $obraInfo = "*Obra:* {$order['construction_site_code']} - {$order['construction_site_name']}";
+            if (!empty($order['construction_site_address'])) {
+                $obraInfo .= " ({$order['construction_site_address']}";
+                if (!empty($order['construction_site_city'])) $obraInfo .= " - {$order['construction_site_city']}/{$order['construction_site_state']}";
+                $obraInfo .= ")";
+            }
+            $obraInfo .= "\n";
+        }
+
         // E-mail (via fila)
         $emails = Setting::get('orders_quote_emails', '');
         if (!empty($emails)) {
             $subject = "Cotação Pendente - Pedido {$order['code']}";
+            if (!empty($order['construction_site_name'])) {
+                $subject .= " - Obra: {$order['construction_site_name']}";
+            }
             $body = EmailTemplate::purchaseOrderQuote($order, $items, $quoteUrl, $orderSuppliers);
             NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'quote_requested');
         }
@@ -1158,6 +1179,7 @@ class PurchaseOrderController extends Controller
 
             $message = "*NOVO PEDIDO - COTAÇÃO PENDENTE*\n\n"
                 . "*Pedido:* {$order['code']}\n"
+                . $obraInfo
                 . "*Solicitado por:* {$order['created_by_name']}\n"
                 . "*Data:* " . date('d/m/Y H:i', strtotime($order['created_at'])) . "\n"
                 . "*Itens:* " . count($items) . "\n\n"
@@ -1169,6 +1191,11 @@ class PurchaseOrderController extends Controller
             $this->sendWebhook($webhookUrl, [
                 'event' => 'quote_requested',
                 'order_code' => $order['code'],
+                'construction_site' => !empty($order['construction_site_name']) ? [
+                    'id' => $order['construction_site_id'],
+                    'code' => $order['construction_site_code'],
+                    'name' => $order['construction_site_name'],
+                ] : null,
                 'suppliers' => $suppliersArray,
                 'items_count' => count($items),
                 'quote_url' => $quoteUrl,
@@ -1190,10 +1217,19 @@ class PurchaseOrderController extends Controller
         $baseUrl = $this->getBaseUrl();
         $approvalUrl = "{$baseUrl}/pedido/aprovacao/{$token}";
 
+        // Informação da obra
+        $obraInfo = '';
+        if (!empty($order['construction_site_name'])) {
+            $obraInfo = "*Obra:* {$order['construction_site_code']} - {$order['construction_site_name']}\n";
+        }
+
         // E-mail
         $emails = Setting::get('orders_approval_emails', '');
         if (!empty($emails)) {
             $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
+            if (!empty($order['construction_site_name'])) {
+                $subject .= " - Obra: {$order['construction_site_name']}";
+            }
             $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
             NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'approval_requested');
         }
@@ -1215,6 +1251,7 @@ class PurchaseOrderController extends Controller
 
             $message = "*PEDIDO AGUARDANDO APROVAÇÃO*\n\n"
                 . "*Pedido:* {$order['code']}\n"
+                . $obraInfo
                 . "*Itens:* " . count($items) . "\n"
                 . "*Cotado por:* {$order['quoted_by_name']}\n"
                 . "*Data cotação:* " . date('d/m/Y H:i', strtotime($order['quoted_at'])) . "\n\n"
@@ -1224,6 +1261,11 @@ class PurchaseOrderController extends Controller
             $this->sendWebhook($webhookUrl, [
                 'event' => 'approval_requested',
                 'order_code' => $order['code'],
+                'construction_site' => !empty($order['construction_site_name']) ? [
+                    'id' => $order['construction_site_id'],
+                    'code' => $order['construction_site_code'],
+                    'name' => $order['construction_site_name'],
+                ] : null,
                 'suppliers' => $suppliersData,
                 'total' => $order['total_estimated'],
                 'items_count' => count($items),
@@ -1261,6 +1303,12 @@ class PurchaseOrderController extends Controller
             $approvedNames = !empty($approvedSuppliers) ? array_column($approvedSuppliers, 'supplier_name') : [];
             $approvedSupplierDisplay = !empty($approvedNames) ? implode(', ', $approvedNames) : ($order['supplier_name'] ?? 'N/A');
 
+            // Informação da obra
+            $obraInfo = '';
+            if (!empty($order['construction_site_name'])) {
+                $obraInfo = "*Obra:* {$order['construction_site_code']} - {$order['construction_site_name']}\n";
+            }
+
             $suppliersComparison = '';
             if (!empty($orderSuppliers) && count($orderSuppliers) > 1) {
                 $suppliersComparison = "\n*Comparação de fornecedores:*\n";
@@ -1273,6 +1321,7 @@ class PurchaseOrderController extends Controller
 
             $message = "*PEDIDO APROVADO*\n\n"
                 . "*Pedido:* {$order['code']}\n"
+                . $obraInfo
                 . "*Fornecedor(es) aprovado(s):* {$approvedSupplierDisplay}\n"
                 . "*Valor Total:* {$totalFormatted}\n"
                 . "*Aprovado por:* {$order['approved_by_name']}\n"
@@ -1283,6 +1332,11 @@ class PurchaseOrderController extends Controller
             $this->sendWebhook($webhookUrl, [
                 'event' => 'order_approved',
                 'order_code' => $order['code'],
+                'construction_site' => !empty($order['construction_site_name']) ? [
+                    'id' => $order['construction_site_id'],
+                    'code' => $order['construction_site_code'],
+                    'name' => $order['construction_site_name'],
+                ] : null,
                 'approved_suppliers' => $approvedNames,
                 'suppliers' => array_map(fn($s) => ['name' => $s['supplier_name'], 'total' => $s['total'], 'approved' => (bool)$s['approved']], $orderSuppliers),
                 'total' => $order['total_estimated'],
@@ -2223,9 +2277,11 @@ class PurchaseOrderController extends Controller
         // Buscar todos os pedidos aprovados que têm checklist de entrega
         $orders = Database::fetchAll(
             "SELECT po.id, po.code, po.total_estimated, po.approved_by_name, po.approved_at, po.delivery_token,
-                    s.name as supplier_name
+                    s.name as supplier_name,
+                    cs.name as construction_site_name, cs.code as construction_site_code
              FROM purchase_orders po
              LEFT JOIN suppliers s ON po.supplier_id = s.id
+             LEFT JOIN construction_sites cs ON po.construction_site_id = cs.id
              WHERE po.status = 'approved'
              AND EXISTS (SELECT 1 FROM purchase_order_deliveries pod WHERE pod.order_id = po.id)
              ORDER BY po.approved_at DESC"

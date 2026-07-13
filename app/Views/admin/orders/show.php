@@ -77,6 +77,22 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <small class="text-muted d-block">Solicitante</small>
                         <strong><?= htmlspecialchars($order['created_by_name'] ?? '-') ?></strong>
                     </div>
+                    <?php if (!empty($order['construction_site_name'])): ?>
+                    <div class="col-sm-6 mb-2">
+                        <small class="text-muted d-block">Obra</small>
+                        <strong>
+                            <a href="/admin/obras/edit/<?= $order['construction_site_id'] ?>" class="text-decoration-none">
+                                <i class="bi bi-buildings"></i> <?= htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']) ?>
+                            </a>
+                        </strong>
+                        <?php if (!empty($order['construction_site_client'])): ?>
+                        <br><small class="text-muted">Cliente: <?= htmlspecialchars($order['construction_site_client']) ?></small>
+                        <?php endif; ?>
+                        <?php if (!empty($order['construction_site_address'])): ?>
+                        <br><small class="text-muted"><?= htmlspecialchars($order['construction_site_address']) ?><?= !empty($order['construction_site_city']) ? ' - ' . $order['construction_site_city'] . '/' . ($order['construction_site_state'] ?? '') : '' ?></small>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                     <div class="col-sm-6 mb-2">
                         <small class="text-muted d-block">Data de Criação</small>
                         <?= date('d/m/Y H:i', strtotime($order['created_at'])) ?>

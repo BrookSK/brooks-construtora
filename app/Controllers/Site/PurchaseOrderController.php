@@ -696,6 +696,17 @@ class PurchaseOrderController extends Controller
         $xlsx->addRow(['Pedido:', $order['code'], '', 'Data:', date('d/m/Y', strtotime($order['created_at']))], 'bold');
         $xlsx->addRow(['Solicitante:', $order['created_by_name'] ?? '-', '', 'Status:', 'Aprovado'], 'bold');
 
+        // Obra
+        if (!empty($order['construction_site_name'])) {
+            $obraLabel = $order['construction_site_code'] . ' - ' . $order['construction_site_name'];
+            if (!empty($order['construction_site_address'])) {
+                $obraLabel .= ' (' . $order['construction_site_address'];
+                if (!empty($order['construction_site_city'])) $obraLabel .= ' - ' . $order['construction_site_city'] . '/' . ($order['construction_site_state'] ?? '');
+                $obraLabel .= ')';
+            }
+            $xlsx->addRow(['Obra:', $obraLabel], 'bold');
+        }
+
         // Fornecedores aprovados
         if (!empty($approvedSuppliers) && count($approvedSuppliers) > 1) {
             $supplierNames = implode(', ', array_column($approvedSuppliers, 'supplier_name'));
@@ -1420,7 +1431,15 @@ class PurchaseOrderController extends Controller
         $this->requirePinIfEnabled();
         if (empty($token)) { $this->show404(); return; }
 
-        $order = Database::fetch("SELECT * FROM purchase_orders WHERE delivery_token = ?", [$token]);
+        $order = Database::fetch(
+            "SELECT po.*, cs.name as construction_site_name, cs.code as construction_site_code,
+                    cs.address as construction_site_address, cs.city as construction_site_city,
+                    cs.state as construction_site_state
+             FROM purchase_orders po
+             LEFT JOIN construction_sites cs ON po.construction_site_id = cs.id
+             WHERE po.delivery_token = ?",
+            [$token]
+        );
         if (!$order || $order['status'] !== 'approved') { $this->show404(); return; }
 
         $items = PurchaseOrderItem::getByOrder($order['id']);

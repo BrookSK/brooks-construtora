@@ -88,16 +88,16 @@ class Auth
                 'dashboard', 'settings', 'newsletter', 'users', 
                 'magazines', 'magazines.edit', 'magazines.publish',
                 'orders', 'orders.create', 'orders.approve', 'orders.quote',
-                'suppliers', 'materials', 'orders.settings'
+                'suppliers', 'materials', 'orders.settings', 'obras'
             ],
             'designer' => ['dashboard', 'magazines', 'magazines.edit'],
-            'editor' => ['dashboard', 'magazines', 'orders', 'suppliers', 'materials'],
-            'comprador' => ['dashboard', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials'],
-            'cotador' => ['dashboard', 'orders', 'orders.quote', 'suppliers', 'materials'],
-            'aprovador' => ['dashboard', 'orders', 'orders.approve'],
-            'financeiro' => ['dashboard', 'orders', 'orders.payment'],
-            'epi' => ['dashboard', 'epi', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials'],
-            'entrega' => ['dashboard', 'orders', 'orders.create', 'suppliers', 'materials'],
+            'editor' => ['dashboard', 'magazines', 'orders', 'suppliers', 'materials', 'obras'],
+            'comprador' => ['dashboard', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials', 'obras'],
+            'cotador' => ['dashboard', 'orders', 'orders.quote', 'suppliers', 'materials', 'obras'],
+            'aprovador' => ['dashboard', 'orders', 'orders.approve', 'obras'],
+            'financeiro' => ['dashboard', 'orders', 'orders.payment', 'obras'],
+            'epi' => ['dashboard', 'epi', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials', 'obras'],
+            'entrega' => ['dashboard', 'orders', 'orders.create', 'suppliers', 'materials', 'obras'],
         ];
 
         if (!isset($permissions[$role])) {

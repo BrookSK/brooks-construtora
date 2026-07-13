@@ -87,6 +87,14 @@
             </div>
 
             <div class="card-body p-3 p-md-4">
+                <?php if (!empty($order['construction_site_name'])): ?>
+                <div class="alert alert-light small mb-2">
+                    <i class="bi bi-buildings"></i> <strong>Obra:</strong> <?= htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']) ?>
+                    <?php if (!empty($order['construction_site_address'])): ?>
+                    <span class="text-muted ms-1">(<?= htmlspecialchars($order['construction_site_address']) ?><?= !empty($order['construction_site_city']) ? ' - ' . $order['construction_site_city'] . '/' . ($order['construction_site_state'] ?? '') : '' ?>)</span>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
                 <?php if (!empty($order['description'])): ?>
                 <div class="alert alert-light small mb-2"><strong>Obs pedido:</strong> <?= nl2br(htmlspecialchars($order['description'])) ?></div>
                 <?php endif; ?>
