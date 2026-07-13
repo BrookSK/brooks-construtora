@@ -139,58 +139,43 @@ HTML;
         // Informação da obra
         $obraHtml = '';
         if (!empty($order['construction_site_name'])) {
-            $obraLabel = htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']);
-            $obraAddress = '';
+            $obraLabel = htmlspecialchars(($order['construction_site_code'] ?? '') . ' - ' . $order['construction_site_name']);
+            $obraHtml = '<p style="margin:8px 0 0; font-size:13px; color:#666;">Obra: <strong>' . $obraLabel . '</strong></p>';
             if (!empty($order['construction_site_address'])) {
                 $obraAddress = htmlspecialchars($order['construction_site_address']);
                 if (!empty($order['construction_site_city'])) $obraAddress .= ' - ' . htmlspecialchars($order['construction_site_city']) . '/' . htmlspecialchars($order['construction_site_state'] ?? '');
-            }
-            $obraHtml = <<<HTML
-    <p style="margin:8px 0 0; font-size:13px; color:#666;">Obra: <strong>{$obraLabel}</strong></p>
-    {$obraAddress}
-HTML;
-            if ($obraAddress) {
-                $obraHtml = <<<HTML
-    <p style="margin:8px 0 0; font-size:13px; color:#666;">Obra: <strong>{$obraLabel}</strong></p>
-    <p style="margin:2px 0 0; font-size:12px; color:#888;">{$obraAddress}</p>
-HTML;
+                $obraHtml .= '<p style="margin:2px 0 0; font-size:12px; color:#888;">' . $obraAddress . '</p>';
             }
         }
 
-        $body = <<<HTML
-<p style="margin-bottom:15px;">Um novo pedido de materiais foi criado e aguarda cotação de preços.</p>
+        $body = '<p style="margin-bottom:15px;">Um novo pedido de materiais foi criado e aguarda cotação de preços.</p>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa; border-radius:6px; margin-bottom:20px;">'
+            . '<tr><td style="padding: 18px 20px;">'
+            . '<p style="margin:0 0 5px; font-size:13px; color:#888; text-transform:uppercase;">Pedido</p>'
+            . '<p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">' . htmlspecialchars($order['code']) . '</p>'
+            . '<p style="margin:8px 0 0; font-size:13px; color:#666;">Solicitado por: <strong>' . htmlspecialchars($order['created_by_name'] ?? '') . '</strong></p>'
+            . '<p style="margin:4px 0 0; font-size:13px; color:#666;">Data: ' . htmlspecialchars($order['created_at'] ?? '') . '</p>'
+            . $obraHtml
+            . '</td></tr></table>'
+            . '<p style="margin-bottom:10px;"><strong>Itens do pedido:</strong></p>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">'
+            . '<tr style="background:#f8f9fa;">'
+            . '<th style="padding:8px; font-size:12px; text-align:left;">#</th>'
+            . '<th style="padding:8px; font-size:12px; text-align:left;">Material</th>'
+            . '<th style="padding:8px; font-size:12px; text-align:left;">Especificação</th>'
+            . '<th style="padding:8px; font-size:12px; text-align:left;">Classificação</th>'
+            . '<th style="padding:8px; font-size:12px; text-align:left;">Unid.</th>'
+            . '<th style="padding:8px; font-size:12px; text-align:center;">Qtd</th>'
+            . '</tr>'
+            . $itemsHtml
+            . '</table>';
 
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa; border-radius:6px; margin-bottom:20px;">
-<tr><td style="padding: 18px 20px;">
-    <p style="margin:0 0 5px; font-size:13px; color:#888; text-transform:uppercase;">Pedido</p>
-    <p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">{$order['code']}</p>
-    <p style="margin:8px 0 0; font-size:13px; color:#666;">Solicitado por: <strong>{$order['created_by_name']}</strong></p>
-    <p style="margin:4px 0 0; font-size:13px; color:#666;">Data: {$order['created_at']}</p>
-    {$obraHtml}
-</td></tr>
-</table>
+        $body .= '<p style="text-align:center; margin: 25px 0 10px;">'
+            . '<a href="' . $quoteUrl . '" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Informar Cotação</a>'
+            . '</p>'
+            . '<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique no botão acima para acessar o formulário de cotação e informar os valores.</p>';
 
-<p style="margin-bottom:10px;"><strong>Itens do pedido:</strong></p>
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">
-<tr style="background:#f8f9fa;">
-    <th style="padding:8px; font-size:12px; text-align:left;">#</th>
-    <th style="padding:8px; font-size:12px; text-align:left;">Material</th>
-    <th style="padding:8px; font-size:12px; text-align:left;">Especificação</th>
-    <th style="padding:8px; font-size:12px; text-align:left;">Classificação</th>
-    <th style="padding:8px; font-size:12px; text-align:left;">Unid.</th>
-    <th style="padding:8px; font-size:12px; text-align:center;">Qtd</th>
-</tr>
-{$itemsHtml}
-</table>
-
-<p style="text-align:center; margin: 25px 0 10px;">
-    <a href="{$quoteUrl}" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Informar Cotação</a>
-</p>
-
-<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique no botão acima para acessar o formulário de cotação e informar os valores.</p>
-HTML;
-
-        return self::wrap("Cotação Pendente - {$order['code']}", $body);
+        return self::wrap("Cotação Pendente - " . htmlspecialchars($order['code']), $body);
     }
 
     public static function purchaseOrderApproval(array $order, array $items, string $approvalUrl, array $orderSuppliers = []): string
@@ -222,46 +207,36 @@ HTML;
             $itemsHtml .= '</tr>';
         }
 
-        $body = <<<HTML
-<p style="margin-bottom:15px;">Um pedido de materiais foi cotado e aguarda sua aprovação.</p>
+        $body = '<p style="margin-bottom:15px;">Um pedido de materiais foi cotado e aguarda sua aprovação.</p>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa; border-radius:6px; margin-bottom:20px;">'
+            . '<tr><td style="padding: 18px 20px;">'
+            . '<p style="margin:0 0 5px; font-size:13px; color:#888; text-transform:uppercase;">Pedido</p>'
+            . '<p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">' . htmlspecialchars($order['code']) . '</p>'
+            . '<p style="margin:8px 0 0; font-size:13px; color:#666;">Cotado por: <strong>' . htmlspecialchars($order['quoted_by_name'] ?? '') . '</strong></p>'
+            . '<p style="margin:4px 0 0; font-size:13px; color:#666;">Solicitado por: ' . htmlspecialchars($order['created_by_name'] ?? '') . '</p>';
 
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa; border-radius:6px; margin-bottom:20px;">
-<tr><td style="padding: 18px 20px;">
-    <p style="margin:0 0 5px; font-size:13px; color:#888; text-transform:uppercase;">Pedido</p>
-    <p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">{$order['code']}</p>
-    <p style="margin:8px 0 0; font-size:13px; color:#666;">Cotado por: <strong>{$order['quoted_by_name']}</strong></p>
-    <p style="margin:4px 0 0; font-size:13px; color:#666;">Solicitado por: {$order['created_by_name']}</p>
-HTML;
         // Obra info no email de aprovação
         if (!empty($order['construction_site_name'])) {
             $obraName = htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']);
-            $body .= <<<HTML
-    <p style="margin:8px 0 0; font-size:13px; color:#666;">Obra: <strong>{$obraName}</strong></p>
-HTML;
+            $body .= '<p style="margin:8px 0 0; font-size:13px; color:#666;">Obra: <strong>' . $obraName . '</strong></p>';
         }
-        $body .= <<<HTML
-</td></tr>
-</table>
 
-{$suppliersHtml}
-
-<p style="margin-bottom:8px;"><strong style="font-size:12px;">Itens do pedido:</strong></p>
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">
-<tr style="background:#f8f9fa;">
-    <th style="padding:6px 8px; font-size:11px; text-align:left;">#</th>
-    <th style="padding:6px 8px; font-size:11px; text-align:left;">Material</th>
-    <th style="padding:6px 8px; font-size:11px; text-align:left;">Unid.</th>
-    <th style="padding:6px 8px; font-size:11px; text-align:center;">Qtd</th>
-</tr>
-{$itemsHtml}
-</table>
-
-<p style="text-align:center; margin: 25px 0 10px;">
-    <a href="{$approvalUrl}" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Analisar e Decidir</a>
-</p>
-
-<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique no botão acima para aprovar ou rejeitar este pedido.</p>
-HTML;
+        $body .= '</td></tr></table>'
+            . $suppliersHtml
+            . '<p style="margin-bottom:8px;"><strong style="font-size:12px;">Itens do pedido:</strong></p>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">'
+            . '<tr style="background:#f8f9fa;">'
+            . '<th style="padding:6px 8px; font-size:11px; text-align:left;">#</th>'
+            . '<th style="padding:6px 8px; font-size:11px; text-align:left;">Material</th>'
+            . '<th style="padding:6px 8px; font-size:11px; text-align:left;">Unid.</th>'
+            . '<th style="padding:6px 8px; font-size:11px; text-align:center;">Qtd</th>'
+            . '</tr>'
+            . $itemsHtml
+            . '</table>'
+            . '<p style="text-align:center; margin: 25px 0 10px;">'
+            . '<a href="' . $approvalUrl . '" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Analisar e Decidir</a>'
+            . '</p>'
+            . '<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique no botão acima para aprovar ou rejeitar este pedido.</p>';
 
         return self::wrap("Aprovação Pendente - {$order['code']}", $body);
     }

@@ -4,6 +4,7 @@ namespace App\Controllers\Admin;
 
 use App\Core\Controller;
 use App\Core\Auth;
+use App\Core\Database;
 use App\Models\ConstructionSite;
 
 class ConstructionSiteController extends Controller
@@ -22,10 +23,26 @@ class ConstructionSiteController extends Controller
     }
 
     /**
+     * Verifica se a tabela construction_sites existe no banco
+     */
+    private function ensureTableExists(): bool
+    {
+        $result = Database::fetch("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'construction_sites' LIMIT 1");
+        if (empty($result)) {
+            $this->setFlash('error', 'A tabela de obras ainda não foi criada no banco de dados. Execute a migration SQL: database/migrations/create_construction_sites_table.sql');
+            $this->redirect('/admin/dashboard');
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Listagem de obras
      */
     public function index(): void
     {
+        if (!$this->ensureTableExists()) return;
+
         $status = $this->input('status');
         $sites = ConstructionSite::allWithFilter($status);
 
@@ -42,6 +59,8 @@ class ConstructionSiteController extends Controller
      */
     public function create(): void
     {
+        if (!$this->ensureTableExists()) return;
+
         $this->view('admin.obras.create', [
             'user' => Auth::user(),
             'flash' => $this->getFlash(),

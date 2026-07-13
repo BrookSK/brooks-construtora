@@ -64,7 +64,13 @@ class PurchaseOrderController extends Controller
         $materials = Material::allActive();
         $categories = MaterialCategory::all('name ASC');
         $units = MeasurementUnit::all('name ASC');
-        $constructionSites = \App\Models\ConstructionSite::allActive();
+        $constructionSites = [];
+        try {
+            $chk = Database::fetch("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'construction_sites' LIMIT 1");
+            if (!empty($chk)) {
+                $constructionSites = \App\Models\ConstructionSite::allActive();
+            }
+        } catch (\Exception $e) {}
 
         // EPIs cadastrados também ficam disponíveis para seleção num novo pedido.
         // Entram como itens não vinculados (material_id nulo), seguindo o mesmo
@@ -121,10 +127,9 @@ class PurchaseOrderController extends Controller
         $constructionSiteId = $this->input('construction_site_id');
         $constructionSiteId = !empty($constructionSiteId) ? (int) $constructionSiteId : null;
 
-        $orderId = PurchaseOrder::create([
+        $orderData = [
             'code' => $code,
             'order_type' => $orderType,
-            'construction_site_id' => $constructionSiteId,
             'supplier_id' => null,
             'status' => 'pending_quote',
             'description' => $description,
@@ -133,7 +138,19 @@ class PurchaseOrderController extends Controller
             'quote_token' => $quoteToken,
             'approval_token' => $approvalToken,
             'created_at' => date('Y-m-d H:i:s'),
-        ]);
+        ];
+
+        // Só incluir construction_site_id se a coluna existir no banco
+        if ($constructionSiteId) {
+            try {
+                $chk = Database::fetch("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_orders' AND COLUMN_NAME = 'construction_site_id' LIMIT 1");
+                if (!empty($chk)) {
+                    $orderData['construction_site_id'] = $constructionSiteId;
+                }
+            } catch (\Exception $e) {}
+        }
+
+        $orderId = PurchaseOrder::create($orderData);
 
         // Salvar itens
         foreach ($items as $item) {
@@ -2275,17 +2292,35 @@ class PurchaseOrderController extends Controller
     public function tracking(): void
     {
         // Buscar todos os pedidos aprovados que têm checklist de entrega
-        $orders = Database::fetchAll(
-            "SELECT po.id, po.code, po.total_estimated, po.approved_by_name, po.approved_at, po.delivery_token,
-                    s.name as supplier_name,
-                    cs.name as construction_site_name, cs.code as construction_site_code
-             FROM purchase_orders po
-             LEFT JOIN suppliers s ON po.supplier_id = s.id
-             LEFT JOIN construction_sites cs ON po.construction_site_id = cs.id
-             WHERE po.status = 'approved'
-             AND EXISTS (SELECT 1 FROM purchase_order_deliveries pod WHERE pod.order_id = po.id)
-             ORDER BY po.approved_at DESC"
-        );
+        $hasCS = false;
+        try {
+            $chk = Database::fetch("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_orders' AND COLUMN_NAME = 'construction_site_id' LIMIT 1");
+            $hasCS = !empty($chk);
+        } catch (\Exception $e) {}
+
+        if ($hasCS) {
+            $orders = Database::fetchAll(
+                "SELECT po.id, po.code, po.total_estimated, po.approved_by_name, po.approved_at, po.delivery_token,
+                        s.name as supplier_name,
+                        cs.name as construction_site_name, cs.code as construction_site_code
+                 FROM purchase_orders po
+                 LEFT JOIN suppliers s ON po.supplier_id = s.id
+                 LEFT JOIN construction_sites cs ON po.construction_site_id = cs.id
+                 WHERE po.status = 'approved'
+                 AND EXISTS (SELECT 1 FROM purchase_order_deliveries pod WHERE pod.order_id = po.id)
+                 ORDER BY po.approved_at DESC"
+            );
+        } else {
+            $orders = Database::fetchAll(
+                "SELECT po.id, po.code, po.total_estimated, po.approved_by_name, po.approved_at, po.delivery_token,
+                        s.name as supplier_name
+                 FROM purchase_orders po
+                 LEFT JOIN suppliers s ON po.supplier_id = s.id
+                 WHERE po.status = 'approved'
+                 AND EXISTS (SELECT 1 FROM purchase_order_deliveries pod WHERE pod.order_id = po.id)
+                 ORDER BY po.approved_at DESC"
+            );
+        }
 
         // Para cada pedido, buscar itens de entrega com dados completos
         $trackingData = [];

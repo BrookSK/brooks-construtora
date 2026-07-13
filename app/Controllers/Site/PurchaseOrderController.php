@@ -1431,15 +1431,26 @@ class PurchaseOrderController extends Controller
         $this->requirePinIfEnabled();
         if (empty($token)) { $this->show404(); return; }
 
-        $order = Database::fetch(
-            "SELECT po.*, cs.name as construction_site_name, cs.code as construction_site_code,
-                    cs.address as construction_site_address, cs.city as construction_site_city,
-                    cs.state as construction_site_state
-             FROM purchase_orders po
-             LEFT JOIN construction_sites cs ON po.construction_site_id = cs.id
-             WHERE po.delivery_token = ?",
-            [$token]
-        );
+        // Verificar se construction_sites existe
+        $hasCS = false;
+        try {
+            $chk = Database::fetch("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_orders' AND COLUMN_NAME = 'construction_site_id' LIMIT 1");
+            $hasCS = !empty($chk);
+        } catch (\Exception $e) {}
+
+        if ($hasCS) {
+            $order = Database::fetch(
+                "SELECT po.*, cs.name as construction_site_name, cs.code as construction_site_code,
+                        cs.address as construction_site_address, cs.city as construction_site_city,
+                        cs.state as construction_site_state
+                 FROM purchase_orders po
+                 LEFT JOIN construction_sites cs ON po.construction_site_id = cs.id
+                 WHERE po.delivery_token = ?",
+                [$token]
+            );
+        } else {
+            $order = Database::fetch("SELECT * FROM purchase_orders WHERE delivery_token = ?", [$token]);
+        }
         if (!$order || $order['status'] !== 'approved') { $this->show404(); return; }
 
         $items = PurchaseOrderItem::getByOrder($order['id']);
