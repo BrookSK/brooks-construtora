@@ -38,16 +38,16 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <div>
                 <span class="label" style="color: var(--forca-teal);">A Origem</span>
                 <h2 class="headline-section">Tudo o que a Brooks desejou ter e não teve.</h2>
-                <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-lg);">
+                <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-md);">
                     Quando decidimos criar uma tecnologia para a Brooks, o objetivo era resolver um problema real: a gestão de obras em campo. A VÉTRIKS nasceu da rotina, dos desafios e das necessidades de quem vive a construção todos os dias.
                 </p>
-                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-lg);">
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-md);">
                     Mas, quando vimos o resultado, entendemos que essa solução não fazia sentido ficar apenas conosco.
                 </p>
-                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-lg);">
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-md);">
                     Compartilhar conhecimento sempre foi parte da nossa essência. Afinal, empreender pode ser uma jornada solitária, e nós mesmos gostaríamos de ter encontrado, lá atrás, empresários experientes dispostos a trocar vivências, acertos e aprendizados.
                 </p>
-                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-lg);">
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-md);">
                     Foi dessa visão que nasceu o Força Estrutural: um grupo que reúne construtoras para compartilhar experiências, fortalecer o mercado e crescer em conjunto.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8;">
