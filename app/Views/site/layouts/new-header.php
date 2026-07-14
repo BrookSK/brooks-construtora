@@ -84,37 +84,14 @@
                 <a href="/projetos" class="header-nav__link <?= ($currentPage ?? '') === 'projetos' ? 'active' : '' ?>">Projetos</a>
             </li>
             
-            <!-- Mega Menu: Ecossistema -->
-            <li class="header-nav__item header-nav__item--mega">
-                <a href="#" class="header-nav__link <?= in_array($currentPage ?? '', ['vetriks','forca','academy']) ? 'active' : '' ?>" aria-expanded="false" aria-haspopup="true">
-                    Ecossistema
-                    <svg class="header-nav__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </a>
-                <div class="mega-menu" role="menu">
-                    <div class="mega-menu__inner">
-                        <a href="/vetriks" class="mega-menu__item" role="menuitem">
-                            <div class="mega-menu__icon mega-menu__icon--vetriks">
-                                <i data-lucide="cpu"></i>
-                            </div>
-                            <div class="mega-menu__title">Vetriks</div>
-                            <div class="mega-menu__desc">Tecnologia própria de gestão de obras. Criada no campo, para resolver problemas reais.</div>
-                        </a>
-                        <a href="/forca-estrutural" class="mega-menu__item" role="menuitem">
-                            <div class="mega-menu__icon mega-menu__icon--forca">
-                                <i data-lucide="users"></i>
-                            </div>
-                            <div class="mega-menu__title">Força Estrutural</div>
-                            <div class="mega-menu__desc">Grupo de empresários da construção civil. Networking, eventos e conhecimento.</div>
-                        </a>
-                        <a href="/academy" class="mega-menu__item" role="menuitem">
-                            <div class="mega-menu__icon mega-menu__icon--academy">
-                                <i data-lucide="graduation-cap"></i>
-                            </div>
-                            <div class="mega-menu__title">Brooks Academy</div>
-                            <div class="mega-menu__desc">Escola profissionalizante com plano de carreira e bolsas de engenharia.</div>
-                        </a>
-                    </div>
-                </div>
+            <li class="header-nav__item">
+                <a href="/vetriks" class="header-nav__link <?= ($currentPage ?? '') === 'vetriks' ? 'active' : '' ?>">Vetriks</a>
+            </li>
+            <li class="header-nav__item">
+                <a href="/forca-estrutural" class="header-nav__link <?= ($currentPage ?? '') === 'forca' ? 'active' : '' ?>">Força Estrutural</a>
+            </li>
+            <li class="header-nav__item">
+                <a href="/academy" class="header-nav__link <?= ($currentPage ?? '') === 'academy' ? 'active' : '' ?>">Brooks Academy</a>
             </li>
             
             <li class="header-nav__item">
