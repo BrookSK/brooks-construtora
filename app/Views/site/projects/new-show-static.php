@@ -158,8 +158,9 @@ $projectsData = [
             '/assets/images/projects/katty-kaitazoff/katty-28.png',
         ],
         'videos' => [
-            '/assets/images/projects/katty-kaitazoff/katty-video-01.mp4',
-            '/assets/images/projects/katty-kaitazoff/katty-video-02.mp4',
+            '/assets/images/projects/katty-kaitazoff/katty-video01.mp4',
+            '/assets/images/projects/katty-kaitazoff/katty-video02.mp4',
+            '/assets/images/projects/katty-kaitazoff/katty-video03.mp4',
         ],
     ],
 ];
