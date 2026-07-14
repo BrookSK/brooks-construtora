@@ -39,10 +39,19 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <span class="label" style="color: var(--forca-teal);">A Origem</span>
                 <h2 class="headline-section">Tudo o que a Brooks desejou ter e não teve.</h2>
                 <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    No começo da trajetória, os proprietários da Brooks sentiram na pele a falta de apoio. Queriam conversar com alguém que já tivesse passado pelos mesmos percalços da construção civil. Não existia isso.
+                    Quando decidimos criar uma tecnologia para a Brooks, o objetivo era resolver um problema real: a gestão de obras em campo. A VÉTRIKS nasceu da rotina, dos desafios e das necessidades de quem vive a construção todos os dias.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-lg);">
+                    Mas, quando vimos o resultado, entendemos que essa solução não fazia sentido ficar apenas conosco.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-lg);">
+                    Compartilhar conhecimento sempre foi parte da nossa essência. Afinal, empreender pode ser uma jornada solitária, e nós mesmos gostaríamos de ter encontrado, lá atrás, empresários experientes dispostos a trocar vivências, acertos e aprendizados.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-lg);">
+                    Foi dessa visão que nasceu o Força Estrutural: um grupo que reúne construtoras para compartilhar experiências, fortalecer o mercado e crescer em conjunto.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8;">
-                    Quando a Brooks se tornou inspiração para outros empresários, seus fundadores decidiram criar o que sempre desejaram: um grupo de apoio mútuo. Assim nasceu o Força Estrutural — onde concorrentes viraram aliados.
+                    No fim, tudo começou com uma faísca. Essa faísca foi a VÉTRIKS. E hoje ela conecta pessoas, empresas e um propósito maior: elevar o nível da construção civil brasileira.
                 </p>
             </div>
             <div style="background: linear-gradient(145deg, var(--forca-ocean), var(--forca-teal)); border-radius: var(--radius-xl); padding: var(--space-3xl); color: white;">
