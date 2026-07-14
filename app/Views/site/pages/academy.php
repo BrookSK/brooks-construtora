@@ -35,7 +35,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <!-- Por quê? -->
 <section class="section">
     <div class="container">
-        <div class="grid grid--2 reveal" style="align-items: center; gap: var(--space-3xl);">
+        <div class="grid grid--2 reveal" style="align-items: flex-start; gap: var(--space-3xl);">
             <div>
                 <span class="label" style="color: #e67e22;">O propósito</span>
                 <h2 class="headline-section">Construir grandes obras começa por construir grandes profissionais.</h2>
