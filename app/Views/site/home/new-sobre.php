@@ -35,7 +35,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 </p>
             </div>
             <div class="reveal-right">
-                <img src="/assets/images/wp/2024/11/IMG_2546-HDR-1-jpg.webp" alt="Projeto Brooks Construtora" style="border-radius: var(--radius-xl); width: 100%; box-shadow: var(--shadow-2xl);" loading="lazy">
+                <img src="/assets/images/projects/katty-kaitazoff/katty-02.png" alt="Projeto Brooks Construtora" style="border-radius: var(--radius-xl); width: 100%; box-shadow: var(--shadow-2xl);" loading="lazy">
             </div>
         </div>
     </div>
