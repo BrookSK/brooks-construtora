@@ -18,7 +18,8 @@ return [
         'username' => 'brooks_construtora_beta',
         'password' => 'nSTjm88b!md0%Ysr',
         'charset' => 'utf8mb4',
-    ]
+    ],
+
     // Configurações de sessão
     'session' => [
         'name' => 'brooks_session',
