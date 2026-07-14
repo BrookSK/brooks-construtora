@@ -158,8 +158,8 @@ $projectsData = [
             '/assets/images/projects/katty-kaitazoff/katty-28.png',
         ],
         'videos' => [
-            '/assets/images/projects/katty-kaitazoff/katty-video-01.mov',
-            '/assets/images/projects/katty-kaitazoff/katty-video-02.mov',
+            '/assets/images/projects/katty-kaitazoff/katty-video-01.mp4',
+            '/assets/images/projects/katty-kaitazoff/katty-video-02.mp4',
         ],
     ],
 ];
@@ -245,7 +245,6 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <?php foreach ($project['videos'] as $i => $video): ?>
                 <div style="border-radius: var(--radius-lg); overflow: hidden; <?= $i === 0 && count($project['videos']) === 1 ? 'grid-column: span 2;' : '' ?>">
                     <video controls playsinline style="width: 100%; height: 400px; object-fit: cover; background: #000;">
-                        <source src="<?= $video ?>" type="video/quicktime">
                         <source src="<?= $video ?>" type="video/mp4">
                         Seu navegador não suporta vídeos.
                     </video>
