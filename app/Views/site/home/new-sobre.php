@@ -31,7 +31,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     Crescemos através da qualidade, da organização, dos processos, da tecnologia e das pessoas. Cada ano investindo, nichando setores, descentralizando com processos definidos, colocando profissionais qualificados à frente de cada área.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8;">
-                    Mesmo diante de incertezas como a pandemia, nunca deixamos de investir. A Brooks continuou se fortalecendo de forma assertiva e entusiasta na construção de alto padrão — sempre com o cliente em primeiro lugar, mas também com seus colaboradores e com o meio ambiente.
+                    Mesmo diante de incertezas como a pandemia, nunca deixamos de investir. A Brooks continuou se fortalecendo de forma assertiva e entusiasta na construção de alto padrão, sempre com o cliente em primeiro lugar, mas também com seus colaboradores e com o meio ambiente.
                 </p>
             </div>
             <div class="reveal-right">
@@ -146,7 +146,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <span class="label">Sustentabilidade</span>
                 <h2 class="headline-section">Membro do GBC Brasil.</h2>
                 <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    A Brooks faz parte do GBC Brasil — Green Building Council, o Conselho Verde do Brasil. Construção consciente, responsabilidade ambiental e boas práticas fazem parte do nosso DNA.
+                    A Brooks faz parte do GBC Brasil, Green Building Council, o Conselho Verde do Brasil. Construção consciente, responsabilidade ambiental e boas práticas fazem parte do nosso DNA.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8;">
                     Acreditamos que construir com qualidade significa também respeitar o meio ambiente e as próximas gerações.
