@@ -244,7 +244,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <?php if (!empty($project['videos'])): ?>
         <div class="grid grid--2" style="gap: var(--space-md); margin-bottom: var(--space-xl);">
             <?php foreach ($project['videos'] as $i => $video): ?>
-                <div style="border-radius: var(--radius-lg); overflow: hidden; <?= $i === 0 && count($project['videos']) === 1 ? 'grid-column: span 2;' : '' ?>">
+                <div style="border-radius: var(--radius-lg); overflow: hidden; <?= ($i === count($project['videos']) - 1 && count($project['videos']) % 2 !== 0) ? 'grid-column: span 2;' : '' ?>">
                     <video controls playsinline style="width: 100%; height: 400px; object-fit: cover; background: #000;">
                         <source src="<?= $video ?>" type="video/mp4">
                         Seu navegador não suporta vídeos.
