@@ -1,12 +1,10 @@
 <?php
-/**
- * CRON Endpoint - Geração automática de revistas
- * 
- * Configure o cron do servidor para acessar esta URL a cada 10 minutos:
- * */10 * * * * curl -s "https://seu-dominio.com.br/cron.php?token=SEU_TOKEN_AQUI" > /dev/null 2>&1
- * 
- * O sistema controla internamente se já rodou no período configurado.
- */
+// CRON Endpoint - Geração automática de revistas
+//
+// Configure o cron do servidor para acessar esta URL a cada 10 minutos:
+// */10 * * * * curl -s "https://seu-dominio.com.br/cron.php?token=SEU_TOKEN_AQUI" > /dev/null 2>&1
+//
+// O sistema controla internamente se já rodou no período configurado.
 
 // Carrega a aplicação
 define('ROOT_PATH', dirname(__DIR__));

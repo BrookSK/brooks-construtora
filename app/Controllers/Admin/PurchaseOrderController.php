@@ -120,6 +120,17 @@ class PurchaseOrderController extends Controller
             return;
         }
 
+        // Validar quantidade mínima de cada item (>= 0.01)
+        foreach ($items as $item) {
+            if (empty($item['material_name'])) continue;
+            $qty = (float) ($item['quantity'] ?? 0);
+            if ($qty < 0.01) {
+                $this->setFlash('error', 'A quantidade de "' . ($item['material_name'] ?? 'item') . '" deve ser no mínimo 0,01.');
+                $this->redirect('/admin/orders/create');
+                return;
+            }
+        }
+
         $code = PurchaseOrder::generateCode();
         $quoteToken = PurchaseOrder::generateToken();
         $approvalToken = PurchaseOrder::generateToken();

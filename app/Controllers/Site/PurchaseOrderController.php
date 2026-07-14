@@ -166,7 +166,10 @@ class PurchaseOrderController extends Controller
                         $unitPrice = (float) str_replace(['.', ','], ['', '.'], $priceStr);
                         $item = PurchaseOrderItem::find((int) $itemId);
                         if ($item && $item['order_id'] == $order['id']) {
-                            $totalPrice = $unitPrice * $item['quantity'];
+                            $qty = (float) $item['quantity'];
+                            // Se quantidade é 0 (comum em serviços/locação), trata como 1
+                            // para que o preço unitário informado seja o total
+                            $totalPrice = $qty > 0 ? $unitPrice * $qty : $unitPrice;
                             $supplierTotal += $totalPrice;
                             PurchaseOrderItemPrice::create([
                                 'order_id' => $order['id'],
@@ -305,7 +308,8 @@ class PurchaseOrderController extends Controller
                 $unitPrice = (float) str_replace(['.', ','], ['', '.'], $itemData['unit_price'] ?? '0');
                 $item = PurchaseOrderItem::find((int) $itemId);
                 if ($item && $item['order_id'] == $order['id']) {
-                    $totalPrice = $unitPrice * $item['quantity'];
+                    $qty = (float) $item['quantity'];
+                    $totalPrice = $qty > 0 ? $unitPrice * $qty : $unitPrice;
                     PurchaseOrderItem::updateById((int) $itemId, ['unit_price' => $unitPrice, 'total_price' => $totalPrice]);
                     $totalEstimated += $totalPrice;
                 }

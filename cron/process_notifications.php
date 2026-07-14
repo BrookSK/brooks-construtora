@@ -7,8 +7,8 @@
  * Ou chamar via HTTP: /public/cron-notifications.php?token=SEU_TOKEN
  */
 
-define('ROOT_PATH', dirname(__DIR__));
-define('BACKGROUND_PROCESS', true);
+if (!defined('ROOT_PATH')) define('ROOT_PATH', dirname(__DIR__));
+if (!defined('BACKGROUND_PROCESS')) define('BACKGROUND_PROCESS', true);
 
 require_once ROOT_PATH . '/app/Core/Autoloader.php';
 App\Core\Autoloader::register();

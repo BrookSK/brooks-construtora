@@ -583,6 +583,21 @@ function showReview() {
     document.querySelectorAll('[id^="mname-"]').forEach(input => { if (!input.value) valid = false; });
     if (!valid) { alert('Selecione um material para cada item.'); return; }
 
+    // Validar quantidade mínima (>= 0.01)
+    let qtyValid = true;
+    let invalidItemName = '';
+    rows.forEach(row => {
+        const qtyInput = row.querySelector('[name*="[quantity]"]');
+        const nameInput = row.querySelector('[id^="mname-"]');
+        const qty = parseFloat(qtyInput?.value) || 0;
+        if (qty < 0.01) {
+            qtyValid = false;
+            invalidItemName = nameInput?.value || 'Item';
+            if (qtyInput) { qtyInput.classList.add('is-invalid'); qtyInput.focus(); }
+        }
+    });
+    if (!qtyValid) { alert('A quantidade de "' + invalidItemName + '" deve ser no mínimo 0,01.'); return; }
+
     // Montar resumo
     let html = '<h6 class="mb-3">Itens do pedido:</h6>';
 

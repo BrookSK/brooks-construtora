@@ -391,7 +391,7 @@
         if (priceMode === 'total') {
             return val;
         }
-        return val * qty;
+        return qty > 0 ? val * qty : val;
     }
 
     // Valida limite de 100% nos campos de desconto/acréscimo
