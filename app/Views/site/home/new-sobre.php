@@ -20,7 +20,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <!-- Timeline / History -->
 <section class="section">
     <div class="container">
-        <div class="grid grid--2" style="align-items: center; gap: var(--space-4xl);">
+        <div class="grid grid--2" style="align-items: stretch; gap: var(--space-4xl);">
             <div class="reveal-left">
                 <span class="label">A Trajetória</span>
                 <h2 class="headline-section">Nascemos da vontade de fazer diferente.</h2>
@@ -34,8 +34,8 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     Mesmo diante de incertezas como a pandemia, nunca deixamos de investir. A Brooks continuou se fortalecendo de forma assertiva e entusiasta na construção de alto padrão, sempre com o cliente em primeiro lugar, mas também com seus colaboradores e com o meio ambiente.
                 </p>
             </div>
-            <div class="reveal-right">
-                <img src="/assets/images/projects/katty-kaitazoff/katty-02.png" alt="Projeto Brooks Construtora" style="border-radius: var(--radius-xl); width: 100%; height: 100%; object-fit: cover; box-shadow: var(--shadow-2xl);" loading="lazy">
+            <div class="reveal-right" style="display: flex;">
+                <img src="/assets/images/projects/katty-kaitazoff/katty-02.png" alt="Projeto Brooks Construtora" style="border-radius: var(--radius-xl); width: 100%; object-fit: cover; max-height: 450px; box-shadow: var(--shadow-2xl);" loading="lazy">
             </div>
         </div>
     </div>
