@@ -51,6 +51,21 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
+<!-- White Label Alert -->
+<section style="padding: var(--space-lg) 0; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+    <div class="container">
+        <div style="display: flex; align-items: center; justify-content: center; gap: var(--space-lg); flex-wrap: wrap; padding: var(--space-lg) var(--space-xl); background: rgba(52, 152, 219, 0.1); border: 1px solid rgba(52, 152, 219, 0.3); border-radius: var(--radius-lg);">
+            <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                <span style="background: linear-gradient(135deg, #3498db, #2ecc71); padding: 8px 12px; border-radius: 6px; font-size: var(--text-xs); font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 1px;">White Label</span>
+            </div>
+            <p style="margin: 0; color: rgba(255,255,255,0.8); font-size: var(--text-base); text-align: center;">
+                Vendemos a Vetriks como <strong style="color: white;">marca propia White Label</strong> para outras construtoras. Tenha o sistema com a sua marca e identidade visual.
+            </p>
+            <a href="/contato" class="btn btn--primary" style="background: linear-gradient(135deg, #3498db, #2980b9); white-space: nowrap;">Saiba mais</a>
+        </div>
+    </div>
+</section>
+
 <!-- Dores / Problemas -->
 <section class="section" id="problemas">
     <div class="container">
