@@ -110,6 +110,17 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 </div>
             </a>
             
+            <a href="/projeto/projeto-katty-kaitazoff-alphaville" class="project-card">
+                <img src="/assets/images/projects/katty-kaitazoff/katty-01.jpg" alt="Projeto Katty Kaitazoff | Alphaville" class="project-card__image" loading="lazy">
+                <div class="project-card__overlay">
+                    <div class="project-card__content">
+                        <h3 class="project-card__title">Projeto Katty Kaitazoff</h3>
+                        <p class="project-card__subtitle">Reforma completa de residência · Alphaville</p>
+                        <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+                    </div>
+                </div>
+            </a>
+            
         </div>
     </div>
 </section>

@@ -18,6 +18,7 @@ class ProjectController extends Controller
         'reforma-corporativa-cafeteria-do-palacio-dos-bandeirantes',
         'reforma-corporativa-de-escritorio-no-itaim-bibi',
         'projeto-milena-niemeyer-moema',
+        'projeto-katty-kaitazoff-alphaville',
     ];
 
     public function index(): void
