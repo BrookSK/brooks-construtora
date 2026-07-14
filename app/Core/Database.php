@@ -31,9 +31,17 @@ class Database
 
     public static function query(string $sql, array $params = []): \PDOStatement
     {
-        $stmt = self::getConnection()->prepare($sql);
-        $stmt->execute($params);
-        return $stmt;
+        try {
+            $stmt = self::getConnection()->prepare($sql);
+            $stmt->execute($params);
+            return $stmt;
+        } catch (\PDOException $e) {
+            \App\Services\LogService::error('SQL Error: ' . $e->getMessage(), [
+                'sql' => $sql,
+                'params' => $params,
+            ]);
+            throw $e;
+        }
     }
 
     public static function fetch(string $sql, array $params = []): ?array

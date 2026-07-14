@@ -167,4 +167,24 @@ class SettingsController extends Controller
         Setting::set('magazine_logo', '');
         $this->json(['success' => true]);
     }
+
+    /**
+     * Visualizador de Logs
+     */
+    public function logs(): void
+    {
+        $date = $this->input('date', date('Y-m-d'));
+        $lines = (int) $this->input('lines', 100);
+        $logContent = \App\Services\LogService::tail($lines, $date);
+        $logFiles = \App\Services\LogService::listFiles();
+
+        $this->view('admin.settings.logs', [
+            'logContent' => $logContent,
+            'logFiles' => $logFiles,
+            'currentDate' => $date,
+            'lines' => $lines,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
+    }
 }

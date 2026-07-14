@@ -149,6 +149,7 @@ class ConstructionSiteController extends Controller
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
+        \App\Services\LogService::action("Obra criada: {$name} ({$code})", ['id' => $id]);
         $this->setFlash('success', "Obra \"{$name}\" ({$code}) cadastrada com sucesso!");
         $this->redirect('/admin/obras');
     }
