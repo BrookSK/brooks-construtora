@@ -128,7 +128,6 @@ $projectsData = [
         'type' => 'Residencial',
         'cover' => '/assets/images/projects/katty-kaitazoff/katty-01.png',
         'images' => [
-            '/assets/images/projects/katty-kaitazoff/katty-01.png',
             '/assets/images/projects/katty-kaitazoff/katty-02.png',
             '/assets/images/projects/katty-kaitazoff/katty-03.png',
             '/assets/images/projects/katty-kaitazoff/katty-04.png',
