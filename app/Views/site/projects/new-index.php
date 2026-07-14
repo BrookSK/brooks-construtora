@@ -111,7 +111,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             </a>
             
             <a href="/projeto/projeto-katty-kaitazoff-alphaville" class="project-card">
-                <img src="/assets/images/projects/katty-kaitazoff/katty-01.jpg" alt="Projeto Katty Kaitazoff | Alphaville" class="project-card__image" loading="lazy">
+                <img src="/assets/images/projects/katty-kaitazoff/katty-01.png" alt="Projeto Katty Kaitazoff | Alphaville" class="project-card__image" loading="lazy">
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Katty Kaitazoff</h3>
