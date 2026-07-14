@@ -148,7 +148,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 
 <!-- Cover Image -->
 <section style="margin-top: -1px;">
-    <img src="<?= $project['cover'] ?>" alt="<?= htmlspecialchars($project['title']) ?>" style="width: 100%; object-fit: cover;" loading="lazy">
+    <img src="<?= $project['cover'] ?>" alt="<?= htmlspecialchars($project['title']) ?>" style="width: 100%; max-height: 560px; object-fit: cover;" loading="lazy">
 </section>
 
 <!-- Project Info -->
@@ -200,7 +200,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <div class="grid grid--2" style="gap: var(--space-md);">
             <?php foreach ($project['images'] as $i => $img): ?>
                 <div style="border-radius: var(--radius-lg); overflow: hidden; <?= $i === 0 ? 'grid-column: span 2;' : '' ?>">
-                    <img src="<?= $img ?>" alt="<?= htmlspecialchars($project['title']) ?> - Foto <?= $i + 1 ?>" style="width: 100%; height: auto; object-fit: contain;" loading="lazy">
+                    <img src="<?= $img ?>" alt="<?= htmlspecialchars($project['title']) ?> - Foto <?= $i + 1 ?>" style="width: 100%; height: <?= $i === 0 ? '400px' : '300px' ?>; object-fit: cover;" loading="lazy">
                 </div>
             <?php endforeach; ?>
         </div>
