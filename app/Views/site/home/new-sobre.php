@@ -86,6 +86,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             </div>
             <div class="reveal-right" style="order: 1;">
                 <img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-104-scaled.webp" alt="Norah Arquiteta parceira da Brooks" style="border-radius: var(--radius-xl); width: 100%;" loading="lazy">
+                <p style="text-align: center; font-size: var(--text-sm); color: var(--brooks-gray-500); margin-top: var(--space-sm);">Norah Arquiteta parceira da Brooks</p>
             </div>
         </div>
     </div>
