@@ -99,6 +99,17 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 </div>
             </a>
             
+            <a href="/projeto/projeto-milena-niemeyer-moema" class="project-card">
+                <img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-5-scaled.webp" alt="Projeto Milena Niemeyer | Moema" class="project-card__image" loading="lazy">
+                <div class="project-card__overlay">
+                    <div class="project-card__content">
+                        <h3 class="project-card__title">Projeto Milena Niemeyer</h3>
+                        <p class="project-card__subtitle">Reforma completa de apartamento · 500m² · Moema</p>
+                        <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+                    </div>
+                </div>
+            </a>
+            
         </div>
     </div>
 </section>

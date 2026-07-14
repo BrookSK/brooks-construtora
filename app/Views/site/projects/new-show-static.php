@@ -93,6 +93,16 @@ $projectsData = [
         'cover' => '/assets/images/wp/2024/11/escritorio-itaim-jpeg.webp',
         'images' => ['/assets/images/wp/2024/11/escritorio-itaim-jpeg.webp'],
     ],
+    'projeto-milena-niemeyer-moema' => [
+        'title' => 'Projeto Milena Niemeyer | Moema',
+        'subtitle' => 'Reforma completa de apartamento · 500m²',
+        'description' => 'Reforma completa de um apartamento de 500 m². Um projeto clássico, onde cada detalhe carrega história, identidade e alma. Uma arquitetura que atravessa o tempo e traduz a essência de quem vive ali. Brooks Construtora. Engenharia para projetos que deixam legado.',
+        'location' => 'Moema, São Paulo',
+        'area' => '500m²',
+        'type' => 'Residencial',
+        'cover' => '/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-5-scaled.webp',
+        'images' => ['/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-5-scaled.webp'],
+    ],
 ];
 
 $project = $projectsData[$projectSlug] ?? null;
