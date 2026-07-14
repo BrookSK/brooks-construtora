@@ -78,14 +78,15 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <span class="label">Cultura</span>
                 <h2 class="headline-section">As pessoas entram e permanecem.</h2>
                 <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    Na Brooks, a cultura forte é o que mantém a empresa em pé e crescente, com portas abertas. As pessoas que entram demonstram ter o mesmo propósito, os mesmos valores — e compartilham da mesma cultura.
+                    Na Brooks, a cultura forte é o que mantém a empresa em pé e crescente, com portas abertas, as pessoas que entram demonstram ter o mesmo propósito, os mesmos valores, e compartilham da mesma cultura.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8;">
-                    Sabemos que erros acontecem. Muitos aconteceram na nossa trajetória. Mas todos foram corrigidos com velocidade, com processo, com tecnologia e com pessoas. O erro pode acontecer — mas não deve se repetir. Essa é a mentalidade que nos move.
+                    Sabemos que erros acontecem, muitos aconteceram na nossa trajetória, mas todos foram corrigidos com velocidade, com processo, com tecnologia e com pessoas. O erro pode acontecer, mas não deve se repetir, essa é a mentalidade que nos move.
                 </p>
             </div>
             <div class="reveal-right" style="order: 1;">
-                <img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-104-scaled.webp" alt="Equipe Brooks" style="border-radius: var(--radius-xl); width: 100%;" loading="lazy">
+                <img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-104-scaled.webp" alt="Norah Arquiteta parceira da Brooks" style="border-radius: var(--radius-xl); width: 100%;" loading="lazy">
+                <p style="text-align: center; font-size: var(--text-sm); color: var(--brooks-gray-500); margin-top: var(--space-sm);">Norah Arquiteta parceira da Brooks</p>
             </div>
         </div>
     </div>
