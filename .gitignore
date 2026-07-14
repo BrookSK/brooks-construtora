@@ -15,3 +15,7 @@ Thumbs.db
 # Logs
 *.log
 Brooks-Novo-Sistema-Com-Revista-DOCUMENTACAO.md
+
+# Videos (muito grandes para Git - subir direto no servidor)
+*.mov
+*.mp4

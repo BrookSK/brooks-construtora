@@ -157,6 +157,10 @@ $projectsData = [
             '/assets/images/projects/katty-kaitazoff/katty-27.png',
             '/assets/images/projects/katty-kaitazoff/katty-28.png',
         ],
+        'videos' => [
+            '/assets/images/projects/katty-kaitazoff/katty-video-01.mov',
+            '/assets/images/projects/katty-kaitazoff/katty-video-02.mov',
+        ],
     ],
 ];
 
@@ -236,6 +240,20 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <h2 class="headline-subsection">Registros do projeto</h2>
         </div>
         
+        <?php if (!empty($project['videos'])): ?>
+        <div class="grid grid--2" style="gap: var(--space-md); margin-bottom: var(--space-xl);">
+            <?php foreach ($project['videos'] as $i => $video): ?>
+                <div style="border-radius: var(--radius-lg); overflow: hidden; <?= $i === 0 && count($project['videos']) === 1 ? 'grid-column: span 2;' : '' ?>">
+                    <video controls playsinline style="width: 100%; height: 400px; object-fit: cover; background: #000;">
+                        <source src="<?= $video ?>" type="video/quicktime">
+                        <source src="<?= $video ?>" type="video/mp4">
+                        Seu navegador não suporta vídeos.
+                    </video>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
         <div class="grid grid--2" style="gap: var(--space-md);">
             <?php foreach ($project['images'] as $i => $img): ?>
                 <div style="border-radius: var(--radius-lg); overflow: hidden; <?= $i === 0 ? 'grid-column: span 2;' : '' ?>">
