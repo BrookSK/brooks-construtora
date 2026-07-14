@@ -130,7 +130,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <div class="section-header section-header--centered reveal">
             <span class="label">Funcionalidades</span>
             <h2 class="headline-section">Existe uma forma mais inteligente de construir.</h2>
-            <p class="subtitle subtitle--centered">Sistema vertical, integrado, com IA — tudo em um único lugar.</p>
+            <p class="subtitle subtitle--centered">Sistema vertical, integrado, com IA, tudo em um único lugar.</p>
         </div>
         
         <div style="display: grid; gap: var(--space-3xl);">
