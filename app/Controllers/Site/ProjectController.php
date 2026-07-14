@@ -17,6 +17,7 @@ class ProjectController extends Controller
         'reforma-completa-de-mansao-no-alphaville',
         'reforma-corporativa-cafeteria-do-palacio-dos-bandeirantes',
         'reforma-corporativa-de-escritorio-no-itaim-bibi',
+        'projeto-milena-niemeyer-moema',
     ];
 
     public function index(): void
