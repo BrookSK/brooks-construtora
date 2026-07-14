@@ -54,12 +54,12 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <div class="card" style="text-align: center;">
                 <div class="card__icon" style="margin: 0 auto var(--space-lg);"><i data-lucide="layers"></i></div>
                 <h3 class="card__title">Base</h3>
-                <p class="card__text">Pessoas, processos e tecnologia integrados em um só propósito. A estrutura que sustenta tudo: Financeiro, CFO, Tecnologia, Jurídico, Operacional, Qualidade e Planejamento.</p>
+                <p class="card__text">Pessoas, processos e tecnologia integrados em um só propósito. A estrutura que sustenta tudo: Vamos começar pelo CEO, diretor de operações, fusão com empresas que possuem os mesmos valores e cultura, Financeiro, CFO, Tecnologia, CTO Jurídico, Operacional, Setor de Qualidade e Planejamento, entre outros.</p>
             </div>
             <div class="card" style="text-align: center;">
                 <div class="card__icon" style="margin: 0 auto var(--space-lg);"><i data-lucide="compass"></i></div>
                 <h3 class="card__title">Propósito</h3>
-                <p class="card__text">Transformar a construção civil através da excelência, inovação e cuidado genuíno com as pessoas. O propósito não muda — ele é quem somos.</p>
+                <p class="card__text">Transformar a construção civil através da excelência, inovação e cuidado genuíno com as pessoas. O propósito não muda, ele é quem somos.</p>
             </div>
             <div class="card" style="text-align: center;">
                 <div class="card__icon" style="margin: 0 auto var(--space-lg);"><i data-lucide="rocket"></i></div>
