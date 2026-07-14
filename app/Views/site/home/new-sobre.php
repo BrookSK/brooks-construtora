@@ -47,7 +47,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <div class="section-header section-header--centered reveal">
             <span class="label">Nossos Pilares</span>
             <h2 class="headline-section">Base. Propósito. Estratégia.</h2>
-            <p class="subtitle subtitle--centered">A estratégia muda a cada fase, a cada oscilação do mercado. Mas o propósito e a cultura não mudam — porque são reflexo do que a alma vive.</p>
+            <p class="subtitle subtitle--centered">A estratégia muda a cada fase, a cada oscilação do mercado. Mas o propósito e a cultura não mudam, porque são reflexo do que a alma vive.</p>
         </div>
         
         <div class="grid grid--3 reveal">
