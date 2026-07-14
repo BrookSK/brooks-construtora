@@ -85,7 +85,7 @@
             </li>
             
             <li class="header-nav__item">
-                <a href="/vetriks" class="header-nav__link <?= ($currentPage ?? '') === 'vetriks' ? 'active' : '' ?>">Vetriks</a>
+                <a href="/vetriks" class="header-nav__link <?= ($currentPage ?? '') === 'vetriks' ? 'active' : '' ?>">Tecnologia Vétriks</a>
             </li>
             <li class="header-nav__item">
                 <a href="/forca-estrutural" class="header-nav__link <?= ($currentPage ?? '') === 'forca' ? 'active' : '' ?>">Força Estrutural</a>
