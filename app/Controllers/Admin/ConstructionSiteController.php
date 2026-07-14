@@ -132,22 +132,34 @@ class ConstructionSiteController extends Controller
 
         $code = ConstructionSite::generateCode();
 
-        $id = ConstructionSite::create([
-            'name' => $name,
-            'code' => $code,
-            'address' => trim($this->input('address', '')),
-            'city' => trim($this->input('city', '')),
-            'state' => trim($this->input('state', '')),
-            'responsible_name' => trim($this->input('responsible_name', '')),
-            'responsible_phone' => trim($this->input('responsible_phone', '')),
-            'client_name' => trim($this->input('client_name', '')),
-            'description' => trim($this->input('description', '')),
-            'status' => $this->input('status', 'active'),
-            'started_at' => $this->input('started_at') ?: null,
-            'expected_end_at' => $this->input('expected_end_at') ?: null,
-            'created_by' => Auth::id(),
-            'created_at' => date('Y-m-d H:i:s'),
-        ]);
+        try {
+            $id = ConstructionSite::create([
+                'name' => $name,
+                'code' => $code,
+                'address' => trim($this->input('address', '')),
+                'city' => trim($this->input('city', '')),
+                'state' => trim($this->input('state', '')),
+                'responsible_name' => trim($this->input('responsible_name', '')),
+                'responsible_phone' => trim($this->input('responsible_phone', '')),
+                'client_name' => trim($this->input('client_name', '')),
+                'description' => trim($this->input('description', '')),
+                'status' => $this->input('status', 'active'),
+                'started_at' => $this->input('started_at') ?: null,
+                'expected_end_at' => $this->input('expected_end_at') ?: null,
+                'created_by' => Auth::id(),
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            if (!$id) {
+                $this->setFlash('error', 'Erro: INSERT retornou ID 0. Verifique a estrutura da tabela construction_sites.');
+                $this->redirect('/admin/obras/create');
+                return;
+            }
+        } catch (\Exception $e) {
+            $this->setFlash('error', 'Erro ao salvar obra: ' . $e->getMessage());
+            $this->redirect('/admin/obras/create');
+            return;
+        }
 
         $this->setFlash('success', "Obra \"{$name}\" ({$code}) cadastrada com sucesso!");
         $this->redirect('/admin/obras');
