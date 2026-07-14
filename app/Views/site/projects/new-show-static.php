@@ -110,7 +110,6 @@ $projectsData = [
             '/assets/images/projects/milena-niemeyer/milena-06.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-07.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-08.jpeg',
-            '/assets/images/projects/milena-niemeyer/milena-09.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-10.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-11.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-12.jpeg',
@@ -118,7 +117,6 @@ $projectsData = [
             '/assets/images/projects/milena-niemeyer/milena-14.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-15.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-16.jpeg',
-            '/assets/images/projects/milena-niemeyer/milena-17.jpeg',
         ],
     ],
 ];
