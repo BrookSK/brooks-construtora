@@ -100,7 +100,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             </a>
             
             <a href="/projeto/projeto-milena-niemeyer-moema" class="project-card">
-                <img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-5-scaled.webp" alt="Projeto Milena Niemeyer | Moema" class="project-card__image" loading="lazy">
+                <img src="/assets/images/projects/milena-niemeyer/milena-06.webp" alt="Projeto Milena Niemeyer | Moema" class="project-card__image" loading="lazy">
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Milena Niemeyer</h3>
