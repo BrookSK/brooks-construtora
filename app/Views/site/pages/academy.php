@@ -58,7 +58,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     Porque construir grandes obras começa, antes de tudo, por construir grandes profissionais.
                 </p>
             </div>
-            <div style="position: sticky; top: 120px;">
+            <div style="position: sticky; top: 120px; margin-top: 80px;">
                 <div style="background: linear-gradient(135deg, #fef3e2, #fde8c8); border-radius: var(--radius-xl); padding: var(--space-2xl);">
                     <div style="display: grid; gap: var(--space-xl);">
                         <div style="display: flex; align-items: center; gap: var(--space-md);">
