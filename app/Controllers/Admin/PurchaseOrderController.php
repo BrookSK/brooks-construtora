@@ -180,7 +180,6 @@ class PurchaseOrderController extends Controller
         // Enviar notificações (e-mail + webhook) para cotação
         $this->sendQuoteNotifications($orderId, $quoteToken);
 
-        \App\Services\LogService::action("Pedido criado: {$code}", ['id' => $orderId, 'construction_site_id' => $constructionSiteId, 'items' => count($items)]);
         $this->setFlash('success', "Pedido {$code} criado com sucesso! Notificações enviadas para cotação.");
         $this->redirect('/admin/orders');
     }

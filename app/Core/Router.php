@@ -24,9 +24,6 @@ class Router
 
     public function dispatch(): void
     {
-        // Log de toda request
-        \App\Services\LogService::request();
-
         $segments = $this->url ? explode('/', $this->url) : [];
 
         // Verifica se é rota administrativa
@@ -144,9 +141,6 @@ class Router
             'obras/update' => ['ConstructionSiteController', 'update'],
             'obras/delete' => ['ConstructionSiteController', 'delete'],
             'obras/search' => ['ConstructionSiteController', 'search'],
-
-            // Logs
-            'logs' => ['SettingsController', 'logs'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],
