@@ -1,5 +1,5 @@
 <?php
-$pageTitle = 'Brooks Academy — Escola Profissionalizante';
+$pageTitle = 'Brooks Academy, Escola Profissionalizante';
 $pageDescription = 'Brooks Academy - Escola profissionalizante dentro dos canteiros de obra. Plano de carreira, capacitação e bolsas de engenharia civil para colaboradores.';
 $currentPage = 'academy';
 $bodyClass = 'page-academy';
@@ -22,7 +22,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     A escola que existe <span style="color: #f39c12;">dentro do canteiro de obras.</span>
                 </h1>
                 <p style="font-size: var(--text-lg); color: rgba(255,255,255,0.65); line-height: 1.8;">
-                    A Brooks Academy oferece plano de carreira, cursos profissionalizantes e bolsas de engenharia civil — tudo dentro dos nossos canteiros de obra de alto padrão.
+                    A Brooks Academy oferece plano de carreira, cursos profissionalizantes e bolsas de engenharia civil, tudo dentro dos nossos canteiros de obra de alto padrão.
                 </p>
             </div>
             <div>
@@ -138,7 +138,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <i data-lucide="heart" style="width:40px;height:40px;color:#f39c12;margin-bottom:var(--space-lg);"></i>
                 <h3 style="font-size: var(--text-2xl); font-weight: 700; margin-bottom: var(--space-md);">Impacto que vai além da obra.</h3>
                 <p style="color: rgba(255,255,255,0.7); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    Por mais que o filho do colaborador não deseje seguir o mesmo caminho — o filho do pedreiro não quer ser pedreiro — ainda assim ele tem a chance de fazer um estágio, aprender na prática, e ter acesso à teoria através da bolsa.
+                    Por mais que o filho do colaborador não deseje seguir o mesmo caminho, o filho do pedreiro não quer ser pedreiro, ainda assim ele tem a chance de fazer um estágio, aprender na prática, e ter acesso à teoria através da bolsa.
                 </p>
                 <p style="color: rgba(255,255,255,0.5); font-size: var(--text-sm); line-height: 1.7;">
                     A Brooks Academy é nosso compromisso com a transformação social através do trabalho digno e da educação acessível.
@@ -149,19 +149,19 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div style="display: grid; gap: var(--space-lg); margin-top: var(--space-lg);">
                     <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
                         <i data-lucide="check-circle" style="width:20px;height:20px;color:#f39c12;flex-shrink:0;margin-top:2px;"></i>
-                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Toda pessoa merece crescer</strong> — independente de onde começou. A porta está aberta.</p>
+                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Toda pessoa merece crescer</strong>, independente de onde começou. A porta está aberta.</p>
                     </div>
                     <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
                         <i data-lucide="check-circle" style="width:20px;height:20px;color:#f39c12;flex-shrink:0;margin-top:2px;"></i>
-                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Prática e teoria juntas</strong> — aprender construindo, com suporte acadêmico para quem quer ir além.</p>
+                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Prática e teoria juntas</strong>, aprender construindo, com suporte acadêmico para quem quer ir além.</p>
                     </div>
                     <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
                         <i data-lucide="check-circle" style="width:20px;height:20px;color:#f39c12;flex-shrink:0;margin-top:2px;"></i>
-                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Cultura forte retém talentos</strong> — as pessoas ficam na Brooks porque compartilham do mesmo propósito.</p>
+                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Cultura forte retém talentos</strong>, as pessoas ficam na Brooks porque compartilham do mesmo propósito.</p>
                     </div>
                     <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
                         <i data-lucide="check-circle" style="width:20px;height:20px;color:#f39c12;flex-shrink:0;margin-top:2px;"></i>
-                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Investir em pessoas é investir no futuro</strong> — da construção civil brasileira como um todo.</p>
+                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Investir em pessoas é investir no futuro</strong>, da construção civil brasileira como um todo.</p>
                     </div>
                 </div>
             </div>
