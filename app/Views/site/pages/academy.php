@@ -26,7 +26,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 </p>
             </div>
             <div>
-                <img src="/assets/images/wp/2024/11/IMG_2586-HDR-2-jpg.webp" alt="Canteiro de obras Brooks" style="border-radius: var(--radius-xl); width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.4);" loading="lazy">
+                <img src="/assets/images/container.jpeg" alt="Canteiro de obras Brooks" style="border-radius: var(--radius-xl); width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.4);" loading="lazy">
             </div>
         </div>
     </div>
