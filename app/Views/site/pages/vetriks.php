@@ -96,29 +96,29 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 </section>
 
 <!-- Telas do Sistema -->
-<section class="section section--dark" style="background: #0f1923;">
+<section class="section" style="background: var(--brooks-off-white);">
     <div class="container">
         <div class="section-header section-header--centered reveal">
-            <span class="label" style="color: #3498db;">Conheça as telas</span>
-            <h2 class="headline-section" style="color: white;">O sistema por dentro.</h2>
+            <span class="label">Conheça as telas</span>
+            <h2 class="headline-section">O sistema por dentro.</h2>
         </div>
         
         <div class="grid grid--2 reveal" style="gap: var(--space-xl);">
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-lg); overflow: hidden; text-align: center;">
-                <img src="/assets/images/projects/vetriks/vetriks.png" alt="Tela Principal Vetriks" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
-                <p style="padding: var(--space-md); margin: 0; color: rgba(255,255,255,0.7); font-size: var(--text-sm); font-weight: 500;">Painel Principal</p>
+            <div style="background: white; border: 1px solid var(--brooks-gray-200); border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <img src="/assets/images/projects/vetriks/VETRIKS.png" alt="Tela Principal Vetriks" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
+                <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">Painel Principal</p>
             </div>
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-lg); overflow: hidden; text-align: center;">
-                <img src="/assets/images/projects/vetriks/cronograma.png" alt="Tela Cronograma" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
-                <p style="padding: var(--space-md); margin: 0; color: rgba(255,255,255,0.7); font-size: var(--text-sm); font-weight: 500;">Cronograma</p>
+            <div style="background: white; border: 1px solid var(--brooks-gray-200); border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <img src="/assets/images/projects/vetriks/CRONOGRAMA.png" alt="Tela Cronograma" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
+                <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">Cronograma</p>
             </div>
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-lg); overflow: hidden; text-align: center;">
-                <img src="/assets/images/projects/vetriks/calendario.png" alt="Tela Calendário" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
-                <p style="padding: var(--space-md); margin: 0; color: rgba(255,255,255,0.7); font-size: var(--text-sm); font-weight: 500;">Calendário</p>
+            <div style="background: white; border: 1px solid var(--brooks-gray-200); border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <img src="/assets/images/projects/vetriks/CALENDÁRIO.png" alt="Tela Calendário" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
+                <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">Calendário</p>
             </div>
-            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-lg); overflow: hidden; text-align: center;">
-                <img src="/assets/images/projects/vetriks/rdo.png" alt="Tela RDO" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
-                <p style="padding: var(--space-md); margin: 0; color: rgba(255,255,255,0.7); font-size: var(--text-sm); font-weight: 500;">RDO - Relatório Diário de Obra</p>
+            <div style="background: white; border: 1px solid var(--brooks-gray-200); border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <img src="/assets/images/projects/vetriks/RDO.png" alt="Tela RDO" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
+                <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">RDO - Relatório Diário de Obra</p>
             </div>
         </div>
     </div>
