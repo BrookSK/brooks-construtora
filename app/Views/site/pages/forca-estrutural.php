@@ -138,11 +138,11 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         
         <div class="counter-grid" style="max-width: 700px; margin: 0 auto;">
             <div class="counter-item">
-                <div class="counter-item__number" style="color: white;" data-counter data-target="30" data-suffix="+">0</div>
-                <div class="counter-item__label" style="color: rgba(255,255,255,0.5);">Empresários ativos</div>
+                <div class="counter-item__number" style="color: white;" data-counter data-target="150" data-suffix="">0</div>
+                <div class="counter-item__label" style="color: rgba(255,255,255,0.5);">Empresários em um grupo seleto</div>
             </div>
             <div class="counter-item">
-                <div class="counter-item__number" style="color: white;" data-counter data-target="12" data-suffix="">0</div>
+                <div class="counter-item__number" style="color: white;" data-counter data-target="7" data-suffix="">0</div>
                 <div class="counter-item__label" style="color: rgba(255,255,255,0.5);">Eventos em 2025</div>
             </div>
             <div class="counter-item">
