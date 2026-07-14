@@ -38,12 +38,24 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <div class="grid grid--2 reveal" style="align-items: center; gap: var(--space-3xl);">
             <div>
                 <span class="label" style="color: #e67e22;">O propósito</span>
-                <h2 class="headline-section">As pessoas que entram na Brooks, permanecem.</h2>
-                <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    Isso não é por acaso. A Brooks investe em cada colaborador como se fosse o primeiro dia. A Academy é a materialização dessa crença: quem quer crescer, vai encontrar o caminho aqui dentro.
+                <h2 class="headline-section">Construir grandes obras começa por construir grandes profissionais.</h2>
+                <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    Acreditamos que o futuro da construção civil não será definido apenas por novas tecnologias, mas, principalmente, pelas pessoas.
                 </p>
-                <p style="color: var(--brooks-gray-500); line-height: 1.8;">
-                    Nos canteiros de obras de residências de alto padrão, entre paredes sendo erguidas, existe uma escola. Colaboradores que desejam têm acesso a cursos técnicos e profissionalizantes. E os que se destacam, concorrem a bolsas de engenharia civil.
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    Foi com essa visão que nasceu a Brooks Academy: uma escola de aprendizado dentro dos nossos próprios canteiros de obras de alto padrão. Um espaço onde conhecimento, prática e oportunidade caminham juntos.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    Aqui, nossos colaboradores podem evoluir profissionalmente e, mais do que isso, abrir portas para a próxima geração. Se desejarem, seus filhos, já em idade de ingressar no mercado de trabalho, também podem conhecer os bastidores da construção, aprender na prática e construir uma trajetória profissional sólida, muitas vezes diferente da de seus pais, mas sustentada pelos mesmos valores de dedicação, excelência e respeito.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    Vivemos um momento em que a escassez de mão de obra qualificada é uma realidade, e todos os indicadores apontam que esse desafio tende a crescer nos próximos anos. Em vez de apenas observar esse cenário, decidimos fazer parte da solução.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    A Brooks Academy nasce para formar profissionais, valorizar talentos, gerar oportunidades e preservar um dos maiores patrimônios da nossa empresa: as pessoas que constroem, todos os dias, a qualidade que entregamos aos nossos clientes.
+                </p>
+                <p style="color: var(--brooks-gray-600); line-height: 1.8; font-weight: 500; font-style: italic;">
+                    Porque construir grandes obras começa, antes de tudo, por construir grandes profissionais.
                 </p>
             </div>
             <div>
