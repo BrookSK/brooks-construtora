@@ -100,7 +100,7 @@ $projectsData = [
         'location' => 'Moema, São Paulo',
         'area' => '500m²',
         'type' => 'Residencial',
-        'cover' => '/assets/images/projects/milena-niemeyer/milena-07.jpeg',
+        'cover' => '/assets/images/projects/milena-niemeyer/milena-08.jpeg',
         'images' => [
             '/assets/images/projects/milena-niemeyer/milena-01.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-02.jpeg',
