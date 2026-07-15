@@ -233,13 +233,14 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     <div class="container">
         <div class="grid grid--2" style="align-items: center; gap: var(--space-4xl);">
             <div class="reveal-left">
-                <img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-104-scaled.webp" alt="Equipe Brooks Construtora" style="border-radius: var(--radius-xl); width: 100%;" loading="lazy">
+                <img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-104-scaled.webp" alt="Norah Arquiteta parceira da Brooks" style="border-radius: var(--radius-xl); width: 100%;" loading="lazy">
+                <p style="text-align: center; font-size: var(--text-sm); color: var(--brooks-gray-500); margin-top: var(--space-sm);">Norah Arquiteta parceira da Brooks</p>
             </div>
             <div class="reveal-right">
                 <span class="label">Cultura</span>
                 <h2 class="headline-section">As pessoas entram e permanecem.</h2>
                 <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    Na Brooks, a cultura forte é o que mantém a empresa em pé e crescente. As pessoas que entram demonstram ter o mesmo propósito, os mesmos valores — e por isso ficam, crescem e evoluem.
+                    Na Brooks, a cultura forte é o que mantém a empresa em pé e crescente. As pessoas que entram demonstram ter o mesmo propósito, os mesmos valores, e por isso ficam, crescem e evoluem.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-xl);">
                     Sabemos que a estratégia muda a cada fase, a cada oscilação do mercado. Mas o propósito e a cultura não mudam. Porque são reflexo do que a alma vive.
