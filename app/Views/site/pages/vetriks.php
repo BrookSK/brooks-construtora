@@ -21,7 +21,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 Sistema integrado que <span style="background: linear-gradient(90deg, #3498db, #2ecc71); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">revoluciona</span> a gestão de obras.
             </h1>
             <p style="font-size: var(--text-lg); color: rgba(255,255,255,0.6); line-height: 1.8; margin-bottom: var(--space-xl);">
-                Criado pela Brooks, é utilizada por diversas outras construtoras. IA e automação avançada. Criado em 10 anos de campo, forjado na operação, validado por dezenas de construtoras. Economize 180 horas/mês em retrabalho.
+                Criado pela Brooks, e utilizada por diversas outras construtoras. IA e automação avançada. Criado em 10 anos de campo, forjado na operação, validado por dezenas de construtoras. Economize 180 horas/mês em retrabalho.
             </p>
             <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
                 <a href="https://app.vetriks.com.br/auth/register" target="_blank" rel="noopener" class="btn btn--primary btn--lg" style="background: linear-gradient(135deg, #3498db, #2980b9);">Começar agora</a>
