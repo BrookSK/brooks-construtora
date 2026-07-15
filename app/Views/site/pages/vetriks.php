@@ -51,21 +51,6 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
-<!-- White Label Alert -->
-<section style="padding: var(--space-lg) 0; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
-    <div class="container">
-        <div style="display: flex; align-items: center; justify-content: center; gap: var(--space-lg); flex-wrap: wrap; padding: var(--space-lg) var(--space-xl); background: rgba(52, 152, 219, 0.1); border: 1px solid rgba(52, 152, 219, 0.3); border-radius: var(--radius-lg);">
-            <div style="display: flex; align-items: center; gap: var(--space-sm);">
-                <span style="background: linear-gradient(135deg, #3498db, #2ecc71); padding: 8px 12px; border-radius: 6px; font-size: var(--text-xs); font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 1px;">White Label</span>
-            </div>
-            <p style="margin: 0; color: rgba(255,255,255,0.8); font-size: var(--text-base); text-align: center;">
-                Vendemos a Vetriks como <strong style="color: white;">marca propia White Label</strong> para outras construtoras. Tenha o sistema com a sua marca e identidade visual.
-            </p>
-            <a href="/contato" class="btn btn--primary" style="background: linear-gradient(135deg, #3498db, #2980b9); white-space: nowrap;">Saiba mais</a>
-        </div>
-    </div>
-</section>
-
 <!-- Dores / Problemas -->
 <section class="section" id="problemas">
     <div class="container">
@@ -277,6 +262,62 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg); padding: var(--space-xl); text-align: center;">
                         <i data-lucide="trending-up" style="width:32px;height:32px;color:#3498db;margin-bottom:var(--space-sm);"></i>
                         <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.6);">ROI comprovado</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- White Label -->
+<section class="section">
+    <div class="container">
+        <div class="reveal" style="background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); border-radius: var(--radius-xl); padding: var(--space-4xl); position: relative; overflow: hidden;">
+            <!-- Decorative elements -->
+            <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(52, 152, 219, 0.15), transparent 70%); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -30px; left: -30px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(46, 204, 113, 0.1), transparent 70%); border-radius: 50%;"></div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3xl); align-items: center; position: relative; z-index: 1;">
+                <div>
+                    <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: linear-gradient(135deg, rgba(52, 152, 219, 0.2), rgba(46, 204, 113, 0.2)); border: 1px solid rgba(52, 152, 219, 0.3); border-radius: var(--radius-full); margin-bottom: var(--space-lg);">
+                        <i data-lucide="tag" style="width:14px;height:14px;color:#3498db;"></i>
+                        <span style="font-size: 11px; font-weight: 600; color: #3498db; text-transform: uppercase; letter-spacing: 0.08em;">White Label</span>
+                    </div>
+                    <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem); font-weight: 800; color: white; line-height: 1.2; margin-bottom: var(--space-lg);">
+                        Sua construtora com tecnologia própria.
+                    </h2>
+                    <p style="font-size: var(--text-lg); color: rgba(255,255,255,0.7); line-height: 1.8; margin-bottom: var(--space-xl);">
+                        Vendemos a Vetriks como marca própria White Label para outras construtoras. Tenha o sistema completo com a sua marca, sua identidade visual e seu domínio.
+                    </p>
+                    <a href="/contato" class="btn btn--lg" style="background: linear-gradient(135deg, #3498db, #2ecc71); color: white; border: none;">Solicitar proposta White Label</a>
+                </div>
+                <div style="display: grid; gap: var(--space-md);">
+                    <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg);">
+                        <div style="width: 44px; height: 44px; border-radius: var(--radius-full); background: rgba(52, 152, 219, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="palette" style="width:20px;height:20px;color:#3498db;"></i>
+                        </div>
+                        <div>
+                            <p style="font-weight: 600; color: white; font-size: var(--text-sm); margin: 0;">Sua marca, sua identidade</p>
+                            <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.5); margin: 4px 0 0;">Logo, cores e domínio personalizados</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg);">
+                        <div style="width: 44px; height: 44px; border-radius: var(--radius-full); background: rgba(46, 204, 113, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="rocket" style="width:20px;height:20px;color:#2ecc71;"></i>
+                        </div>
+                        <div>
+                            <p style="font-weight: 600; color: white; font-size: var(--text-sm); margin: 0;">Pronto para usar</p>
+                            <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.5); margin: 4px 0 0;">Implantação rápida, sem desenvolvimento</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg);">
+                        <div style="width: 44px; height: 44px; border-radius: var(--radius-full); background: rgba(52, 152, 219, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="headphones" style="width:20px;height:20px;color:#3498db;"></i>
+                        </div>
+                        <div>
+                            <p style="font-weight: 600; color: white; font-size: var(--text-sm); margin: 0;">Suporte dedicado</p>
+                            <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.5); margin: 4px 0 0;">Treinamento e acompanhamento incluso</p>
+                        </div>
                     </div>
                 </div>
             </div>
