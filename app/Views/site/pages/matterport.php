@@ -54,7 +54,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     Na Brooks, utilizamos essa tecnologia em todas as nossas obras de alto padrão. Desde o início da construção até a entrega das chaves, cada etapa é escaneada e disponibilizada em um tour virtual completo.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-sm);">
-                    Isso significa que nossos clientes podem acompanhar o progresso da sua obra em tempo real, sem precisar visitar o canteiro. Basta abrir o link e navegar livremente pelo espaço em 3D — como se estivesse lá.
+                    Isso significa que nossos clientes podem acompanhar o progresso da sua obra em tempo real, sem precisar visitar o canteiro. Basta abrir o link e navegar livremente pelo espaço em 3D, como se estivesse lá.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8;">
                     Mais do que transparência, é confiança. O cliente vê cada detalhe, cada acabamento, cada fase executada com a qualidade que a Brooks entrega.
