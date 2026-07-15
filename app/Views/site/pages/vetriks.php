@@ -287,7 +287,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                         Sua construtora com tecnologia própria.
                     </h2>
                     <p style="font-size: var(--text-lg); color: rgba(255,255,255,0.7); line-height: 1.8; margin-bottom: var(--space-xl);">
-                        Vendemos a Vetriks como marca própria White Label para outras construtoras. Tenha o sistema completo com a sua marca, sua identidade visual e seu domínio.
+                        Vendemos a Vetriks como marca própria White Label para outras construtoras. Tenha o sistema completo com a sua marca e sua identidade visual.
                     </p>
                     <a href="/contato" class="btn btn--lg" style="background: linear-gradient(135deg, #3498db, #2ecc71); color: white; border: none;">Solicitar proposta White Label</a>
                 </div>
