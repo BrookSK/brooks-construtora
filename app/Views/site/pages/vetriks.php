@@ -316,7 +316,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                         </div>
                         <div>
                             <p style="font-weight: 600; color: white; font-size: var(--text-sm); margin: 0;">Suporte dedicado</p>
-                            <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.5); margin: 4px 0 0;">Treinamento incluso</p>
+                            <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.5); margin: 4px 0 0;">Suporte humano</p>
                         </div>
                     </div>
                 </div>
