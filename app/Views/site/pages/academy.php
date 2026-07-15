@@ -184,7 +184,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     Desde que o programa começou, percebemos uma mudança real no engajamento das equipes. Os colaboradores passaram a enxergar a obra não apenas como um trabalho, mas como um caminho de crescimento pessoal e profissional.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8;">
-                    É um depoimento genuíno de quem acompanha de perto o impacto da educação dentro do canteiro — e de como isso reflete diretamente na qualidade do que entregamos aos nossos clientes.
+                    É um depoimento genuíno de quem acompanha de perto o impacto da educação dentro do canteiro, e de como isso reflete diretamente na qualidade do que entregamos aos nossos clientes.
                 </p>
             </div>
 
