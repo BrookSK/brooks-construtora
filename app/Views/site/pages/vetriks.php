@@ -110,7 +110,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             </div>
             <div style="background: white; border: 1px solid var(--brooks-gray-200); border-bottom: 3px solid #3498db; border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
                 <img src="/assets/images/projects/vetriks/CRONOGRAMA.png" alt="Tela Cronograma" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
-                <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">Cronograma</p>
+                <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">Gráfico em Gantt</p>
             </div>
             <div style="background: white; border: 1px solid var(--brooks-gray-200); border-bottom: 3px solid #3498db; border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
                 <img src="/assets/images/projects/vetriks/CALENDÁRIO.png" alt="Tela Calendário" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
