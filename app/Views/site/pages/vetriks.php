@@ -105,19 +105,19 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         
         <div class="grid grid--2 reveal" style="gap: var(--space-xl);">
             <div style="background: white; border: 1px solid var(--brooks-gray-200); border-bottom: 3px solid #3498db; border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                <img src="/assets/images/projects/vetriks/VETRIKS.png" alt="Tela Principal Vetriks" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
+                <img src="/assets/images/projects/vetriks/VETRIKS.jpeg" alt="Tela Principal Vetriks" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
                 <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">Painel Principal</p>
             </div>
             <div style="background: white; border: 1px solid var(--brooks-gray-200); border-bottom: 3px solid #3498db; border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                <img src="/assets/images/projects/vetriks/CRONOGRAMA.png" alt="Tela Cronograma" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
+                <img src="/assets/images/projects/vetriks/CRONOGRAMA.jpeg" alt="Tela Cronograma" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
                 <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">Gráfico em Gantt</p>
             </div>
             <div style="background: white; border: 1px solid var(--brooks-gray-200); border-bottom: 3px solid #3498db; border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                <img src="/assets/images/projects/vetriks/CALENDÁRIO.png" alt="Tela Calendário" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
+                <img src="/assets/images/projects/vetriks/CALENDÁRIO.jpeg" alt="Tela Calendário" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
                 <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">Calendário</p>
             </div>
             <div style="background: white; border: 1px solid var(--brooks-gray-200); border-bottom: 3px solid #3498db; border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                <img src="/assets/images/projects/vetriks/RDO.png" alt="Tela RDO" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
+                <img src="/assets/images/projects/vetriks/RDO.jpeg" alt="Tela RDO" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
                 <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">RDO - Relatório Diário de Obra</p>
             </div>
         </div>
