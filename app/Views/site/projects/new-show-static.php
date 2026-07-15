@@ -102,12 +102,12 @@ $projectsData = [
         'type' => 'Residencial',
         'cover' => '/assets/images/projects/milena-niemeyer/milena-08.jpeg',
         'images' => [
+            '/assets/images/projects/milena-niemeyer/milena-06.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-01.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-02.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-03.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-04.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-05.jpeg',
-            '/assets/images/projects/milena-niemeyer/milena-06.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-07.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-08.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-10.jpeg',
