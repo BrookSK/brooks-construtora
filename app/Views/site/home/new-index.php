@@ -49,7 +49,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     A Brooks Construtora atua há mais de 10 anos no mercado de construção civil de alto padrão em São Paulo. Crescemos através da qualidade, da organização, dos processos e, acima de tudo, das pessoas.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-xl);">
-                    Somos uma das únicas construtoras com setor de tecnologia próprio. Cada erro do campo é corrigido com tecnologia, treinamento e processo. A Brooks não vende apenas obras — vende confiança, previsibilidade e inovação.
+                    Somos uma das únicas construtoras com setor de tecnologia próprio. Cada erro do campo é corrigido com tecnologia, treinamento e processo. A Brooks não vende apenas obras, vende confiança, previsibilidade e inovação.
                 </p>
                 <a href="/sobre" class="btn btn--outline">Conheça nossa história</a>
             </div>
