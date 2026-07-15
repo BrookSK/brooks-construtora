@@ -172,26 +172,14 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <!-- Depoimento em Vídeo -->
 <section class="section">
     <div class="container">
-        <div class="section-header section-header--centered reveal">
-            <span class="label" style="color: #e67e22;">Depoimento</span>
-            <h2 class="headline-section">Quem vive a Academy, conta como é.</h2>
-            <p class="subtitle subtitle--centered">Uma das arquitetas da nossa equipe compartilha sua experiência com a Brooks Academy e o impacto real que a educação dentro do canteiro gera no dia a dia.</p>
-        </div>
-
         <div class="grid grid--2 reveal" style="align-items: center; gap: var(--space-3xl);">
             <!-- Texto -->
             <div>
-                <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-md);">
-                    Neste vídeo, nossa arquiteta conta como o programa transforma a rotina dos colaboradores e como a educação dentro do canteiro impacta diretamente a qualidade das entregas.
+                <span class="label" style="color: #e67e22;">Depoimento</span>
+                <h2 class="headline-subsection" style="margin-bottom: var(--space-lg);">Quem vive a Academy, conta como é.</h2>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8;">
+                    Nossa arquiteta compartilha como a Brooks Academy transforma a rotina dos colaboradores e impacta a qualidade das obras no dia a dia.
                 </p>
-                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    Um relato genuíno de quem acompanha de perto a evolução dos profissionais, vê o crescimento acontecer e acredita que investir em pessoas é o melhor caminho para construir com excelência.
-                </p>
-                <div style="padding: var(--space-lg); background: rgba(243, 156, 18, 0.06); border-left: 3px solid #f39c12; border-radius: 0 var(--radius-md) var(--radius-md) 0;">
-                    <p style="color: var(--brooks-gray-600); line-height: 1.7; font-style: italic; margin: 0;">
-                        "A Academy não é só sobre cursos, é sobre dar uma chance real para quem quer crescer."
-                    </p>
-                </div>
             </div>
 
             <!-- Video Placeholder (vertical) -->
@@ -201,8 +189,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(243, 156, 18, 0.2); border: 2px solid rgba(243, 156, 18, 0.5); display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-lg);">
                         <i data-lucide="play" style="width:32px;height:32px;color:#f39c12;margin-left:4px;"></i>
                     </div>
-                    <p style="color: rgba(255,255,255,0.7); font-size: var(--text-sm); text-align: center; padding: 0 var(--space-xl);">Vídeo em breve</p>
-                    <p style="color: rgba(255,255,255,0.4); font-size: var(--text-xs); text-align: center; padding: 0 var(--space-xl); margin-top: var(--space-sm);">Brooks Academy</p>
+                    <p style="color: rgba(255,255,255,0.7); font-size: var(--text-sm); text-align: center;">Vídeo em breve</p>
                 </div>
             </div>
         </div>
