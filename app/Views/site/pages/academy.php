@@ -134,9 +134,9 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <section class="section">
     <div class="container">
         <div class="grid grid--2 reveal" style="align-items: center; gap: var(--space-3xl);">
-            <div style="background: linear-gradient(160deg, #4a2c0a, #7f5517); border-radius: var(--radius-xl); padding: var(--space-3xl); color: white;">
+            <div style="background: linear-gradient(160deg, #3d2207, #6b4410); border-radius: var(--radius-xl); padding: var(--space-3xl); color: white;">
                 <i data-lucide="heart" style="width:40px;height:40px;color:#f39c12;margin-bottom:var(--space-lg);"></i>
-                <h3 style="font-size: var(--text-2xl); font-weight: 700; margin-bottom: var(--space-md);">Impacto que vai além da obra.</h3>
+                <h3 style="font-size: var(--text-2xl); font-weight: 700; margin-bottom: var(--space-md); color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">Impacto que vai além da obra.</h3>
                 <p style="color: rgba(255,255,255,0.7); line-height: 1.8; margin-bottom: var(--space-lg);">
                     Por mais que o filho do colaborador não deseje seguir o mesmo caminho, o filho do pedreiro não quer ser pedreiro, ainda assim ele tem a chance de fazer um estágio, aprender na prática, e ter acesso à teoria através da bolsa.
                 </p>
