@@ -52,6 +52,7 @@
                     <li><a href="/vetriks">Vetriks</a></li>
                     <li><a href="/forca-estrutural">Força Estrutural</a></li>
                     <li><a href="/academy">Brooks Academy</a></li>
+                    <li><a href="/matterport">Matterport</a></li>
                     <li><a href="https://vetriks.com.br/" target="_blank" rel="noopener">Vetriks App</a></li>
                 </ul>
             </div>

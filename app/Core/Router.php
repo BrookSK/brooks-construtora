@@ -272,6 +272,7 @@ class Router
             'vetriks' => ['HomeController', 'vetriks'],
             'forca-estrutural' => ['HomeController', 'forcaEstrutural'],
             'academy' => ['HomeController', 'academy'],
+            'matterport' => ['HomeController', 'matterport'],
             'politica-privacidade' => ['HomeController', 'politicaPrivacidade'],
             'termos' => ['HomeController', 'termos'],
             'newsletter/subscribe' => ['NewsletterController', 'subscribe'],

@@ -199,7 +199,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <p class="subtitle subtitle--centered" style="color: rgba(255,255,255,0.5);">A Brooks representa hoje um ecossistema completo, formado por empresas que compartilham o mesmo propósito: inovar na construção civil.</p>
         </div>
         
-        <div class="grid grid--3 reveal" style="gap: var(--space-lg);">
+        <div class="grid grid--4 reveal" style="gap: var(--space-lg);">
             <a href="/vetriks" class="eco-card eco-card--vetriks">
                 <span class="eco-card__tag">Tecnologia</span>
                 <h3 class="eco-card__title">Vetriks</h3>
@@ -217,6 +217,12 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <h3 class="eco-card__title">Brooks Academy</h3>
                 <p class="eco-card__text">Escola profissionalizante nos canteiros de obra. Plano de carreira, capacitação e bolsas de engenharia civil EAD.</p>
                 <span class="eco-card__link">Conhecer a Academy <i data-lucide="arrow-right" style="width:16px;height:16px;"></i></span>
+            </a>
+            <a href="/matterport" class="eco-card eco-card--matterport">
+                <span class="eco-card__tag">Tour Virtual 3D</span>
+                <h3 class="eco-card__title">Matterport</h3>
+                <p class="eco-card__text">Gêmeos digitais e tours virtuais 3D de todas as nossas obras. O cliente acompanha cada fase da construção de qualquer lugar.</p>
+                <span class="eco-card__link">Conhecer a Matterport <i data-lucide="arrow-right" style="width:16px;height:16px;"></i></span>
             </a>
         </div>
     </div>

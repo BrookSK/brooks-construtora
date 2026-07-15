@@ -93,6 +93,9 @@
             <li class="header-nav__item">
                 <a href="/academy" class="header-nav__link <?= ($currentPage ?? '') === 'academy' ? 'active' : '' ?>">Brooks Academy</a>
             </li>
+            <li class="header-nav__item">
+                <a href="/matterport" class="header-nav__link <?= ($currentPage ?? '') === 'matterport' ? 'active' : '' ?>">Matterport</a>
+            </li>
             
             <li class="header-nav__item">
                 <a href="/revista" class="header-nav__link <?= ($currentPage ?? '') === 'revista' ? 'active' : '' ?>">Revista</a>
@@ -125,6 +128,7 @@
         <li><a href="/vetriks" class="mobile-nav__link">Vetriks</a></li>
         <li><a href="/forca-estrutural" class="mobile-nav__link">Força Estrutural</a></li>
         <li><a href="/academy" class="mobile-nav__link">Brooks Academy</a></li>
+        <li><a href="/matterport" class="mobile-nav__link">Matterport</a></li>
         <li><a href="/revista" class="mobile-nav__link">Revista</a></li>
         <li><a href="/contato" class="mobile-nav__link">Contato</a></li>
     </ul>
