@@ -119,7 +119,7 @@ $projectsData = [
             '/assets/images/projects/milena-niemeyer/milena-16.jpeg',
         ],
         'videos' => [
-            '/assets/images/projects/milena-niemeyer/Videoh1.mp4',
+            '/assets/images/projects/milena-niemeyer/videoh1.mp4',
             '/assets/images/projects/milena-niemeyer/videoh2.mp4',
             '/assets/images/projects/milena-niemeyer/videoh3.mp4',
         ],
