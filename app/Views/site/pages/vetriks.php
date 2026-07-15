@@ -21,7 +21,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 Sistema integrado que <span style="background: linear-gradient(90deg, #3498db, #2ecc71); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">revoluciona</span> a gestão de obras.
             </h1>
             <p style="font-size: var(--text-lg); color: rgba(255,255,255,0.6); line-height: 1.8; margin-bottom: var(--space-xl);">
-                IA e automação avançada. Criado em 10 anos de campo, forjado na operação, validado por dezenas de construtoras. Economize 180 horas/mês em retrabalho.
+                Criado pela Brooks, e utilizada por diversas outras construtoras. IA e automação avançada. Criado em 10 anos de campo, forjado na operação, validado por dezenas de construtoras. Economize 180 horas/mês em retrabalho.
             </p>
             <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
                 <a href="https://app.vetriks.com.br/auth/register" target="_blank" rel="noopener" class="btn btn--primary btn--lg" style="background: linear-gradient(135deg, #3498db, #2980b9);">Começar agora</a>
@@ -80,13 +80,42 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
+<!-- Telas do Sistema -->
+<section class="section" style="background: var(--brooks-off-white);">
+    <div class="container">
+        <div class="section-header section-header--centered reveal">
+            <span class="label">Conheça as telas</span>
+            <h2 class="headline-section">O sistema por dentro.</h2>
+        </div>
+        
+        <div class="grid grid--2 reveal" style="gap: var(--space-xl);">
+            <div style="background: white; border: 1px solid var(--brooks-gray-200); border-bottom: 3px solid #3498db; border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <img src="/assets/images/projects/vetriks/VETRIKS.jpeg" alt="Tela Principal Vetriks" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
+                <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">Painel Principal</p>
+            </div>
+            <div style="background: white; border: 1px solid var(--brooks-gray-200); border-bottom: 3px solid #3498db; border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <img src="/assets/images/projects/vetriks/CRONOGRAMA.jpeg" alt="Tela Cronograma" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
+                <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">Gráfico em Gantt</p>
+            </div>
+            <div style="background: white; border: 1px solid var(--brooks-gray-200); border-bottom: 3px solid #3498db; border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <img src="/assets/images/projects/vetriks/CALENDÁRIO.jpeg" alt="Tela Calendário" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
+                <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">Calendário</p>
+            </div>
+            <div style="background: white; border: 1px solid var(--brooks-gray-200); border-bottom: 3px solid #3498db; border-radius: var(--radius-lg); overflow: hidden; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <img src="/assets/images/projects/vetriks/RDO.jpeg" alt="Tela RDO" style="width: 100%; height: 280px; object-fit: cover;" loading="lazy">
+                <p style="padding: var(--space-md); margin: 0; color: var(--brooks-gray-600); font-size: var(--text-sm); font-weight: 500;">RDO - Relatório Diário de Obra</p>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Funcionalidades -->
 <section class="section section--gray" id="funcionalidades">
     <div class="container">
         <div class="section-header section-header--centered reveal">
             <span class="label">Funcionalidades</span>
             <h2 class="headline-section">Existe uma forma mais inteligente de construir.</h2>
-            <p class="subtitle subtitle--centered">Sistema vertical, integrado, com IA — tudo em um único lugar.</p>
+            <p class="subtitle subtitle--centered">Sistema vertical, integrado, com IA, tudo em um único lugar.</p>
         </div>
         
         <div style="display: grid; gap: var(--space-3xl);">
@@ -233,6 +262,62 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg); padding: var(--space-xl); text-align: center;">
                         <i data-lucide="trending-up" style="width:32px;height:32px;color:#3498db;margin-bottom:var(--space-sm);"></i>
                         <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.6);">ROI comprovado</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- White Label -->
+<section class="section">
+    <div class="container">
+        <div class="reveal" style="background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); border-radius: var(--radius-xl); padding: var(--space-4xl); position: relative; overflow: hidden;">
+            <!-- Decorative elements -->
+            <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(52, 152, 219, 0.15), transparent 70%); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -30px; left: -30px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(46, 204, 113, 0.1), transparent 70%); border-radius: 50%;"></div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3xl); align-items: center; position: relative; z-index: 1;">
+                <div>
+                    <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: linear-gradient(135deg, rgba(52, 152, 219, 0.2), rgba(46, 204, 113, 0.2)); border: 1px solid rgba(52, 152, 219, 0.3); border-radius: var(--radius-full); margin-bottom: var(--space-lg);">
+                        <i data-lucide="tag" style="width:14px;height:14px;color:#3498db;"></i>
+                        <span style="font-size: 11px; font-weight: 600; color: #3498db; text-transform: uppercase; letter-spacing: 0.08em;">White Label</span>
+                    </div>
+                    <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem); font-weight: 800; color: white; line-height: 1.2; margin-bottom: var(--space-lg);">
+                        Sua construtora com tecnologia própria.
+                    </h2>
+                    <p style="font-size: var(--text-lg); color: rgba(255,255,255,0.7); line-height: 1.8; margin-bottom: var(--space-xl);">
+                        Vendemos a Vetriks como marca própria White Label para outras construtoras. Tenha o sistema completo com a sua marca e sua identidade visual.
+                    </p>
+                    <a href="/contato" class="btn btn--lg" style="background: linear-gradient(135deg, #3498db, #2ecc71); color: white; border: none;">Solicitar proposta White Label</a>
+                </div>
+                <div style="display: grid; gap: var(--space-md);">
+                    <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg);">
+                        <div style="width: 44px; height: 44px; border-radius: var(--radius-full); background: rgba(52, 152, 219, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="palette" style="width:20px;height:20px;color:#3498db;"></i>
+                        </div>
+                        <div>
+                            <p style="font-weight: 600; color: white; font-size: var(--text-sm); margin: 0;">Sua marca, sua identidade</p>
+                            <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.5); margin: 4px 0 0;">Logo, cores e domínio personalizados</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg);">
+                        <div style="width: 44px; height: 44px; border-radius: var(--radius-full); background: rgba(46, 204, 113, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="rocket" style="width:20px;height:20px;color:#2ecc71;"></i>
+                        </div>
+                        <div>
+                            <p style="font-weight: 600; color: white; font-size: var(--text-sm); margin: 0;">Pronto para usar</p>
+                            <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.5); margin: 4px 0 0;">Implantação rápida, sem desenvolvimento</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-lg); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg);">
+                        <div style="width: 44px; height: 44px; border-radius: var(--radius-full); background: rgba(52, 152, 219, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="headphones" style="width:20px;height:20px;color:#3498db;"></i>
+                        </div>
+                        <div>
+                            <p style="font-weight: 600; color: white; font-size: var(--text-sm); margin: 0;">Suporte dedicado</p>
+                            <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.5); margin: 4px 0 0;">Suporte humano</p>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -38,16 +38,25 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <div>
                 <span class="label" style="color: var(--forca-teal);">A Origem</span>
                 <h2 class="headline-section">Tudo o que a Brooks desejou ter e não teve.</h2>
-                <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    No começo da trajetória, os proprietários da Brooks sentiram na pele a falta de apoio. Queriam conversar com alguém que já tivesse passado pelos mesmos percalços da construção civil. Não existia isso.
+                <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    Quando decidimos criar uma tecnologia para a Brooks, o objetivo era resolver um problema real: a gestão de obras em campo. A VÉTRIKS nasceu da rotina, dos desafios e das necessidades de quem vive a construção todos os dias.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    Mas, quando vimos o resultado, entendemos que essa solução não fazia sentido ficar apenas conosco.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    Compartilhar conhecimento sempre foi parte da nossa essência. Afinal, empreender pode ser uma jornada solitária, e nós mesmos gostaríamos de ter encontrado, lá atrás, empresários experientes dispostos a trocar vivências, acertos e aprendizados.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    Foi dessa visão que nasceu o Força Estrutural: um grupo que reúne construtoras para compartilhar experiências, fortalecer o mercado e crescer em conjunto.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8;">
-                    Quando a Brooks se tornou inspiração para outros empresários, seus fundadores decidiram criar o que sempre desejaram: um grupo de apoio mútuo. Assim nasceu o Força Estrutural — onde concorrentes viraram aliados.
+                    No fim, tudo começou com uma faísca. Essa faísca foi a VÉTRIKS. E hoje ela conecta pessoas, empresas e um propósito maior: elevar o nível da construção civil brasileira.
                 </p>
             </div>
             <div style="background: linear-gradient(145deg, var(--forca-ocean), var(--forca-teal)); border-radius: var(--radius-xl); padding: var(--space-3xl); color: white;">
-                <p style="font-size: var(--text-2xl); font-weight: 700; line-height: 1.4; margin-bottom: var(--space-xl);">"Descobrimos que a maior concorrência não eram as outras empresas — era a solidão do empresário."</p>
-                <p style="font-size: var(--text-sm); opacity: 0.7;">— Kauê e Mariana, fundadores</p>
+                <p style="font-size: var(--text-2xl); font-weight: 700; line-height: 1.4; margin-bottom: var(--space-xl);">"Descobrimos que a maior concorrência não eram as outras empresas, era a solidão do empresário."</p>
+                <p style="font-size: var(--text-sm); opacity: 0.7;">Kauê e Mariana, fundadores</p>
             </div>
         </div>
     </div>
@@ -129,11 +138,11 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         
         <div class="counter-grid" style="max-width: 700px; margin: 0 auto;">
             <div class="counter-item">
-                <div class="counter-item__number" style="color: white;" data-counter data-target="30" data-suffix="+">0</div>
-                <div class="counter-item__label" style="color: rgba(255,255,255,0.5);">Empresários ativos</div>
+                <div class="counter-item__number" style="color: white;" data-counter data-target="150" data-suffix="">0</div>
+                <div class="counter-item__label" style="color: rgba(255,255,255,0.5);">Empresários em um grupo seleto</div>
             </div>
             <div class="counter-item">
-                <div class="counter-item__number" style="color: white;" data-counter data-target="12" data-suffix="">0</div>
+                <div class="counter-item__number" style="color: white;" data-counter data-target="7" data-suffix="">0</div>
                 <div class="counter-item__label" style="color: rgba(255,255,255,0.5);">Eventos em 2025</div>
             </div>
             <div class="counter-item">

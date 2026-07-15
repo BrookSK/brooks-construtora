@@ -1,5 +1,5 @@
 <?php
-$pageTitle = 'Brooks Academy — Escola Profissionalizante';
+$pageTitle = 'Brooks Academy, Escola Profissionalizante';
 $pageDescription = 'Brooks Academy - Escola profissionalizante dentro dos canteiros de obra. Plano de carreira, capacitação e bolsas de engenharia civil para colaboradores.';
 $currentPage = 'academy';
 $bodyClass = 'page-academy';
@@ -22,11 +22,11 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     A escola que existe <span style="color: #f39c12;">dentro do canteiro de obras.</span>
                 </h1>
                 <p style="font-size: var(--text-lg); color: rgba(255,255,255,0.65); line-height: 1.8;">
-                    A Brooks Academy oferece plano de carreira, cursos profissionalizantes e bolsas de engenharia civil — tudo dentro dos nossos canteiros de obra de alto padrão.
+                    A Brooks Academy oferece plano de carreira, cursos profissionalizantes e bolsas de engenharia civil, tudo dentro dos nossos canteiros de obra de alto padrão.
                 </p>
             </div>
             <div>
-                <img src="/assets/images/wp/2024/11/IMG_2586-HDR-2-jpg.webp" alt="Canteiro de obras Brooks" style="border-radius: var(--radius-xl); width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.4);" loading="lazy">
+                <img src="/assets/images/container.jpeg" alt="Canteiro de obras Brooks" style="border-radius: var(--radius-xl); width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.4);" loading="lazy">
             </div>
         </div>
     </div>
@@ -35,18 +35,30 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <!-- Por quê? -->
 <section class="section">
     <div class="container">
-        <div class="grid grid--2 reveal" style="align-items: center; gap: var(--space-3xl);">
+        <div class="grid grid--2 reveal" style="align-items: start; gap: var(--space-3xl);">
             <div>
                 <span class="label" style="color: #e67e22;">O propósito</span>
-                <h2 class="headline-section">As pessoas que entram na Brooks, permanecem.</h2>
-                <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    Isso não é por acaso. A Brooks investe em cada colaborador como se fosse o primeiro dia. A Academy é a materialização dessa crença: quem quer crescer, vai encontrar o caminho aqui dentro.
+                <h2 class="headline-section">Construir grandes obras começa por construir grandes profissionais.</h2>
+                <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    Acreditamos que o futuro da construção civil não será definido apenas por novas tecnologias, mas, principalmente, pelas pessoas.
                 </p>
-                <p style="color: var(--brooks-gray-500); line-height: 1.8;">
-                    Nos canteiros de obras de residências de alto padrão, entre paredes sendo erguidas, existe uma escola. Colaboradores que desejam têm acesso a cursos técnicos e profissionalizantes. E os que se destacam, concorrem a bolsas de engenharia civil.
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    Foi com essa visão que nasceu a Brooks Academy: uma escola de aprendizado dentro dos nossos próprios canteiros de obras de alto padrão. Um espaço onde conhecimento, prática e oportunidade caminham juntos.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    Aqui, nossos colaboradores podem evoluir profissionalmente e, mais do que isso, abrir portas para a próxima geração. Se desejarem, seus filhos, já em idade de ingressar no mercado de trabalho, também podem conhecer os bastidores da construção, aprender na prática e construir uma trajetória profissional sólida, muitas vezes diferente da de seus pais, mas sustentada pelos mesmos valores de dedicação, excelência e respeito.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    Vivemos um momento em que a escassez de mão de obra qualificada é uma realidade, e todos os indicadores apontam que esse desafio tende a crescer nos próximos anos. Em vez de apenas observar esse cenário, decidimos fazer parte da solução.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-sm);">
+                    A Brooks Academy nasce para formar profissionais, valorizar talentos, gerar oportunidades e preservar um dos maiores patrimônios da nossa empresa: as pessoas que constroem, todos os dias, a qualidade que entregamos aos nossos clientes.
+                </p>
+                <p style="color: var(--brooks-gray-600); line-height: 1.8; font-weight: 500; font-style: italic;">
+                    Porque construir grandes obras começa, antes de tudo, por construir grandes profissionais.
                 </p>
             </div>
-            <div>
+            <div style="position: sticky; top: 120px; margin-top: 80px;">
                 <div style="background: linear-gradient(135deg, #fef3e2, #fde8c8); border-radius: var(--radius-xl); padding: var(--space-2xl);">
                     <div style="display: grid; gap: var(--space-xl);">
                         <div style="display: flex; align-items: center; gap: var(--space-md);">
@@ -122,11 +134,11 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <section class="section">
     <div class="container">
         <div class="grid grid--2 reveal" style="align-items: center; gap: var(--space-3xl);">
-            <div style="background: linear-gradient(160deg, #4a2c0a, #7f5517); border-radius: var(--radius-xl); padding: var(--space-3xl); color: white;">
+            <div style="background: linear-gradient(160deg, #3d2207, #6b4410); border-radius: var(--radius-xl); padding: var(--space-3xl); color: white;">
                 <i data-lucide="heart" style="width:40px;height:40px;color:#f39c12;margin-bottom:var(--space-lg);"></i>
-                <h3 style="font-size: var(--text-2xl); font-weight: 700; margin-bottom: var(--space-md);">Impacto que vai além da obra.</h3>
+                <h3 style="font-size: var(--text-2xl); font-weight: 700; margin-bottom: var(--space-md); color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">Impacto que vai além da obra.</h3>
                 <p style="color: rgba(255,255,255,0.7); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    Por mais que o filho do colaborador não deseje seguir o mesmo caminho — o filho do pedreiro não quer ser pedreiro — ainda assim ele tem a chance de fazer um estágio, aprender na prática, e ter acesso à teoria através da bolsa.
+                    Por mais que o filho do colaborador não deseje seguir o mesmo caminho, o filho do pedreiro não quer ser pedreiro, ainda assim ele tem a chance de fazer um estágio, aprender na prática, e ter acesso à teoria através da bolsa.
                 </p>
                 <p style="color: rgba(255,255,255,0.5); font-size: var(--text-sm); line-height: 1.7;">
                     A Brooks Academy é nosso compromisso com a transformação social através do trabalho digno e da educação acessível.
@@ -137,20 +149,53 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div style="display: grid; gap: var(--space-lg); margin-top: var(--space-lg);">
                     <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
                         <i data-lucide="check-circle" style="width:20px;height:20px;color:#f39c12;flex-shrink:0;margin-top:2px;"></i>
-                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Toda pessoa merece crescer</strong> — independente de onde começou. A porta está aberta.</p>
+                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Toda pessoa merece crescer</strong>, independente de onde começou. A porta está aberta.</p>
                     </div>
                     <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
                         <i data-lucide="check-circle" style="width:20px;height:20px;color:#f39c12;flex-shrink:0;margin-top:2px;"></i>
-                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Prática e teoria juntas</strong> — aprender construindo, com suporte acadêmico para quem quer ir além.</p>
+                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Prática e teoria juntas</strong>, aprender construindo, com suporte acadêmico para quem quer ir além.</p>
                     </div>
                     <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
                         <i data-lucide="check-circle" style="width:20px;height:20px;color:#f39c12;flex-shrink:0;margin-top:2px;"></i>
-                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Cultura forte retém talentos</strong> — as pessoas ficam na Brooks porque compartilham do mesmo propósito.</p>
+                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Cultura forte retém talentos</strong>, as pessoas ficam na Brooks porque compartilham do mesmo propósito.</p>
                     </div>
                     <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
                         <i data-lucide="check-circle" style="width:20px;height:20px;color:#f39c12;flex-shrink:0;margin-top:2px;"></i>
-                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Investir em pessoas é investir no futuro</strong> — da construção civil brasileira como um todo.</p>
+                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-600); line-height: 1.6;"><strong>Investir em pessoas é investir no futuro</strong>, da construção civil brasileira como um todo.</p>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Depoimento em Vídeo -->
+<section class="section">
+    <div class="container">
+        <div class="grid grid--2 reveal" style="align-items: center; gap: var(--space-3xl);">
+            <!-- Texto -->
+            <div>
+                <span class="label" style="color: #e67e22;">Depoimento</span>
+                <h2 class="headline-subsection" style="margin-bottom: var(--space-lg);">Quem vive a Academy, conta como é.</h2>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-md);">
+                    Nossa arquiteta compartilha como a Brooks Academy transforma a rotina dos colaboradores e impacta a qualidade das obras no dia a dia.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-md);">
+                    Desde que o programa começou, percebemos uma mudança real no engajamento das equipes. Os colaboradores passaram a enxergar a obra não apenas como um trabalho, mas como um caminho de crescimento pessoal e profissional.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8;">
+                    É um depoimento genuíno de quem acompanha de perto o impacto da educação dentro do canteiro, e de como isso reflete diretamente na qualidade do que entregamos aos nossos clientes.
+                </p>
+            </div>
+
+            <!-- Video Placeholder (vertical) -->
+            <div style="display: flex; justify-content: center;">
+                <div style="width: 300px; max-width: 100%; aspect-ratio: 9/16; background: linear-gradient(160deg, #3d2207, #6b4410); border-radius: var(--radius-xl); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+                    <div style="position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(243, 156, 18, 0.2), transparent 70%); border-radius: 50%;"></div>
+                    <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(243, 156, 18, 0.2); border: 2px solid rgba(243, 156, 18, 0.5); display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-lg);">
+                        <i data-lucide="play" style="width:32px;height:32px;color:#f39c12;margin-left:4px;"></i>
+                    </div>
+                    <p style="color: rgba(255,255,255,0.7); font-size: var(--text-sm); text-align: center;">Vídeo em breve</p>
                 </div>
             </div>
         </div>

@@ -49,7 +49,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     A Brooks Construtora atua há mais de 10 anos no mercado de construção civil de alto padrão em São Paulo. Crescemos através da qualidade, da organização, dos processos e, acima de tudo, das pessoas.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-xl);">
-                    Somos uma das únicas construtoras com setor de tecnologia próprio. Cada erro do campo é corrigido com tecnologia, treinamento e processo. A Brooks não vende apenas obras — vende confiança, previsibilidade e inovação.
+                    Somos uma das únicas construtoras com setor de tecnologia próprio. Cada erro do campo é corrigido com tecnologia, treinamento e processo. A Brooks não vende apenas obras, vende confiança, previsibilidade e inovação.
                 </p>
                 <a href="/sobre" class="btn btn--outline">Conheça nossa história</a>
             </div>
@@ -199,24 +199,65 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <p class="subtitle subtitle--centered" style="color: rgba(255,255,255,0.5);">A Brooks representa hoje um ecossistema completo, formado por empresas que compartilham o mesmo propósito: inovar na construção civil.</p>
         </div>
         
-        <div class="grid grid--3 reveal" style="gap: var(--space-lg);">
-            <a href="/vetriks" class="eco-card eco-card--vetriks">
-                <span class="eco-card__tag">Tecnologia</span>
-                <h3 class="eco-card__title">Vetriks</h3>
-                <p class="eco-card__text">Sistema de gestão de obra completo, vertical e integrado. Criado no campo, nas dores reais da construção. Com IA e interface moderna.</p>
-                <span class="eco-card__link">Conhecer a Vetriks <i data-lucide="arrow-right" style="width:16px;height:16px;"></i></span>
+        <div class="reveal" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);">
+            <!-- Vetriks -->
+            <a href="/vetriks" style="display: block; padding: var(--space-2xl); border-radius: var(--radius-xl); background: linear-gradient(135deg, rgba(52, 152, 219, 0.08), rgba(52, 152, 219, 0.02)); border: 1px solid rgba(52, 152, 219, 0.15); transition: all 0.3s; text-decoration: none;">
+                <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-lg);">
+                    <div style="width: 48px; height: 48px; border-radius: var(--radius-lg); background: rgba(52, 152, 219, 0.15); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="cpu" style="width:24px;height:24px;color:#3498db;"></i>
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #3498db;">Tecnologia</span>
+                        <h3 style="font-size: var(--text-xl); font-weight: 700; color: white; margin: 0;">Tecnologia Vetriks</h3>
+                    </div>
+                </div>
+                <p style="color: rgba(255,255,255,0.6); line-height: 1.7; font-size: var(--text-sm); margin-bottom: var(--space-lg);">Sistema de gestão de obra completo, vertical e integrado. Criado no campo, nas dores reais da construção. Com IA e interface moderna.</p>
+                <span style="font-size: var(--text-sm); font-weight: 600; color: #3498db; display: flex; align-items: center; gap: 6px;">Conhecer a Vetriks <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
             </a>
-            <a href="/forca-estrutural" class="eco-card eco-card--forca">
-                <span class="eco-card__tag">Comunidade</span>
-                <h3 class="eco-card__title">Força Estrutural</h3>
-                <p class="eco-card__text">Grupo de empresários da construção civil. Networking, eventos, conhecimento e parcerias com os melhores do mercado.</p>
-                <span class="eco-card__link">Conhecer o grupo <i data-lucide="arrow-right" style="width:16px;height:16px;"></i></span>
+
+            <!-- Força Estrutural -->
+            <a href="/forca-estrutural" style="display: block; padding: var(--space-2xl); border-radius: var(--radius-xl); background: linear-gradient(135deg, rgba(46, 134, 171, 0.08), rgba(46, 134, 171, 0.02)); border: 1px solid rgba(46, 134, 171, 0.15); transition: all 0.3s; text-decoration: none;">
+                <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-lg);">
+                    <div style="width: 48px; height: 48px; border-radius: var(--radius-lg); background: rgba(46, 134, 171, 0.15); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="users" style="width:24px;height:24px;color:#2e86ab;"></i>
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #2e86ab;">Comunidade</span>
+                        <h3 style="font-size: var(--text-xl); font-weight: 700; color: white; margin: 0;">Força Estrutural</h3>
+                    </div>
+                </div>
+                <p style="color: rgba(255,255,255,0.6); line-height: 1.7; font-size: var(--text-sm); margin-bottom: var(--space-lg);">Grupo de empresários da construção civil. Networking, eventos, conhecimento e parcerias com os melhores do mercado.</p>
+                <span style="font-size: var(--text-sm); font-weight: 600; color: #2e86ab; display: flex; align-items: center; gap: 6px;">Conhecer o grupo <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
             </a>
-            <a href="/academy" class="eco-card eco-card--academy">
-                <span class="eco-card__tag">Educação</span>
-                <h3 class="eco-card__title">Brooks Academy</h3>
-                <p class="eco-card__text">Escola profissionalizante nos canteiros de obra. Plano de carreira, capacitação e bolsas de engenharia civil EAD.</p>
-                <span class="eco-card__link">Conhecer a Academy <i data-lucide="arrow-right" style="width:16px;height:16px;"></i></span>
+
+            <!-- Brooks Academy -->
+            <a href="/academy" style="display: block; padding: var(--space-2xl); border-radius: var(--radius-xl); background: linear-gradient(135deg, rgba(243, 156, 18, 0.08), rgba(243, 156, 18, 0.02)); border: 1px solid rgba(243, 156, 18, 0.15); transition: all 0.3s; text-decoration: none;">
+                <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-lg);">
+                    <div style="width: 48px; height: 48px; border-radius: var(--radius-lg); background: rgba(243, 156, 18, 0.15); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="graduation-cap" style="width:24px;height:24px;color:#f39c12;"></i>
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #f39c12;">Educação</span>
+                        <h3 style="font-size: var(--text-xl); font-weight: 700; color: white; margin: 0;">Brooks Academy</h3>
+                    </div>
+                </div>
+                <p style="color: rgba(255,255,255,0.6); line-height: 1.7; font-size: var(--text-sm); margin-bottom: var(--space-lg);">Escola profissionalizante nos canteiros de obra. Plano de carreira, capacitação e bolsas de engenharia civil EAD.</p>
+                <span style="font-size: var(--text-sm); font-weight: 600; color: #f39c12; display: flex; align-items: center; gap: 6px;">Conhecer a Academy <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+            </a>
+
+            <!-- Matterport -->
+            <a href="/matterport" style="display: block; padding: var(--space-2xl); border-radius: var(--radius-xl); background: linear-gradient(135deg, rgba(123, 97, 255, 0.08), rgba(123, 97, 255, 0.02)); border: 1px solid rgba(123, 97, 255, 0.15); transition: all 0.3s; text-decoration: none;">
+                <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-lg);">
+                    <div style="width: 48px; height: 48px; border-radius: var(--radius-lg); background: rgba(123, 97, 255, 0.15); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="view" style="width:24px;height:24px;color:#7b61ff;"></i>
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #7b61ff;">Tour Virtual 3D</span>
+                        <h3 style="font-size: var(--text-xl); font-weight: 700; color: white; margin: 0;">Matterport</h3>
+                    </div>
+                </div>
+                <p style="color: rgba(255,255,255,0.6); line-height: 1.7; font-size: var(--text-sm); margin-bottom: var(--space-lg);">Gêmeos digitais e tours virtuais 3D de todas as nossas obras. O cliente acompanha cada fase da construção de qualquer lugar.</p>
+                <span style="font-size: var(--text-sm); font-weight: 600; color: #7b61ff; display: flex; align-items: center; gap: 6px;">Conhecer a Matterport <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
             </a>
         </div>
     </div>
@@ -227,13 +268,14 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     <div class="container">
         <div class="grid grid--2" style="align-items: center; gap: var(--space-4xl);">
             <div class="reveal-left">
-                <img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-104-scaled.webp" alt="Equipe Brooks Construtora" style="border-radius: var(--radius-xl); width: 100%;" loading="lazy">
+                <img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-104-scaled.webp" alt="Norah Arquiteta parceira da Brooks" style="border-radius: var(--radius-xl); width: 100%;" loading="lazy">
+                <p style="text-align: center; font-size: var(--text-sm); color: var(--brooks-gray-500); margin-top: var(--space-sm);">Norah Arquiteta parceira da Brooks</p>
             </div>
             <div class="reveal-right">
                 <span class="label">Cultura</span>
                 <h2 class="headline-section">As pessoas entram e permanecem.</h2>
                 <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    Na Brooks, a cultura forte é o que mantém a empresa em pé e crescente. As pessoas que entram demonstram ter o mesmo propósito, os mesmos valores — e por isso ficam, crescem e evoluem.
+                    Na Brooks, a cultura forte é o que mantém a empresa em pé e crescente. As pessoas que entram demonstram ter o mesmo propósito, os mesmos valores, e por isso ficam, crescem e evoluem.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-xl);">
                     Sabemos que a estratégia muda a cada fase, a cada oscilação do mercado. Mas o propósito e a cultura não mudam. Porque são reflexo do que a alma vive.

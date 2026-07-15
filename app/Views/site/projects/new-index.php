@@ -12,7 +12,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <div class="reveal">
             <span class="label" style="color: var(--brooks-blue-accent);">Portfólio</span>
             <h1 class="headline-hero" style="color: white; max-width: 600px;">Nossos Projetos</h1>
-            <p class="subtitle" style="color: rgba(255,255,255,0.6); margin-top: var(--space-lg);">Reformas completas de alto padrão em imóveis desocupados. Residenciais, corporativos e outros. Conheça nossos trabalhos realizados.</p>
+            <p class="subtitle" style="color: rgba(255,255,255,0.6); margin-top: var(--space-lg);">Construção de residências alto e altíssimo padrão. Reformas de imóveis residenciais e corporativo acima de 200 metros.</p>
         </div>
     </div>
 </section>
@@ -94,6 +94,28 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Jóia Bergamo 2</h3>
                         <p class="project-card__subtitle">Reforma completa de apartamento · 270m²</p>
+                        <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+                    </div>
+                </div>
+            </a>
+            
+            <a href="/projeto/projeto-milena-niemeyer-moema" class="project-card">
+                <img src="/assets/images/projects/milena-niemeyer/milena-08.jpeg" alt="Projeto Milena Niemeyer | Moema" class="project-card__image" loading="lazy">
+                <div class="project-card__overlay">
+                    <div class="project-card__content">
+                        <h3 class="project-card__title">Projeto Milena Niemeyer</h3>
+                        <p class="project-card__subtitle">Reforma completa de apartamento · 500m² · Moema</p>
+                        <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+                    </div>
+                </div>
+            </a>
+            
+            <a href="/projeto/projeto-katty-kaitazoff-alphaville" class="project-card">
+                <img src="/assets/images/projects/katty-kaitazoff/katty-01.png" alt="Projeto Katty Kaitazoff | Alphaville" class="project-card__image" loading="lazy">
+                <div class="project-card__overlay">
+                    <div class="project-card__content">
+                        <h3 class="project-card__title">Projeto Katty Kaitazoff</h3>
+                        <p class="project-card__subtitle">Reforma completa de residência · Alphaville</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>

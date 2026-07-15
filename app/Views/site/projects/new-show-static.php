@@ -93,6 +93,74 @@ $projectsData = [
         'cover' => '/assets/images/wp/2024/11/escritorio-itaim-jpeg.webp',
         'images' => ['/assets/images/wp/2024/11/escritorio-itaim-jpeg.webp'],
     ],
+    'projeto-milena-niemeyer-moema' => [
+        'title' => 'Projeto Milena Niemeyer | Moema',
+        'subtitle' => 'Reforma completa de apartamento · 500m²',
+        'description' => 'Reforma completa de um apartamento de 500 m². Um projeto clássico, onde cada detalhe carrega história, identidade e alma. Uma arquitetura que atravessa o tempo e traduz a essência de quem vive ali. Brooks Construtora. Engenharia para projetos que deixam legado.',
+        'location' => 'Moema, São Paulo',
+        'area' => '500m²',
+        'type' => 'Residencial',
+        'cover' => '/assets/images/projects/milena-niemeyer/milena-08.jpeg',
+        'images' => [
+            '/assets/images/projects/milena-niemeyer/milena-06.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-01.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-02.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-03.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-04.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-05.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-07.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-08.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-10.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-11.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-12.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-13.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-14.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-15.jpeg',
+            '/assets/images/projects/milena-niemeyer/milena-16.jpeg',
+        ],
+        'videos' => [
+            '/assets/images/projects/milena-niemeyer/videoh1.mp4',
+            '/assets/images/projects/milena-niemeyer/videoh2.mp4',
+            '/assets/images/projects/milena-niemeyer/videoh3.mp4',
+        ],
+    ],
+    'projeto-katty-kaitazoff-alphaville' => [
+        'title' => 'Projeto Katty Kaitazoff | Alphaville',
+        'subtitle' => 'Reforma completa de residência · Alphaville',
+        'description' => 'Uma reforma completa. Desafiadora. Estruturalmente precisa. A retirada de 18 pilares de sustentação transformou por completo esta residência e abriu espaço para uma nova casa, uma nova história e um novo sonho realizado. Engenharia, técnica e execução para tornar possível aquilo que um dia foi apenas imaginado. Brooks Construtora. Engenharia para projetos que deixam legado.',
+        'location' => 'Alphaville, SP',
+        'area' => 'Residência',
+        'type' => 'Residencial',
+        'cover' => '/assets/images/projects/katty-kaitazoff/katty-01.png',
+        'images' => [
+            '/assets/images/projects/katty-kaitazoff/katty-02.png',
+            '/assets/images/projects/katty-kaitazoff/katty-03.png',
+            '/assets/images/projects/katty-kaitazoff/katty-04.png',
+            '/assets/images/projects/katty-kaitazoff/katty-06.png',
+            '/assets/images/projects/katty-kaitazoff/katty-07.png',
+            '/assets/images/projects/katty-kaitazoff/katty-08.png',
+            '/assets/images/projects/katty-kaitazoff/katty-10.png',
+            '/assets/images/projects/katty-kaitazoff/katty-11.png',
+            '/assets/images/projects/katty-kaitazoff/katty-12.png',
+            '/assets/images/projects/katty-kaitazoff/katty-14.png',
+            '/assets/images/projects/katty-kaitazoff/katty-15.png',
+            '/assets/images/projects/katty-kaitazoff/katty-16.png',
+            '/assets/images/projects/katty-kaitazoff/katty-18.png',
+            '/assets/images/projects/katty-kaitazoff/katty-19.png',
+            '/assets/images/projects/katty-kaitazoff/katty-20.png',
+            '/assets/images/projects/katty-kaitazoff/katty-22.png',
+            '/assets/images/projects/katty-kaitazoff/katty-23.png',
+            '/assets/images/projects/katty-kaitazoff/katty-24.png',
+            '/assets/images/projects/katty-kaitazoff/katty-26.png',
+            '/assets/images/projects/katty-kaitazoff/katty-27.png',
+            '/assets/images/projects/katty-kaitazoff/katty-28.png',
+        ],
+        'videos' => [
+            '/assets/images/projects/katty-kaitazoff/katty-video03.mp4',
+            '/assets/images/projects/katty-kaitazoff/katty-video02.mp4',
+            '/assets/images/projects/katty-kaitazoff/katty-video01.mp4',
+        ],
+    ],
 ];
 
 $project = $projectsData[$projectSlug] ?? null;
@@ -171,6 +239,19 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <h2 class="headline-subsection">Registros do projeto</h2>
         </div>
         
+        <?php if (!empty($project['videos'])): ?>
+        <div class="grid grid--2" style="gap: var(--space-md); margin-bottom: var(--space-xl);">
+            <?php foreach ($project['videos'] as $i => $video): ?>
+                <div style="border-radius: var(--radius-lg); overflow: hidden; <?= ($i === count($project['videos']) - 1 && count($project['videos']) % 2 !== 0) ? 'grid-column: span 2;' : '' ?>">
+                    <video controls playsinline style="width: 100%; height: 400px; object-fit: cover; background: #000;">
+                        <source src="<?= $video ?>" type="video/mp4">
+                        Seu navegador não suporta vídeos.
+                    </video>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
         <div class="grid grid--2" style="gap: var(--space-md);">
             <?php foreach ($project['images'] as $i => $img): ?>
                 <div style="border-radius: var(--radius-lg); overflow: hidden; <?= $i === 0 ? 'grid-column: span 2;' : '' ?>">

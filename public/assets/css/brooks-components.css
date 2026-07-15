@@ -582,6 +582,11 @@
 }
 .eco-card--academy::before { background: linear-gradient(145deg, rgba(243, 156, 18, 0.1), transparent); }
 
+.eco-card--matterport {
+    background: linear-gradient(145deg, #1a1a3e, #2d1b69);
+}
+.eco-card--matterport::before { background: linear-gradient(145deg, rgba(123, 97, 255, 0.15), transparent); }
+
 .eco-card__tag {
     display: inline-block;
     font-size: var(--text-xs);

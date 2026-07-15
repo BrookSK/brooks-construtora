@@ -20,7 +20,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <!-- Timeline / History -->
 <section class="section">
     <div class="container">
-        <div class="grid grid--2" style="align-items: center; gap: var(--space-4xl);">
+        <div class="grid grid--2" style="display: grid; grid-template-columns: 1fr 1fr; align-items: start; gap: var(--space-4xl);">
             <div class="reveal-left">
                 <span class="label">A Trajetória</span>
                 <h2 class="headline-section">Nascemos da vontade de fazer diferente.</h2>
@@ -31,11 +31,11 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     Crescemos através da qualidade, da organização, dos processos, da tecnologia e das pessoas. Cada ano investindo, nichando setores, descentralizando com processos definidos, colocando profissionais qualificados à frente de cada área.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8;">
-                    Mesmo diante de incertezas como a pandemia, nunca deixamos de investir. A Brooks continuou se fortalecendo de forma assertiva e entusiasta na construção de alto padrão — sempre com o cliente em primeiro lugar, mas também com seus colaboradores e com o meio ambiente.
+                    Mesmo diante de incertezas como a pandemia, nunca deixamos de investir. A Brooks continuou se fortalecendo de forma assertiva e entusiasta na construção de alto padrão, sempre com o cliente em primeiro lugar, mas também com seus colaboradores e com o meio ambiente.
                 </p>
             </div>
             <div class="reveal-right">
-                <img src="/assets/images/wp/2024/11/IMG_2546-HDR-1-jpg.webp" alt="Projeto Brooks Construtora" style="border-radius: var(--radius-xl); width: 100%; box-shadow: var(--shadow-2xl);" loading="lazy">
+                <img src="/assets/images/projects/katty-kaitazoff/katty-02.png" alt="Projeto Brooks Construtora" style="border-radius: var(--radius-xl); width: 100%; height: 420px; object-fit: cover; box-shadow: var(--shadow-2xl);" loading="lazy">
             </div>
         </div>
     </div>
@@ -47,19 +47,19 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <div class="section-header section-header--centered reveal">
             <span class="label">Nossos Pilares</span>
             <h2 class="headline-section">Base. Propósito. Estratégia.</h2>
-            <p class="subtitle subtitle--centered">A estratégia muda a cada fase, a cada oscilação do mercado. Mas o propósito e a cultura não mudam — porque são reflexo do que a alma vive.</p>
+            <p class="subtitle subtitle--centered">A estratégia muda a cada fase, a cada oscilação do mercado. Mas o propósito e a cultura não mudam, porque são reflexo do que a alma vive.</p>
         </div>
         
         <div class="grid grid--3 reveal">
             <div class="card" style="text-align: center;">
                 <div class="card__icon" style="margin: 0 auto var(--space-lg);"><i data-lucide="layers"></i></div>
                 <h3 class="card__title">Base</h3>
-                <p class="card__text">Pessoas, processos e tecnologia integrados em um só propósito. A estrutura que sustenta tudo: Financeiro, CFO, Tecnologia, Jurídico, Operacional, Qualidade e Planejamento.</p>
+                <p class="card__text">Pessoas, processos e tecnologia integrados em um só propósito. A estrutura que sustenta tudo: Vamos começar pelo CEO o diretor de operações, fusão com empresas que possuem os mesmos valores e cultura, Financeiro, CFO, Tecnologia, CTO Jurídico, Operacional, Setor de Qualidade e Planejamento, entre outros.</p>
             </div>
             <div class="card" style="text-align: center;">
                 <div class="card__icon" style="margin: 0 auto var(--space-lg);"><i data-lucide="compass"></i></div>
                 <h3 class="card__title">Propósito</h3>
-                <p class="card__text">Transformar a construção civil através da excelência, inovação e cuidado genuíno com as pessoas. O propósito não muda — ele é quem somos.</p>
+                <p class="card__text">Transformar a construção civil através da excelência, inovação e cuidado genuíno com as pessoas. O propósito não muda, ele é quem somos.</p>
             </div>
             <div class="card" style="text-align: center;">
                 <div class="card__icon" style="margin: 0 auto var(--space-lg);"><i data-lucide="rocket"></i></div>
@@ -78,14 +78,15 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <span class="label">Cultura</span>
                 <h2 class="headline-section">As pessoas entram e permanecem.</h2>
                 <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    Na Brooks, a cultura forte é o que mantém a empresa em pé e crescente, com portas abertas. As pessoas que entram demonstram ter o mesmo propósito, os mesmos valores — e compartilham da mesma cultura.
+                    Na Brooks, a cultura forte é o que mantém a empresa em pé e crescente, com portas abertas, as pessoas que entram demonstram ter o mesmo propósito, os mesmos valores, e compartilham da mesma cultura.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8;">
-                    Sabemos que erros acontecem. Muitos aconteceram na nossa trajetória. Mas todos foram corrigidos com velocidade, com processo, com tecnologia e com pessoas. O erro pode acontecer — mas não deve se repetir. Essa é a mentalidade que nos move.
+                    Sabemos que erros acontecem, muitos aconteceram na nossa trajetória, mas todos foram corrigidos com velocidade, com processo, com tecnologia e com pessoas. O erro pode acontecer, mas não deve se repetir, essa é a mentalidade que nos move.
                 </p>
             </div>
             <div class="reveal-right" style="order: 1;">
-                <img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-104-scaled.webp" alt="Equipe Brooks" style="border-radius: var(--radius-xl); width: 100%;" loading="lazy">
+                <img src="/assets/images/wp/2024/11/NorahCarneiro_Av.Prof_.AscendinoReis_RafaelRenzo-104-scaled.webp" alt="Norah Arquiteta parceira da Brooks" style="border-radius: var(--radius-xl); width: 100%;" loading="lazy">
+                <p style="text-align: center; font-size: var(--text-sm); color: var(--brooks-gray-500); margin-top: var(--space-sm);">Norah Arquiteta parceira da Brooks</p>
             </div>
         </div>
     </div>
@@ -145,7 +146,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <span class="label">Sustentabilidade</span>
                 <h2 class="headline-section">Membro do GBC Brasil.</h2>
                 <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-lg);">
-                    A Brooks faz parte do GBC Brasil — Green Building Council, o Conselho Verde do Brasil. Construção consciente, responsabilidade ambiental e boas práticas fazem parte do nosso DNA.
+                    A Brooks faz parte do GBC Brasil, Green Building Council, o Conselho Verde do Brasil. Construção consciente, responsabilidade ambiental e boas práticas fazem parte do nosso DNA.
                 </p>
                 <p style="color: var(--brooks-gray-500); line-height: 1.8;">
                     Acreditamos que construir com qualidade significa também respeitar o meio ambiente e as próximas gerações.
