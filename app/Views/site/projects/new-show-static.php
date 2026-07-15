@@ -118,6 +118,10 @@ $projectsData = [
             '/assets/images/projects/milena-niemeyer/milena-15.jpeg',
             '/assets/images/projects/milena-niemeyer/milena-16.jpeg',
         ],
+        'videos' => [
+            '/assets/images/projects/milena-niemeyer/milena-video01.mp4',
+            '/assets/images/projects/milena-niemeyer/milena-video02.mp4',
+        ],
     ],
     'projeto-katty-kaitazoff-alphaville' => [
         'title' => 'Projeto Katty Kaitazoff | Alphaville',
