@@ -232,7 +232,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <div class="grid grid--2 reveal" style="align-items: center; gap: var(--space-3xl);">
             <div style="background: linear-gradient(160deg, #2d1b69, #1a1a3e); border-radius: var(--radius-xl); padding: var(--space-3xl); color: white;">
                 <i data-lucide="diamond" style="width:40px;height:40px;color:#7b61ff;margin-bottom:var(--space-lg);"></i>
-                <h3 style="font-size: var(--text-2xl); font-weight: 700; margin-bottom: var(--space-md);">Um diferencial que poucos oferecem.</h3>
+                <h3 style="font-size: var(--text-2xl); font-weight: 700; margin-bottom: var(--space-md); color: white;">Um diferencial que poucos oferecem.</h3>
                 <p style="color: rgba(255,255,255,0.7); line-height: 1.8; margin-bottom: var(--space-lg);">
                     Enquanto a maioria das construtoras ainda trabalha com fotos planas e relatórios genéricos, a Brooks oferece ao cliente uma imersão completa em sua obra. A Matterport eleva o padrão de comunicação e confiança entre construtora e cliente.
                 </p>
