@@ -198,8 +198,8 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <p style="color: rgba(255,255,255,0.5); line-height: 1.8; margin-bottom: var(--space-lg);">
                     O resultado é um acervo digital completo da evolução do imóvel, do esqueleto estrutural ao acabamento final. Uma garantia visual que fica registrada para sempre.
                 </p>
-                <a href="/projetos" class="btn btn--lg" style="background: rgba(123, 97, 255, 0.2); border: 1px solid rgba(123, 97, 255, 0.4); color: white;">
-                    <i data-lucide="building-2" style="width:18px;height:18px;"></i> Ver projetos com Matterport
+                <a href="/contato" class="btn btn--lg" style="background: rgba(123, 97, 255, 0.2); border: 1px solid rgba(123, 97, 255, 0.4); color: white;">
+                    <i data-lucide="mail" style="width:18px;height:18px;"></i> Solicitar orçamento
                 </a>
             </div>
             <div style="text-align: center;">
