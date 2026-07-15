@@ -169,6 +169,45 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
+<!-- Depoimento em Vídeo -->
+<section class="section" style="background: linear-gradient(160deg, #fef9f0, #fff5e6);">
+    <div class="container">
+        <div class="grid grid--2 reveal" style="align-items: center; gap: var(--space-4xl);">
+            <!-- Video Placeholder (vertical) -->
+            <div style="display: flex; justify-content: center;">
+                <div style="width: 320px; max-width: 100%; aspect-ratio: 9/16; background: linear-gradient(160deg, #3d2207, #6b4410); border-radius: var(--radius-xl); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+                    <!-- Decorative circle -->
+                    <div style="position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(243, 156, 18, 0.2), transparent 70%); border-radius: 50%;"></div>
+                    <!-- Play button -->
+                    <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(243, 156, 18, 0.2); border: 2px solid rgba(243, 156, 18, 0.5); display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-lg);">
+                        <i data-lucide="play" style="width:32px;height:32px;color:#f39c12;margin-left:4px;"></i>
+                    </div>
+                    <p style="color: rgba(255,255,255,0.7); font-size: var(--text-sm); text-align: center; padding: 0 var(--space-xl);">Vídeo em breve</p>
+                    <p style="color: rgba(255,255,255,0.4); font-size: var(--text-xs); text-align: center; padding: 0 var(--space-xl); margin-top: var(--space-sm);">Brooks Academy</p>
+                </div>
+            </div>
+
+            <!-- Texto sobre o vídeo -->
+            <div>
+                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(243, 156, 18, 0.1); border: 1px solid rgba(243, 156, 18, 0.2); border-radius: var(--radius-full); margin-bottom: var(--space-lg);">
+                    <i data-lucide="video" style="width:14px;height:14px;color:#f39c12;"></i>
+                    <span style="font-size: 11px; font-weight: 600; color: #e67e22; text-transform: uppercase; letter-spacing: 0.08em;">Depoimento</span>
+                </div>
+                <h2 class="headline-subsection" style="margin-bottom: var(--space-lg);">Quem vive a Academy, conta como é.</h2>
+                <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-md);">
+                    Neste vídeo, uma das arquitetas da nossa equipe compartilha sua experiência com a Brooks Academy, como o programa transforma a rotina dos colaboradores e o impacto real que a educação dentro do canteiro gera no dia a dia das obras.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-md);">
+                    Um relato genuíno de quem acompanha de perto a evolução dos profissionais, vê o crescimento acontecer e acredita que investir em pessoas é o melhor caminho para construir com excelência.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; font-style: italic;">
+                    "A Academy não é só sobre cursos, é sobre dar uma chance real para quem quer crescer."
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- CTA -->
 <section class="section section--gray" style="padding: var(--space-4xl) 0;">
     <div class="container text-center reveal">
