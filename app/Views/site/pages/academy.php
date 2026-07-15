@@ -177,8 +177,14 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <div>
                 <span class="label" style="color: #e67e22;">Depoimento</span>
                 <h2 class="headline-subsection" style="margin-bottom: var(--space-lg);">Quem vive a Academy, conta como é.</h2>
-                <p style="color: var(--brooks-gray-500); line-height: 1.8;">
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-md);">
                     Nossa arquiteta compartilha como a Brooks Academy transforma a rotina dos colaboradores e impacta a qualidade das obras no dia a dia.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8; margin-bottom: var(--space-md);">
+                    Desde que o programa começou, percebemos uma mudança real no engajamento das equipes. Os colaboradores passaram a enxergar a obra não apenas como um trabalho, mas como um caminho de crescimento pessoal e profissional.
+                </p>
+                <p style="color: var(--brooks-gray-500); line-height: 1.8;">
+                    É um depoimento genuíno de quem acompanha de perto o impacto da educação dentro do canteiro — e de como isso reflete diretamente na qualidade do que entregamos aos nossos clientes.
                 </p>
             </div>
 
