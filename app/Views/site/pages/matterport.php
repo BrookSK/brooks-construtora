@@ -245,15 +245,15 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div style="display: grid; gap: var(--space-lg); margin-top: var(--space-lg);">
                     <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
                         <i data-lucide="check-circle" style="width:20px;height:20px;color:#7b61ff;flex-shrink:0;margin-top:2px;"></i>
-                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-700); line-height: 1.6;"><strong style="color: var(--brooks-navy);">Acompanhamento sem visitas</strong> — veja a obra evoluir sem sair de casa ou do escritório.</p>
+                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-700); line-height: 1.6;"><strong style="color: var(--brooks-navy);">Acompanhamento sem visitas</strong>, veja a obra evoluir sem sair de casa ou do escritório.</p>
                     </div>
                     <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
                         <i data-lucide="check-circle" style="width:20px;height:20px;color:#7b61ff;flex-shrink:0;margin-top:2px;"></i>
-                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-700); line-height: 1.6;"><strong style="color: var(--brooks-navy);">Confiança e segurança</strong> — cada etapa documentada com precisão milimétrica em 3D.</p>
+                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-700); line-height: 1.6;"><strong style="color: var(--brooks-navy);">Confiança e segurança</strong>, cada etapa documentada com precisão milimétrica em 3D.</p>
                     </div>
                     <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
                         <i data-lucide="check-circle" style="width:20px;height:20px;color:#7b61ff;flex-shrink:0;margin-top:2px;"></i>
-                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-700); line-height: 1.6;"><strong style="color: var(--brooks-navy);">Compartilhe com quem quiser</strong> — envie o link para familiares, arquitetos ou designers de interiores.</p>
+                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-700); line-height: 1.6;"><strong style="color: var(--brooks-navy);">Compartilhe com quem quiser</strong>, envie o link para familiares, arquitetos ou designers de interiores.</p>
                     </div>
                     <div style="display: flex; gap: var(--space-md); align-items: flex-start;">
                         <i data-lucide="check-circle" style="width:20px;height:20px;color:#7b61ff;flex-shrink:0;margin-top:2px;"></i>
