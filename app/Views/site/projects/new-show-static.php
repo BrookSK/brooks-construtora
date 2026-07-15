@@ -121,6 +121,7 @@ $projectsData = [
         'videos' => [
             '/assets/images/projects/milena-niemeyer/milena-video01.mp4',
             '/assets/images/projects/milena-niemeyer/milena-video02.mp4',
+            '/assets/images/projects/milena-niemeyer/milena-video03.mp4',
         ],
     ],
     'projeto-katty-kaitazoff-alphaville' => [
