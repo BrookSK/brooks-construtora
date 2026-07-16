@@ -66,7 +66,8 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <h2 class="headline-section">O que nos sustenta.</h2>
         </div>
         
-        <div class="reveal" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md);">
+        <style>.pilares-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); } @media (max-width: 768px) { .pilares-grid { grid-template-columns: repeat(2, 1fr); } }</style>
+        <div class="reveal pilares-grid">
             <div style="background: white; border-radius: var(--radius-lg); padding: var(--space-xl); text-align: center; border: 1px solid var(--brooks-gray-200);">
                 <div style="width: 48px; height: 48px; border-radius: var(--radius-md); background: #111827; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-md); color: #d4af37;">
                     <i data-lucide="crosshair" style="width:22px;height:22px;"></i>
@@ -178,7 +179,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         </div>
         
         <div class="reveal" style="max-width: 1000px; margin: 0 auto; border-radius: var(--radius-xl); overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
-            <img src="/assets/images/cultura/manifesto-cultura.jpg" alt="Manifesto de Cultura Brooks Construtora" style="width: 100%; height: auto; display: block;" loading="lazy">
+            <img src="/assets/images/cultura/manifesto-cultura.jpeg" alt="Manifesto de Cultura Brooks Construtora" style="width: 100%; height: auto; display: block;" loading="lazy">
         </div>
     </div>
 </section>
