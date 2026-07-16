@@ -323,6 +323,12 @@ class Router
             'distribuicao-terceiros/buscar' => ['EpiController', 'searchWorkers'],
             'historico-de-epi' => ['EpiController', 'history'],
 
+            // Checklist de Limpeza
+            'checklist-limpeza' => ['CleaningChecklistController', 'index'],
+            'checklist-limpeza/novo' => ['CleaningChecklistController', 'create'],
+            'checklist-limpeza/salvar' => ['CleaningChecklistController', 'store'],
+            'checklist-limpeza/ver' => ['CleaningChecklistController', 'show'],
+
             // Lista de Presença
             'lista-de-presenca' => ['PresenceController', 'index'],
             'lista-de-presenca/buscar-prestador' => ['PresenceController', 'searchProviders'],
