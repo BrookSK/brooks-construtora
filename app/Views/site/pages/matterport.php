@@ -265,6 +265,29 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
+<!-- Tours Virtuais -->
+<section class="section">
+    <div class="container">
+        <div class="section-header section-header--centered reveal">
+            <span class="label" style="color: #7b61ff;">Tours Virtuais</span>
+            <h2 class="headline-section">Navegue pelos nossos projetos em 3D.</h2>
+            <p class="subtitle subtitle--centered">Clique em um dos tours abaixo e explore nossos projetos como se estivesse dentro da obra.</p>
+        </div>
+        
+        <div class="reveal" style="display: flex; gap: var(--space-lg); justify-content: center; flex-wrap: wrap; margin-top: var(--space-xl);">
+            <a href="https://discover.matterport.com/space/kVTh35mWgjR" target="_blank" rel="noopener noreferrer" class="btn btn--lg" style="background: linear-gradient(135deg, #7b61ff, #5a3fd4); color: white; display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="rotate-3d" style="width:18px;height:18px;"></i> Tour Virtual 1
+            </a>
+            <a href="https://discover.matterport.com/space/tUk5LhVhaZM" target="_blank" rel="noopener noreferrer" class="btn btn--lg" style="background: linear-gradient(135deg, #6a4fd6, #4a2fb2); color: white; display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="rotate-3d" style="width:18px;height:18px;"></i> Tour Virtual 2
+            </a>
+            <a href="https://discover.matterport.com/space/qTgNv6b16gp" target="_blank" rel="noopener noreferrer" class="btn btn--lg" style="background: linear-gradient(135deg, #5a3fd4, #3d2a99); color: white; display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="rotate-3d" style="width:18px;height:18px;"></i> Tour Virtual 3
+            </a>
+        </div>
+    </div>
+</section>
+
 <!-- CTA -->
 <section class="section section--gray" style="padding: var(--space-4xl) 0;">
     <div class="container text-center reveal">
