@@ -308,17 +308,17 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 </section>
 
 <!-- Compromisso -->
-<section style="background: #111827; color: white; padding: var(--space-3xl) 0;">
+<section style="background: #111827; color: white; padding: var(--space-5xl) 0;">
     <div class="container">
-        <div class="reveal" style="text-align: center; max-width: 650px; margin: 0 auto;">
-            <i data-lucide="heart" style="width:28px;height:28px;color:#d4af37;margin-bottom:var(--space-lg);"></i>
-            <p style="font-size: var(--text-lg); font-weight: 700; color: white; margin-bottom: var(--space-md); line-height: 1.4;">
+        <div class="reveal" style="text-align: center; max-width: 750px; margin: 0 auto;">
+            <i data-lucide="heart" style="width:44px;height:44px;color:#d4af37;margin-bottom:var(--space-xl);"></i>
+            <p style="font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; color: white; margin-bottom: var(--space-xl); line-height: 1.3;">
                 Se você está aqui, existe um motivo que te fez ficar.
             </p>
-            <p style="color: rgba(255,255,255,0.5); line-height: 1.8; font-size: var(--text-sm);">
+            <p style="color: rgba(255,255,255,0.6); line-height: 1.9; font-size: var(--text-lg); margin-bottom: var(--space-xl);">
                 A partir de agora, você carrega uma responsabilidade: proteger nossa cultura, honrar nossos valores e contribuir para que cada obra represente o mais alto padrão de qualidade, organização e respeito pelas pessoas.
             </p>
-            <p style="color: #d4af37; font-weight: 600; margin-top: var(--space-lg); font-size: var(--text-sm);">
+            <p style="color: #d4af37; font-weight: 600; font-size: var(--text-lg);">
                 Construir vai muito além de erguer estruturas: é deixar um legado de excelência.
             </p>
         </div>
