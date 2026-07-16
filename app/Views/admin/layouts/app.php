@@ -263,6 +263,14 @@
                     <i class="bi bi-clock-history"></i> Histórico de EPI
                 </a>
             </li>
+            <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
+                <small class="text-uppercase px-3 opacity-50" style="font-size:0.65rem; letter-spacing:1px;">Limpeza</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= in_array($currentPage ?? '', ['cleaning_index', 'cleaning_create']) ? 'active' : '' ?>" href="/checklist-limpeza">
+                    <i class="bi bi-clipboard2-check"></i> Checklist de Limpeza
+                </a>
+            </li>
             <?php endif; ?>
 
             <?php if (\App\Core\Auth::hasPermission('orders')): ?>
