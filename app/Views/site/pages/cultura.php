@@ -225,6 +225,30 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
+<!-- Documento N.U.C.L.E.O -->
+<section class="section" style="background: #f5f5f5;">
+    <div class="container">
+        <div class="reveal" style="max-width: 700px; margin: 0 auto;">
+            <div style="background: white; border-radius: var(--radius-lg); border: 1px solid #e5e7eb; padding: var(--space-xl); display: flex; align-items: center; gap: var(--space-xl); flex-wrap: wrap;">
+                <!-- Ícone PDF -->
+                <div style="width: 64px; height: 64px; border-radius: var(--radius-md); background: #111827; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i data-lucide="file-text" style="width:28px;height:28px;color:#d4af37;"></i>
+                </div>
+                <!-- Info -->
+                <div style="flex: 1; min-width: 200px;">
+                    <p style="font-size: var(--text-sm); font-weight: 700; color: #111827; margin-bottom: 4px;">Documento de Processo Operacional</p>
+                    <p style="font-size: 12px; color: #6b7280; margin-bottom: 2px;">N.U.C.L.E.O — PRO-NUCLEO-001 · Versão 1.0</p>
+                    <p style="font-size: 11px; color: #9ca3af;">VETRIKS | Acervo de Processos · Uso Interno</p>
+                </div>
+                <!-- Botão -->
+                <a href="/assets/docs/Brooks-NUCLEO-Processo-VETRIKS.pdf" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: #111827; color: #d4af37; font-size: 12px; font-weight: 600; border-radius: var(--radius-md); text-decoration: none; white-space: nowrap;">
+                    <i data-lucide="download" style="width:14px;height:14px;"></i> Baixar PDF
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Cenários -->
 <section class="section" id="nucleo-processo">
     <div class="container">
