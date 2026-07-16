@@ -308,14 +308,14 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 </section>
 
 <!-- Compromisso -->
-<section style="background: #111827; color: white; padding: var(--space-5xl) 0;">
+<section style="background: #f5f5f5; padding: var(--space-5xl) 0;">
     <div class="container">
         <div class="reveal" style="text-align: center; max-width: 750px; margin: 0 auto;">
             <i data-lucide="heart" style="width:44px;height:44px;color:#d4af37;margin-bottom:var(--space-xl);"></i>
-            <p style="font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; color: white; margin-bottom: var(--space-xl); line-height: 1.3;">
+            <p style="font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; color: #111827; margin-bottom: var(--space-xl); line-height: 1.3;">
                 Se você está aqui, existe um motivo que te fez ficar.
             </p>
-            <p style="color: rgba(255,255,255,0.6); line-height: 1.9; font-size: var(--text-lg); margin-bottom: var(--space-xl);">
+            <p style="color: #6b7280; line-height: 1.9; font-size: var(--text-lg); margin-bottom: var(--space-xl);">
                 A partir de agora, você carrega uma responsabilidade: proteger nossa cultura, honrar nossos valores e contribuir para que cada obra represente o mais alto padrão de qualidade, organização e respeito pelas pessoas.
             </p>
             <p style="color: #d4af37; font-weight: 600; font-size: var(--text-lg);">
