@@ -161,8 +161,22 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         </div>
         
         <div class="reveal" style="max-width: 880px; margin: 0 auto;">
-            <div style="border-radius: 16px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.5);">
-                <img src="/assets/images/cultura/manifesto-cultura.jpeg" alt="Manifesto de Cultura Brooks Construtora" style="width: 100%; height: auto; display: block;" loading="lazy">
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(212,175,55,0.12); border-radius: 16px; padding: 24px; position: relative; overflow: hidden;">
+                <!-- Glow top -->
+                <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 50%; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,55,0.4), transparent);"></div>
+                <!-- Badge -->
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <div style="display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.2); border-radius: var(--radius-full);">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background: #d4af37;"></span>
+                        <span style="font-size: 10px; font-weight: 600; color: #d4af37; text-transform: uppercase; letter-spacing: 0.1em;">Documento Oficial</span>
+                    </div>
+                </div>
+                <!-- Imagem -->
+                <div style="border-radius: 10px; overflow: hidden;">
+                    <img src="/assets/images/cultura/manifesto-cultura.jpeg" alt="Manifesto de Cultura Brooks Construtora" style="width: 100%; height: auto; display: block;" loading="lazy">
+                </div>
+                <!-- Glow bottom -->
+                <div style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 30%; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,55,0.3), transparent);"></div>
             </div>
         </div>
     </div>
