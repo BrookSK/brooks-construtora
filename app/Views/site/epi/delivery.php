@@ -183,7 +183,7 @@ $user = $user ?? \App\Core\Auth::user();
         clearTimeout(timer);
         if (term.length < 1) { hide(); return; }
         timer = setTimeout(() => {
-            fetch('<?= $searchAction ?>?q=' + encodeURIComponent(term))
+            fetch('<?= $searchAction ?>?q=' + encodeURIComponent(term) + '&recipient_type=<?= $recipientType ?>')
                 .then(r => r.json())
                 .then(d => {
                     const workers = d.workers || [];
