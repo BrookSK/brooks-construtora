@@ -23,7 +23,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     Seus olhos dentro da obra, <span style="color: #7b61ff;">a qualquer momento.</span>
                 </h1>
                 <p style="font-size: var(--text-lg); color: rgba(255,255,255,0.65); line-height: 1.8; margin-bottom: var(--space-xl);">
-                    A Brooks utiliza a tecnologia Matterport para criar gêmeos digitais de todos os seus projetos. Tours virtuais 3D completos que permitem ao cliente acompanhar cada etapa da obra com total transparência, de qualquer lugar do mundo.
+                    A Brooks possui equipamento próprio de captura Matterport e cria gêmeos digitais de todos os seus projetos. Tours virtuais 3D completos que permitem ao cliente acompanhar cada etapa da obra com total transparência, de qualquer lugar do mundo.
                 </p>
                 <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
                     <a href="/projetos" class="btn btn--lg" style="background: linear-gradient(135deg, #7b61ff, #5a3fd4); color: white;">Ver nossos projetos</a>
