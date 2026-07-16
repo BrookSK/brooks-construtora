@@ -54,7 +54,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <div class="card" style="text-align: center;">
                 <div class="card__icon" style="margin: 0 auto var(--space-lg);"><i data-lucide="layers"></i></div>
                 <h3 class="card__title">Base</h3>
-                <p class="card__text" style="margin-bottom: var(--space-sm);">A excelência não nasce por acaso — ela é construída sobre uma base sólida de pessoas, processos, tecnologia e governança.</p>
+                <p class="card__text" style="margin-bottom: var(--space-sm);">A excelência não nasce por acaso, ela é construída sobre uma base sólida de pessoas, processos, tecnologia e governança.</p>
                 <p class="card__text" style="margin-bottom: var(--space-sm);">Na Brooks, cada departamento atua de forma integrada, compartilhando a mesma cultura, os mesmos valores e um único objetivo: <strong>transformar projetos complexos em obras executadas com previsibilidade, eficiência e qualidade absoluta.</strong></p>
                 <p class="card__text">É essa estrutura que sustenta cada decisão e cada entrega.</p>
             </div>
