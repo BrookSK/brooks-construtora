@@ -7,7 +7,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 ?>
 
 <style>
-.cultura-hero { padding-top: calc(var(--header-height) + var(--space-4xl)); padding-bottom: var(--space-5xl); background: linear-gradient(160deg, #0c0c0c 0%, #1a1a1a 50%, #0c0c0c 100%); position: relative; overflow: hidden; }
+.cultura-hero { padding-top: calc(var(--header-height) + var(--space-4xl)); padding-bottom: var(--space-5xl); background: linear-gradient(160deg, #0a0a14 0%, #111827 50%, #1e293b 100%); position: relative; overflow: hidden; }
 .cultura-hero::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse at 30% 20%, rgba(212,175,55,0.04) 0%, transparent 60%); }
 .gold-accent { color: #d4af37; }
 .gold-gradient { background: linear-gradient(135deg, #d4af37, #f5d76e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -15,8 +15,8 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 @media (max-width: 768px) { .pilares-grid { grid-template-columns: repeat(2, 1fr); } }
 .pilar-card { background: #fafafa; border-radius: var(--radius-lg); padding: var(--space-lg); text-align: center; border: 1px solid #e5e7eb; transition: transform 0.2s, box-shadow 0.2s; }
 .pilar-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
-.pilar-icon { width: 44px; height: 44px; border-radius: 10px; background: #111; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-sm); color: #d4af37; }
-.dark-section { background: #0c0c0c; color: white; }
+.pilar-icon { width: 44px; height: 44px; border-radius: 10px; background: #111827; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-sm); color: #d4af37; }
+.dark-section { background: #111827; color: white; }
 .etapa-item { display: flex; gap: var(--space-md); align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-md); padding: 14px 18px; transition: border-color 0.2s; }
 .etapa-item:hover { border-color: rgba(212,175,55,0.3); }
 .etapa-num { width: 32px; height: 32px; border-radius: var(--radius-full); background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); color: #d4af37; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; flex-shrink: 0; }
@@ -39,7 +39,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 Na Brooks Construtora, acreditamos que grandes obras são consequência de uma cultura forte. Antes de construir residências, construímos pessoas, processos e padrões capazes de transformar a construção civil.
             </p>
             <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
-                <a href="#nucleo" class="btn btn--lg" style="background: #d4af37; color: #0c0c0c; font-weight: 700; border: none;">Conheça o N.U.C.L.E.O</a>
+                <a href="#nucleo" class="btn btn--lg" style="background: #d4af37; color: #111827; font-weight: 700; border: none;">Conheça o N.U.C.L.E.O</a>
                 <a href="#manifesto" class="btn btn--lg" style="background: transparent; border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7);">Ver Manifesto</a>
             </div>
         </div>
@@ -181,7 +181,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     O N.U.C.L.E.O é o departamento de inteligência pré-construtiva da Brooks. Uma mesa de engenheiros especializados que atua antes do primeiro tijolo ser assentado, garantindo que cada projeto nasça viável, otimizado e previsível.
                 </p>
                 <p style="color: rgba(255,255,255,0.35); line-height: 1.7; font-style: italic; margin-bottom: var(--space-lg); font-size: var(--text-sm);">"Onde o sonho encontra a viabilidade antes do primeiro traço."</p>
-                <a href="#nucleo-processo" class="btn btn--lg" style="background: #d4af37; color: #0c0c0c; font-weight: 700; border: none;">Ver processo completo</a>
+                <a href="#nucleo-processo" class="btn btn--lg" style="background: #d4af37; color: #111827; font-weight: 700; border: none;">Ver processo completo</a>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
                 <div class="nucleo-card">
@@ -220,21 +220,21 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <div class="grid grid--3 reveal" style="gap: var(--space-lg);">
             <div style="background: white; border-radius: var(--radius-lg); padding: var(--space-xl); border: 1px solid #e5e7eb; border-left: 3px solid #d4af37;">
                 <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
-                    <span style="width: 28px; height: 28px; border-radius: var(--radius-full); background: #111; color: #d4af37; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px;">A</span>
+                    <span style="width: 28px; height: 28px; border-radius: var(--radius-full); background: #111827; color: #d4af37; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px;">A</span>
                     <h3 style="font-weight: 700; font-size: var(--text-sm); color: #111;">Pré-Aquisição</h3>
                 </div>
                 <p style="font-size: var(--text-xs); color: #6b7280; line-height: 1.7;">Cliente ainda não adquiriu o terreno. O N.U.C.L.E.O analisa topografia, viabilidade construtiva, restrições legais e estima custos antes da compra.</p>
             </div>
             <div style="background: white; border-radius: var(--radius-lg); padding: var(--space-xl); border: 1px solid #e5e7eb; border-left: 3px solid #d4af37;">
                 <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
-                    <span style="width: 28px; height: 28px; border-radius: var(--radius-full); background: #111; color: #d4af37; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px;">B</span>
+                    <span style="width: 28px; height: 28px; border-radius: var(--radius-full); background: #111827; color: #d4af37; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px;">B</span>
                     <h3 style="font-weight: 700; font-size: var(--text-sm); color: #111;">Pré-Projeto</h3>
                 </div>
                 <p style="font-size: var(--text-xs); color: #6b7280; line-height: 1.7;">Terreno adquirido, projeto ainda não iniciado. Alinha com o arquiteto condicionantes técnicas, sistema construtivo e premissas financeiras.</p>
             </div>
             <div style="background: white; border-radius: var(--radius-lg); padding: var(--space-xl); border: 1px solid #e5e7eb; border-left: 3px solid #d4af37;">
                 <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
-                    <span style="width: 28px; height: 28px; border-radius: var(--radius-full); background: #111; color: #d4af37; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px;">C</span>
+                    <span style="width: 28px; height: 28px; border-radius: var(--radius-full); background: #111827; color: #d4af37; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px;">C</span>
                     <h3 style="font-weight: 700; font-size: var(--text-sm); color: #111;">Pré-Orçamento</h3>
                 </div>
                 <p style="font-size: var(--text-xs); color: #6b7280; line-height: 1.7;">Projeto já elaborado. Revisão técnica, compatibilização, análise estrutural, riscos e custos ocultos antes do orçamento executivo.</p>
@@ -282,7 +282,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div><p style="font-weight: 600; color: white; font-size: 13px;">Parecer Técnico N.U.C.L.E.O</p><p style="font-size: 11px; color: rgba(255,255,255,0.4);">Diretrizes, riscos e estimativa financeira</p></div>
             </div>
             <div class="etapa-item" style="border-color: rgba(212,175,55,0.3);">
-                <span class="etapa-num" style="background: #d4af37; color: #0c0c0c; border-color: #d4af37;">08</span>
+                <span class="etapa-num" style="background: #d4af37; color: #111827; border-color: #d4af37;">08</span>
                 <div><p style="font-weight: 600; color: white; font-size: 13px;">Encaminhamento para Orçamento</p><p style="font-size: 11px; color: rgba(255,255,255,0.4);">Pacote completo com precisão e previsibilidade</p></div>
             </div>
         </div>
@@ -306,7 +306,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 </section>
 
 <!-- Compromisso -->
-<section style="background: #0c0c0c; color: white; padding: var(--space-3xl) 0;">
+<section style="background: #111827; color: white; padding: var(--space-3xl) 0;">
     <div class="container">
         <div class="reveal" style="text-align: center; max-width: 650px; margin: 0 auto;">
             <i data-lucide="heart" style="width:28px;height:28px;color:#d4af37;margin-bottom:var(--space-lg);"></i>
