@@ -170,15 +170,15 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 </section>
 
 <!-- Manifesto Visual (imagem) -->
-<section class="section" id="manifesto">
+<section class="section" id="manifesto" style="background: #111827; padding: var(--space-4xl) 0;">
     <div class="container">
         <div class="section-header section-header--centered reveal">
             <span class="label" style="color: #d4af37;">Manifesto</span>
-            <h2 class="headline-section">Nosso Manifesto de Cultura.</h2>
-            <p class="subtitle subtitle--centered">O documento que guia cada decisão, cada obra e cada pessoa dentro da Brooks.</p>
+            <h2 class="headline-section" style="color: white;">Nosso Manifesto de Cultura.</h2>
+            <p class="subtitle subtitle--centered" style="color: rgba(255,255,255,0.5);">O documento que guia cada decisão, cada obra e cada pessoa dentro da Brooks.</p>
         </div>
         
-        <div class="reveal" style="max-width: 1000px; margin: 0 auto; border-radius: var(--radius-xl); overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+        <div class="reveal" style="max-width: 900px; margin: 0 auto; border-radius: var(--radius-xl); overflow: hidden; border: 1px solid rgba(212, 175, 55, 0.2); box-shadow: 0 25px 60px -12px rgba(0,0,0,0.5);">
             <img src="/assets/images/cultura/manifesto-cultura.jpeg" alt="Manifesto de Cultura Brooks Construtora" style="width: 100%; height: auto; display: block;" loading="lazy">
         </div>
     </div>
