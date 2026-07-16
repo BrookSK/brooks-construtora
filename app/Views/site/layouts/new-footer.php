@@ -39,6 +39,7 @@
                 <h4 class="footer-col__title">Institucional</h4>
                 <ul class="footer-col__list">
                     <li><a href="/sobre">Sobre a Brooks</a></li>
+                    <li><a href="/cultura">Cultura</a></li>
                     <li><a href="/projetos">Projetos</a></li>
                     <li><a href="/revista">Revista Digital</a></li>
                     <li><a href="/contato">Contato</a></li>
