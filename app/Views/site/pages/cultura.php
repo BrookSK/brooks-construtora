@@ -85,42 +85,42 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <div class="reveal pilares-grid">
             <div class="pilar-card">
                 <div class="pilar-icon"><i data-lucide="crosshair" style="width:20px;height:20px;"></i></div>
-                <h4 style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 4px;">Tudo Tem Propósito</h4>
+                <h4 style="font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 4px;">Tudo Tem Propósito</h4>
                 <p style="font-size: 11px; color: #6b7280; line-height: 1.5;">Nada é por acaso. Tudo comunica construção.</p>
             </div>
             <div class="pilar-card">
                 <div class="pilar-icon"><i data-lucide="heart" style="width:20px;height:20px;"></i></div>
-                <h4 style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 4px;">Deus no Centro</h4>
+                <h4 style="font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 4px;">Deus no Centro</h4>
                 <p style="font-size: 11px; color: #6b7280; line-height: 1.5;">Ele é a base, direção e sustentação da Brooks.</p>
             </div>
             <div class="pilar-card">
                 <div class="pilar-icon"><i data-lucide="users" style="width:20px;height:20px;"></i></div>
-                <h4 style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 4px;">Nós Parceiros</h4>
+                <h4 style="font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 4px;">Nós Parceiros</h4>
                 <p style="font-size: 11px; color: #6b7280; line-height: 1.5;">Honramos cada pessoa que constrói conosco.</p>
             </div>
             <div class="pilar-card">
                 <div class="pilar-icon"><i data-lucide="target" style="width:20px;height:20px;"></i></div>
-                <h4 style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 4px;">O Que Vendemos</h4>
+                <h4 style="font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 4px;">O Que Vendemos</h4>
                 <p style="font-size: 11px; color: #6b7280; line-height: 1.5;">Previsibilidade, controle, tempo e clareza.</p>
             </div>
             <div class="pilar-card">
                 <div class="pilar-icon"><i data-lucide="alert-triangle" style="width:20px;height:20px;"></i></div>
-                <h4 style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 4px;">Sobre Erro</h4>
+                <h4 style="font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 4px;">Sobre Erro</h4>
                 <p style="font-size: 11px; color: #6b7280; line-height: 1.5;">Rápidos na correção. Jamais recorrentes.</p>
             </div>
             <div class="pilar-card">
                 <div class="pilar-icon"><i data-lucide="settings" style="width:20px;height:20px;"></i></div>
-                <h4 style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 4px;">Gestão Brooks</h4>
+                <h4 style="font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 4px;">Gestão Brooks</h4>
                 <p style="font-size: 11px; color: #6b7280; line-height: 1.5;">Método e rastreabilidade acima do improviso.</p>
             </div>
             <div class="pilar-card">
                 <div class="pilar-icon"><i data-lucide="monitor" style="width:20px;height:20px;"></i></div>
-                <h4 style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 4px;">Tecnologia</h4>
+                <h4 style="font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 4px;">Tecnologia</h4>
                 <p style="font-size: 11px; color: #6b7280; line-height: 1.5;">Não é estética. É estrutura operacional.</p>
             </div>
             <div class="pilar-card">
                 <div class="pilar-icon"><i data-lucide="check-circle" style="width:20px;height:20px;"></i></div>
-                <h4 style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 4px;">Vétriks</h4>
+                <h4 style="font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 4px;">Vétriks</h4>
                 <p style="font-size: 11px; color: #6b7280; line-height: 1.5;">O padrão que sustenta cultura e operação.</p>
             </div>
         </div>
@@ -130,7 +130,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <!-- Limpeza e Organização - Card escuro isolado em fundo claro -->
 <section class="section">
     <div class="container">
-        <div class="reveal" style="background: #111; border-radius: var(--radius-xl); padding: var(--space-3xl); text-align: center; max-width: 900px; margin: 0 auto;">
+        <div class="reveal" style="background: #111827; border-radius: var(--radius-xl); padding: var(--space-3xl); text-align: center; max-width: 900px; margin: 0 auto;">
             <div style="display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px; background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.2); border-radius: var(--radius-full); margin-bottom: var(--space-lg);">
                 <i data-lucide="sparkles" style="width:14px;height:14px;color:#d4af37;"></i>
                 <span style="font-size: 10px; font-weight: 600; color: #d4af37; text-transform: uppercase; letter-spacing: 0.08em;">Pilar Fundamental</span>
@@ -221,21 +221,21 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <div style="background: white; border-radius: var(--radius-lg); padding: var(--space-xl); border: 1px solid #e5e7eb; border-left: 3px solid #d4af37;">
                 <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
                     <span style="width: 28px; height: 28px; border-radius: var(--radius-full); background: #111827; color: #d4af37; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px;">A</span>
-                    <h3 style="font-weight: 700; font-size: var(--text-sm); color: #111;">Pré-Aquisição</h3>
+                    <h3 style="font-weight: 700; font-size: var(--text-sm); color: #111827;">Pré-Aquisição</h3>
                 </div>
                 <p style="font-size: var(--text-xs); color: #6b7280; line-height: 1.7;">Cliente ainda não adquiriu o terreno. O N.U.C.L.E.O analisa topografia, viabilidade construtiva, restrições legais e estima custos antes da compra.</p>
             </div>
             <div style="background: white; border-radius: var(--radius-lg); padding: var(--space-xl); border: 1px solid #e5e7eb; border-left: 3px solid #d4af37;">
                 <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
                     <span style="width: 28px; height: 28px; border-radius: var(--radius-full); background: #111827; color: #d4af37; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px;">B</span>
-                    <h3 style="font-weight: 700; font-size: var(--text-sm); color: #111;">Pré-Projeto</h3>
+                    <h3 style="font-weight: 700; font-size: var(--text-sm); color: #111827;">Pré-Projeto</h3>
                 </div>
                 <p style="font-size: var(--text-xs); color: #6b7280; line-height: 1.7;">Terreno adquirido, projeto ainda não iniciado. Alinha com o arquiteto condicionantes técnicas, sistema construtivo e premissas financeiras.</p>
             </div>
             <div style="background: white; border-radius: var(--radius-lg); padding: var(--space-xl); border: 1px solid #e5e7eb; border-left: 3px solid #d4af37;">
                 <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
                     <span style="width: 28px; height: 28px; border-radius: var(--radius-full); background: #111827; color: #d4af37; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px;">C</span>
-                    <h3 style="font-weight: 700; font-size: var(--text-sm); color: #111;">Pré-Orçamento</h3>
+                    <h3 style="font-weight: 700; font-size: var(--text-sm); color: #111827;">Pré-Orçamento</h3>
                 </div>
                 <p style="font-size: var(--text-xs); color: #6b7280; line-height: 1.7;">Projeto já elaborado. Revisão técnica, compatibilização, análise estrutural, riscos e custos ocultos antes do orçamento executivo.</p>
             </div>
@@ -298,7 +298,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <p style="font-size: var(--text-lg); color: var(--brooks-gray-600); line-height: 1.8; margin-bottom: var(--space-lg);">
                 Construímos confiança, relacionamentos, processos e um novo padrão para a construção civil. Trabalhamos diariamente para ser referência em gestão, tecnologia, organização e excelência operacional.
             </p>
-            <p style="font-size: var(--text-xl); font-weight: 800; color: #111;">
+            <p style="font-size: var(--text-xl); font-weight: 800; color: #111827;">
                 Brooks não é apenas uma empresa. É um padrão de engenharia.
             </p>
         </div>
