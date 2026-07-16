@@ -126,8 +126,8 @@ $projectsData = [
     ],
     'projeto-katty-kaitazoff-alphaville' => [
         'title' => 'Projeto Katty Kaitazoff | Alphaville',
-        'subtitle' => 'Reforma completa de residência · Alphaville',
-        'description' => 'Uma reforma completa. Desafiadora. Estruturalmente precisa. A retirada de 18 pilares de sustentação transformou por completo esta residência e abriu espaço para uma nova casa, uma nova história e um novo sonho realizado. Engenharia, técnica e execução para tornar possível aquilo que um dia foi apenas imaginado. Brooks Construtora. Engenharia para projetos que deixam legado.',
+        'subtitle' => 'Construção completa de residência · Alphaville',
+        'description' => 'Uma construção completa. Desafiadora. Estruturalmente precisa. A retirada de 18 pilares de sustentação transformou por completo esta residência e abriu espaço para uma nova casa, uma nova história e um novo sonho realizado. Engenharia, técnica e execução para tornar possível aquilo que um dia foi apenas imaginado. Brooks Construtora. Engenharia para projetos que deixam legado.',
         'location' => 'Alphaville, SP',
         'area' => 'Residência',
         'type' => 'Residencial',
