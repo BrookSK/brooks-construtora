@@ -160,22 +160,10 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             <p class="subtitle subtitle--centered" style="color: rgba(255,255,255,0.4);">O documento que guia cada decisão, cada obra e cada pessoa dentro da Brooks.</p>
         </div>
         
-        <div class="reveal" style="max-width: 860px; margin: 0 auto; position: relative; padding: var(--space-xl);">
-            <!-- Moldura decorativa -->
-            <div style="position: absolute; inset: 0; border-radius: 20px; border: 1px solid rgba(212,175,55,0.2); pointer-events: none;"></div>
-            <div style="position: absolute; top: -1px; left: 50%; transform: translateX(-50%); width: 120px; height: 3px; background: linear-gradient(90deg, transparent, #d4af37, transparent); border-radius: 2px;"></div>
-            <div style="position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%); width: 120px; height: 3px; background: linear-gradient(90deg, transparent, #d4af37, transparent); border-radius: 2px;"></div>
-            <!-- Cantos dourados -->
-            <div style="position: absolute; top: 12px; left: 12px; width: 24px; height: 24px; border-top: 2px solid #d4af37; border-left: 2px solid #d4af37; border-radius: 4px 0 0 0;"></div>
-            <div style="position: absolute; top: 12px; right: 12px; width: 24px; height: 24px; border-top: 2px solid #d4af37; border-right: 2px solid #d4af37; border-radius: 0 4px 0 0;"></div>
-            <div style="position: absolute; bottom: 12px; left: 12px; width: 24px; height: 24px; border-bottom: 2px solid #d4af37; border-left: 2px solid #d4af37; border-radius: 0 0 0 4px;"></div>
-            <div style="position: absolute; bottom: 12px; right: 12px; width: 24px; height: 24px; border-bottom: 2px solid #d4af37; border-right: 2px solid #d4af37; border-radius: 0 0 4px 0;"></div>
-            <!-- Imagem -->
-            <div style="border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 40px rgba(212,175,55,0.06);">
+        <div class="reveal" style="max-width: 880px; margin: 0 auto;">
+            <div style="border-radius: 16px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.5);">
                 <img src="/assets/images/cultura/manifesto-cultura.jpeg" alt="Manifesto de Cultura Brooks Construtora" style="width: 100%; height: auto; display: block;" loading="lazy">
             </div>
-            <!-- Legenda -->
-            <p style="text-align: center; margin-top: var(--space-lg); font-size: 11px; color: rgba(255,255,255,0.35); letter-spacing: 0.05em; text-transform: uppercase;">Brooks Construtora — Documento Interno de Cultura</p>
         </div>
     </div>
 </section>
