@@ -34,10 +34,11 @@ $user = $user ?? \App\Core\Auth::user();
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-header bg-white fw-bold"><i class="bi bi-building text-primary"></i> Setores Realizados *</div>
             <div class="card-body">
+                <p class="text-muted small mb-3"><i class="bi bi-info-circle"></i> Selecione os setores que serão inspecionados para visualizar os itens de verificação.</p>
                 <div class="d-flex flex-wrap gap-3">
                     <?php foreach ($defaultItems as $key => $sector): ?>
                     <div class="form-check">
-                        <input class="form-check-input sector-check" type="checkbox" name="sectors[]" value="<?= $key ?>" id="sector_<?= $key ?>" checked>
+                        <input class="form-check-input sector-check" type="checkbox" name="sectors[]" value="<?= $key ?>" id="sector_<?= $key ?>">
                         <label class="form-check-label fw-bold small" for="sector_<?= $key ?>"><?= htmlspecialchars($sector['label']) ?></label>
                     </div>
                     <?php endforeach; ?>
@@ -47,7 +48,7 @@ $user = $user ?? \App\Core\Auth::user();
 
         <!-- Itens do Checklist por Setor -->
         <?php foreach ($defaultItems as $sectorKey => $sector): ?>
-        <div class="card border-0 shadow-sm mb-3 sector-card" id="card_<?= $sectorKey ?>">
+        <div class="card border-0 shadow-sm mb-3 sector-card" id="card_<?= $sectorKey ?>" style="display:none;">
             <div class="card-header bg-white fw-bold">
                 <i class="bi bi-check2-square text-success"></i> <?= htmlspecialchars($sector['label']) ?>
                 <span class="badge bg-secondary ms-2 small"><?= count($sector['items']) ?> itens</span>
