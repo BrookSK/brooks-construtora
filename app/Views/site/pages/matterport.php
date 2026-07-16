@@ -23,7 +23,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     Seus olhos dentro da obra, <span style="color: #7b61ff;">a qualquer momento.</span>
                 </h1>
                 <p style="font-size: var(--text-lg); color: rgba(255,255,255,0.65); line-height: 1.8; margin-bottom: var(--space-xl);">
-                    A Brooks utiliza a tecnologia Matterport para criar gêmeos digitais de todos os seus projetos. Tours virtuais 3D completos que permitem ao cliente acompanhar cada etapa da obra com total transparência, de qualquer lugar do mundo.
+                    Muito mais do que utilizar a tecnologia Matterport, nós temos o equipamento na empresa. A Brooks cria gêmeos digitais de todos os seus projetos com tours virtuais 3D completos que permitem ao cliente acompanhar cada etapa da obra com total transparência, de qualquer lugar do mundo.
                 </p>
                 <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
                     <a href="/projetos" class="btn btn--lg" style="background: linear-gradient(135deg, #7b61ff, #5a3fd4); color: white;">Ver nossos projetos</a>
@@ -261,6 +261,29 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</section>
+
+<!-- Tours Virtuais -->
+<section class="section">
+    <div class="container">
+        <div class="section-header section-header--centered reveal">
+            <span class="label" style="color: #7b61ff;">Tours Virtuais</span>
+            <h2 class="headline-section">Navegue pelos nossos projetos em 3D.</h2>
+            <p class="subtitle subtitle--centered">Clique em um dos tours abaixo e explore nossos projetos como se estivesse dentro da obra.</p>
+        </div>
+        
+        <div class="reveal" style="display: flex; gap: var(--space-lg); justify-content: center; flex-wrap: wrap; margin-top: var(--space-xl);">
+            <a href="https://discover.matterport.com/space/kVTh35mWgjR" target="_blank" rel="noopener noreferrer" class="btn btn--lg" style="background: linear-gradient(135deg, #7b61ff, #5a3fd4); color: white; display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="rotate-3d" style="width:18px;height:18px;"></i> Tour Virtual 1
+            </a>
+            <a href="https://discover.matterport.com/space/tUk5LhVhaZM" target="_blank" rel="noopener noreferrer" class="btn btn--lg" style="background: linear-gradient(135deg, #6a4fd6, #4a2fb2); color: white; display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="rotate-3d" style="width:18px;height:18px;"></i> Tour Virtual 2
+            </a>
+            <a href="https://discover.matterport.com/space/qTgNv6b16gp" target="_blank" rel="noopener noreferrer" class="btn btn--lg" style="background: linear-gradient(135deg, #5a3fd4, #3d2a99); color: white; display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="rotate-3d" style="width:18px;height:18px;"></i> Tour Virtual 3
+            </a>
         </div>
     </div>
 </section>

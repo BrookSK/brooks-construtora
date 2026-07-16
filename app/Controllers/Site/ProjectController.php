@@ -10,15 +10,15 @@ class ProjectController extends Controller
 {
     // Projetos com páginas estáticas (HTML do WordPress)
     private array $staticProjects = [
+        'projeto-katty-kaitazoff-alphaville',
+        'construcao-completa-de-mansao-no-alphaville',
+        'projeto-milena-niemeyer-moema',
         'projeto-rocha-andrade',
         'projeto-norah-carneiro',
         'projeto-joia-bergamo-2',
-        'projeto-joia-bergamo-reforma-rsvp',
-        'reforma-completa-de-mansao-no-alphaville',
-        'reforma-corporativa-cafeteria-do-palacio-dos-bandeirantes',
-        'reforma-corporativa-de-escritorio-no-itaim-bibi',
-        'projeto-milena-niemeyer-moema',
-        'projeto-katty-kaitazoff-alphaville',
+        'projeto-joia-bergamo-rsvp',
+        'construcao-corporativa-cafeteria-do-palacio-dos-bandeirantes',
+        'construcao-corporativa-de-escritorio-no-itaim-bibi',
     ];
 
     public function index(): void

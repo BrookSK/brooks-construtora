@@ -283,7 +283,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);">
                     <div>
                         <h4 style="font-size: var(--text-sm); font-weight: 700; color: var(--brooks-navy); margin-bottom: var(--space-xs);">Base</h4>
-                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-500);">Pessoas, processos e tecnologia integrados em um só propósito.</p>
+                        <p style="font-size: var(--text-sm); color: var(--brooks-gray-500);">A excelência é construída sobre uma base sólida de pessoas, processos, tecnologia e governança.</p>
                     </div>
                     <div>
                         <h4 style="font-size: var(--text-sm); font-weight: 700; color: var(--brooks-navy); margin-bottom: var(--space-xs);">Propósito</h4>

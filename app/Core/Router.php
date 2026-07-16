@@ -273,6 +273,7 @@ class Router
             'forca-estrutural' => ['HomeController', 'forcaEstrutural'],
             'academy' => ['HomeController', 'academy'],
             'matterport' => ['HomeController', 'matterport'],
+            'cultura' => ['HomeController', 'cultura'],
             'politica-privacidade' => ['HomeController', 'politicaPrivacidade'],
             'termos' => ['HomeController', 'termos'],
             'newsletter/subscribe' => ['NewsletterController', 'subscribe'],
