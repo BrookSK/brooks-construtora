@@ -81,6 +81,9 @@
                 <a href="/sobre" class="header-nav__link <?= ($currentPage ?? '') === 'sobre' ? 'active' : '' ?>">Sobre</a>
             </li>
             <li class="header-nav__item">
+                <a href="/cultura" class="header-nav__link <?= ($currentPage ?? '') === 'cultura' ? 'active' : '' ?>">Cultura</a>
+            </li>
+            <li class="header-nav__item">
                 <a href="/projetos" class="header-nav__link <?= ($currentPage ?? '') === 'projetos' ? 'active' : '' ?>">Projetos</a>
             </li>
             
@@ -124,6 +127,7 @@
     <ul class="mobile-nav__list">
         <li><a href="/" class="mobile-nav__link">Home</a></li>
         <li><a href="/sobre" class="mobile-nav__link">Sobre</a></li>
+        <li><a href="/cultura" class="mobile-nav__link">Cultura</a></li>
         <li><a href="/projetos" class="mobile-nav__link">Projetos</a></li>
         <li><a href="/vetriks" class="mobile-nav__link">Vetriks</a></li>
         <li><a href="/forca-estrutural" class="mobile-nav__link">Força Estrutural</a></li>

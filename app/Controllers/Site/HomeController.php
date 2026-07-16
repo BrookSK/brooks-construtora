@@ -147,6 +147,17 @@ class HomeController extends Controller
         include ROOT_PATH . '/app/Views/site/pages/matterport.php';
     }
 
+    public function cultura(): void
+    {
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
+
+        include ROOT_PATH . '/app/Views/site/pages/cultura.php';
+    }
+
     public function politicaPrivacidade(): void
     {
         try {
