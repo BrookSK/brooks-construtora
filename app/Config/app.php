@@ -14,8 +14,8 @@ return [
     // Configurações do banco de dados
     'database' => [
         'host' => 'localhost',
-        'dbname' => 'brooks_construtora_beta',
-        'username' => 'brooks_construtora_beta',
+        'dbname' => 'brooks_construtora',
+        'username' => 'brooks_construtora',
         'password' => 'nSTjm88b!md0%Ysr',
         'charset' => 'utf8mb4',
     ],
