@@ -1,5 +1,9 @@
 RewriteEngine On
 
+# Redirecionar site.brooksconstrutora.com.br para www.brooksconstrutora.com.br
+RewriteCond %{HTTP_HOST} ^site\.brooksconstrutora\.com\.br$ [NC]
+RewriteRule ^(.*)$ https://www.brooksconstrutora.com.br/$1 [R=301,L]
+
 # Servir assets diretamente do /public
 RewriteRule ^assets/(.*)$ public/assets/$1 [L]
 RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
