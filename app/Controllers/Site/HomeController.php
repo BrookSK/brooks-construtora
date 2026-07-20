@@ -158,6 +158,65 @@ class HomeController extends Controller
         include ROOT_PATH . '/app/Views/site/pages/cultura.php';
     }
 
+    public function trabalheConosco(): void
+    {
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
+
+        include ROOT_PATH . '/app/Views/site/pages/trabalhe-conosco.php';
+    }
+
+    public function trabalheConoscoStore(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /trabalhe-conosco');
+            exit;
+        }
+
+        $name = trim($_POST['name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $area = trim($_POST['area'] ?? '');
+        $message = trim($_POST['message'] ?? '');
+
+        // Upload do currículo
+        $resumePath = null;
+        if (!empty($_FILES['resume']['tmp_name']) && $_FILES['resume']['error'] === UPLOAD_ERR_OK) {
+            $allowedExt = ['pdf', 'doc', 'docx'];
+            $ext = strtolower(pathinfo($_FILES['resume']['name'], PATHINFO_EXTENSION));
+            
+            if (in_array($ext, $allowedExt) && $_FILES['resume']['size'] <= 5 * 1024 * 1024) {
+                $uploadDir = ROOT_PATH . '/public/uploads/curriculos';
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                
+                $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                move_uploaded_file($_FILES['resume']['tmp_name'], $uploadDir . '/' . $filename);
+                $resumePath = '/uploads/curriculos/' . $filename;
+            }
+        }
+
+        // Enviar e-mail de notificação (se o MailService estiver configurado)
+        try {
+            $settings = Setting::getGroup('site_');
+            $toEmail = $settings['site_email'] ?? 'contato@brooksconstrutora.com.br';
+            
+            $subject = "Novo currículo recebido - {$name} ({$area})";
+            $body = "Nome: {$name}\nE-mail: {$email}\nTelefone: {$phone}\nÁrea: {$area}\nMensagem: {$message}\n";
+            if ($resumePath) $body .= "Currículo: " . ($_SERVER['REQUEST_SCHEME'] ?? 'https') . '://' . ($_SERVER['HTTP_HOST'] ?? 'brooksconstrutora.com.br') . $resumePath;
+            
+            @mail($toEmail, $subject, $body, "From: {$email}\r\nReply-To: {$email}");
+        } catch (\Exception $e) {
+            // silently fail
+        }
+
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Currículo enviado com sucesso! Entraremos em contato caso surja uma oportunidade.'];
+        header('Location: /trabalhe-conosco');
+        exit;
+    }
+
     public function politicaPrivacidade(): void
     {
         try {

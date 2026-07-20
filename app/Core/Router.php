@@ -274,6 +274,8 @@ class Router
             'academy' => ['HomeController', 'academy'],
             'matterport' => ['HomeController', 'matterport'],
             'cultura' => ['HomeController', 'cultura'],
+            'trabalhe-conosco' => ['HomeController', 'trabalheConosco'],
+            'trabalhe-conosco/enviar' => ['HomeController', 'trabalheConoscoStore'],
             'politica-privacidade' => ['HomeController', 'politicaPrivacidade'],
             'termos' => ['HomeController', 'termos'],
             'newsletter/subscribe' => ['NewsletterController', 'subscribe'],
