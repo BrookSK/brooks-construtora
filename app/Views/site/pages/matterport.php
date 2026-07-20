@@ -106,8 +106,27 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
-<!-- Vídeo -->
-<section class="section section--gray" id="video">
+<!-- Vídeo Matterport -->
+<section class="section" id="video">
+    <div class="container">
+        <div class="section-header section-header--centered reveal">
+            <span class="label" style="color: #7b61ff;">Veja na prática</span>
+            <h2 class="headline-section">Como a Brooks usa a Matterport.</h2>
+            <p class="subtitle subtitle--centered">Assista ao vídeo e entenda como essa tecnologia transforma a experiência dos nossos clientes.</p>
+        </div>
+        
+        <div class="reveal" style="max-width: 400px; margin: 0 auto;">
+            <div style="border-radius: var(--radius-xl); overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.15); border: 1px solid rgba(123, 97, 255, 0.15);">
+                <video autoplay muted loop playsinline style="width: 100%; height: auto; display: block;">
+                    <source src="/assets/videos/videomatterport.mp4" type="video/mp4">
+                </video>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Vídeo placeholder -->
+<section class="section section--gray">
     <div class="container">
         <div class="section-header section-header--centered reveal">
             <span class="label" style="color: #7b61ff;">Veja na prática</span>
