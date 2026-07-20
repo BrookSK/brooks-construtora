@@ -67,7 +67,8 @@
                     ];
                     $label = $statusLabels[$order['status']] ?? ['Desconhecido', 'secondary'];
                     ?>
-                    <tr class="order-row" data-status="<?= $order['status'] ?>"<?php if (!empty($order['financial_reviewed_at'])): ?> style="background-color: #f0fdf4 !important;"<?php endif; ?>>
+                    <?php $showFinancialReview = \App\Core\Auth::isSuperAdmin() || \App\Core\Auth::hasPermission('orders.payment'); ?>
+                    <tr class="order-row" data-status="<?= $order['status'] ?>"<?php if ($showFinancialReview && !empty($order['financial_reviewed_at'])): ?> style="background-color: #f0fdf4 !important;"<?php endif; ?>>
                         <td>
                             <a href="/admin/orders/show/<?= $order['id'] ?>" class="fw-bold text-decoration-none">
                                 <?= htmlspecialchars($order['code']) ?>
@@ -85,7 +86,7 @@
                         </td>
                         <td><?= htmlspecialchars($order['supplier_name'] ?? 'N/A') ?></td>
                         <td><span class="badge bg-<?= $label[1] ?>"><?= $label[0] ?></span>
-                            <?php if (!empty($order['financial_reviewed_at'])): ?>
+                            <?php if ($showFinancialReview && !empty($order['financial_reviewed_at'])): ?>
                             <span class="badge bg-success ms-1" style="font-size:0.6rem;" title="Revisado por <?= htmlspecialchars($order['financial_reviewed_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['financial_reviewed_at'])) ?>"><i class="bi bi-check2"></i> Financeiro</span>
                             <?php endif; ?>
                         </td>
@@ -128,7 +129,7 @@
                     <strong class="text-dark"><?= htmlspecialchars($order['code']) ?></strong>
                     <div>
                         <span class="badge bg-<?= $label[1] ?>" style="font-size:0.7rem;"><?= $label[0] ?></span>
-                        <?php if (!empty($order['financial_reviewed_at'])): ?>
+                        <?php if ((\App\Core\Auth::isSuperAdmin() || \App\Core\Auth::hasPermission('orders.payment')) && !empty($order['financial_reviewed_at'])): ?>
                         <span class="badge bg-success" style="font-size:0.6rem;"><i class="bi bi-check2"></i></span>
                         <?php endif; ?>
                     </div>
