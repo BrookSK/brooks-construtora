@@ -138,7 +138,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
-<!-- Vídeo placeholder -->
+<!-- Vídeo Interno Matterport -->
 <section class="section section--gray">
     <div class="container">
         <div class="section-header section-header--centered reveal">
@@ -148,15 +148,10 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         </div>
         
         <div class="reveal" style="max-width: 900px; margin: 0 auto;">
-            <div style="position: relative; background: linear-gradient(135deg, #1a1a3e, #2d1b69); border-radius: var(--radius-xl); aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(123, 97, 255, 0.2);">
-                <!-- Placeholder para o vídeo — substituir pelo embed quando disponível -->
-                <div style="text-align: center; padding: var(--space-2xl);">
-                    <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(123, 97, 255, 0.2); border: 2px solid rgba(123, 97, 255, 0.4); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-lg);">
-                        <i data-lucide="play" style="width:32px;height:32px;color:#7b61ff;margin-left:4px;"></i>
-                    </div>
-                    <p style="color: rgba(255,255,255,0.6); font-size: var(--text-base); margin-bottom: var(--space-xs);">Vídeo em breve</p>
-                    <p style="color: rgba(255,255,255,0.35); font-size: var(--text-sm);">Estamos produzindo um vídeo mostrando como utilizamos a Matterport nos nossos projetos.</p>
-                </div>
+            <div style="border-radius: var(--radius-xl); overflow: hidden; border: 1px solid rgba(123, 97, 255, 0.15); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
+                <video controls playsinline style="width: 100%; height: auto; display: block;">
+                    <source src="/assets/videos/internomatterport.mp4" type="video/mp4">
+                </video>
             </div>
         </div>
     </div>
