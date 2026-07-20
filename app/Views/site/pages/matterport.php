@@ -117,10 +117,9 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <p style="color: rgba(255,255,255,0.6); line-height: 1.8; margin-bottom: var(--space-md);">
                     A cada etapa da obra, realizamos um escaneamento completo com nossa câmera Matterport Pro. O resultado é um modelo 3D navegável que permite ao cliente acompanhar a evolução do projeto de qualquer lugar.
                 </p>
-                <p style="color: rgba(255,255,255,0.45); line-height: 1.8; margin-bottom: var(--space-lg);">
+                <p style="color: rgba(255,255,255,0.45); line-height: 1.8;">
                     Medições precisas, registro de instalações ocultas e histórico visual completo — tudo acessível por um link exclusivo, a qualquer momento.
                 </p>
-                <a href="#tours" class="btn btn--lg" style="background: linear-gradient(135deg, #7b61ff, #5a3fd4); color: white;">Ver tours virtuais</a>
             </div>
             <!-- Vídeo à direita -->
             <div style="display: flex; justify-content: center;">
