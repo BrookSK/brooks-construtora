@@ -24,6 +24,11 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <!-- Formulário -->
 <section class="section">
     <div class="container">
+        <?php if (!empty($_SESSION['flash'])): ?>
+        <div class="reveal" style="max-width: 700px; margin: 0 auto var(--space-xl); padding: 16px 24px; background: <?= $_SESSION['flash']['type'] === 'success' ? '#f0fdf4' : '#fef2f2' ?>; border: 1px solid <?= $_SESSION['flash']['type'] === 'success' ? '#bbf7d0' : '#fecaca' ?>; border-radius: var(--radius-md); color: <?= $_SESSION['flash']['type'] === 'success' ? '#166534' : '#991b1b' ?>; font-size: var(--text-sm);">
+            <?= htmlspecialchars($_SESSION['flash']['message']) ?>
+        </div>
+        <?php unset($_SESSION['flash']); endif; ?>
         <div class="grid grid--2 reveal" style="gap: var(--space-3xl); align-items: start;">
             <div>
                 <h2 class="headline-section">Envie seu currículo</h2>

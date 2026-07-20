@@ -184,6 +184,7 @@ class HomeController extends Controller
 
         // Upload do currículo
         $resumePath = null;
+        $resumeFullPath = null;
         if (!empty($_FILES['resume']['tmp_name']) && $_FILES['resume']['error'] === UPLOAD_ERR_OK) {
             $allowedExt = ['pdf', 'doc', 'docx'];
             $ext = strtolower(pathinfo($_FILES['resume']['name'], PATHINFO_EXTENSION));
@@ -195,24 +196,34 @@ class HomeController extends Controller
                 $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                 move_uploaded_file($_FILES['resume']['tmp_name'], $uploadDir . '/' . $filename);
                 $resumePath = '/uploads/curriculos/' . $filename;
+                $resumeFullPath = $uploadDir . '/' . $filename;
             }
         }
 
-        // Enviar e-mail de notificação (se o MailService estiver configurado)
+        // Enviar e-mail para contato@brooksconstrutora.com.br
         try {
-            $settings = Setting::getGroup('site_');
-            $toEmail = $settings['site_email'] ?? 'contato@brooksconstrutora.com.br';
+            $mailService = new \App\Services\MailService();
             
             $subject = "Novo currículo recebido - {$name} ({$area})";
-            $body = "Nome: {$name}\nE-mail: {$email}\nTelefone: {$phone}\nÁrea: {$area}\nMensagem: {$message}\n";
-            if ($resumePath) $body .= "Currículo: " . ($_SERVER['REQUEST_SCHEME'] ?? 'https') . '://' . ($_SERVER['HTTP_HOST'] ?? 'brooksconstrutora.com.br') . $resumePath;
+            $body = "<h2>Novo currículo recebido</h2>";
+            $body .= "<p><strong>Nome:</strong> {$name}</p>";
+            $body .= "<p><strong>E-mail:</strong> {$email}</p>";
+            $body .= "<p><strong>Telefone:</strong> {$phone}</p>";
+            $body .= "<p><strong>Área de interesse:</strong> {$area}</p>";
+            if ($message) $body .= "<p><strong>Mensagem:</strong> {$message}</p>";
+            if ($resumePath) {
+                $baseUrl = ($_SERVER['REQUEST_SCHEME'] ?? 'https') . '://' . ($_SERVER['HTTP_HOST'] ?? 'brooksconstrutora.com.br');
+                $body .= "<p><strong>Currículo:</strong> <a href='{$baseUrl}{$resumePath}'>Download do currículo</a></p>";
+            }
             
-            @mail($toEmail, $subject, $body, "From: {$email}\r\nReply-To: {$email}");
+            $mailService->send('contato@brooksconstrutora.com.br', $subject, $body, true);
         } catch (\Exception $e) {
-            // silently fail
+            // Se o SMTP falhar, tenta com mail() nativo
+            $plainBody = "Nome: {$name}\nE-mail: {$email}\nTelefone: {$phone}\nÁrea: {$area}\nMensagem: {$message}\n";
+            @mail('contato@brooksconstrutora.com.br', "Novo currículo - {$name} ({$area})", $plainBody, "From: {$email}\r\nReply-To: {$email}");
         }
 
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Currículo enviado com sucesso! Entraremos em contato caso surja uma oportunidade.'];
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Currículo enviado com sucesso! Analisaremos seu perfil e entraremos em contato caso surja uma oportunidade compatível.'];
         header('Location: /trabalhe-conosco');
         exit;
     }
