@@ -2,7 +2,7 @@
 <?php ob_start(); ?>
 
 <style>
-.financial-reviewed td { background-color: #132a1a !important; }
+.financial-reviewed td { background-color: rgba(34, 197, 94, 0.08) !important; }
 </style>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
