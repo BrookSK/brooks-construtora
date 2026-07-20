@@ -1,5 +1,33 @@
 <?php $pageTitle = 'Configurações'; $currentPage = 'settings'; ob_start(); ?>
 
+<?php
+// Detectar branch e banco de dados atual
+$_currentBranch = 'main';
+$_headFile = ROOT_PATH . '/.git/HEAD';
+if (file_exists($_headFile)) {
+    $_head = trim(file_get_contents($_headFile));
+    if (str_starts_with($_head, 'ref: refs/heads/')) {
+        $_currentBranch = substr($_head, strlen('ref: refs/heads/'));
+    }
+}
+$_config = require ROOT_PATH . '/app/Config/app.php';
+$_currentDb = $_config['database']['dbname'] ?? '—';
+$_isProduction = $_currentBranch === 'main';
+?>
+
+<div class="alert alert-<?= $_isProduction ? 'success' : 'warning' ?> d-flex align-items-center gap-3 mb-4" style="border-left: 4px solid;">
+    <div>
+        <i class="bi bi-<?= $_isProduction ? 'check-circle-fill' : 'exclamation-triangle-fill' ?>" style="font-size: 1.4rem;"></i>
+    </div>
+    <div>
+        <strong>Ambiente:</strong> <?= $_isProduction ? 'Produção' : 'Desenvolvimento' ?>
+        &nbsp;|&nbsp;
+        <strong>Branch:</strong> <code><?= htmlspecialchars($_currentBranch) ?></code>
+        &nbsp;|&nbsp;
+        <strong>Banco:</strong> <code><?= htmlspecialchars($_currentDb) ?></code>
+    </div>
+</div>
+
 <form method="POST" action="/admin/settings/update">
     <!-- SMTP -->
     <div class="card mb-4">
