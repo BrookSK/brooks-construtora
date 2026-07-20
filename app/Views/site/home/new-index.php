@@ -147,7 +147,8 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Rocha Andrade</h3>
-                        <p class="project-card__subtitle">Reforma completa · 300m²</p>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">São Paulo, SP</p>
                         <span class="project-card__arrow">Ver projeto <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -157,27 +158,30 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Norah Carneiro</h3>
-                        <p class="project-card__subtitle">Reforma completa · 250m²</p>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">Av. Prof. Ascendino Reis, São Paulo</p>
                         <span class="project-card__arrow">Ver projeto <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
             </a>
-            <a href="/projeto/projeto-joia-bergamo-reforma-rsvp" class="project-card">
+            <a href="/projeto/projeto-joia-bergamo-rsvp" class="project-card">
                 <img src="/assets/images/wp/2024/11/bergamo-jpg.webp" alt="Projeto Jóia Bergamo" class="project-card__image" loading="lazy">
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Jóia Bergamo</h3>
-                        <p class="project-card__subtitle">Reforma completa · 270m²</p>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">São Paulo, SP</p>
                         <span class="project-card__arrow">Ver projeto <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
             </a>
-            <a href="/projeto/reforma-corporativa-cafeteria-do-palacio-dos-bandeirantes" class="project-card">
+            <a href="/projeto/construcao-corporativa-cafeteria-do-palacio-dos-bandeirantes" class="project-card">
                 <img src="/assets/images/wp/2024/11/palacio-bandeirantes-jpg.webp" alt="Palácio dos Bandeirantes" class="project-card__image" loading="lazy">
                 <div class="project-card__overlay">
                     <div class="project-card__content">
-                        <h3 class="project-card__title">Reforma Corporativa</h3>
-                        <p class="project-card__subtitle">Palácio dos Bandeirantes</p>
+                        <h3 class="project-card__title">Palácio dos Bandeirantes</h3>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Corporativo</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">Morumbi, São Paulo</p>
                         <span class="project-card__arrow">Ver projeto <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
