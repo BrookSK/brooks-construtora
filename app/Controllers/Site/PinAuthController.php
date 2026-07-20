@@ -169,6 +169,14 @@ class PinAuthController extends Controller
             return;
         }
 
+        // Bloquear cadastro com o PIN global (usado como acesso compartilhado)
+        $globalPin = \App\Models\Setting::get('orders_pin_code', '');
+        if (!empty($globalPin) && $pin === $globalPin) {
+            $this->setFlash('error', 'Este PIN é reservado pelo sistema. Escolha outro.');
+            $this->redirect('/pin/cadastro/' . $inviteToken);
+            return;
+        }
+
         $userId = PinUser::create([
             'name' => $name,
             'email' => $email ?: null,
