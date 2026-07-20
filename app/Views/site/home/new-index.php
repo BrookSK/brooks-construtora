@@ -10,7 +10,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <section class="hero" id="hero">
     <div class="hero__bg">
         <video autoplay muted loop playsinline poster="/assets/images/projects/katty-kaitazoff/katty-01.png">
-            <source src="/assets/images/projects/katty-kaitazoff/katty-video03.mp4" type="video/mp4">
+            <source src="/assets/images/projects/katty-kaitazoff/katty-video01.mp4" type="video/mp4">
         </video>
     </div>
     <div class="hero__overlay"></div>
