@@ -107,16 +107,19 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 </section>
 
 <!-- Vídeo Matterport -->
-<section class="section" id="video">
+<section class="section" id="video" style="background: linear-gradient(160deg, #0a0a1a, #1a1040); padding: var(--space-5xl) 0;">
     <div class="container">
         <div class="section-header section-header--centered reveal">
             <span class="label" style="color: #7b61ff;">Veja na prática</span>
-            <h2 class="headline-section">Como a Brooks usa a Matterport.</h2>
-            <p class="subtitle subtitle--centered">Assista ao vídeo e entenda como essa tecnologia transforma a experiência dos nossos clientes.</p>
+            <h2 class="headline-section" style="color: white;">Como a Brooks usa a Matterport.</h2>
+            <p class="subtitle subtitle--centered" style="color: rgba(255,255,255,0.5);">Assista ao vídeo e entenda como essa tecnologia transforma a experiência dos nossos clientes.</p>
         </div>
         
-        <div class="reveal" style="max-width: 400px; margin: 0 auto;">
-            <div style="border-radius: var(--radius-xl); overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.15); border: 1px solid rgba(123, 97, 255, 0.15);">
+        <div class="reveal" style="max-width: 380px; margin: 0 auto; position: relative;">
+            <!-- Glow atrás do vídeo -->
+            <div style="position: absolute; inset: -20px; background: radial-gradient(ellipse, rgba(123, 97, 255, 0.15), transparent 70%); border-radius: 50%; filter: blur(40px); z-index: 0;"></div>
+            <!-- Vídeo -->
+            <div style="position: relative; z-index: 1; border-radius: 20px; overflow: hidden; border: 1px solid rgba(123, 97, 255, 0.2); box-shadow: 0 25px 60px rgba(0,0,0,0.4), 0 0 40px rgba(123, 97, 255, 0.08);">
                 <video autoplay muted loop playsinline style="width: 100%; height: auto; display: block;">
                     <source src="/assets/videos/videomatterport.mp4" type="video/mp4">
                 </video>
