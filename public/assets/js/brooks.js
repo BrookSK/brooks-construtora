@@ -158,23 +158,24 @@
             var question = this.textContent;
             var answer = this.getAttribute('data-answer');
             
-            // Move questions container to end of chat body (keeps it always at bottom)
             var questionsContainer = document.getElementById('chat-questions');
             
-            // Show question as sent message
+            // Show question as sent message (before the questions container)
             var questionEl = document.createElement('div');
             questionEl.className = 'chat-widget__question-sent';
             questionEl.textContent = question;
             chatBody.insertBefore(questionEl, questionsContainer);
             
-            // Show answer
+            // Show answer (before the questions container)
             var answerEl = document.createElement('div');
             answerEl.className = 'chat-widget__answer';
             answerEl.textContent = answer;
             chatBody.insertBefore(answerEl, questionsContainer);
             
-            // Scroll to the question (not all the way to bottom, so user reads the answer)
-            questionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Scroll so the sent question is at the top of the visible area
+            setTimeout(function() {
+                questionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 50);
         });
     });
 

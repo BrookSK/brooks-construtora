@@ -106,7 +106,7 @@
 .chat-widget__body {
     padding: var(--space-lg);
     min-height: 200px;
-    max-height: 300px;
+    max-height: 400px;
     overflow-y: auto;
 }
 
@@ -666,7 +666,7 @@
         max-width: none;
     }
     .chat-widget__body {
-        max-height: 250px;
+        max-height: 350px;
     }
     .hero__title { max-width: 100%; }
     
