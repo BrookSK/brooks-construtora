@@ -115,6 +115,7 @@ class Router
             'orders/price-history' => ['PurchaseOrderController', 'priceHistory'],
             'orders/export' => ['PurchaseOrderController', 'export'],
             'orders/upload-payment' => ['PurchaseOrderController', 'uploadPayment'],
+            'orders/validate-payment-cnpj' => ['PurchaseOrderController', 'validatePaymentCnpj'],
             'orders/mark-paid' => ['PurchaseOrderController', 'markPaid'],
             'orders/delete-payment' => ['PurchaseOrderController', 'deletePayment'],
             'orders/payments' => ['PurchaseOrderController', 'payments'],

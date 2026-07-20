@@ -474,8 +474,24 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <?php endif; ?>
 
                 <!-- Formulário de upload -->
-                <form method="POST" action="/admin/orders/upload-payment" enctype="multipart/form-data">
+                <form method="POST" action="/admin/orders/upload-payment" enctype="multipart/form-data" id="paymentForm">
                     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+                    <?php
+                    // Pegar CNPJ do fornecedor aprovado para validação
+                    $approvedCnpj = '';
+                    $approvedSupplierName = '';
+                    if (!empty($orderSuppliers)) {
+                        foreach ($orderSuppliers as $os) {
+                            if ($os['approved'] && !empty($os['cnpj'])) {
+                                $approvedCnpj = $os['cnpj'];
+                                $approvedSupplierName = $os['supplier_name'];
+                                break;
+                            }
+                        }
+                    }
+                    ?>
+                    <input type="hidden" id="approvedCnpj" value="<?= htmlspecialchars(preg_replace('/\D/', '', $approvedCnpj)) ?>">
+                    <input type="hidden" id="approvedSupplierName" value="<?= htmlspecialchars($approvedSupplierName) ?>">
                     <div class="row g-2">
                         <div class="col-6 col-md-2">
                             <select class="form-select form-select-sm" name="type" required>
@@ -493,12 +509,13 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <input type="date" class="form-control form-control-sm" name="due_date">
                         </div>
                         <div class="col-12 col-md-3">
-                            <input type="file" class="form-control form-control-sm" name="file" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                            <input type="file" class="form-control form-control-sm" name="file" id="paymentFile" accept=".pdf,.jpg,.jpeg,.png,.webp">
                         </div>
                         <div class="col-12 col-md-1">
-                            <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-upload"></i></button>
+                            <button type="submit" class="btn btn-sm btn-primary w-100" id="paymentSubmitBtn"><i class="bi bi-upload"></i></button>
                         </div>
                     </div>
+                    <div id="cnpjValidationResult" class="mt-2" style="display:none;"></div>
                 </form>
             </div>
         </div>
@@ -1225,12 +1242,10 @@ function resendPhase(orderId, phase) {
     input.addEventListener('input', function() {
         let v = this.value.replace(/\D/g, '');
         if (v.length <= 11) {
-            // CPF: 000.000.000-00
             v = v.replace(/(\d{3})(\d)/, '$1.$2');
             v = v.replace(/(\d{3})(\d)/, '$1.$2');
             v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
         } else {
-            // CNPJ: 00.000.000/0000-00
             v = v.substring(0, 14);
             v = v.replace(/^(\d{2})(\d)/, '$1.$2');
             v = v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
@@ -1241,11 +1256,11 @@ function resendPhase(orderId, phase) {
     });
 
     // Validação no submit
-    const form = input.closest('form');
+    const form = document.getElementById('paymentForm');
     if (form) {
         form.addEventListener('submit', function(e) {
             const raw = input.value.replace(/\D/g, '');
-            if (raw.length === 0) return; // campo opcional
+            if (raw.length === 0) return;
             if (raw.length !== 11 && raw.length !== 14) {
                 e.preventDefault();
                 alert('CPF/CNPJ inválido. CPF deve ter 11 dígitos e CNPJ 14 dígitos.');
@@ -1264,6 +1279,69 @@ function resendPhase(orderId, phase) {
                 input.focus();
                 return;
             }
+            // Validar contra fornecedor aprovado
+            const approvedCnpj = document.getElementById('approvedCnpj')?.value || '';
+            if (approvedCnpj && raw !== approvedCnpj) {
+                const supplierName = document.getElementById('approvedSupplierName')?.value || 'fornecedor aprovado';
+                if (!confirm('⚠️ ATENÇÃO: O CPF/CNPJ informado (' + input.value + ') é diferente do fornecedor aprovado ' + supplierName + '.\n\nDeseja continuar mesmo assim?')) {
+                    e.preventDefault();
+                    input.focus();
+                    return;
+                }
+            }
+        });
+    }
+
+    // Validação com IA ao selecionar arquivo
+    const fileInput = document.getElementById('paymentFile');
+    const resultDiv = document.getElementById('cnpjValidationResult');
+    
+    if (fileInput && resultDiv) {
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) return;
+            
+            const approvedCnpj = document.getElementById('approvedCnpj')?.value || '';
+            if (!approvedCnpj) return; // sem CNPJ de referência, não valida
+
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<small class="text-muted"><i class="bi bi-hourglass-split"></i> Analisando documento com IA para validar CPF/CNPJ...</small>';
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('approved_cnpj', approvedCnpj);
+
+            fetch('/admin/orders/validate-payment-cnpj', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        resultDiv.innerHTML = '<small class="text-warning"><i class="bi bi-exclamation-triangle"></i> ' + data.error + '</small>';
+                        return;
+                    }
+                    if (data.extracted_cnpj) {
+                        const extracted = data.extracted_cnpj.replace(/\D/g, '');
+                        const match = extracted === approvedCnpj;
+                        
+                        if (match) {
+                            resultDiv.innerHTML = '<small class="text-success"><i class="bi bi-check-circle-fill"></i> CPF/CNPJ do documento confere com o fornecedor aprovado (' + data.extracted_cnpj + ')</small>';
+                            // Preencher o campo automaticamente
+                            if (!input.value) input.value = data.extracted_cnpj;
+                        } else {
+                            resultDiv.innerHTML = '<small class="text-danger"><i class="bi bi-x-circle-fill"></i> CPF/CNPJ do documento (' + data.extracted_cnpj + ') <strong>NÃO confere</strong> com o fornecedor aprovado.</small>';
+                        }
+                        
+                        // Também validar contra o campo digitado
+                        const typed = input.value.replace(/\D/g, '');
+                        if (typed && typed !== extracted) {
+                            resultDiv.innerHTML += '<br><small class="text-warning"><i class="bi bi-exclamation-triangle"></i> O CPF/CNPJ digitado no campo também difere do encontrado no documento.</small>';
+                        }
+                    } else {
+                        resultDiv.innerHTML = '<small class="text-muted"><i class="bi bi-info-circle"></i> Não foi possível extrair CPF/CNPJ do documento.</small>';
+                    }
+                })
+                .catch(() => {
+                    resultDiv.innerHTML = '<small class="text-muted"><i class="bi bi-info-circle"></i> Não foi possível validar o documento automaticamente.</small>';
+                });
         });
     }
 
