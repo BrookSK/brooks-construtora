@@ -55,6 +55,72 @@ class EmailTemplate
 HTML;
     }
 
+    public static function resumeReceived(string $name, string $email, string $phone, string $area, string $message, ?string $resumeUrl): string
+    {
+        $date = date('d/m/Y \à\s H:i');
+
+        $body = <<<HTML
+<p style="margin-bottom:20px; color:#555;">Um novo currículo foi recebido através do site. Confira os dados abaixo:</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa; border-radius:8px; margin-bottom:20px; border: 1px solid #e9ecef;">
+<tr><td style="padding: 20px;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #e9ecef;">
+                <span style="font-size:12px; color:#888; text-transform:uppercase; letter-spacing:0.5px;">Nome</span><br>
+                <strong style="font-size:15px; color:#1a1a2e;">{$name}</strong>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #e9ecef;">
+                <span style="font-size:12px; color:#888; text-transform:uppercase; letter-spacing:0.5px;">E-mail</span><br>
+                <a href="mailto:{$email}" style="font-size:15px; color:#446084; text-decoration:none;">{$email}</a>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #e9ecef;">
+                <span style="font-size:12px; color:#888; text-transform:uppercase; letter-spacing:0.5px;">Telefone / WhatsApp</span><br>
+                <strong style="font-size:15px; color:#1a1a2e;">{$phone}</strong>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0;">
+                <span style="font-size:12px; color:#888; text-transform:uppercase; letter-spacing:0.5px;">Área de Interesse</span><br>
+                <span style="display:inline-block; margin-top:4px; padding: 4px 12px; background:#3a3b4e; color:#fff; border-radius:4px; font-size:13px; font-weight:600;">{$area}</span>
+            </td>
+        </tr>
+    </table>
+</td></tr>
+</table>
+HTML;
+
+        if (!empty($message)) {
+            $message = nl2br(htmlspecialchars($message));
+            $body .= <<<HTML
+<div style="background:#fff8e1; border-left:4px solid #ffc107; padding:15px 18px; border-radius:4px; margin-bottom:20px;">
+    <p style="margin:0 0 5px; font-size:12px; color:#888; text-transform:uppercase; letter-spacing:0.5px;">Mensagem do candidato</p>
+    <p style="margin:0; font-size:14px; color:#555; line-height:1.6;">{$message}</p>
+</div>
+HTML;
+        }
+
+        if (!empty($resumeUrl)) {
+            $body .= <<<HTML
+<div style="text-align:center; margin:25px 0;">
+    <a href="{$resumeUrl}" style="display:inline-block; padding: 12px 30px; background:#3a3b4e; color:#ffffff; text-decoration:none; border-radius:6px; font-size:14px; font-weight:600; letter-spacing:0.5px;">
+        📎 Baixar Currículo
+    </a>
+</div>
+HTML;
+        }
+
+        $body .= <<<HTML
+<p style="font-size:12px; color:#999; text-align:center; margin-top:20px;">Recebido em {$date} via site Brooks Construtora</p>
+HTML;
+
+        return self::wrap('Novo Currículo Recebido', $body);
+    }
+
     public static function magazineGenerated(string $magazineTitle, int $magazineId, string $topicTitle = ''): string
     {
         $baseUrl = self::baseUrl();

@@ -487,6 +487,82 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Marcar pedido como revisado pelo financeiro
+     */
+    public function financialReview(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if (!Auth::hasPermission('orders.payment')) {
+            $this->setFlash('error', 'Sem permissão.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Financeiro';
+
+        PurchaseOrder::updateById($id, [
+            'financial_reviewed_at' => date('Y-m-d H:i:s'),
+            'financial_reviewed_by' => $userName,
+        ]);
+
+        PurchaseOrderHistory::log($id, 'financial_reviewed', "Revisado pelo financeiro: {$userName}", $userName, Auth::id());
+
+        $this->setFlash('success', 'Pedido marcado como revisado pelo financeiro.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
+     * Desmarcar revisão financeira
+     */
+    public function financialUnreview(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if (!Auth::hasPermission('orders.payment')) {
+            $this->setFlash('error', 'Sem permissão.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Financeiro';
+
+        PurchaseOrder::updateById($id, [
+            'financial_reviewed_at' => null,
+            'financial_reviewed_by' => null,
+        ]);
+
+        PurchaseOrderHistory::log($id, 'financial_unreview', "Revisão financeira desmarcada por: {$userName}", $userName, Auth::id());
+
+        $this->setFlash('success', 'Revisão financeira desmarcada.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
      * Cancelar pedido
      */
     public function cancel(): void
@@ -987,6 +1063,175 @@ class PurchaseOrderController extends Controller
             'cancelled' => 'Cancelado',
         ];
         return $labels[$status] ?? $status;
+    }
+
+    /**
+     * Validar CPF/CNPJ de documento de pagamento usando IA
+     */
+    public function validatePaymentCnpj(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $approvedCnpj = trim($this->input('approved_cnpj', ''));
+        
+        if (empty($_FILES['file']['tmp_name']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            $this->json(['error' => 'Nenhum arquivo enviado.'], 400);
+            return;
+        }
+
+        $file = $_FILES['file'];
+        $openaiKey = Setting::get('openai_api_key', '');
+        
+        if (empty($openaiKey)) {
+            $this->json(['error' => 'Chave da OpenAI não configurada.'], 500);
+            return;
+        }
+
+        $model = Setting::get('openai_model', 'gpt-4o');
+        $mediaType = $file['type'];
+
+        try {
+            // Para PDFs, usar a Responses API
+            if ($mediaType === 'application/pdf') {
+                $extracted = $this->extractCnpjFromPdf($file['tmp_name'], $file['name'], $openaiKey, $model);
+            } else {
+                // Para imagens: enviar como base64
+                $content = base64_encode(file_get_contents($file['tmp_name']));
+                
+                $messages = [
+                    ['role' => 'system', 'content' => 'Você é um assistente que analisa documentos financeiros (notas fiscais, boletos). Extraia APENAS o CPF ou CNPJ do EMITENTE/FORNECEDOR do documento. Retorne APENAS um JSON com o campo "cnpj" contendo o número formatado (ex: "10.776.149/0001-10") ou null se não encontrar. Sem explicação, sem markdown.'],
+                    ['role' => 'user', 'content' => [
+                        ['type' => 'text', 'text' => 'Extraia o CPF/CNPJ do emitente/fornecedor deste documento:'],
+                        ['type' => 'image_url', 'image_url' => ['url' => "data:{$mediaType};base64,{$content}"]]
+                    ]]
+                ];
+
+                $ch = curl_init('https://api.openai.com/v1/chat/completions');
+                curl_setopt_array($ch, [
+                    CURLOPT_POST => true,
+                    CURLOPT_POSTFIELDS => json_encode([
+                        'model' => $model,
+                        'messages' => $messages,
+                        'max_tokens' => 200,
+                        'temperature' => 0,
+                    ]),
+                    CURLOPT_HTTPHEADER => [
+                        'Content-Type: application/json',
+                        'Authorization: Bearer ' . $openaiKey,
+                    ],
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => 30,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                ]);
+
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($httpCode !== 200) {
+                    $this->json(['error' => 'Erro ao analisar documento.'], 500);
+                    return;
+                }
+
+                $result = json_decode($response, true);
+                $text = $result['choices'][0]['message']['content'] ?? '';
+                $text = preg_replace('/```json\s*/', '', $text);
+                $text = preg_replace('/```\s*/', '', $text);
+                $text = trim($text);
+
+                $parsed = json_decode($text, true);
+                $extracted = $parsed['cnpj'] ?? null;
+            }
+
+            if ($extracted) {
+                $this->json(['extracted_cnpj' => $extracted]);
+            } else {
+                $this->json(['extracted_cnpj' => null, 'error' => 'Não foi possível extrair CPF/CNPJ do documento.']);
+            }
+        } catch (\Exception $e) {
+            $this->json(['error' => 'Erro: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Extrair CNPJ de PDF usando OpenAI
+     */
+    private function extractCnpjFromPdf(string $filePath, string $fileName, string $apiKey, string $model): ?string
+    {
+        // Upload do arquivo para OpenAI
+        $ch = curl_init('https://api.openai.com/v1/files');
+        $cfile = new \CURLFile($filePath, 'application/pdf', $fileName);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => ['file' => $cfile, 'purpose' => 'assistants'],
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiKey],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) return null;
+        
+        $fileData = json_decode($response, true);
+        $fileId = $fileData['id'] ?? null;
+        if (!$fileId) return null;
+
+        // Usar o arquivo no chat
+        $ch = curl_init('https://api.openai.com/v1/chat/completions');
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode([
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'system', 'content' => 'Você é um assistente que analisa documentos financeiros. Extraia APENAS o CPF ou CNPJ do EMITENTE/FORNECEDOR. Retorne APENAS um JSON: {"cnpj": "XX.XXX.XXX/XXXX-XX"} ou {"cnpj": null}.'],
+                    ['role' => 'user', 'content' => [
+                        ['type' => 'text', 'text' => 'Extraia o CPF/CNPJ do emitente/fornecedor deste documento:'],
+                        ['type' => 'file', 'file' => ['file_id' => $fileId]]
+                    ]]
+                ],
+                'max_tokens' => 200,
+                'temperature' => 0,
+            ]),
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $apiKey,
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 60,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // Deletar arquivo da OpenAI
+        $ch = curl_init("https://api.openai.com/v1/files/{$fileId}");
+        curl_setopt_array($ch, [
+            CURLOPT_CUSTOMREQUEST => 'DELETE',
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiKey],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        curl_exec($ch);
+        curl_close($ch);
+
+        if ($httpCode !== 200) return null;
+
+        $result = json_decode($response, true);
+        $text = $result['choices'][0]['message']['content'] ?? '';
+        $text = preg_replace('/```json\s*/', '', $text);
+        $text = preg_replace('/```\s*/', '', $text);
+        $text = trim($text);
+
+        $parsed = json_decode($text, true);
+        return $parsed['cnpj'] ?? null;
     }
 
     /**

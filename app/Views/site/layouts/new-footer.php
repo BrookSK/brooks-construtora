@@ -29,7 +29,7 @@
                     <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.4); margin-bottom: var(--space-sm);">Assine a Revista Brooks</p>
                     <form action="/newsletter/subscribe" method="POST" class="footer-newsletter__form" id="footer-newsletter-form">
                         <input type="email" name="email" placeholder="Seu melhor e-mail" required class="footer-newsletter__input" aria-label="E-mail para newsletter">
-                        <button type="submit" class="footer-newsletter__btn">Assinar</button>
+                        <button type="submit" class="footer-newsletter__btn">Assinar Gratuitamente</button>
                     </form>
                 </div>
             </div>
@@ -43,6 +43,7 @@
                     <li><a href="/projetos">Projetos</a></li>
                     <li><a href="/revista">Revista Digital</a></li>
                     <li><a href="/contato">Contato</a></li>
+                    <li><a href="/trabalhe-conosco">Envie seu currículo</a></li>
                 </ul>
             </div>
             

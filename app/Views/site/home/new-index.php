@@ -9,8 +9,8 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <!-- ===== HERO ===== -->
 <section class="hero" id="hero">
     <div class="hero__bg">
-        <video autoplay muted loop playsinline poster="/assets/images/wp/2024/11/IMG_2477-1-jpg.webp">
-            <source src="/assets/videos/IMG_96791.mp4" type="video/mp4">
+        <video autoplay muted loop playsinline poster="/assets/images/projects/katty-kaitazoff/katty-01.png">
+            <source src="/assets/images/projects/katty-kaitazoff/katty-video01.mp4" type="video/mp4">
         </video>
     </div>
     <div class="hero__overlay"></div>
@@ -342,7 +342,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <div class="grid grid--2 reveal" style="align-items: center; gap: var(--space-3xl);">
             <div>
                 <span class="label" style="color: var(--brooks-blue-accent);">Revista Digital</span>
-                <h2 class="headline-subsection" style="color: white;">Assine a Revista Brooks</h2>
+                <h2 class="headline-subsection" style="color: white;">Assine Gratuitamente a Revista Brooks</h2>
                 <p style="color: rgba(255,255,255,0.6); line-height: 1.7;">Receba edições exclusivas sobre construção sustentável, reformas de alto padrão e tendências de arquitetura diretamente no seu e-mail.</p>
             </div>
             <div>

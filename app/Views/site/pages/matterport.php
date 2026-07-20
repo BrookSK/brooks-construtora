@@ -106,8 +106,40 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
-<!-- Vídeo -->
-<section class="section section--gray" id="video">
+<!-- Vídeo Matterport -->
+<section class="section" id="video" style="background: linear-gradient(160deg, #0a0a1a, #1a1040); padding: var(--space-5xl) 0;">
+    <div class="container">
+        <div class="grid grid--2 reveal" style="gap: var(--space-3xl); align-items: center;">
+            <!-- Texto à esquerda -->
+            <div>
+                <span class="label" style="color: #7b61ff;">Veja na prática</span>
+                <h2 class="headline-section" style="color: white;">Como a Brooks usa a Matterport.</h2>
+                <p style="color: rgba(255,255,255,0.6); line-height: 1.8; margin-bottom: var(--space-md);">
+                    A cada etapa da obra, realizamos um escaneamento completo com nossa câmera Matterport Pro. O resultado é um modelo 3D navegável que permite ao cliente acompanhar a evolução do projeto de qualquer lugar.
+                </p>
+                <p style="color: rgba(255,255,255,0.45); line-height: 1.8;">
+                    Medições precisas, registro de instalações ocultas e histórico visual completo — tudo acessível por um link exclusivo, a qualquer momento.
+                </p>
+            </div>
+            <!-- Vídeo à direita -->
+            <div style="display: flex; justify-content: center;">
+                <div style="max-width: 320px; position: relative;">
+                    <!-- Glow -->
+                    <div style="position: absolute; inset: -20px; background: radial-gradient(ellipse, rgba(123, 97, 255, 0.15), transparent 70%); border-radius: 50%; filter: blur(40px); z-index: 0;"></div>
+                    <!-- Vídeo -->
+                    <div style="position: relative; z-index: 1; border-radius: 20px; overflow: hidden; border: 1px solid rgba(123, 97, 255, 0.2); box-shadow: 0 25px 60px rgba(0,0,0,0.4), 0 0 40px rgba(123, 97, 255, 0.08);">
+                        <video autoplay muted loop playsinline style="width: 100%; height: auto; display: block;">
+                            <source src="/assets/videos/videomatterport.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Vídeo Interno Matterport -->
+<section class="section section--gray">
     <div class="container">
         <div class="section-header section-header--centered reveal">
             <span class="label" style="color: #7b61ff;">Veja na prática</span>
@@ -116,15 +148,10 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         </div>
         
         <div class="reveal" style="max-width: 900px; margin: 0 auto;">
-            <div style="position: relative; background: linear-gradient(135deg, #1a1a3e, #2d1b69); border-radius: var(--radius-xl); aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(123, 97, 255, 0.2);">
-                <!-- Placeholder para o vídeo — substituir pelo embed quando disponível -->
-                <div style="text-align: center; padding: var(--space-2xl);">
-                    <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(123, 97, 255, 0.2); border: 2px solid rgba(123, 97, 255, 0.4); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-lg);">
-                        <i data-lucide="play" style="width:32px;height:32px;color:#7b61ff;margin-left:4px;"></i>
-                    </div>
-                    <p style="color: rgba(255,255,255,0.6); font-size: var(--text-base); margin-bottom: var(--space-xs);">Vídeo em breve</p>
-                    <p style="color: rgba(255,255,255,0.35); font-size: var(--text-sm);">Estamos produzindo um vídeo mostrando como utilizamos a Matterport nos nossos projetos.</p>
-                </div>
+            <div style="border-radius: var(--radius-xl); overflow: hidden; border: 1px solid rgba(123, 97, 255, 0.15); box-shadow: 0 20px 50px rgba(0,0,0,0.1);">
+                <video controls playsinline style="width: 100%; height: auto; display: block;">
+                    <source src="/assets/videos/internomatterport.mp4" type="video/mp4">
+                </video>
             </div>
         </div>
     </div>
@@ -265,25 +292,17 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
-<!-- Tours Virtuais -->
-<section class="section">
+<!-- Tour Virtual -->
+<section class="section" id="tours" style="background: linear-gradient(160deg, #0a0a1a, #1a1040); padding: var(--space-5xl) 0;">
     <div class="container">
         <div class="section-header section-header--centered reveal">
-            <span class="label" style="color: #7b61ff;">Tours Virtuais</span>
-            <h2 class="headline-section">Navegue pelos nossos projetos em 3D.</h2>
-            <p class="subtitle subtitle--centered">Clique em um dos tours abaixo e explore nossos projetos como se estivesse dentro da obra.</p>
+            <span class="label" style="color: #7b61ff;">Experiência Imersiva</span>
+            <h2 class="headline-section" style="color: white;">Faça seu tour virtual.</h2>
+            <p class="subtitle subtitle--centered" style="color: rgba(255,255,255,0.5);">Navegue pela obra como se estivesse lá dentro. Use o mouse ou toque na tela para explorar cada ambiente em 3D.</p>
         </div>
         
-        <div class="reveal" style="display: flex; gap: var(--space-lg); justify-content: center; flex-wrap: wrap; margin-top: var(--space-xl);">
-            <a href="https://discover.matterport.com/space/kVTh35mWgjR" target="_blank" rel="noopener noreferrer" class="btn btn--lg" style="background: linear-gradient(135deg, #7b61ff, #5a3fd4); color: white; display: inline-flex; align-items: center; gap: 8px;">
-                <i data-lucide="rotate-3d" style="width:18px;height:18px;"></i> Tour Virtual 1
-            </a>
-            <a href="https://discover.matterport.com/space/tUk5LhVhaZM" target="_blank" rel="noopener noreferrer" class="btn btn--lg" style="background: linear-gradient(135deg, #6a4fd6, #4a2fb2); color: white; display: inline-flex; align-items: center; gap: 8px;">
-                <i data-lucide="rotate-3d" style="width:18px;height:18px;"></i> Tour Virtual 2
-            </a>
-            <a href="https://discover.matterport.com/space/qTgNv6b16gp" target="_blank" rel="noopener noreferrer" class="btn btn--lg" style="background: linear-gradient(135deg, #5a3fd4, #3d2a99); color: white; display: inline-flex; align-items: center; gap: 8px;">
-                <i data-lucide="rotate-3d" style="width:18px;height:18px;"></i> Tour Virtual 3
-            </a>
+        <div class="reveal" style="max-width: 1000px; margin: 0 auto; border-radius: 16px; overflow: hidden; border: 1px solid rgba(123, 97, 255, 0.2); box-shadow: 0 25px 60px rgba(0,0,0,0.4), 0 0 40px rgba(123, 97, 255, 0.08);">
+            <iframe src="https://my.matterport.com/show?play=1&lang=en-US&m=tUk5LhVhaZM" width="100%" height="550" frameborder="0" allowfullscreen allow="xr-spatial-tracking" style="display: block;"></iframe>
         </div>
     </div>
 </section>
