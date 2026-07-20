@@ -67,7 +67,7 @@
                     ];
                     $label = $statusLabels[$order['status']] ?? ['Desconhecido', 'secondary'];
                     ?>
-                    <tr class="order-row" data-status="<?= $order['status'] ?>"<?php if (\App\Core\Auth::hasPermission('orders.payment') && !empty($order['financial_reviewed_at'])): ?> style="background-color: rgba(25, 135, 84, 0.06);"<?php endif; ?>>
+                    <tr class="order-row" data-status="<?= $order['status'] ?>"<?php if (\App\Core\Auth::hasPermission('orders.payment') && !empty($order['financial_reviewed_at'])): ?> style="background-color: #f0fdf4;"<?php endif; ?>>
                         <td>
                             <a href="/admin/orders/show/<?= $order['id'] ?>" class="fw-bold text-decoration-none">
                                 <?= htmlspecialchars($order['code']) ?>
