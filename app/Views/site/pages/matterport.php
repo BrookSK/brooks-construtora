@@ -109,20 +109,31 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <!-- Vídeo Matterport -->
 <section class="section" id="video" style="background: linear-gradient(160deg, #0a0a1a, #1a1040); padding: var(--space-5xl) 0;">
     <div class="container">
-        <div class="section-header section-header--centered reveal">
-            <span class="label" style="color: #7b61ff;">Veja na prática</span>
-            <h2 class="headline-section" style="color: white;">Como a Brooks usa a Matterport.</h2>
-            <p class="subtitle subtitle--centered" style="color: rgba(255,255,255,0.5);">Assista ao vídeo e entenda como essa tecnologia transforma a experiência dos nossos clientes.</p>
-        </div>
-        
-        <div class="reveal" style="max-width: 380px; margin: 0 auto; position: relative;">
-            <!-- Glow atrás do vídeo -->
-            <div style="position: absolute; inset: -20px; background: radial-gradient(ellipse, rgba(123, 97, 255, 0.15), transparent 70%); border-radius: 50%; filter: blur(40px); z-index: 0;"></div>
-            <!-- Vídeo -->
-            <div style="position: relative; z-index: 1; border-radius: 20px; overflow: hidden; border: 1px solid rgba(123, 97, 255, 0.2); box-shadow: 0 25px 60px rgba(0,0,0,0.4), 0 0 40px rgba(123, 97, 255, 0.08);">
-                <video autoplay muted loop playsinline style="width: 100%; height: auto; display: block;">
-                    <source src="/assets/videos/videomatterport.mp4" type="video/mp4">
-                </video>
+        <div class="grid grid--2 reveal" style="gap: var(--space-3xl); align-items: center;">
+            <!-- Texto à esquerda -->
+            <div>
+                <span class="label" style="color: #7b61ff;">Veja na prática</span>
+                <h2 class="headline-section" style="color: white;">Como a Brooks usa a Matterport.</h2>
+                <p style="color: rgba(255,255,255,0.6); line-height: 1.8; margin-bottom: var(--space-md);">
+                    A cada etapa da obra, realizamos um escaneamento completo com nossa câmera Matterport Pro. O resultado é um modelo 3D navegável que permite ao cliente acompanhar a evolução do projeto de qualquer lugar.
+                </p>
+                <p style="color: rgba(255,255,255,0.45); line-height: 1.8; margin-bottom: var(--space-lg);">
+                    Medições precisas, registro de instalações ocultas e histórico visual completo — tudo acessível por um link exclusivo, a qualquer momento.
+                </p>
+                <a href="#tours" class="btn btn--lg" style="background: linear-gradient(135deg, #7b61ff, #5a3fd4); color: white;">Ver tours virtuais</a>
+            </div>
+            <!-- Vídeo à direita -->
+            <div style="display: flex; justify-content: center;">
+                <div style="max-width: 320px; position: relative;">
+                    <!-- Glow -->
+                    <div style="position: absolute; inset: -20px; background: radial-gradient(ellipse, rgba(123, 97, 255, 0.15), transparent 70%); border-radius: 50%; filter: blur(40px); z-index: 0;"></div>
+                    <!-- Vídeo -->
+                    <div style="position: relative; z-index: 1; border-radius: 20px; overflow: hidden; border: 1px solid rgba(123, 97, 255, 0.2); box-shadow: 0 25px 60px rgba(0,0,0,0.4), 0 0 40px rgba(123, 97, 255, 0.08);">
+                        <video autoplay muted loop playsinline style="width: 100%; height: auto; display: block;">
+                            <source src="/assets/videos/videomatterport.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
