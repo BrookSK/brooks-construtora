@@ -487,6 +487,82 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Marcar pedido como revisado pelo financeiro
+     */
+    public function financialReview(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if (!Auth::hasPermission('orders.payment')) {
+            $this->setFlash('error', 'Sem permissão.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Financeiro';
+
+        PurchaseOrder::updateById($id, [
+            'financial_reviewed_at' => date('Y-m-d H:i:s'),
+            'financial_reviewed_by' => $userName,
+        ]);
+
+        PurchaseOrderHistory::log($id, 'financial_reviewed', "Revisado pelo financeiro: {$userName}", $userName, Auth::id());
+
+        $this->setFlash('success', 'Pedido marcado como revisado pelo financeiro.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
+     * Desmarcar revisão financeira
+     */
+    public function financialUnreview(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if (!Auth::hasPermission('orders.payment')) {
+            $this->setFlash('error', 'Sem permissão.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Financeiro';
+
+        PurchaseOrder::updateById($id, [
+            'financial_reviewed_at' => null,
+            'financial_reviewed_by' => null,
+        ]);
+
+        PurchaseOrderHistory::log($id, 'financial_unreview', "Revisão financeira desmarcada por: {$userName}", $userName, Auth::id());
+
+        $this->setFlash('success', 'Revisão financeira desmarcada.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
      * Cancelar pedido
      */
     public function cancel(): void

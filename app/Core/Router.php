@@ -106,6 +106,8 @@ class Router
             'orders/reopen-approval' => ['PurchaseOrderController', 'reopenApproval'],
             'orders/cancel' => ['PurchaseOrderController', 'cancel'],
             'orders/delete' => ['PurchaseOrderController', 'delete'],
+            'orders/financial-review' => ['PurchaseOrderController', 'financialReview'],
+            'orders/financial-unreview' => ['PurchaseOrderController', 'financialUnreview'],
             'orders/clear-price-history' => ['PurchaseOrderController', 'clearPriceHistory'],
             'orders/settings' => ['PurchaseOrderController', 'settings'],
             'orders/settings/update' => ['PurchaseOrderController', 'updateSettings'],

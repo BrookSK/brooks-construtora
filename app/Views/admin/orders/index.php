@@ -67,7 +67,7 @@
                     ];
                     $label = $statusLabels[$order['status']] ?? ['Desconhecido', 'secondary'];
                     ?>
-                    <tr class="order-row" data-status="<?= $order['status'] ?>">
+                    <tr class="order-row" data-status="<?= $order['status'] ?>"<?php if (\App\Core\Auth::hasPermission('orders.payment') && !empty($order['financial_reviewed_at'])): ?> style="background-color: rgba(25, 135, 84, 0.06);"<?php endif; ?>>
                         <td>
                             <a href="/admin/orders/show/<?= $order['id'] ?>" class="fw-bold text-decoration-none">
                                 <?= htmlspecialchars($order['code']) ?>
@@ -84,7 +84,11 @@
                             <?php endif; ?>
                         </td>
                         <td><?= htmlspecialchars($order['supplier_name'] ?? 'N/A') ?></td>
-                        <td><span class="badge bg-<?= $label[1] ?>"><?= $label[0] ?></span></td>
+                        <td><span class="badge bg-<?= $label[1] ?>"><?= $label[0] ?></span>
+                            <?php if (\App\Core\Auth::hasPermission('orders.payment') && !empty($order['financial_reviewed_at'])): ?>
+                            <span class="badge bg-success ms-1" style="font-size:0.6rem;" title="Revisado por <?= htmlspecialchars($order['financial_reviewed_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['financial_reviewed_at'])) ?>"><i class="bi bi-check2"></i> Financeiro</span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <?php $orderTotal = $order['display_total'] ?? $order['total_estimated']; ?>
                             <?= $orderTotal > 0 ? '<strong>R$ ' . number_format($orderTotal, 2, ',', '.') . '</strong>' : '<span class="text-muted">-</span>' ?>
@@ -122,7 +126,12 @@
             <div class="card-body py-2 px-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <strong class="text-dark"><?= htmlspecialchars($order['code']) ?></strong>
-                    <span class="badge bg-<?= $label[1] ?>" style="font-size:0.7rem;"><?= $label[0] ?></span>
+                    <div>
+                        <span class="badge bg-<?= $label[1] ?>" style="font-size:0.7rem;"><?= $label[0] ?></span>
+                        <?php if (\App\Core\Auth::hasPermission('orders.payment') && !empty($order['financial_reviewed_at'])): ?>
+                        <span class="badge bg-success" style="font-size:0.6rem;"><i class="bi bi-check2"></i></span>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mt-1">
                     <span class="text-muted small"><?= htmlspecialchars($order['supplier_name'] ?? 'Sem fornecedor') ?></span>

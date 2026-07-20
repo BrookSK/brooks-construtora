@@ -1000,6 +1000,28 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
 
                 <?php if (!in_array($order['status'], ['cancelled'])): ?>
                 <hr>
+                <?php if (\App\Core\Auth::hasPermission('orders.payment')): ?>
+                <?php if (empty($order['financial_reviewed_at'])): ?>
+                <form method="POST" action="/admin/orders/financial-review">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn btn-outline-success w-100" onclick="return confirm('Marcar este pedido como revisado pelo financeiro?')">
+                        <i class="bi bi-check2-square"></i> Revisado pelo Financeiro
+                    </button>
+                </form>
+                <?php else: ?>
+                <div class="alert alert-success py-2 px-3 small mb-2">
+                    <i class="bi bi-check-circle-fill"></i> Revisado por <strong><?= htmlspecialchars($order['financial_reviewed_by'] ?? '') ?></strong>
+                    <br><small class="text-muted"><?= date('d/m/Y H:i', strtotime($order['financial_reviewed_at'])) ?></small>
+                </div>
+                <form method="POST" action="/admin/orders/financial-unreview">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100" onclick="return confirm('Desmarcar revisão financeira?')">
+                        <i class="bi bi-arrow-counterclockwise"></i> Desmarcar Revisão
+                    </button>
+                </form>
+                <?php endif; ?>
+                <?php endif; ?>
+                <hr>
                 <form method="POST" action="/admin/orders/cancel" onsubmit="return confirm('Tem certeza que deseja cancelar este pedido?')">
                     <input type="hidden" name="id" value="<?= $order['id'] ?>">
                     <button type="submit" class="btn btn-outline-danger w-100">
