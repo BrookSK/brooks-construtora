@@ -1,6 +1,10 @@
 <?php $pageTitle = 'Pedidos de Materiais'; $currentPage = 'orders'; ?>
 <?php ob_start(); ?>
 
+<style>
+.financial-reviewed td { background-color: #132a1a !important; }
+</style>
+
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <span class="badge bg-secondary"><?= count($orders) ?> pedidos</span>
     <div class="d-flex flex-wrap gap-1 justify-content-end">
@@ -68,7 +72,8 @@
                     $label = $statusLabels[$order['status']] ?? ['Desconhecido', 'secondary'];
                     ?>
                     <?php $showFinancialReview = \App\Core\Auth::isSuperAdmin() || \App\Core\Auth::hasPermission('orders.payment'); ?>
-                    <tr class="order-row" data-status="<?= $order['status'] ?>"<?php if ($showFinancialReview && !empty($order['financial_reviewed_at'])): ?> style="background-color: rgba(34, 197, 94, 0.12) !important;"<?php endif; ?>>
+                    <?php $isReviewed = $showFinancialReview && !empty($order['financial_reviewed_at']); ?>
+                    <tr class="order-row <?= $isReviewed ? 'financial-reviewed' : '' ?>" data-status="<?= $order['status'] ?>">
                         <td>
                             <a href="/admin/orders/show/<?= $order['id'] ?>" class="fw-bold text-decoration-none">
                                 <?= htmlspecialchars($order['code']) ?>
