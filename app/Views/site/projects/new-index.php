@@ -28,7 +28,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Katty Kaitazoff</h3>
                         <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial</p>
-                        <p class="project-card__subtitle" style="opacity:0.6; margin-top:2px;">Alphaville, SP</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">Alphaville, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -40,7 +40,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Bárbara Dundes</h3>
                         <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial</p>
-                        <p class="project-card__subtitle" style="opacity:0.6; margin-top:2px;">Alphaville, SP</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">Alphaville, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -52,7 +52,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Milena Niemeyer</h3>
                         <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial</p>
-                        <p class="project-card__subtitle" style="opacity:0.6; margin-top:2px;">Moema, São Paulo</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">Moema, São Paulo</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -64,7 +64,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Rocha Andrade</h3>
                         <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial</p>
-                        <p class="project-card__subtitle" style="opacity:0.6; margin-top:2px;">São Paulo, SP</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">São Paulo, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -76,7 +76,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Norah Carneiro</h3>
                         <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial</p>
-                        <p class="project-card__subtitle" style="opacity:0.6; margin-top:2px;">Av. Prof. Ascendino Reis, São Paulo</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">Av. Prof. Ascendino Reis, São Paulo</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -88,7 +88,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Jóia Bergamo</h3>
                         <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial</p>
-                        <p class="project-card__subtitle" style="opacity:0.6; margin-top:2px;">São Paulo, SP</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">São Paulo, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -100,7 +100,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div class="project-card__content">
                         <h3 class="project-card__title">Palácio dos Bandeirantes</h3>
                         <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Corporativo</p>
-                        <p class="project-card__subtitle" style="opacity:0.6; margin-top:2px;">Morumbi, São Paulo</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">Morumbi, São Paulo</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -112,7 +112,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div class="project-card__content">
                         <h3 class="project-card__title">Escritório Itaim Bibi</h3>
                         <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Corporativo</p>
-                        <p class="project-card__subtitle" style="opacity:0.6; margin-top:2px;">Itaim Bibi, São Paulo</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">Itaim Bibi, São Paulo</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -124,7 +124,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Jóia Bergamo 2</h3>
                         <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial</p>
-                        <p class="project-card__subtitle" style="opacity:0.6; margin-top:2px;">São Paulo, SP</p>
+                        <p class="project-card__subtitle" style="opacity:0.8; margin-top:2px;">São Paulo, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
