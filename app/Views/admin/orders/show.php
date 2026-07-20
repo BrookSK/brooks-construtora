@@ -484,7 +484,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             </select>
                         </div>
                         <div class="col-6 col-md-2">
-                            <input type="text" class="form-control form-control-sm" name="number" placeholder="Número">
+                            <input type="text" class="form-control form-control-sm" name="number" placeholder="CPF/CNPJ" id="cpfCnpjInput" maxlength="18">
                         </div>
                         <div class="col-6 col-md-2">
                             <input type="text" inputmode="decimal" class="form-control form-control-sm" name="amount" placeholder="Valor (R$)">
@@ -1214,6 +1214,85 @@ function resendPhase(orderId, phase) {
     })
     .catch(() => alert('Erro de conexão'));
 }
+</script>
+
+<script>
+// Máscara e validação CPF/CNPJ
+(function() {
+    const input = document.getElementById('cpfCnpjInput');
+    if (!input) return;
+
+    input.addEventListener('input', function() {
+        let v = this.value.replace(/\D/g, '');
+        if (v.length <= 11) {
+            // CPF: 000.000.000-00
+            v = v.replace(/(\d{3})(\d)/, '$1.$2');
+            v = v.replace(/(\d{3})(\d)/, '$1.$2');
+            v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        } else {
+            // CNPJ: 00.000.000/0000-00
+            v = v.substring(0, 14);
+            v = v.replace(/^(\d{2})(\d)/, '$1.$2');
+            v = v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+            v = v.replace(/\.(\d{3})(\d)/, '.$1/$2');
+            v = v.replace(/(\d{4})(\d)/, '$1-$2');
+        }
+        this.value = v;
+    });
+
+    // Validação no submit
+    const form = input.closest('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const raw = input.value.replace(/\D/g, '');
+            if (raw.length === 0) return; // campo opcional
+            if (raw.length !== 11 && raw.length !== 14) {
+                e.preventDefault();
+                alert('CPF/CNPJ inválido. CPF deve ter 11 dígitos e CNPJ 14 dígitos.');
+                input.focus();
+                return;
+            }
+            if (raw.length === 11 && !validarCPF(raw)) {
+                e.preventDefault();
+                alert('CPF inválido.');
+                input.focus();
+                return;
+            }
+            if (raw.length === 14 && !validarCNPJ(raw)) {
+                e.preventDefault();
+                alert('CNPJ inválido.');
+                input.focus();
+                return;
+            }
+        });
+    }
+
+    function validarCPF(cpf) {
+        if (/^(\d)\1{10}$/.test(cpf)) return false;
+        let soma = 0, resto;
+        for (let i = 1; i <= 9; i++) soma += parseInt(cpf[i-1]) * (11 - i);
+        resto = (soma * 10) % 11;
+        if (resto === 10 || resto === 11) resto = 0;
+        if (resto !== parseInt(cpf[9])) return false;
+        soma = 0;
+        for (let i = 1; i <= 10; i++) soma += parseInt(cpf[i-1]) * (12 - i);
+        resto = (soma * 10) % 11;
+        if (resto === 10 || resto === 11) resto = 0;
+        return resto === parseInt(cpf[10]);
+    }
+
+    function validarCNPJ(cnpj) {
+        if (/^(\d)\1{13}$/.test(cnpj)) return false;
+        let tamanho = cnpj.length - 2, numeros = cnpj.substring(0, tamanho), digitos = cnpj.substring(tamanho), soma = 0, pos = tamanho - 7;
+        for (let i = tamanho; i >= 1; i--) { soma += numeros[tamanho - i] * pos--; if (pos < 2) pos = 9; }
+        let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+        if (resultado != digitos[0]) return false;
+        tamanho++; numeros = cnpj.substring(0, tamanho); soma = 0; pos = tamanho - 7;
+        for (let i = tamanho; i >= 1; i--) { soma += numeros[tamanho - i] * pos--; if (pos < 2) pos = 9; }
+        resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+        return resultado == digitos[1];
+    }
+})();
 </script>
 
 <?php $content = ob_get_clean(); ?>
