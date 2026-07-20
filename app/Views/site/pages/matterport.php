@@ -304,6 +304,19 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <div class="reveal" style="max-width: 1000px; margin: 0 auto; border-radius: 16px; overflow: hidden; border: 1px solid rgba(123, 97, 255, 0.2); box-shadow: 0 25px 60px rgba(0,0,0,0.4), 0 0 40px rgba(123, 97, 255, 0.08);">
             <iframe src="https://my.matterport.com/show?play=1&lang=en-US&m=tUk5LhVhaZM" width="100%" height="550" frameborder="0" allowfullscreen allow="xr-spatial-tracking" style="display: block;"></iframe>
         </div>
+
+        <!-- Botões para outros tours -->
+        <div class="reveal" style="display: flex; gap: var(--space-lg); justify-content: center; flex-wrap: wrap; margin-top: var(--space-2xl);">
+            <a href="https://discover.matterport.com/space/kVTh35mWgjR" target="_blank" rel="noopener noreferrer" class="btn btn--lg" style="background: linear-gradient(135deg, #7b61ff, #5a3fd4); color: white; display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="rotate-3d" style="width:18px;height:18px;"></i> Tour Virtual 1
+            </a>
+            <a href="https://discover.matterport.com/space/tUk5LhVhaZM" target="_blank" rel="noopener noreferrer" class="btn btn--lg" style="background: linear-gradient(135deg, #6a4fd6, #4a2fb2); color: white; display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="rotate-3d" style="width:18px;height:18px;"></i> Tour Virtual 2
+            </a>
+            <a href="https://discover.matterport.com/space/qTgNv6b16gp" target="_blank" rel="noopener noreferrer" class="btn btn--lg" style="background: linear-gradient(135deg, #5a3fd4, #3d2a99); color: white; display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="rotate-3d" style="width:18px;height:18px;"></i> Tour Virtual 3
+            </a>
+        </div>
     </div>
 </section>
 
