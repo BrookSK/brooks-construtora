@@ -121,11 +121,16 @@
             <p>Olá! 👋 Selecione uma das perguntas abaixo ou fale conosco pelo WhatsApp.</p>
         </div>
         <div class="chat-widget__questions" id="chat-questions">
-            <button class="chat-widget__question-btn" data-answer="Realizamos reformas completas de alto padrão em imóveis totalmente desocupados — residenciais, corporativos e outros. Atendemos São Paulo e região.">Quais serviços vocês oferecem?</button>
+            <button class="chat-widget__question-btn" data-answer="Realizamos construções completas de alto padrão em imóveis residenciais, corporativos e comerciais. Também oferecemos reformas em imóveis totalmente desocupados. Atendemos São Paulo e região.">Quais serviços vocês oferecem?</button>
             <button class="chat-widget__question-btn" data-answer="A Brooks atua há mais de 10 anos no mercado. Temos centenas de obras entregues, 5 estrelas no Google e zero reclamações no Reclame Aqui.">Há quanto tempo a Brooks existe?</button>
             <button class="chat-widget__question-btn" data-answer="Atendemos São Paulo e região metropolitana. Nosso escritório fica na Av. Brigadeiro Faria Lima, 1811 - Jardim Paulistano.">Qual a área de atuação?</button>
-            <button class="chat-widget__question-btn" data-answer="Sim! Solicite um orçamento sem compromisso pelo nosso formulário de contato ou WhatsApp: (11) 99339-2659.">Como solicitar um orçamento?</button>
-            <button class="chat-widget__question-btn" data-answer="A Vetriks é nossa tecnologia própria de gestão de obras. Um sistema completo, integrado e com IA, criado dentro da Brooks para resolver problemas reais da construção.">O que é a Vetriks?</button>
+            <button class="chat-widget__question-btn" data-answer="Sim! Solicite um orçamento sem compromisso pelo nosso formulário de contato ou WhatsApp: (11) 99339-2659. Retornamos em até 24h úteis.">Como solicitar um orçamento?</button>
+            <button class="chat-widget__question-btn" data-answer="A Vetriks é nossa tecnologia própria de gestão de obras. Um sistema completo, integrado e com IA, criado dentro da Brooks e utilizado por diversas construtoras.">O que é a Vetriks?</button>
+            <button class="chat-widget__question-btn" data-answer="Sim! Utilizamos a tecnologia Matterport para criar tours virtuais 3D de todas as nossas obras. O cliente acompanha cada etapa da construção de qualquer lugar do mundo.">Vocês fazem tour virtual da obra?</button>
+            <button class="chat-widget__question-btn" data-answer="O prazo varia conforme o escopo do projeto. Construções residenciais de alto padrão costumam levar de 12 a 24 meses. Reformas completas entre 4 e 12 meses. Informamos o cronograma detalhado na proposta.">Qual o prazo médio de uma obra?</button>
+            <button class="chat-widget__question-btn" data-answer="Sim. A Brooks Academy é nossa escola profissionalizante dentro dos canteiros de obra. Oferecemos capacitação técnica, plano de carreira e bolsas de engenharia civil EAD para colaboradores.">Vocês têm programa de capacitação?</button>
+            <button class="chat-widget__question-btn" data-answer="Acesse a página Trabalhe Conosco no nosso site e envie seu currículo. Estamos sempre em busca de profissionais que compartilham do nosso propósito de excelência na construção civil.">Como trabalhar na Brooks?</button>
+            <button class="chat-widget__question-btn" data-answer="O Força Estrutural é um grupo de empresários da construção civil criado pela Brooks. Reúne construtoras para networking, eventos exclusivos e parcerias com as melhores marcas de São Paulo.">O que é o Força Estrutural?</button>
         </div>
     </div>
     <div class="chat-widget__footer" style="justify-content: center; padding: var(--space-md);">

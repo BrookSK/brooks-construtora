@@ -158,32 +158,23 @@
             var question = this.textContent;
             var answer = this.getAttribute('data-answer');
             
-            // Hide questions
+            // Move questions container to end of chat body (keeps it always at bottom)
             var questionsContainer = document.getElementById('chat-questions');
-            if (questionsContainer) questionsContainer.style.display = 'none';
             
             // Show question as sent message
             var questionEl = document.createElement('div');
             questionEl.className = 'chat-widget__question-sent';
             questionEl.textContent = question;
-            chatBody.appendChild(questionEl);
+            chatBody.insertBefore(questionEl, questionsContainer);
             
             // Show answer
             var answerEl = document.createElement('div');
             answerEl.className = 'chat-widget__answer';
             answerEl.textContent = answer;
-            chatBody.appendChild(answerEl);
+            chatBody.insertBefore(answerEl, questionsContainer);
             
-            // Show questions again after a delay
-            setTimeout(function () {
-                if (questionsContainer) {
-                    questionsContainer.style.display = 'flex';
-                    chatBody.scrollTop = chatBody.scrollHeight;
-                }
-            }, 1500);
-            
-            // Scroll to bottom
-            chatBody.scrollTop = chatBody.scrollHeight;
+            // Scroll to the question (not all the way to bottom, so user reads the answer)
+            questionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     });
 
