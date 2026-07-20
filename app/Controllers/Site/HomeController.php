@@ -205,16 +205,8 @@ class HomeController extends Controller
             $mailService = new \App\Services\MailService();
             
             $subject = "Novo currículo recebido - {$name} ({$area})";
-            $body = "<h2>Novo currículo recebido</h2>";
-            $body .= "<p><strong>Nome:</strong> {$name}</p>";
-            $body .= "<p><strong>E-mail:</strong> {$email}</p>";
-            $body .= "<p><strong>Telefone:</strong> {$phone}</p>";
-            $body .= "<p><strong>Área de interesse:</strong> {$area}</p>";
-            if ($message) $body .= "<p><strong>Mensagem:</strong> {$message}</p>";
-            if ($resumePath) {
-                $baseUrl = ($_SERVER['REQUEST_SCHEME'] ?? 'https') . '://' . ($_SERVER['HTTP_HOST'] ?? 'brooksconstrutora.com.br');
-                $body .= "<p><strong>Currículo:</strong> <a href='{$baseUrl}{$resumePath}'>Download do currículo</a></p>";
-            }
+            $resumeFullUrl = $resumePath ? (($_SERVER['REQUEST_SCHEME'] ?? 'https') . '://' . ($_SERVER['HTTP_HOST'] ?? 'brooksconstrutora.com.br') . $resumePath) : null;
+            $body = \App\Services\EmailTemplate::resumeReceived($name, $email, $phone, $area, $message, $resumeFullUrl);
             
             $mailService->send('contato@brooksconstrutora.com.br', $subject, $body, true);
         } catch (\Exception $e) {
