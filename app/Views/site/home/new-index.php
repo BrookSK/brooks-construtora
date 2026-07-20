@@ -9,8 +9,8 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <!-- ===== HERO ===== -->
 <section class="hero" id="hero">
     <div class="hero__bg">
-        <video autoplay muted loop playsinline poster="/assets/images/wp/2024/11/IMG_2477-1-jpg.webp">
-            <source src="/assets/videos/IMG_96791.mp4" type="video/mp4">
+        <video autoplay muted loop playsinline poster="/assets/images/projects/katty-kaitazoff/katty-01.png">
+            <source src="/assets/images/projects/katty-kaitazoff/katty-video03.mp4" type="video/mp4">
         </video>
     </div>
     <div class="hero__overlay"></div>
