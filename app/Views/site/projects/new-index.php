@@ -27,7 +27,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Katty Kaitazoff</h3>
-                        <p class="project-card__subtitle">Construção completa de residência · Alphaville</p>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial · Alphaville, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -38,7 +38,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Bárbara Dundes</h3>
-                        <p class="project-card__subtitle">Construção completa de mansão · Alphaville</p>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial · Alphaville, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -49,7 +49,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Milena Niemeyer</h3>
-                        <p class="project-card__subtitle">Construção completa de apartamento · 500m² · Moema</p>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial · Moema, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -60,7 +60,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Rocha Andrade</h3>
-                        <p class="project-card__subtitle">Construção completa de apartamento · 300m²</p>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial · São Paulo, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -71,7 +71,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Norah Carneiro</h3>
-                        <p class="project-card__subtitle">Construção completa de apartamento · 250m²</p>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial · São Paulo, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -82,7 +82,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Jóia Bergamo</h3>
-                        <p class="project-card__subtitle">Construção completa de apartamento · 270m²</p>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial · São Paulo, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -93,7 +93,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Construção Corporativa</h3>
-                        <p class="project-card__subtitle">Cafeteria do Palácio dos Bandeirantes</p>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Corporativo · Morumbi, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -104,7 +104,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Construção Corporativa</h3>
-                        <p class="project-card__subtitle">Escritório no Itaim Bibi</p>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Corporativo · Itaim Bibi, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
@@ -115,7 +115,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <div class="project-card__overlay">
                     <div class="project-card__content">
                         <h3 class="project-card__title">Projeto Jóia Bergamo 2</h3>
-                        <p class="project-card__subtitle">Construção completa de apartamento · 270m²</p>
+                        <p class="project-card__subtitle">Execução de Engenharia · Brooks Construtora · Residencial · São Paulo, SP</p>
                         <span class="project-card__arrow">Ver detalhes <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
                     </div>
                 </div>
