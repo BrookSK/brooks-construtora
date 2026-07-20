@@ -1017,7 +1017,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
 
                 <?php if (!in_array($order['status'], ['cancelled'])): ?>
                 <hr>
-                <?php if (\App\Core\Auth::hasPermission('orders.payment')): ?>
+                <?php if ($order['status'] === 'approved' && \App\Core\Auth::hasPermission('orders.payment')): ?>
                 <?php if (empty($order['financial_reviewed_at'])): ?>
                 <form method="POST" action="/admin/orders/financial-review">
                     <input type="hidden" name="id" value="<?= $order['id'] ?>">
