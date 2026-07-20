@@ -68,7 +68,7 @@
                     $label = $statusLabels[$order['status']] ?? ['Desconhecido', 'secondary'];
                     ?>
                     <?php $showFinancialReview = \App\Core\Auth::isSuperAdmin() || \App\Core\Auth::hasPermission('orders.payment'); ?>
-                    <tr class="order-row" data-status="<?= $order['status'] ?>"<?php if ($showFinancialReview && !empty($order['financial_reviewed_at'])): ?> style="background-color: #f0fdf4 !important;"<?php endif; ?>>
+                    <tr class="order-row" data-status="<?= $order['status'] ?>"<?php if ($showFinancialReview && !empty($order['financial_reviewed_at'])): ?> style="background-color: rgba(34, 197, 94, 0.12) !important;"<?php endif; ?>>
                         <td>
                             <a href="/admin/orders/show/<?= $order['id'] ?>" class="fw-bold text-decoration-none">
                                 <?= htmlspecialchars($order['code']) ?>
