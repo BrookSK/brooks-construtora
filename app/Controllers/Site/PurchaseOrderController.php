@@ -1039,6 +1039,17 @@ class PurchaseOrderController extends Controller
     {
         // Já tem sessão ativa
         if (!empty($_SESSION['pin_auth'])) {
+            // Forçar re-login se sessão ficou com usuário inativo/incorreto
+            if (!empty($_SESSION['pin_user_id']) && $_SESSION['pin_user_id'] > 0) {
+                $pinUser = PinUser::find($_SESSION['pin_user_id']);
+                if (!$pinUser || !$pinUser['active']) {
+                    // Usuário PIN inativo — limpar sessão e forçar re-login
+                    unset($_SESSION['pin_auth'], $_SESSION['user_id'], $_SESSION['user_name'], 
+                          $_SESSION['user_email'], $_SESSION['user_role'], $_SESSION['pin_user_id'], $_SESSION['pin_user_role']);
+                    setcookie('pin_session', '', time() - 3600, '/');
+                    return false;
+                }
+            }
             return true;
         }
 
@@ -1053,6 +1064,20 @@ class PurchaseOrderController extends Controller
                 $_SESSION['user_email'] = 'comprador@pin';
                 $_SESSION['user_role'] = 'comprador';
                 $_SESSION['pin_auth'] = true;
+                return true;
+            }
+
+            // Tentar validar como PIN individual (cookie de token)
+            $pinUser = PinUser::findBySessionToken($cookie);
+            if ($pinUser) {
+                $roleMap = ['buyer'=>'comprador','quoter'=>'cotador','approver'=>'aprovador','payment'=>'financeiro','delivery'=>'comprador','epi'=>'epi','all'=>'comprador'];
+                $_SESSION['user_id'] = $pinUser['id'];
+                $_SESSION['user_name'] = $pinUser['name'];
+                $_SESSION['user_email'] = $pinUser['email'] ?? '';
+                $_SESSION['user_role'] = $roleMap[$pinUser['role']] ?? 'comprador';
+                $_SESSION['pin_auth'] = true;
+                $_SESSION['pin_user_id'] = $pinUser['id'];
+                $_SESSION['pin_user_role'] = $pinUser['role'];
                 return true;
             }
         }
