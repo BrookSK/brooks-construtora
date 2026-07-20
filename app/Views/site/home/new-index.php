@@ -342,7 +342,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
         <div class="grid grid--2 reveal" style="align-items: center; gap: var(--space-3xl);">
             <div>
                 <span class="label" style="color: var(--brooks-blue-accent);">Revista Digital</span>
-                <h2 class="headline-subsection" style="color: white;">Assine a Revista Brooks</h2>
+                <h2 class="headline-subsection" style="color: white;">Assine gratuitamente a Revista Brooks</h2>
                 <p style="color: rgba(255,255,255,0.6); line-height: 1.7;">Receba edições exclusivas sobre construção sustentável, reformas de alto padrão e tendências de arquitetura diretamente no seu e-mail.</p>
             </div>
             <div>
