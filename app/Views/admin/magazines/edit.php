@@ -295,6 +295,13 @@
 </div>
 
 <script>
+// Ao submeter o form principal, desabilita os file inputs de upload para não enviá-los
+document.querySelector('form[action="/admin/magazines/update"]').addEventListener('submit', function() {
+    this.querySelectorAll('.upload-img-form input[type="file"], .upload-img-form input[name="page_id"], .upload-img-form input[name="field"]').forEach(function(input) {
+        input.disabled = true;
+    });
+});
+
 // Upload da capa
 document.getElementById('cover-form').addEventListener('submit', function(e) {
     e.preventDefault();
