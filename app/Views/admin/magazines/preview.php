@@ -45,7 +45,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-cover .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8)}
 
         /* ===== PÁGINA INTERNA BASE ===== */
-        .pg-int{padding:30px 35px;height:842px;overflow:hidden}
+        .pg-int{padding:30px 35px;min-height:842px;overflow:visible}
         .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
         .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
         .pg-int .logo-sm .ck{color:#2e7d32}

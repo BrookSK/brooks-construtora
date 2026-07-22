@@ -135,13 +135,13 @@
                                     <div class="text-center text-muted small py-2"><i class="bi bi-image"></i></div>
                                 <?php endif; ?>
                                 <div class="d-flex gap-1 mt-1">
-                                    <form class="upload-img-form flex-grow-1" enctype="multipart/form-data" data-page-id="<?= $page['id'] ?>" data-field="image_url">
+                                    <div class="upload-img-form flex-grow-1" data-page-id="<?= $page['id'] ?>" data-field="image_url">
                                         <input type="hidden" name="page_id" value="<?= $page['id'] ?>">
                                         <div class="input-group input-group-sm">
                                             <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.65rem;">
-                                            <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-upload"></i></button>
+                                            <button type="button" class="btn btn-outline-primary btn-sm upload-img-btn"><i class="bi bi-upload"></i></button>
                                         </div>
-                                    </form>
+                                    </div>
                                     <button type="button" class="btn btn-outline-warning btn-sm generate-img-btn" data-page-id="<?= $page['id'] ?>" data-field="image_url" title="Gerar com IA"><i class="bi bi-stars"></i></button>
                                 </div>
                             </div>
@@ -157,14 +157,14 @@
                                     <div class="text-center text-muted small py-2"><i class="bi bi-image"></i></div>
                                 <?php endif; ?>
                                 <div class="d-flex gap-1 mt-1">
-                                    <form class="upload-img-form flex-grow-1" enctype="multipart/form-data" data-page-id="<?= $page['id'] ?>" data-field="image_url_2">
+                                    <div class="upload-img-form flex-grow-1" data-page-id="<?= $page['id'] ?>" data-field="image_url_2">
                                         <input type="hidden" name="page_id" value="<?= $page['id'] ?>">
                                         <input type="hidden" name="field" value="image_url_2">
                                         <div class="input-group input-group-sm">
                                             <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.65rem;">
-                                            <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-upload"></i></button>
+                                            <button type="button" class="btn btn-outline-primary btn-sm upload-img-btn"><i class="bi bi-upload"></i></button>
                                         </div>
-                                    </form>
+                                    </div>
                                     <button type="button" class="btn btn-outline-warning btn-sm generate-img-btn" data-page-id="<?= $page['id'] ?>" data-field="image_url_2" title="Gerar com IA"><i class="bi bi-stars"></i></button>
                                 </div>
                             </div>
@@ -181,14 +181,14 @@
                                     <div class="text-center text-muted small py-2"><i class="bi bi-image"></i></div>
                                 <?php endif; ?>
                                 <div class="d-flex gap-1 mt-1">
-                                    <form class="upload-img-form flex-grow-1" enctype="multipart/form-data" data-page-id="<?= $page['id'] ?>" data-field="image_url_3">
+                                    <div class="upload-img-form flex-grow-1" data-page-id="<?= $page['id'] ?>" data-field="image_url_3">
                                         <input type="hidden" name="page_id" value="<?= $page['id'] ?>">
                                         <input type="hidden" name="field" value="image_url_3">
                                         <div class="input-group input-group-sm">
                                             <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.65rem;">
-                                            <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-upload"></i></button>
+                                            <button type="button" class="btn btn-outline-primary btn-sm upload-img-btn"><i class="bi bi-upload"></i></button>
                                         </div>
-                                    </form>
+                                    </div>
                                     <button type="button" class="btn btn-outline-warning btn-sm generate-img-btn" data-page-id="<?= $page['id'] ?>" data-field="image_url_3" title="Gerar com IA"><i class="bi bi-stars"></i></button>
                                 </div>
                             </div>
@@ -253,10 +253,16 @@ document.getElementById('cover-form').addEventListener('submit', function(e) {
 });
 
 // Upload de imagens por página
-document.querySelectorAll('.upload-img-form').forEach(f=>{
-    f.addEventListener('submit', function(e){
-        e.preventDefault();
-        var fd = new FormData(this);
+document.querySelectorAll('.upload-img-form').forEach(container=>{
+    var btn = container.querySelector('.upload-img-btn');
+    if(btn) btn.addEventListener('click', function(){
+        var fileInput = container.querySelector('input[type="file"]');
+        if(!fileInput || !fileInput.files.length){alert('Selecione uma imagem.');return;}
+        var fd = new FormData();
+        fd.append('page_id', container.querySelector('input[name="page_id"]').value);
+        fd.append('image', fileInput.files[0]);
+        var fieldInput = container.querySelector('input[name="field"]');
+        if(fieldInput) fd.append('field', fieldInput.value);
         fetch('/admin/magazines/upload-image', {method:'POST', body:fd})
         .then(r=>r.json()).then(d=>{
             if(d.success){alert('Imagem enviada!');location.reload();}
