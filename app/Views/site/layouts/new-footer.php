@@ -40,7 +40,6 @@
                 <ul class="footer-col__list">
                     <li><a href="/sobre">Sobre a Brooks</a></li>
                     <li><a href="/cultura">Cultura</a></li>
-                    <li><a href="/cultura#nucleo">N.U.C.L.E.O</a></li>
                     <li><a href="/projetos">Projetos</a></li>
                     <li><a href="/revista">Revista Digital</a></li>
                     <li><a href="/contato">Contato</a></li>
@@ -52,6 +51,7 @@
             <div class="footer-col">
                 <h4 class="footer-col__title">Ecossistema</h4>
                 <ul class="footer-col__list">
+                    <li><a href="/cultura#nucleo">Núcleo</a></li>
                     <li><a href="/vetriks">Vetriks</a></li>
                     <li><a href="/forca-estrutural">Força Estrutural</a></li>
                     <li><a href="/academy">Brooks Academy</a></li>
