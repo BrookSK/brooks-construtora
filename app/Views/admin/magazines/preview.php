@@ -82,6 +82,22 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 
         /* Placeholder para imagens não carregadas */
         .img-placeholder{background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;color:#2e7d32;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
+
+        /* ===== COLUNA DO CONVIDADO ===== */
+        .pg-guest{padding:40px 40px;min-height:842px}
+        .pg-guest .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:25px}
+        .pg-guest .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
+        .pg-guest .logo-sm .ck{color:#2e7d32}
+        .pg-guest .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
+        .pg-guest .pn{font-size:1rem;font-weight:300;color:#333}
+        .pg-guest .column-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:#2e7d32;font-weight:600;margin-bottom:8px}
+        .pg-guest .column-title{font-family:'Montserrat',sans-serif;font-size:2.2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:20px}
+        .pg-guest .author-box{display:flex;align-items:center;gap:15px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #2e7d32}
+        .pg-guest .author-photo{width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #2e7d32}
+        .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;border:3px solid #2e7d32;color:#2e7d32;font-size:0.5rem;text-transform:uppercase}
+        .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
+        .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
+        .pg-guest .column-content p{font-size:0.82rem;line-height:1.9;color:#333;margin-bottom:14px;text-align:justify}
     </style>
 </head>
 <body>
@@ -140,6 +156,29 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
             <span>&copy; <?= $year ?> BROOKS CONSTRUTORA.<br>TODOS OS DIREITOS RESERVADOS.</span>
             <span><?= $siteUrl ?></span>
         </div>
+    </div>
+</div>
+
+<?php elseif ($layout === 'guest_column'): ?>
+<!-- COLUNA DO CONVIDADO -->
+<div class="page pg-guest">
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
+    <div class="column-label"><?= htmlspecialchars($page['caption'] ?? 'Coluna do Convidado') ?></div>
+    <div class="author-box">
+        <?php if($img1): ?>
+            <img src="<?= $img1 ?>" class="author-photo" alt="<?= htmlspecialchars($page['title'] ?? '') ?>">
+        <?php else: ?>
+            <div class="author-photo-placeholder">FOTO</div>
+        <?php endif; ?>
+        <div class="author-info">
+            <div class="author-name"><?= htmlspecialchars($page['title'] ?? 'Nome do Convidado') ?></div>
+            <div class="author-role"><?= htmlspecialchars($page['subtitle'] ?? 'Cargo / Empresa') ?></div>
+        </div>
+    </div>
+    <div class="column-content">
+        <?php foreach(explode("\n", $page['content'] ?? '') as $p): if(trim($p)): ?>
+            <p><?= htmlspecialchars(trim($p)) ?></p>
+        <?php endif; endforeach; ?>
     </div>
 </div>
 

@@ -159,8 +159,8 @@ class MagazineController extends Controller
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        // Cria as 10 páginas padrão em branco
-        $layouts = ['cover', 'subcover', 'internal_01', 'internal_02', 'internal_03', 'internal_04', 'internal_05', 'internal_06', 'internal_07', 'backcover'];
+        // Cria as 11 páginas padrão em branco (inclui coluna do convidado)
+        $layouts = ['cover', 'subcover', 'guest_column', 'internal_01', 'internal_02', 'internal_03', 'internal_04', 'internal_05', 'internal_06', 'internal_07', 'backcover'];
         foreach ($layouts as $i => $layout) {
             $pageData = [
                 'page_number' => $i + 1,
@@ -170,9 +170,10 @@ class MagazineController extends Controller
                 'layout_type' => $layout,
                 'created_at' => date('Y-m-d H:i:s'),
             ];
-            // Preenche defaults para cover/subcover/backcover
+            // Preenche defaults para cover/subcover/backcover/guest_column
             if ($layout === 'cover') { $pageData['title'] = 'NÚCLEO'; $pageData['subtitle'] = 'CONSTRUÇÃO — SUSTENTÁVEL'; }
             if ($layout === 'subcover') { $pageData['title'] = 'ECO'; $pageData['subtitle'] = 'CONSTRUÇÃO — CONSCIENTE'; }
+            if ($layout === 'guest_column') { $pageData['caption'] = 'Coluna do Convidado'; }
             if ($layout === 'backcover') { $pageData['content'] = 'Construção consciente do zero ao acabamento. Comprometidos com o meio ambiente, com as pessoas e com o futuro.'; }
             
             Magazine::addPage($magazineId, $pageData);
@@ -419,7 +420,7 @@ class MagazineController extends Controller
         $pending = [];
 
         foreach ($pages as $page) {
-            if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])) {
+            if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover', 'guest_column'])) {
                 continue;
             }
 
@@ -991,8 +992,12 @@ class MagazineController extends Controller
             ]);
 
             foreach ($content['pages'] as $index => $page) {
+                $pageNumber = $index + 1;
+                // Desloca numeração para abrir espaço para guest_column na posição 3
+                if ($pageNumber >= 3) $pageNumber++;
+                
                 Magazine::addPage($magazineId, [
-                    'page_number' => $index + 1,
+                    'page_number' => $pageNumber,
                     'title' => $page['title'] ?? '',
                     'subtitle' => $page['subtitle'] ?? '',
                     'content' => $page['content'] ?? '',
@@ -1005,6 +1010,17 @@ class MagazineController extends Controller
                     'created_at' => date('Y-m-d H:i:s'),
                 ]);
             }
+
+            // Insere página de Coluna do Convidado na posição 3 (após cover e subcover)
+            Magazine::addPage($magazineId, [
+                'page_number' => 3,
+                'title' => '',
+                'subtitle' => '',
+                'content' => '',
+                'caption' => 'Coluna do Convidado',
+                'layout_type' => 'guest_column',
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
 
             $updateJob(['magazine_id' => $magazineId]);
             MagazineTopic::markAsUsed($topicId);
@@ -1034,7 +1050,7 @@ class MagazineController extends Controller
         $imagesToGenerate = [];
 
         foreach ($pages as $page) {
-            if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])) {
+            if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover', 'guest_column'])) {
                 continue;
             }
 

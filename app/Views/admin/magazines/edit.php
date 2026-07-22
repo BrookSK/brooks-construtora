@@ -94,9 +94,52 @@
             <?php foreach ($pages as $page): ?>
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
-                    <h6 class="mb-0 small">Página <?= $page['page_number'] ?> — <span class="text-muted"><?= $page['layout_type'] ?></span></h6>
+                    <h6 class="mb-0 small">Página <?= $page['page_number'] ?> — <span class="text-muted"><?= $page['layout_type'] === 'guest_column' ? 'Coluna do Convidado' : $page['layout_type'] ?></span></h6>
                 </div>
                 <div class="card-body">
+                    <?php if ($page['layout_type'] === 'guest_column'): ?>
+                    <!-- Campos específicos: Coluna do Convidado -->
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-12">
+                            <label class="form-label small">Título da Coluna</label>
+                            <input type="text" class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][caption]" value="<?= htmlspecialchars($page['caption'] ?? 'Coluna do Convidado') ?>" placeholder="Ex: Coluna do Convidado">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label small">Nome do Convidado</label>
+                            <input type="text" class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][title]" value="<?= htmlspecialchars($page['title'] ?? '') ?>" placeholder="Nome completo do autor">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Cargo / Empresa</label>
+                            <input type="text" class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][subtitle]" value="<?= htmlspecialchars($page['subtitle'] ?? '') ?>" placeholder="Ex: CEO da Empresa X">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Foto do Convidado</label>
+                        <div class="border rounded p-2" style="min-height:80px;background:#f9f9f9;">
+                            <?php if ($page['image_url']): ?>
+                                <img src="<?= $page['image_url'] ?>" alt="" style="width:70px;height:70px;object-fit:cover;border-radius:50%;margin-bottom:5px;">
+                            <?php else: ?>
+                                <div class="text-center text-muted small py-2"><i class="bi bi-person-circle"></i> Nenhuma foto</div>
+                            <?php endif; ?>
+                            <div class="d-flex gap-1 mt-1">
+                                <div class="upload-img-form flex-grow-1" data-page-id="<?= $page['id'] ?>" data-field="image_url">
+                                    <input type="hidden" name="page_id" value="<?= $page['id'] ?>">
+                                    <div class="input-group input-group-sm">
+                                        <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.65rem;">
+                                        <button type="button" class="btn btn-outline-primary btn-sm upload-img-btn"><i class="bi bi-upload"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Texto da Coluna</label>
+                        <textarea class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][content]" rows="8" placeholder="Texto escrito pelo convidado..."><?= htmlspecialchars($page['content'] ?? '') ?></textarea>
+                    </div>
+                    <?php else: ?>
+                    <!-- Campos genéricos para outros layouts -->
                     <div class="row g-2 mb-2">
                         <div class="col-md-6">
                             <label class="form-label small">Título</label>
@@ -116,7 +159,7 @@
                     <?php endif; ?>
 
                     <!-- Imagens -->
-                    <?php if (!in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])): ?>
+                    <?php if (!in_array($page['layout_type'], ['cover', 'subcover', 'backcover', 'guest_column'])): ?>
                     <?php
                         // Layouts que usam 3 imagens
                         $threeImages = in_array($page['layout_type'], ['internal_05', 'internal_06']);
@@ -197,12 +240,13 @@
                     </div>
                     <?php endif; ?>
 
-                    <?php if (!in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])): ?>
+                    <?php if (!in_array($page['layout_type'], ['cover', 'subcover', 'backcover', 'guest_column'])): ?>
                     <div class="mt-2">
                         <label class="form-label small">Legenda (caption)</label>
                         <input type="text" class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][caption]" value="<?= htmlspecialchars($page['caption'] ?? '') ?>">
                     </div>
                     <?php endif; ?>
+                    <?php endif; ?><!-- end guest_column else -->
                 </div>
             </div>
             <?php endforeach; ?>
