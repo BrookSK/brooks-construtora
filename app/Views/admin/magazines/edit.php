@@ -27,6 +27,16 @@
                     </form>
                     <?php endif; ?>
                     <a href="/admin/magazines/preview/<?= $magazine['id'] ?>" class="btn btn-outline-info" target="_blank"><i class="bi bi-eye"></i> Preview</a>
+                    <?php
+                    $hasGuestColumn = false;
+                    foreach ($pages as $p) { if ($p['layout_type'] === 'guest_column') { $hasGuestColumn = true; break; } }
+                    if (!$hasGuestColumn):
+                    ?>
+                    <form method="POST" action="/admin/magazines/add-guest-column" class="mt-2">
+                        <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
+                        <button type="submit" class="btn btn-outline-secondary w-100" onclick="return confirm('Adicionar página de Coluna do Convidado?')"><i class="bi bi-person-plus"></i> Adicionar Coluna do Convidado</button>
+                    </form>
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
             </div>

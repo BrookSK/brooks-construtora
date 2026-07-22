@@ -92,6 +92,7 @@ class Router
             'magazines/delete' => ['MagazineController', 'delete'],
             'magazines/schedule' => ['MagazineController', 'schedule'],
             'magazines/schedule/update' => ['MagazineController', 'updateSchedule'],
+            'magazines/add-guest-column' => ['MagazineController', 'addGuestColumn'],
 
             // Pedidos de materiais
             'orders' => ['PurchaseOrderController', 'index'],

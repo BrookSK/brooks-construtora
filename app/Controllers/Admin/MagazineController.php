@@ -933,6 +933,57 @@ class MagazineController extends Controller
     }
 
     /**
+     * Adiciona página de Coluna do Convidado em revistas que não possuem
+     */
+    public function addGuestColumn(): void
+    {
+        if (!$this->isPost() || !Auth::hasPermission('magazines.edit')) {
+            $this->redirect('/admin/magazines');
+            return;
+        }
+
+        $id = (int) $this->input('magazine_id');
+        $magazine = Magazine::find($id);
+
+        if (!$magazine) {
+            $this->setFlash('error', 'Revista não encontrada.');
+            $this->redirect('/admin/magazines');
+            return;
+        }
+
+        $pages = Magazine::getPages($id);
+
+        // Verifica se já tem guest_column
+        foreach ($pages as $page) {
+            if ($page['layout_type'] === 'guest_column') {
+                $this->setFlash('error', 'Esta revista já possui uma Coluna do Convidado.');
+                $this->redirect('/admin/magazines/edit/' . $id);
+                return;
+            }
+        }
+
+        // Desloca page_number de todas as páginas a partir da posição 3
+        Database::query(
+            "UPDATE magazine_pages SET page_number = page_number + 1 WHERE magazine_id = ? AND page_number >= 3 ORDER BY page_number DESC",
+            [$id]
+        );
+
+        // Insere a página guest_column na posição 3
+        Magazine::addPage($id, [
+            'page_number' => 3,
+            'title' => '',
+            'subtitle' => '',
+            'content' => '',
+            'caption' => 'Coluna do Convidado',
+            'layout_type' => 'guest_column',
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->setFlash('success', 'Coluna do Convidado adicionada com sucesso!');
+        $this->redirect('/admin/magazines/edit/' . $id);
+    }
+
+    /**
      * Executa a geração completa da revista em background (após já ter respondido ao navegador)
      */
     private function executeBackgroundGeneration(int $jobId, int $topicId, int $userId): void
