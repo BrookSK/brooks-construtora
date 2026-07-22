@@ -40,6 +40,7 @@
                 <ul class="footer-col__list">
                     <li><a href="/sobre">Sobre a Brooks</a></li>
                     <li><a href="/cultura">Cultura</a></li>
+                    <li><a href="/cultura#nucleo">N.U.C.L.E.O</a></li>
                     <li><a href="/projetos">Projetos</a></li>
                     <li><a href="/revista">Revista Digital</a></li>
                     <li><a href="/contato">Contato</a></li>
