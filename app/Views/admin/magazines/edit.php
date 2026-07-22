@@ -145,6 +145,30 @@
                     </div>
                     <?php else: ?>
                     <!-- Campos genéricos para outros layouts -->
+                    <?php if (in_array($page['layout_type'], ['cover', 'subcover'])): ?>
+                    <!-- Campos específicos: Capa / Subcapa -->
+                    <?php
+                        $subtitleParts = explode('—', $page['subtitle'] ?? '');
+                        $subtitleLeft = trim($subtitleParts[0] ?? '');
+                        $subtitleRight = trim($subtitleParts[1] ?? '');
+                    ?>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-12">
+                            <label class="form-label small">Título (texto grande da capa)</label>
+                            <input type="text" class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][title]" value="<?= htmlspecialchars($page['title'] ?? '') ?>">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label small">Tagline Esquerda</label>
+                            <input type="text" class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][subtitle_left]" value="<?= htmlspecialchars($subtitleLeft) ?>" placeholder="Ex: CONSTRUÇÃO">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Tagline Direita</label>
+                            <input type="text" class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][subtitle_right]" value="<?= htmlspecialchars($subtitleRight) ?>" placeholder="Ex: SUSTENTÁVEL">
+                        </div>
+                    </div>
+                    <?php else: ?>
                     <div class="row g-2 mb-2">
                         <div class="col-md-6">
                             <label class="form-label small">Título</label>
@@ -155,6 +179,7 @@
                             <input type="text" class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][subtitle]" value="<?= htmlspecialchars($page['subtitle'] ?? '') ?>">
                         </div>
                     </div>
+                    <?php endif; ?>
 
                     <?php if (!in_array($page['layout_type'], ['cover', 'subcover'])): ?>
                     <div class="mb-2">

@@ -587,9 +587,17 @@ class MagazineController extends Controller
         // Atualiza páginas
         if (isset($_POST['pages'])) {
             foreach ($_POST['pages'] as $pageId => $pageData) {
+                // Monta subtitle a partir dos campos separados (cover/subcover)
+                $subtitle = $pageData['subtitle'] ?? '';
+                if (isset($pageData['subtitle_left']) || isset($pageData['subtitle_right'])) {
+                    $left = trim($pageData['subtitle_left'] ?? '');
+                    $right = trim($pageData['subtitle_right'] ?? '');
+                    $subtitle = $left . ($right ? ' — ' . $right : '');
+                }
+
                 Magazine::updatePage((int) $pageId, [
                     'title' => $pageData['title'] ?? '',
-                    'subtitle' => $pageData['subtitle'] ?? '',
+                    'subtitle' => $subtitle,
                     'content' => $pageData['content'] ?? '',
                     'caption' => $pageData['caption'] ?? '',
                 ]);
