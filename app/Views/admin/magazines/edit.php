@@ -81,7 +81,7 @@
 
     <!-- Conteúdo -->
     <div class="col-md-8">
-        <form method="POST" action="/admin/magazines/update">
+        <form method="POST" action="/admin/magazines/update" enctype="multipart/form-data">
             <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
 
             <div class="card mb-3">
@@ -133,14 +133,9 @@
                             <?php else: ?>
                                 <div class="text-center text-muted small py-2"><i class="bi bi-person-circle"></i> Nenhuma foto</div>
                             <?php endif; ?>
-                            <div class="d-flex gap-1 mt-1">
-                                <div class="upload-img-form flex-grow-1" data-page-id="<?= $page['id'] ?>" data-field="image_url">
-                                    <input type="hidden" name="page_id" value="<?= $page['id'] ?>">
-                                    <div class="input-group input-group-sm">
-                                        <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.65rem;">
-                                        <button type="button" class="btn btn-outline-primary btn-sm upload-img-btn"><i class="bi bi-upload"></i></button>
-                                    </div>
-                                </div>
+                            <div class="mt-1">
+                                <input type="file" class="form-control form-control-sm" name="guest_photo_<?= $page['id'] ?>" accept="image/*" style="font-size:0.65rem;">
+                                <small class="text-muted">A foto será salva ao clicar em "Salvar Alterações"</small>
                             </div>
                         </div>
                     </div>
@@ -314,21 +309,31 @@ document.getElementById('cover-form').addEventListener('submit', function(e) {
 });
 
 // Upload de imagens por página
-document.querySelectorAll('.upload-img-form').forEach(container=>{
+document.querySelectorAll('.upload-img-form').forEach(function(container){
     var btn = container.querySelector('.upload-img-btn');
-    if(btn) btn.addEventListener('click', function(){
+    if(!btn) return;
+    btn.addEventListener('click', function(){
         var fileInput = container.querySelector('input[type="file"]');
-        if(!fileInput || !fileInput.files.length){alert('Selecione uma imagem.');return;}
+        if(!fileInput || !fileInput.files.length){alert('Selecione uma imagem primeiro.');return;}
         var fd = new FormData();
-        fd.append('page_id', container.querySelector('input[name="page_id"]').value);
+        var pageIdInput = container.querySelector('input[name="page_id"]');
+        if(!pageIdInput){alert('Erro: page_id não encontrado.');return;}
+        fd.append('page_id', pageIdInput.value);
         fd.append('image', fileInput.files[0]);
         var fieldInput = container.querySelector('input[name="field"]');
         if(fieldInput) fd.append('field', fieldInput.value);
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
         fetch('/admin/magazines/upload-image', {method:'POST', body:fd})
-        .then(r=>r.json()).then(d=>{
-            if(d.success){alert('Imagem enviada!');location.reload();}
-            else alert(d.error||'Erro.');
-        }).catch(()=>alert('Erro ao enviar.'));
+        .then(function(r){
+            if(!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(d){
+            if(d.success){location.reload();}
+            else{alert(d.error||'Erro ao enviar imagem.');btn.disabled=false;btn.innerHTML='<i class="bi bi-upload"></i>';}
+        })
+        .catch(function(e){alert('Erro ao enviar: ' + e.message);btn.disabled=false;btn.innerHTML='<i class="bi bi-upload"></i>';});
     });
 });
 

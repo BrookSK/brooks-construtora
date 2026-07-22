@@ -593,6 +593,22 @@ class MagazineController extends Controller
                     'content' => $pageData['content'] ?? '',
                     'caption' => $pageData['caption'] ?? '',
                 ]);
+
+                // Processa upload de foto do convidado (guest_column)
+                $fileKey = 'guest_photo_' . $pageId;
+                if (isset($_FILES[$fileKey]) && $_FILES[$fileKey]['error'] === UPLOAD_ERR_OK) {
+                    $file = $_FILES[$fileKey];
+                    $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                    if (in_array($file['type'], $allowedTypes)) {
+                        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+                        $filename = 'magazine_guest_' . $pageId . '_' . time() . '.' . $ext;
+                        $uploadDir = ROOT_PATH . '/public/uploads/magazines/pages/';
+                        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                        if (move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
+                            Magazine::updatePage((int) $pageId, ['image_url' => '/uploads/magazines/pages/' . $filename]);
+                        }
+                    }
+                }
             }
         }
 
