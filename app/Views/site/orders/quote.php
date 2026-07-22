@@ -1895,6 +1895,253 @@ function removeServiceMaterial(sid, idx) {
     if (rawMats[idx]) rawMats[idx]._removed = true;
     recalcServiceTotals(sid);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── AUTO-SAVE DRAFT (localStorage) ─────────────────────────────────────────
+// Salva automaticamente o progresso da cotação para não perder dados se a
+// página recarregar (falta de nome, internet caiu, etc.)
+// ═══════════════════════════════════════════════════════════════════════════════
+(function() {
+    const DRAFT_KEY = 'quote_draft_<?= htmlspecialchars($token) ?>';
+    const SAVE_INTERVAL = 3000; // Salvar a cada 3 segundos se houver alterações
+    let draftDirty = false;
+    let draftSaveTimer = null;
+    let draftRestoredFromStorage = false;
+
+    // ─── Coletar estado atual do formulário ────────────────────────────────
+    function collectDraftData() {
+        const data = {
+            quoted_by_name: document.querySelector('[name="quoted_by_name"]')?.value || '',
+            quote_notes: document.querySelector('[name="quote_notes"]')?.value || '',
+            priceMode: priceMode,
+            suppliers: [],
+            savedAt: new Date().toISOString(),
+        };
+
+        addedSuppliers.forEach(sid => {
+            const block = document.getElementById('supplier-block-' + sid);
+            if (!block) return;
+
+            const supplierData = {
+                id: sid,
+                name: supplierNames[sid] || '',
+                prices: {},
+                financials: {},
+                vendor: {},
+            };
+
+            // Preços dos itens
+            block.querySelectorAll('.price-input').forEach(input => {
+                const itemId = input.dataset.itemId || input.name.match(/\[(\d+)\]$/)?.[1];
+                if (itemId) supplierData.prices[itemId] = input.value;
+            });
+
+            // Financeiros
+            ['discount_value', 'discount_type', 'surcharge_value', 'surcharge_type', 'ipi_percent', 'icms_percent', 'freight'].forEach(field => {
+                const el = block.querySelector(`[name="supplier_financials[${sid}][${field}]"]`);
+                if (el) supplierData.financials[field] = el.value;
+            });
+
+            // Dados do vendedor
+            ['name', 'phone', 'email', 'delivery_days', 'payment_method', 'payment_condition', 'payment_first_due', 'payment_notes'].forEach(field => {
+                const el = block.querySelector(`[name="supplier_vendor[${sid}][${field}]"]`);
+                if (el) supplierData.vendor[field] = el.value;
+            });
+
+            data.suppliers.push(supplierData);
+        });
+
+        return data;
+    }
+
+    // ─── Salvar draft no localStorage ──────────────────────────────────────
+    function saveDraft() {
+        if (!draftDirty) return;
+        try {
+            const data = collectDraftData();
+            // Só salvar se tem algum dado útil (pelo menos um fornecedor ou nome preenchido)
+            if (!data.quoted_by_name && data.suppliers.length === 0 && !data.quote_notes) return;
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+            draftDirty = false;
+            showDraftIndicator('saved');
+        } catch (e) {
+            // localStorage cheio ou indisponível - silenciar
+            console.warn('Draft save failed:', e);
+        }
+    }
+
+    // ─── Restaurar draft do localStorage ───────────────────────────────────
+    function restoreDraft() {
+        try {
+            const raw = localStorage.getItem(DRAFT_KEY);
+            if (!raw) return false;
+
+            const data = JSON.parse(raw);
+            if (!data || !data.savedAt) return false;
+
+            // Verificar se o draft não é muito antigo (máx 7 dias)
+            const savedDate = new Date(data.savedAt);
+            const now = new Date();
+            if ((now - savedDate) > 7 * 24 * 60 * 60 * 1000) {
+                localStorage.removeItem(DRAFT_KEY);
+                return false;
+            }
+
+            // Só restaurar se não tem dados pré-carregados do servidor (pedido em pending_approval)
+            if (addedSuppliers.length > 0) return false;
+
+            // Restaurar nome (apenas se o campo não estiver readonly/preenchido pelo pin)
+            const nameInput = document.querySelector('[name="quoted_by_name"]');
+            if (nameInput && !nameInput.readOnly && !nameInput.value && data.quoted_by_name) {
+                nameInput.value = data.quoted_by_name;
+            }
+
+            // Restaurar observações
+            const notesInput = document.querySelector('[name="quote_notes"]');
+            if (notesInput && !notesInput.value && data.quote_notes) {
+                notesInput.value = data.quote_notes;
+            }
+
+            // Restaurar modo de preço
+            if (data.priceMode && data.priceMode !== priceMode) {
+                setPriceMode(data.priceMode);
+            }
+
+            // Restaurar fornecedores
+            if (data.suppliers && data.suppliers.length > 0) {
+                data.suppliers.forEach(sup => {
+                    const sid = sup.id;
+                    const sname = sup.name;
+
+                    // Verificar se o fornecedor existe no select
+                    const option = document.querySelector(`#addSupplierSelect option[value="${sid}"]`);
+                    if (!option) return; // Fornecedor não existe mais
+
+                    if (addedSuppliers.includes(sid)) return; // Já adicionado
+
+                    addedSuppliers.push(sid);
+                    addSupplierBlock(sid, sname);
+
+                    // Preencher preços (com pequeno delay para o DOM montar)
+                    setTimeout(() => {
+                        const block = document.getElementById('supplier-block-' + sid);
+                        if (!block) return;
+
+                        // Preços
+                        for (const itemId in sup.prices) {
+                            const input = block.querySelector(`[name="supplier_prices[${sid}][${itemId}]"]`);
+                            if (input && sup.prices[itemId]) {
+                                input.value = sup.prices[itemId];
+                            }
+                        }
+
+                        // Financeiros
+                        for (const field in sup.financials) {
+                            const el = block.querySelector(`[name="supplier_financials[${sid}][${field}]"]`);
+                            if (el && sup.financials[field]) el.value = sup.financials[field];
+                        }
+
+                        // Vendedor
+                        for (const field in sup.vendor) {
+                            const el = block.querySelector(`[name="supplier_vendor[${sid}][${field}]"]`);
+                            if (el && sup.vendor[field]) el.value = sup.vendor[field];
+                        }
+
+                        // Recalcular totais
+                        calculateSupplierTotal(sid);
+                    }, 200);
+                });
+
+                document.getElementById('submitBtn').disabled = addedSuppliers.length === 0;
+            }
+
+            draftRestoredFromStorage = true;
+            showDraftIndicator('restored');
+            return true;
+        } catch (e) {
+            console.warn('Draft restore failed:', e);
+            return false;
+        }
+    }
+
+    // ─── Indicador visual de draft ─────────────────────────────────────────
+    function showDraftIndicator(state) {
+        let indicator = document.getElementById('draftIndicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'draftIndicator';
+            indicator.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;padding:8px 16px;border-radius:8px;font-size:0.8rem;transition:opacity 0.5s;box-shadow:0 2px 8px rgba(0,0,0,0.15);';
+            document.body.appendChild(indicator);
+        }
+
+        if (state === 'saved') {
+            indicator.style.background = '#d4edda';
+            indicator.style.color = '#155724';
+            indicator.innerHTML = '<i class="bi bi-cloud-check"></i> Rascunho salvo';
+            indicator.style.opacity = '1';
+            setTimeout(() => { indicator.style.opacity = '0'; }, 2500);
+        } else if (state === 'restored') {
+            indicator.style.background = '#cce5ff';
+            indicator.style.color = '#004085';
+            indicator.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Rascunho restaurado';
+            indicator.style.opacity = '1';
+            setTimeout(() => { indicator.style.opacity = '0'; }, 4000);
+        }
+    }
+
+    // ─── Limpar draft (após envio com sucesso) ─────────────────────────────
+    function clearDraft() {
+        try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+    }
+
+    // ─── Marcar como dirty em qualquer alteração ───────────────────────────
+    function markDirty() {
+        draftDirty = true;
+    }
+
+    // ─── Inicializar ───────────────────────────────────────────────────────
+
+    // 1) Tentar restaurar draft ao carregar
+    setTimeout(() => {
+        // Só restaurar se não tem dados vindos do servidor (pending_approval)
+        <?php if ($order['status'] !== 'pending_approval' || empty($orderSuppliers)): ?>
+        restoreDraft();
+        <?php endif; ?>
+    }, 500);
+
+    // 2) Observar mudanças no formulário para marcar dirty
+    document.getElementById('quoteForm').addEventListener('input', markDirty);
+    document.getElementById('quoteForm').addEventListener('change', markDirty);
+
+    // 3) Observar adição/remoção de fornecedores
+    new MutationObserver(markDirty).observe(
+        document.getElementById('suppliersContainer'), { childList: true, subtree: true }
+    );
+
+    // 4) Salvar periodicamente
+    draftSaveTimer = setInterval(saveDraft, SAVE_INTERVAL);
+
+    // 5) Salvar ao sair da página (beforeunload)
+    window.addEventListener('beforeunload', () => {
+        if (draftDirty) saveDraft();
+    });
+
+    // 6) Salvar quando a página perde visibilidade (troca de aba, minimizar)
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && draftDirty) saveDraft();
+    });
+
+    // 7) Limpar draft ao submeter formulário com sucesso
+    const originalConfirmSubmit = window.confirmSubmit;
+    window.confirmSubmit = function() {
+        clearDraft();
+        originalConfirmSubmit();
+    };
+
+    // 8) Expor função para limpar draft manualmente (debug)
+    window.clearQuoteDraft = clearDraft;
+})();
+// ═══════════════════════════════════════════════════════════════════════════════
 </script>
 </body>
 </html>
