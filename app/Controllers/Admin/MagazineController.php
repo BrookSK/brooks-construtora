@@ -594,18 +594,27 @@ class MagazineController extends Controller
                     'caption' => $pageData['caption'] ?? '',
                 ]);
 
-                // Processa upload de foto do convidado (guest_column)
-                $fileKey = 'guest_photo_' . $pageId;
-                if (isset($_FILES[$fileKey]) && $_FILES[$fileKey]['error'] === UPLOAD_ERR_OK) {
-                    $file = $_FILES[$fileKey];
-                    $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-                    if (in_array($file['type'], $allowedTypes)) {
-                        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-                        $filename = 'magazine_guest_' . $pageId . '_' . time() . '.' . $ext;
-                        $uploadDir = ROOT_PATH . '/public/uploads/magazines/pages/';
-                        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-                        if (move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
-                            Magazine::updatePage((int) $pageId, ['image_url' => '/uploads/magazines/pages/' . $filename]);
+                // Processa uploads de imagens da página
+                $imageFields = [
+                    'guest_photo_' . $pageId => 'image_url',
+                    'page_image_' . $pageId . '_1' => 'image_url',
+                    'page_image_' . $pageId . '_2' => 'image_url_2',
+                    'page_image_' . $pageId . '_3' => 'image_url_3',
+                ];
+
+                $uploadDir = ROOT_PATH . '/public/uploads/magazines/pages/';
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+                foreach ($imageFields as $fileKey => $dbField) {
+                    if (isset($_FILES[$fileKey]) && $_FILES[$fileKey]['error'] === UPLOAD_ERR_OK) {
+                        $file = $_FILES[$fileKey];
+                        if (in_array($file['type'], $allowedTypes)) {
+                            $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+                            $filename = 'magazine_page_' . $pageId . '_' . $dbField . '_' . time() . '.' . $ext;
+                            if (move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
+                                Magazine::updatePage((int) $pageId, [$dbField => '/uploads/magazines/pages/' . $filename]);
+                            }
                         }
                     }
                 }

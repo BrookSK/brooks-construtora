@@ -182,16 +182,7 @@
                                 <?php else: ?>
                                     <div class="text-center text-muted small py-2"><i class="bi bi-image"></i></div>
                                 <?php endif; ?>
-                                <div class="d-flex gap-1 mt-1">
-                                    <div class="upload-img-form flex-grow-1" data-page-id="<?= $page['id'] ?>" data-field="image_url">
-                                        <input type="hidden" name="page_id" value="<?= $page['id'] ?>">
-                                        <div class="input-group input-group-sm">
-                                            <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.65rem;">
-                                            <button type="button" class="btn btn-outline-primary btn-sm upload-img-btn"><i class="bi bi-upload"></i></button>
-                                        </div>
-                                    </div>
-                                    <button type="button" class="btn btn-outline-warning btn-sm generate-img-btn" data-page-id="<?= $page['id'] ?>" data-field="image_url" title="Gerar com IA"><i class="bi bi-stars"></i></button>
-                                </div>
+                                <input type="file" class="form-control form-control-sm mt-1" name="page_image_<?= $page['id'] ?>_1" accept="image/*" style="font-size:0.65rem;">
                             </div>
                         </div>
                         <!-- Imagem 2 -->
@@ -204,17 +195,7 @@
                                 <?php else: ?>
                                     <div class="text-center text-muted small py-2"><i class="bi bi-image"></i></div>
                                 <?php endif; ?>
-                                <div class="d-flex gap-1 mt-1">
-                                    <div class="upload-img-form flex-grow-1" data-page-id="<?= $page['id'] ?>" data-field="image_url_2">
-                                        <input type="hidden" name="page_id" value="<?= $page['id'] ?>">
-                                        <input type="hidden" name="field" value="image_url_2">
-                                        <div class="input-group input-group-sm">
-                                            <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.65rem;">
-                                            <button type="button" class="btn btn-outline-primary btn-sm upload-img-btn"><i class="bi bi-upload"></i></button>
-                                        </div>
-                                    </div>
-                                    <button type="button" class="btn btn-outline-warning btn-sm generate-img-btn" data-page-id="<?= $page['id'] ?>" data-field="image_url_2" title="Gerar com IA"><i class="bi bi-stars"></i></button>
-                                </div>
+                                <input type="file" class="form-control form-control-sm mt-1" name="page_image_<?= $page['id'] ?>_2" accept="image/*" style="font-size:0.65rem;">
                             </div>
                         </div>
                         <?php endif; ?>
@@ -228,17 +209,7 @@
                                 <?php else: ?>
                                     <div class="text-center text-muted small py-2"><i class="bi bi-image"></i></div>
                                 <?php endif; ?>
-                                <div class="d-flex gap-1 mt-1">
-                                    <div class="upload-img-form flex-grow-1" data-page-id="<?= $page['id'] ?>" data-field="image_url_3">
-                                        <input type="hidden" name="page_id" value="<?= $page['id'] ?>">
-                                        <input type="hidden" name="field" value="image_url_3">
-                                        <div class="input-group input-group-sm">
-                                            <input type="file" class="form-control form-control-sm" name="image" accept="image/*" style="font-size:0.65rem;">
-                                            <button type="button" class="btn btn-outline-primary btn-sm upload-img-btn"><i class="bi bi-upload"></i></button>
-                                        </div>
-                                    </div>
-                                    <button type="button" class="btn btn-outline-warning btn-sm generate-img-btn" data-page-id="<?= $page['id'] ?>" data-field="image_url_3" title="Gerar com IA"><i class="bi bi-stars"></i></button>
-                                </div>
+                                <input type="file" class="form-control form-control-sm mt-1" name="page_image_<?= $page['id'] ?>_3" accept="image/*" style="font-size:0.65rem;">
                             </div>
                         </div>
                         <?php endif; ?>
@@ -290,13 +261,6 @@
 </div>
 
 <script>
-// Ao submeter o form principal, desabilita os file inputs de upload para não enviá-los
-document.querySelector('form[action="/admin/magazines/update"]').addEventListener('submit', function() {
-    this.querySelectorAll('.upload-img-form input[type="file"], .upload-img-form input[name="page_id"], .upload-img-form input[name="field"]').forEach(function(input) {
-        input.disabled = true;
-    });
-});
-
 // Upload da capa
 document.getElementById('cover-form').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -306,35 +270,6 @@ document.getElementById('cover-form').addEventListener('submit', function(e) {
         if(d.success){alert('Capa atualizada!');location.reload();}
         else alert(d.error||'Erro.');
     }).catch(()=>alert('Erro.'));
-});
-
-// Upload de imagens por página
-document.querySelectorAll('.upload-img-form').forEach(function(container){
-    var btn = container.querySelector('.upload-img-btn');
-    if(!btn) return;
-    btn.addEventListener('click', function(){
-        var fileInput = container.querySelector('input[type="file"]');
-        if(!fileInput || !fileInput.files.length){alert('Selecione uma imagem primeiro.');return;}
-        var fd = new FormData();
-        var pageIdInput = container.querySelector('input[name="page_id"]');
-        if(!pageIdInput){alert('Erro: page_id não encontrado.');return;}
-        fd.append('page_id', pageIdInput.value);
-        fd.append('image', fileInput.files[0]);
-        var fieldInput = container.querySelector('input[name="field"]');
-        if(fieldInput) fd.append('field', fieldInput.value);
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-        fetch('/admin/magazines/upload-image', {method:'POST', body:fd})
-        .then(function(r){
-            if(!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
-        })
-        .then(function(d){
-            if(d.success){location.reload();}
-            else{alert(d.error||'Erro ao enviar imagem.');btn.disabled=false;btn.innerHTML='<i class="bi bi-upload"></i>';}
-        })
-        .catch(function(e){alert('Erro ao enviar: ' + e.message);btn.disabled=false;btn.innerHTML='<i class="bi bi-upload"></i>';});
-    });
 });
 
 // Gerar imagem com IA
