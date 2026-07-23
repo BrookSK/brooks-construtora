@@ -141,9 +141,9 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
     <?php if ($magazine['cover_image']): ?><img src="<?= $magazine['cover_image'] ?>" class="bg" alt=""><?php endif; ?>
     <div class="overlay"></div>
     <div class="content">
-        <div style="display:flex;flex-direction:column;align-items:center;margin-top:20px;padding:0 20px;">
-            <img src="<?= $magazineLogo ?>" style="max-width:180px;margin-bottom:15px" alt="Brooks">
-            <span style="font-size:3.5rem;font-weight:900;color:#fff;text-align:center;word-break:break-word;"><?= htmlspecialchars($page['title'] ?? 'ECO') ?></span>
+        <div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap;padding:0 20px;">
+            <span style="font-size:3.5rem;font-weight:900;color:#fff;text-align:center;"><?= htmlspecialchars($page['title'] ?? 'ECO') ?></span>
+            <img src="<?= $magazineLogo ?>" style="max-width:180px" alt="Brooks">
         </div>
         <div class="sub-line" style="margin-top:12px">
             <span><?= htmlspecialchars(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — CONSCIENTE')[0] ?? 'CONSTRUÇÃO') ?></span>
