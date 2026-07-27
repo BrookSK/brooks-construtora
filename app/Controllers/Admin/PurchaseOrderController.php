@@ -276,7 +276,11 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        // Log no histórico
+        // Determinar se precisa de cotação/aprovação ou se vai direto
+        $requireTransferApproval = Setting::get('orders_require_transfer_approval', '0') === '1';
+        $allFromStock = !$hasQuoteItems; // Se não tem itens de compra, todos são de estoque
+
+        // Montar descrição do histórico
         $historyDesc = 'Pedido criado';
         if (!empty($stockMovements)) {
             $historyDesc .= '. ' . count($stockMovements) . ' item(ns) saindo do estoque';
@@ -285,6 +289,33 @@ class PurchaseOrderController extends Controller
             $historyDesc .= '. Itens restantes enviados para cotação';
         }
 
+        if ($allFromStock && !$requireTransferApproval) {
+            // Todos os itens são de estoque/transferência e aprovação de transferência está desativada
+            // Pular cotação e aprovação → aprovar automaticamente e ir direto pro checklist
+            PurchaseOrder::updateById($orderId, [
+                'status' => 'approved',
+                'approved_by_name' => 'Sistema (transferência automática)',
+                'approved_at' => date('Y-m-d H:i:s'),
+                'approval_notes' => 'Aprovação automática - todos os itens saíram do estoque',
+            ]);
+
+            PurchaseOrderHistory::log(
+                $orderId,
+                'approved',
+                $historyDesc . '. Aprovação automática (transferência sem aprovação)',
+                'Sistema',
+                Auth::id()
+            );
+
+            // Criar checklist de entrega e enviar notificação
+            $this->initDeliveryOnApproval($orderId);
+
+            $this->setFlash('success', "Pedido {$code} criado! Itens de estoque aprovados automaticamente. Checklist de entrega criado.");
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        // Log no histórico (fluxo normal com cotação)
         PurchaseOrderHistory::log(
             $orderId,
             'created',
@@ -894,6 +925,7 @@ class PurchaseOrderController extends Controller
             'orders_pin_code',
             'require_pin_login',
             'orders_require_pin_login',
+            'orders_require_transfer_approval',
             'spare_items_weekly_budget',
         ];
 
@@ -907,6 +939,9 @@ class PurchaseOrderController extends Controller
         // Checkbox: se não veio, é 0
         if (!isset($_POST['orders_require_pin_login'])) {
             $data['orders_require_pin_login'] = '0';
+        }
+        if (!isset($_POST['orders_require_transfer_approval'])) {
+            $data['orders_require_transfer_approval'] = '0';
         }
 
         Setting::setMultiple($data);

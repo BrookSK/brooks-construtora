@@ -66,6 +66,21 @@
         </div>
     </div>
 
+    <!-- Configuração de Aprovação de Transferência -->
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-shield-check"></i> <strong>Aprovação de Transferência</strong></div>
+        <div class="card-body">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="orders_require_transfer_approval" value="1" id="requireTransferApproval" <?= ($settings['orders_require_transfer_approval'] ?? '0') === '1' ? 'checked' : '' ?>>
+                <label class="form-check-label fw-bold" for="requireTransferApproval">Exigir aprovação para itens de transferência/estoque</label>
+            </div>
+            <p class="text-muted small mt-2 mb-0">
+                <strong>Ativado:</strong> Itens de transferência/estoque passam pela aprovação junto com os itens de compra.<br>
+                <strong>Desativado:</strong> Itens de transferência/estoque são aprovados automaticamente. Se o pedido tiver APENAS itens de estoque, pula cotação e aprovação (vai direto pro checklist e notifica o transporte).
+            </p>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Fase 1: Cotação -->
         <div class="col-12 col-lg-3 mb-3">

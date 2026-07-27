@@ -557,8 +557,11 @@ class PurchaseOrderController extends Controller
             // Enviar notificações de conclusão (PDF pronto)
             $this->sendCompletedNotifications($order['id']);
 
-            // Enviar notificação de NF pendente
-            $this->sendPaymentPendingNotification($order['id']);
+            // Enviar notificação de NF pendente (apenas se tem itens de compra)
+            $hasItemsCompra = !empty(array_filter($items, fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase'));
+            if ($hasItemsCompra) {
+                $this->sendPaymentPendingNotification($order['id']);
+            }
 
             // Criar checklist de entrega e enviar notificação
             $this->initDeliveryOnApproval($order['id']);

@@ -158,6 +158,43 @@
                     <?php endif; ?>
                 </div>
 
+                <?php
+                // Separar itens por origem
+                $stockItems = array_filter($items, fn($i) => !empty($i['source_type']) && $i['source_type'] !== 'purchase');
+                $purchaseItems = array_filter($items, fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase');
+                ?>
+
+                <?php if (!empty($stockItems)): ?>
+                <div class="alert alert-success small py-2 mb-3">
+                    <i class="bi bi-box-seam"></i> <strong><?= count($stockItems) ?> item(ns) de estoque/transferência</strong>
+                    <?php if (\App\Models\Setting::get('orders_require_transfer_approval', '0') === '1'): ?>
+                        — precisam de aprovação
+                    <?php else: ?>
+                        — aprovados automaticamente (não precisam de ação)
+                    <?php endif; ?>
+                </div>
+                <div class="mb-3 p-2 rounded" style="background: #e8f5e9;">
+                    <small class="fw-bold text-success d-block mb-1"><i class="bi bi-arrow-left-right"></i> Itens de Estoque/Transferência:</small>
+                    <?php foreach ($stockItems as $si): ?>
+                        <div class="d-flex justify-content-between small py-1 border-bottom" style="border-color:#c8e6c9!important;">
+                            <span>
+                                <?= htmlspecialchars($si['material_name']) ?>
+                                <span class="badge bg-<?= $si['source_type'] === 'stock_transfer' ? 'primary' : 'success' ?>" style="font-size:0.6rem;">
+                                    <?= $si['source_type'] === 'stock_transfer' ? 'Transferência' : 'Estoque' ?>
+                                </span>
+                            </span>
+                            <span class="fw-bold"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?> <?= $si['unit'] ?? '' ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+                <?php if (!empty($purchaseItems)): ?>
+                <div class="alert alert-warning small py-2 mb-3">
+                    <i class="bi bi-cart"></i> <strong><?= count($purchaseItems) ?> item(ns) de compra</strong> — selecione o fornecedor para cada um:
+                </div>
+                <?php endif; ?>
+
                 <p class="text-muted small mb-3"><i class="bi bi-info-circle"></i> Você pode escolher fornecedores diferentes para cada material.</p>
                 <!-- Toggle de visualização -->
                 <?php if (count($orderSuppliers) >= 2): ?>
@@ -171,7 +208,11 @@
 
                 <!-- VISUALIZAÇÃO LISTA (por item) -->
                 <div id="approvalListView" style="display:none;">
-                <?php foreach ($items as $item): ?>
+                <?php 
+                $requireTransferApproval = \App\Models\Setting::get('orders_require_transfer_approval', '0') === '1';
+                $itemsToApprove = $requireTransferApproval ? $items : $purchaseItems;
+                ?>
+                <?php foreach ($itemsToApprove as $item): ?>
                 <div class="item-card" id="item-card-<?= $item['id'] ?>">
                     <div class="item-info">
                         <div class="item-title"><?= htmlspecialchars($item['material_name']) ?></div>
@@ -215,7 +256,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($items as $item): ?>
+                            <?php foreach ($itemsToApprove as $item): ?>
                             <tr>
                                 <td style="position:sticky; left:0; background:#fff; z-index:1;">
                                     <strong style="font-size:0.72rem;"><?= htmlspecialchars($item['material_name']) ?></strong>
@@ -262,7 +303,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($items as $item): ?>
+                            <?php foreach ($itemsToApprove as $item): ?>
                             <tr>
                                 <td><?= htmlspecialchars($item['material_name']) ?></td>
                                 <td class="text-center"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
