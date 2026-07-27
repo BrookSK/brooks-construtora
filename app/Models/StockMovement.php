@@ -67,6 +67,7 @@ class StockMovement extends Model
 
     /**
      * Buscar movimentações pendentes do transportador (Wilton)
+     * Apenas movimentações vinculadas a pedidos
      */
     public static function getPendingForTransport(): array
     {
@@ -76,20 +77,24 @@ class StockMovement extends Model
                     mu.abbreviation as unit_abbr,
                     cs_from.name as from_site_name, cs_from.code as from_site_code,
                     cs_to.name as to_site_name, cs_to.code as to_site_code,
+                    sl_from.name as from_location_name,
+                    sl_to.name as to_location_name,
                     po.code as order_code
              FROM stock_movements sm
              JOIN materials m ON sm.material_id = m.id
              LEFT JOIN measurement_units mu ON m.unit_id = mu.id
              LEFT JOIN construction_sites cs_from ON sm.from_site_id = cs_from.id
              LEFT JOIN construction_sites cs_to ON sm.to_site_id = cs_to.id
+             LEFT JOIN stock_locations sl_from ON sm.from_location_id = sl_from.id
+             LEFT JOIN stock_locations sl_to ON sm.to_location_id = sl_to.id
              LEFT JOIN purchase_orders po ON sm.order_id = po.id
-             WHERE sm.status = 'pending'
+             WHERE sm.status = 'pending' AND sm.order_id IS NOT NULL
              ORDER BY sm.created_at ASC"
         );
     }
 
     /**
-     * Buscar movimentações em trânsito
+     * Buscar movimentações em trânsito (apenas de pedidos)
      */
     public static function getInTransit(): array
     {
@@ -99,20 +104,24 @@ class StockMovement extends Model
                     mu.abbreviation as unit_abbr,
                     cs_from.name as from_site_name, cs_from.code as from_site_code,
                     cs_to.name as to_site_name, cs_to.code as to_site_code,
+                    sl_from.name as from_location_name,
+                    sl_to.name as to_location_name,
                     po.code as order_code
              FROM stock_movements sm
              JOIN materials m ON sm.material_id = m.id
              LEFT JOIN measurement_units mu ON m.unit_id = mu.id
              LEFT JOIN construction_sites cs_from ON sm.from_site_id = cs_from.id
              LEFT JOIN construction_sites cs_to ON sm.to_site_id = cs_to.id
+             LEFT JOIN stock_locations sl_from ON sm.from_location_id = sl_from.id
+             LEFT JOIN stock_locations sl_to ON sm.to_location_id = sl_to.id
              LEFT JOIN purchase_orders po ON sm.order_id = po.id
-             WHERE sm.status = 'in_transit'
+             WHERE sm.status = 'in_transit' AND sm.order_id IS NOT NULL
              ORDER BY sm.created_at ASC"
         );
     }
 
     /**
-     * Buscar movimentações entregues (histórico)
+     * Buscar movimentações entregues (histórico, apenas de pedidos)
      */
     public static function getDelivered(int $limit = 50): array
     {
@@ -122,14 +131,18 @@ class StockMovement extends Model
                     mu.abbreviation as unit_abbr,
                     cs_from.name as from_site_name, cs_from.code as from_site_code,
                     cs_to.name as to_site_name, cs_to.code as to_site_code,
+                    sl_from.name as from_location_name,
+                    sl_to.name as to_location_name,
                     po.code as order_code
              FROM stock_movements sm
              JOIN materials m ON sm.material_id = m.id
              LEFT JOIN measurement_units mu ON m.unit_id = mu.id
              LEFT JOIN construction_sites cs_from ON sm.from_site_id = cs_from.id
              LEFT JOIN construction_sites cs_to ON sm.to_site_id = cs_to.id
+             LEFT JOIN stock_locations sl_from ON sm.from_location_id = sl_from.id
+             LEFT JOIN stock_locations sl_to ON sm.to_location_id = sl_to.id
              LEFT JOIN purchase_orders po ON sm.order_id = po.id
-             WHERE sm.status = 'delivered'
+             WHERE sm.status = 'delivered' AND sm.order_id IS NOT NULL
              ORDER BY sm.delivered_at DESC
              LIMIT ?",
             [$limit]
