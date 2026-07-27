@@ -189,31 +189,35 @@ class PurchaseOrderController extends Controller
                 $isPartial = in_array($decision['action'], ['stock_partial', 'stock_transfer_partial']);
                 $sourceType = str_replace('_partial', '', $decision['action']); // stock_use ou stock_transfer
                 $stockFromSiteId = !empty($decision['from_site_id']) ? (int) $decision['from_site_id'] : null;
+                $stockFromLocationId = !empty($decision['from_location_id']) ? (int) $decision['from_location_id'] : null;
 
                 // Quantidade que sai do estoque
                 $fromStockQty = $isPartial ? $stockQty : $quantity;
 
                 // Registrar movimentação de estoque
-                if ($materialId && $stockFromSiteId) {
-                    if ($sourceType === 'stock_transfer') {
-                        $movId = \App\Models\StockMovement::transfer(
-                            $materialId,
-                            $stockFromSiteId,
-                            $constructionSiteId,
-                            $fromStockQty,
-                            Auth::user()['name'],
-                            $orderId
-                        );
-                    } else {
-                        // stock_use - saída do estoque local
-                        $movId = \App\Models\StockMovement::stockExit(
-                            $materialId,
-                            $stockFromSiteId,
-                            $fromStockQty,
-                            Auth::user()['name'],
-                            $orderId
-                        );
+                if ($materialId && ($stockFromSiteId || $stockFromLocationId)) {
+                    $movData = [
+                        'material_id' => $materialId,
+                        'from_site_id' => $stockFromSiteId,
+                        'to_site_id' => $constructionSiteId,
+                        'from_location_id' => $stockFromLocationId,
+                        'to_location_id' => null,
+                        'quantity' => $fromStockQty,
+                        'type' => $sourceType === 'stock_transfer' ? \App\Models\StockMovement::TYPE_TRANSFER : \App\Models\StockMovement::TYPE_EXIT,
+                        'status' => \App\Models\StockMovement::STATUS_PENDING,
+                        'requested_by' => Auth::user()['name'],
+                        'order_id' => $orderId,
+                    ];
+
+                    // Se é transferência pra uma obra destino, buscar location da obra destino
+                    if ($sourceType === 'stock_transfer' && $constructionSiteId) {
+                        $destLocation = \App\Models\StockLocation::findBySite($constructionSiteId);
+                        if ($destLocation) {
+                            $movData['to_location_id'] = $destLocation['id'];
+                        }
                     }
+
+                    $movId = \App\Models\StockMovement::record($movData);
                     $stockMovementId = $movId;
                     $stockMovements[] = $movId;
                 }
