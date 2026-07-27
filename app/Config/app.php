@@ -14,11 +14,24 @@ return [
     // Configurações do banco de dados (detecta branch automaticamente)
     'database' => (function () {
         $branch = 'main';
-        $headFile = ROOT_PATH . '/.git/HEAD';
-        if (file_exists($headFile)) {
-            $head = trim(file_get_contents($headFile));
-            if (str_starts_with($head, 'ref: refs/heads/')) {
-                $branch = substr($head, strlen('ref: refs/heads/'));
+
+        // 1. Prioridade: variável de ambiente (definida no Plesk ou .env)
+        $envBranch = getenv('APP_BRANCH');
+        if ($envBranch !== false && $envBranch !== '') {
+            $branch = $envBranch;
+        }
+        // 2. Fallback: arquivo .branch na raiz (útil para deploys que não preservam .git)
+        elseif (file_exists(ROOT_PATH . '/.branch')) {
+            $branch = trim(file_get_contents(ROOT_PATH . '/.branch'));
+        }
+        // 3. Fallback: leitura do .git/HEAD
+        else {
+            $headFile = ROOT_PATH . '/.git/HEAD';
+            if (file_exists($headFile)) {
+                $head = trim(file_get_contents($headFile));
+                if (str_starts_with($head, 'ref: refs/heads/')) {
+                    $branch = substr($head, strlen('ref: refs/heads/'));
+                }
             }
         }
 
