@@ -99,12 +99,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const stocks = data.stocks || [];
                 const stock = stocks.find(s => String(s.stock_location_id) === String(fromSiteId));
                 if (stock) {
-                    fromStockInfo.textContent = `Disponível: ${stock.quantity} ${stock.unit_abbr || ''}`;
+                    const qty = parseFloat(stock.quantity);
+                    const qtyFmt = qty % 1 === 0 ? qty.toFixed(0) : qty.toFixed(2).replace('.', ',');
+                    fromStockInfo.textContent = `Disponível: ${qtyFmt} ${stock.unit_abbr || ''}`;
                     fromStockInfo.className = 'text-success small';
                 } else if (stocks.length > 0) {
-                    // Material existe em outro depósito
                     const other = stocks[0];
-                    fromStockInfo.textContent = `Não encontrado aqui. Tem ${other.quantity} em: ${other.location_name || 'outro depósito'}`;
+                    const qty = parseFloat(other.quantity);
+                    const qtyFmt = qty % 1 === 0 ? qty.toFixed(0) : qty.toFixed(2).replace('.', ',');
+                    fromStockInfo.textContent = `Não encontrado aqui. Tem ${qtyFmt} em: ${other.location_name || 'outro depósito'}`;
                     fromStockInfo.className = 'text-warning small';
                 } else {
                     fromStockInfo.textContent = 'Material sem estoque em nenhum depósito';
