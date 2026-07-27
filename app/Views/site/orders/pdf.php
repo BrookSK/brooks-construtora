@@ -260,9 +260,16 @@
             </thead>
             <tbody>
                 <?php foreach ($items as $i => $item): ?>
-                <tr>
+                <tr<?= !empty($item['source_type']) && $item['source_type'] !== 'purchase' ? ' style="background:#e8f5e9;"' : '' ?>>
                     <td><?= $i + 1 ?></td>
-                    <td><strong><?= htmlspecialchars($item['material_name']) ?></strong></td>
+                    <td>
+                        <strong><?= htmlspecialchars($item['material_name']) ?></strong>
+                        <?php if (!empty($item['source_type']) && $item['source_type'] !== 'purchase'): ?>
+                            <br><span style="font-size:0.65rem; color:#2e7d32; font-weight:600;">
+                                <?= $item['source_type'] === 'stock_transfer' ? '↔ TRANSFERIDO' : '✓ ESTOQUE' ?>
+                            </span>
+                        <?php endif; ?>
+                    </td>
                     <td><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
                     <td><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
                     <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
@@ -290,6 +297,50 @@
                 </tr>
             </tbody>
         </table>
+
+        <!-- Resumo de Estoque (se houver itens do estoque) -->
+        <?php
+        $stockItemsList = array_filter($items, fn($it) => !empty($it['source_type']) && $it['source_type'] !== 'purchase');
+        $purchaseItemsList = array_filter($items, fn($it) => empty($it['source_type']) || $it['source_type'] === 'purchase');
+        ?>
+        <?php if (!empty($stockItemsList)): ?>
+        <div style="margin:1rem 0; padding:0.75rem; background:#e8f5e9; border-radius:6px; border-left:4px solid #4caf50;">
+            <strong style="font-size:0.8rem; color:#2e7d32;">Movimentações de Estoque</strong>
+            <table style="width:100%; margin-top:0.5rem; font-size:0.75rem; border-collapse:collapse;">
+                <tr style="border-bottom:1px solid #c8e6c9;">
+                    <th style="padding:4px; text-align:left;">Material</th>
+                    <th style="padding:4px; text-align:center;">Qtd</th>
+                    <th style="padding:4px; text-align:left;">Tipo</th>
+                    <th style="padding:4px; text-align:left;">Origem</th>
+                </tr>
+                <?php foreach ($stockItemsList as $si): ?>
+                <tr>
+                    <td style="padding:3px 4px;"><?= htmlspecialchars($si['material_name']) ?></td>
+                    <td style="padding:3px 4px; text-align:center;"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?></td>
+                    <td style="padding:3px 4px;">
+                        <?= $si['source_type'] === 'stock_transfer' ? 'Transferência' : 'Uso de estoque' ?>
+                    </td>
+                    <td style="padding:3px 4px;">
+                        <?php if (!empty($stockMovements)): ?>
+                            <?php foreach ($stockMovements as $sm): ?>
+                                <?php if ($sm['material_id'] == ($si['material_id'] ?? 0)): ?>
+                                    <?= htmlspecialchars($sm['from_site_name'] ?? 'N/A') ?>
+                                    <?= $si['source_type'] === 'stock_transfer' ? ' → ' . htmlspecialchars($sm['to_site_name'] ?? 'N/A') : '' ?>
+                                    <?php break; ?>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            -
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </table>
+            <div style="margin-top:0.5rem; font-size:0.7rem; color:#666;">
+                <?= count($stockItemsList) ?> item(ns) de estoque | <?= count($purchaseItemsList) ?> item(ns) comprados
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Itens: Mobile (cards) -->
         <div class="items-mobile-only" style="margin:1rem 0;">

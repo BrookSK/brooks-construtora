@@ -126,6 +126,12 @@
 
             <form method="POST" action="/pedido/cotacao/enviar/<?= $token ?>" id="quoteForm">
                 <div class="card-body p-3 p-md-4">
+                    <!-- Enviar cotação para fornecedor via WhatsApp -->
+                    <?php require ROOT_PATH . '/app/Views/site/orders/partials/quote_send_supplier.php'; ?>
+
+                    <!-- Auto-preenchimento de orçamento via IA -->
+                    <?php require ROOT_PATH . '/app/Views/site/orders/partials/quote_ai_parse.php'; ?>
+
                     <!-- Identificação -->
                     <h6 class="mb-3"><i class="bi bi-person"></i> Identificação</h6>
                     <div class="row mb-4">
@@ -140,21 +146,47 @@
                     <div class="table-responsive mb-4">
                         <table class="table table-sm table-bordered">
                             <thead class="table-light">
-                                <tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th class="text-center">Qtd</th></tr>
+                                <tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th class="text-center">Qtd</th><th>Origem</th></tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($items as $i => $item): ?>
-                                <tr>
+                                <tr class="<?= !empty($item['source_type']) && $item['source_type'] !== 'purchase' ? 'table-success' : '' ?>">
                                     <td><?= $i + 1 ?></td>
                                     <td><strong><?= htmlspecialchars($item['material_name']) ?></strong></td>
                                     <td class="text-muted small"><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
                                     <td class="text-muted small"><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
                                     <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
                                     <td class="text-center fw-bold"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
+                                    <td>
+                                        <?php if (!empty($item['source_type'])): ?>
+                                            <?php if ($item['source_type'] === 'stock_use'): ?>
+                                                <span class="badge bg-success" title="Saiu do estoque"><i class="bi bi-box-seam"></i> Estoque</span>
+                                            <?php elseif ($item['source_type'] === 'stock_transfer'): ?>
+                                                <span class="badge bg-primary" title="Transferido de outra obra"><i class="bi bi-arrow-left-right"></i> Transf.</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-warning text-dark"><i class="bi bi-cart"></i> Cotação</span>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-cart"></i> Cotação</span>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+                        <?php
+                        $stockItems = array_filter($items, fn($it) => !empty($it['source_type']) && $it['source_type'] !== 'purchase');
+                        $purchaseItems = array_filter($items, fn($it) => empty($it['source_type']) || $it['source_type'] === 'purchase');
+                        ?>
+                        <?php if (!empty($stockItems)): ?>
+                            <div class="alert alert-success small py-2 mb-0">
+                                <i class="bi bi-info-circle"></i>
+                                <strong><?= count($stockItems) ?> item(ns)</strong> saiu(ram) do estoque.
+                                <?php if (!empty($purchaseItems)): ?>
+                                    <strong><?= count($purchaseItems) ?> item(ns)</strong> precisa(m) de cotação.
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Fornecedores para cotação -->

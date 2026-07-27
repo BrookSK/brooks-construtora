@@ -79,6 +79,7 @@
             <?php endif; ?>
             <div class="d-flex gap-2 mt-2">
                 <a href="/admin/suppliers/edit/<?= $s['id'] ?>" class="btn btn-sm btn-outline-primary flex-grow-1"><i class="bi bi-pencil"></i> Editar</a>
+                <a href="/admin/suppliers/contacts/<?= $s['id'] ?>" class="btn btn-sm btn-outline-success" title="Vendedores"><i class="bi bi-people"></i></a>
                 <?php if ($s['active']): ?>
                 <form method="POST" action="/admin/suppliers/delete" onsubmit="return confirm('Desativar?')">
                     <input type="hidden" name="id" value="<?= $s['id'] ?>">

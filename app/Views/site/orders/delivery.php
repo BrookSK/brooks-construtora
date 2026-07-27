@@ -113,7 +113,14 @@ $pmLabels = ['pix'=>'PIX','boleto'=>'Boleto','cartao'=>'Cartão','transferencia'
                     <span class="badge bg-<?= $si[1] ?>" style="font-size:0.65rem;"><i class="bi <?= $si[2] ?>"></i> <?= $si[0] ?></span>
                     <?php if ($isLate): ?><span class="badge bg-danger" style="font-size:0.6rem;"><i class="bi bi-clock"></i> ATRASADO</span><?php endif; ?>
                 </div>
-                <div class="fw-bold" style="font-size:0.9rem;"><?= htmlspecialchars($d['material_name']) ?></div>
+                <div class="fw-bold" style="font-size:0.9rem;">
+                    <?= htmlspecialchars($d['material_name']) ?>
+                    <?php if (!empty($d['source_type']) && $d['source_type'] !== 'purchase'): ?>
+                        <span class="badge bg-<?= $d['source_type'] === 'stock_transfer' ? 'primary' : 'success' ?>" style="font-size:0.6rem; margin-left:4px;">
+                            <?= $d['source_type'] === 'stock_transfer' ? '↔ TRANSF.' : '✓ ESTOQUE' ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
                 <div class="d-flex flex-wrap gap-2 mt-1" style="font-size:0.75rem; color:#6c757d;">
                     <span><i class="bi bi-hash"></i> <?= number_format($d['quantity'], $d['quantity'] == (int)$d['quantity'] ? 0 : 2) ?> <?= htmlspecialchars($d['unit'] ?? '') ?></span>
                     <?php if ($d['expected_date']): ?><span><i class="bi bi-calendar3"></i> <?= date('d/m', strtotime($d['expected_date'])) ?></span><?php endif; ?>

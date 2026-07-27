@@ -682,5 +682,7 @@ if (reviewModal && mobileBtn) {
 }
 </script>
 
+<?php require ROOT_PATH . '/app/Views/admin/orders/partials/stock_check_modal.php'; ?>
+
 <?php $content = ob_get_clean(); ?>
 <?php require ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>

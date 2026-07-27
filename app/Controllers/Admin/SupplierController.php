@@ -160,6 +160,144 @@ class SupplierController extends Controller
     }
 
     /**
+     * Gerenciar vendedores/contatos de um fornecedor
+     */
+    public function contacts(int $id = 0): void
+    {
+        $id = $id ?: (int) $this->input('id', 0);
+        $supplier = Supplier::find($id);
+
+        if (!$supplier) {
+            $this->setFlash('error', 'Fornecedor não encontrado.');
+            $this->redirect('/admin/suppliers');
+            return;
+        }
+
+        $contacts = \App\Models\SupplierContact::getBySupplier($id);
+
+        $this->view('admin.suppliers.contacts', [
+            'supplier' => $supplier,
+            'contacts' => $contacts,
+            'user' => \App\Core\Auth::user(),
+            'flash' => $this->getFlash(),
+            'pageTitle' => 'Vendedores - ' . $supplier['name'],
+            'currentPage' => 'suppliers',
+        ]);
+    }
+
+    /**
+     * Salvar novo contato/vendedor (AJAX)
+     */
+    public function storeContact(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $supplierId = (int) $this->input('supplier_id', 0);
+        $name = trim($this->input('name', ''));
+
+        if (!$supplierId || !$name) {
+            $this->json(['error' => 'Fornecedor e nome são obrigatórios.'], 400);
+            return;
+        }
+
+        $id = \App\Models\SupplierContact::create([
+            'supplier_id' => $supplierId,
+            'name' => $name,
+            'phone' => trim($this->input('phone', '')),
+            'email' => trim($this->input('email', '')),
+            'role' => trim($this->input('role', 'vendedor')),
+            'notes' => trim($this->input('notes', '')),
+            'active' => 1,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $contact = \App\Models\SupplierContact::find($id);
+        $this->json(['success' => true, 'contact' => $contact]);
+    }
+
+    /**
+     * Atualizar contato/vendedor (AJAX)
+     */
+    public function updateContact(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $contact = \App\Models\SupplierContact::find($id);
+
+        if (!$contact) {
+            $this->json(['error' => 'Contato não encontrado.'], 404);
+            return;
+        }
+
+        $name = trim($this->input('name', ''));
+        if (!$name) {
+            $this->json(['error' => 'Nome é obrigatório.'], 400);
+            return;
+        }
+
+        \App\Models\SupplierContact::updateById($id, [
+            'name' => $name,
+            'phone' => trim($this->input('phone', '')),
+            'email' => trim($this->input('email', '')),
+            'role' => trim($this->input('role', 'vendedor')),
+            'notes' => trim($this->input('notes', '')),
+        ]);
+
+        $contact = \App\Models\SupplierContact::find($id);
+        $this->json(['success' => true, 'contact' => $contact]);
+    }
+
+    /**
+     * Excluir contato/vendedor (AJAX)
+     */
+    public function deleteContact(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        \App\Models\SupplierContact::updateById($id, ['active' => 0]);
+        $this->json(['success' => true]);
+    }
+
+    /**
+     * API: Listar vendedores de um fornecedor (AJAX)
+     */
+    public function getContacts(): void
+    {
+        $supplierId = (int) $this->input('supplier_id', 0);
+        if (!$supplierId) {
+            $this->json(['contacts' => []]);
+            return;
+        }
+        $contacts = \App\Models\SupplierContact::getBySupplier($supplierId);
+        $this->json(['contacts' => $contacts]);
+    }
+
+    /**
+     * Importar vendedores de cotações anteriores (AJAX)
+     */
+    public function importContacts(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $imported = \App\Models\SupplierContact::importFromQuotes();
+        $this->json(['success' => true, 'imported' => $imported]);
+    }
+
+    /**
      * API para cadastro rápido inline (AJAX)
      */
     public function quickStore(): void

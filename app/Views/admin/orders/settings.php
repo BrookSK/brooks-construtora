@@ -252,6 +252,65 @@
                 </div>
             </div>
         </div>
+
+        <!-- Transporte (Wilton) -->
+        <div class="col-12 col-lg-3 mb-3">
+            <div class="card h-100 border-primary">
+                <div class="card-header bg-primary bg-opacity-10">
+                    <i class="bi bi-truck text-primary"></i> <strong>Transporte (Estoque)</strong>
+                    <p class="small text-muted mb-0 mt-1">Responsável pelo transporte de materiais entre obras</p>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label small">E-mails</label>
+                        <textarea class="form-control form-control-sm" name="orders_transport_emails" rows="2" placeholder="wilton@empresa.com"><?= htmlspecialchars($settings['orders_transport_emails'] ?? '') ?></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Nome (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_transport_phone_name" placeholder="Ex: Wilton" value="<?= htmlspecialchars($settings['orders_transport_phone_name'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Telefone (Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_transport_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_transport_phone'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">URL Webhook</label>
+                        <div class="input-group input-group-sm">
+                            <input type="url" class="form-control" name="orders_transport_webhook" id="webhook_transport" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_transport_webhook'] ?? '') ?>">
+                            <button type="button" class="btn btn-outline-primary" onclick="testWebhook('transport')" title="Testar"><i class="bi bi-lightning"></i></button>
+                        </div>
+                    </div>
+                    <div class="alert alert-light small py-2 mb-0">
+                        <i class="bi bi-info-circle"></i> Notificado quando há transferência ou saída de estoque.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Envio de Cotação para Fornecedores -->
+        <div class="col-12 col-lg-3 mb-3">
+            <div class="card h-100 border-success">
+                <div class="card-header bg-success bg-opacity-10">
+                    <i class="bi bi-whatsapp text-success"></i> <strong>Envio de Cotação</strong>
+                    <p class="small text-muted mb-0 mt-1">Webhook para enviar cotação aos fornecedores via WhatsApp</p>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label small">URL Webhook (envio)</label>
+                        <div class="input-group input-group-sm">
+                            <input type="url" class="form-control" name="orders_quote_send_webhook" id="webhook_quote_send" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_quote_send_webhook'] ?? '') ?>">
+                            <button type="button" class="btn btn-outline-success" onclick="testWebhook('quote_send')" title="Testar"><i class="bi bi-lightning"></i></button>
+                        </div>
+                        <small class="text-muted">Este webhook envia a cotação direto pro WhatsApp do fornecedor.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Mensagem Padrão</label>
+                        <textarea class="form-control form-control-sm" name="orders_quote_default_message" rows="6" placeholder="Mensagem que será enviada ao fornecedor..."><?= htmlspecialchars($settings['orders_quote_default_message'] ?? "Olá! Bom dia, tudo bem?\n\nPrecisamos de cotação para os seguintes itens:\n\n{items_list}\n\nObra: {construction_site}\nPedido: {order_code}\n\nPoderia nos enviar o orçamento?\n\nObrigado!") ?></textarea>
+                        <small class="text-muted">Variáveis: {items_list}, {construction_site}, {order_code}, {supplier_name}, {vendor_name}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="text-end">

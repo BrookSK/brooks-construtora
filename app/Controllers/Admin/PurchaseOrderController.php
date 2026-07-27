@@ -163,33 +163,104 @@ class PurchaseOrderController extends Controller
 
         $orderId = PurchaseOrder::create($orderData);
 
+        // Decisões de estoque (se vieram do modal de verificação)
+        $stockDecisions = $_POST['stock_decisions'] ?? [];
+
         // Salvar itens
-        foreach ($items as $item) {
+        $itemIndex = 0;
+        $stockMovements = [];
+        $hasQuoteItems = false;
+
+        foreach ($items as $idx => $item) {
             if (empty($item['material_name'])) continue;
+            $itemIndex++;
+
+            $materialId = !empty($item['material_id']) ? (int) $item['material_id'] : null;
+            $quantity = (float) ($item['quantity'] ?? 1);
+
+            // Verificar se há decisão de estoque para este item
+            $decision = $stockDecisions[$idx] ?? null;
+            $sourceType = null;
+            $stockFromSiteId = null;
+            $stockMovementId = null;
+
+            if ($decision && $decision['action'] !== 'purchase') {
+                $sourceType = $decision['action']; // 'stock_use' ou 'stock_transfer'
+                $stockFromSiteId = !empty($decision['from_site_id']) ? (int) $decision['from_site_id'] : null;
+
+                // Registrar movimentação de estoque
+                if ($materialId && $stockFromSiteId) {
+                    if ($sourceType === 'stock_transfer') {
+                        $movId = \App\Models\StockMovement::transfer(
+                            $materialId,
+                            $stockFromSiteId,
+                            $constructionSiteId,
+                            $quantity,
+                            Auth::user()['name'],
+                            $orderId
+                        );
+                    } else {
+                        // stock_use - saída do estoque local
+                        $movId = \App\Models\StockMovement::stockExit(
+                            $materialId,
+                            $stockFromSiteId,
+                            $quantity,
+                            Auth::user()['name'],
+                            $orderId
+                        );
+                    }
+                    $stockMovementId = $movId;
+                    $stockMovements[] = $movId;
+                }
+            } else {
+                $hasQuoteItems = true;
+            }
 
             PurchaseOrderItem::create([
                 'order_id' => $orderId,
-                'material_id' => !empty($item['material_id']) ? (int) $item['material_id'] : null,
+                'material_id' => $materialId,
                 'material_name' => $item['material_name'],
                 'specification' => $item['specification'] ?? '',
                 'classification' => $item['classification'] ?? '',
                 'unit' => $item['unit'] ?? '',
-                'quantity' => (float) ($item['quantity'] ?? 1),
+                'quantity' => $quantity,
+                'source_type' => $sourceType,
+                'stock_from_site_id' => $stockFromSiteId,
+                'stock_movement_id' => $stockMovementId,
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
         }
 
+        // Notificar transporte para movimentações de estoque
+        if (!empty($stockMovements)) {
+            $stockController = new \App\Controllers\Admin\StockController();
+            foreach ($stockMovements as $movId) {
+                // Usa reflection para chamar método privado, ou melhor, extrai a lógica
+                $this->notifyTransportMovement($movId);
+            }
+        }
+
         // Log no histórico
+        $historyDesc = 'Pedido criado';
+        if (!empty($stockMovements)) {
+            $historyDesc .= '. ' . count($stockMovements) . ' item(ns) saindo do estoque';
+        }
+        if ($hasQuoteItems) {
+            $historyDesc .= '. Itens restantes enviados para cotação';
+        }
+
         PurchaseOrderHistory::log(
             $orderId,
             'created',
-            'Pedido criado e enviado para cotação',
+            $historyDesc,
             Auth::user()['name'],
             Auth::id()
         );
 
-        // Enviar notificações (e-mail + webhook) para cotação
-        $this->sendQuoteNotifications($orderId, $quoteToken);
+        // Enviar notificações (e-mail + webhook) para cotação (se houver itens para cotar)
+        if ($hasQuoteItems) {
+            $this->sendQuoteNotifications($orderId, $quoteToken);
+        }
 
         $this->setFlash('success', "Pedido {$code} criado com sucesso! Notificações enviadas para cotação.");
         $this->redirect('/admin/orders');
@@ -776,6 +847,12 @@ class PurchaseOrderController extends Controller
             'orders_spare_webhook',
             'orders_spare_phone',
             'orders_spare_phone_name',
+            'orders_transport_emails',
+            'orders_transport_webhook',
+            'orders_transport_phone',
+            'orders_transport_phone_name',
+            'orders_quote_send_webhook',
+            'orders_quote_default_message',
             'orders_pin_code',
             'require_pin_login',
             'orders_require_pin_login',
@@ -1636,6 +1713,62 @@ class PurchaseOrderController extends Controller
         error_log("[BROOKS_WEBHOOK] sendWebhook: url={$url} event={$eventType} orderId={$orderId} phone=" . ($data['phone'] ?? 'N/A'));
 
         NotificationService::queueWebhook($url, $data, $orderId, $eventType);
+    }
+
+    /**
+     * Notificar responsável pelo transporte sobre movimentação de estoque
+     */
+    private function notifyTransportMovement(int $movementId): void
+    {
+        $movement = \App\Models\StockMovement::find($movementId);
+        if (!$movement) return;
+
+        $material = Material::find($movement['material_id']);
+        $fromSite = $movement['from_site_id'] ? \App\Models\ConstructionSite::find($movement['from_site_id']) : null;
+        $toSite = $movement['to_site_id'] ? \App\Models\ConstructionSite::find($movement['to_site_id']) : null;
+
+        $materialName = $material['name'] ?? 'Material';
+        $fromName = $fromSite['name'] ?? 'N/A';
+        $toName = $toSite['name'] ?? 'N/A';
+        $qty = $movement['quantity'];
+        $type = $movement['type'] === 'transfer' ? 'TRANSFERÊNCIA' : 'SAÍDA DE ESTOQUE';
+
+        $emails = Setting::get('orders_transport_emails', '');
+        if (!empty($emails)) {
+            $subject = "{$type} - {$materialName}";
+            $body = "<h2>{$type} de Material</h2>"
+                . "<p><strong>Material:</strong> {$materialName}</p>"
+                . "<p><strong>Quantidade:</strong> {$qty}</p>"
+                . "<p><strong>Origem:</strong> {$fromName}</p>"
+                . ($toSite ? "<p><strong>Destino:</strong> {$toName}</p>" : '')
+                . "<p><strong>Solicitado por:</strong> {$movement['requested_by']}</p>"
+                . "<p><strong>Data:</strong> " . date('d/m/Y H:i') . "</p>";
+            NotificationService::queueEmails($emails, $subject, $body, null, 'stock_transport');
+        }
+
+        $webhookUrl = Setting::get('orders_transport_webhook', '');
+        if (!empty(trim($webhookUrl))) {
+            $message = "*{$type}*\n\n"
+                . "*Material:* {$materialName}\n"
+                . "*Quantidade:* {$qty}\n"
+                . "*Origem:* {$fromName}\n"
+                . ($toSite ? "*Destino:* {$toName}\n" : '')
+                . "*Solicitado por:* {$movement['requested_by']}\n"
+                . "*Data:* " . date('d/m/Y H:i');
+
+            NotificationService::queueWebhook($webhookUrl, [
+                'event' => 'stock_movement',
+                'type' => $movement['type'],
+                'material' => $materialName,
+                'quantity' => $qty,
+                'from_site' => $fromName,
+                'to_site' => $toName,
+                'requested_by' => $movement['requested_by'],
+                'message' => $message,
+                'phone' => Setting::get('orders_transport_phone', ''),
+                'phone_name' => Setting::get('orders_transport_phone_name', ''),
+            ], null, 'stock_transport');
+        }
     }
 
     private function sendPaymentNotifications(int $orderId, string $type, array $docData): void

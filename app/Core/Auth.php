@@ -88,16 +88,17 @@ class Auth
                 'dashboard', 'settings', 'newsletter', 'users', 
                 'magazines', 'magazines.edit', 'magazines.publish',
                 'orders', 'orders.create', 'orders.approve', 'orders.quote',
-                'suppliers', 'materials', 'orders.settings', 'obras'
+                'suppliers', 'materials', 'orders.settings', 'obras', 'stock', 'transport'
             ],
             'designer' => ['dashboard', 'magazines', 'magazines.edit'],
             'editor' => ['dashboard', 'magazines', 'orders', 'suppliers', 'materials', 'obras'],
-            'comprador' => ['dashboard', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials', 'obras'],
+            'comprador' => ['dashboard', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials', 'obras', 'stock'],
             'cotador' => ['dashboard', 'orders', 'orders.quote', 'suppliers', 'materials', 'obras'],
             'aprovador' => ['dashboard', 'orders', 'orders.approve', 'obras'],
             'financeiro' => ['dashboard', 'orders', 'orders.payment', 'obras'],
             'epi' => ['dashboard', 'epi', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials', 'obras'],
             'entrega' => ['dashboard', 'orders', 'orders.create', 'suppliers', 'materials', 'obras'],
+            'transporte' => ['dashboard', 'orders', 'transport', 'obras'],
         ];
 
         if (!isset($permissions[$role])) {

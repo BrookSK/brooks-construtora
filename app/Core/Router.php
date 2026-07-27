@@ -169,6 +169,38 @@ class Router
             'materials/quick-store-unit' => ['MaterialController', 'quickStoreUnit'],
             'materials/import' => ['MaterialController', 'import'],
             'materials/import-process' => ['MaterialController', 'importProcess'],
+
+            // Fornecedores - Contatos/Vendedores
+            'suppliers/contacts' => ['SupplierController', 'contacts'],
+            'suppliers/store-contact' => ['SupplierController', 'storeContact'],
+            'suppliers/update-contact' => ['SupplierController', 'updateContact'],
+            'suppliers/delete-contact' => ['SupplierController', 'deleteContact'],
+            'suppliers/get-contacts' => ['SupplierController', 'getContacts'],
+            'suppliers/import-contacts' => ['SupplierController', 'importContacts'],
+
+            // Estoque
+            'stock' => ['StockController', 'index'],
+            'stock/create' => ['StockController', 'create'],
+            'stock/store' => ['StockController', 'store'],
+            'stock/edit' => ['StockController', 'edit'],
+            'stock/update' => ['StockController', 'update'],
+            'stock/delete' => ['StockController', 'delete'],
+            'stock/transfer' => ['StockController', 'transfer'],
+            'stock/process-transfer' => ['StockController', 'processTransfer'],
+            'stock/movements' => ['StockController', 'movements'],
+            'stock/check-stock' => ['StockController', 'checkStock'],
+            'stock/search-stock' => ['StockController', 'searchStock'],
+            'stock/bulk-create' => ['StockController', 'bulkCreate'],
+            'stock/bulk-store' => ['StockController', 'bulkStore'],
+
+            // Transporte (Wilton)
+            'transport' => ['TransportController', 'index'],
+            'transport/in-transit' => ['TransportController', 'markInTransit'],
+            'transport/delivered' => ['TransportController', 'markDelivered'],
+            'transport/bulk-in-transit' => ['TransportController', 'bulkInTransit'],
+            'transport/bulk-delivered' => ['TransportController', 'bulkDelivered'],
+            'transport/detail' => ['TransportController', 'detail'],
+            'transport/orders' => ['TransportController', 'orders'],
         ];
 
         $path = implode('/', $segments);
@@ -303,6 +335,8 @@ class Router
             'pedido/entrega/data' => ['PurchaseOrderController', 'deliveryPublicData'],
             'pedido/aprovacao/comentario' => ['PurchaseOrderController', 'approvalComment'],
             'pedido/cotacao/comentario' => ['PurchaseOrderController', 'quoteComment'],
+            'pedido/cotacao/send-to-supplier' => ['PurchaseOrderController', 'sendToSupplier'],
+            'pedido/cotacao/parse-ai-quote' => ['PurchaseOrderController', 'parseAiQuote'],
 
             // PIN Auth
             'pin/login' => ['PinAuthController', 'login'],

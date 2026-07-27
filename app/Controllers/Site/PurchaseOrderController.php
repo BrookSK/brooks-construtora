@@ -656,6 +656,7 @@ class PurchaseOrderController extends Controller
         $history = PurchaseOrderHistory::getByOrder($orderId);
         $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
         $approvedSupplier = PurchaseOrderSupplier::getApproved($orderId);
+        $stockMovements = \App\Models\StockMovement::getByOrder($orderId);
 
         $this->view('site.orders.pdf', [
             'order' => $order,
@@ -663,6 +664,7 @@ class PurchaseOrderController extends Controller
             'history' => $history,
             'orderSuppliers' => $orderSuppliers,
             'approvedSupplier' => $approvedSupplier,
+            'stockMovements' => $stockMovements,
         ]);
     }
 
@@ -753,9 +755,14 @@ class PurchaseOrderController extends Controller
             $totalPrice = $item['total_price'] ?? 0;
             $subtotalInsumos += $totalPrice;
 
+            $materialLabel = $item['material_name'];
+            if (!empty($item['source_type']) && $item['source_type'] !== 'purchase') {
+                $materialLabel .= $item['source_type'] === 'stock_transfer' ? ' [TRANSFERIDO]' : ' [ESTOQUE]';
+            }
+
             $row = [
                 $i + 1,
-                $item['material_name'],
+                $materialLabel,
                 $item['specification'] ?? '',
                 $item['classification'] ?? '',
                 $item['unit'] ?? '',
@@ -911,6 +918,233 @@ class PurchaseOrderController extends Controller
 
         $supplier = Supplier::find($id);
         $this->json(['success' => true, 'supplier' => $supplier]);
+    }
+
+    /**
+     * Enviar cotação para fornecedor via webhook (WhatsApp)
+     */
+    public function sendToSupplier(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $orderId = (int) $this->input('order_id', 0);
+        $supplierId = (int) $this->input('supplier_id', 0);
+        $contactId = (int) $this->input('contact_id', 0);
+        $phone = trim($this->input('phone', ''));
+        $vendorName = trim($this->input('vendor_name', ''));
+        $supplierName = trim($this->input('supplier_name', ''));
+        $message = trim($this->input('message', ''));
+
+        if (!$orderId || !$supplierId || !$phone || !$message) {
+            $this->json(['error' => 'Dados incompletos.'], 400);
+            return;
+        }
+
+        $webhookUrl = Setting::get('orders_quote_send_webhook', '');
+        if (empty($webhookUrl)) {
+            $this->json(['error' => 'URL do webhook de envio de cotação não configurada. Acesse Config. Pedidos.'], 400);
+            return;
+        }
+
+        // Enviar via webhook
+        $payload = [
+            'event' => 'quote_send_to_supplier',
+            'order_id' => $orderId,
+            'supplier_id' => $supplierId,
+            'contact_id' => $contactId,
+            'phone' => $phone,
+            'phone_name' => $vendorName,
+            'supplier_name' => $supplierName,
+            'vendor_name' => $vendorName,
+            'message' => $message,
+        ];
+
+        // Enviar direto (não pela fila, para feedback imediato)
+        $ch = curl_init($webhookUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        // Registrar log
+        \App\Core\Database::insert('quote_webhook_logs', [
+            'order_id' => $orderId,
+            'supplier_id' => $supplierId,
+            'contact_id' => $contactId ?: null,
+            'message_sent' => $message,
+            'webhook_url' => $webhookUrl,
+            'response_code' => $httpCode ?: null,
+            'response_body' => $response ?: $error,
+            'sent_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        if ($error || $httpCode >= 400) {
+            $this->json(['error' => "Falha no envio: HTTP {$httpCode}. " . ($error ?: '')], 500);
+            return;
+        }
+
+        $this->json(['success' => true, 'http_code' => $httpCode]);
+    }
+
+    /**
+     * Processar mensagens do fornecedor com IA para auto-preencher orçamento
+     */
+    public function parseAiQuote(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $orderId = (int) $this->input('order_id', 0);
+        $supplierId = (int) $this->input('supplier_id', 0);
+        $messages = trim($this->input('messages', ''));
+
+        if (!$orderId || !$supplierId || empty($messages)) {
+            $this->json(['error' => 'Dados incompletos.'], 400);
+            return;
+        }
+
+        $order = PurchaseOrder::find($orderId);
+        if (!$order) {
+            $this->json(['error' => 'Pedido não encontrado.'], 404);
+            return;
+        }
+
+        $items = PurchaseOrderItem::getByOrder($orderId);
+        $supplier = Supplier::find($supplierId);
+
+        // Montar lista de itens para contexto
+        $itemsList = [];
+        foreach ($items as $item) {
+            $itemsList[] = [
+                'id' => $item['id'],
+                'name' => $item['material_name'],
+                'specification' => $item['specification'] ?? '',
+                'unit' => $item['unit'] ?? '',
+                'quantity' => $item['quantity'],
+            ];
+        }
+
+        // Chamar OpenAI para extrair dados
+        try {
+            $apiKey = Setting::get('openai_api_key', '');
+            $model = Setting::get('openai_model', 'gpt-4');
+
+            if (empty($apiKey)) {
+                $this->json(['error' => 'Chave API OpenAI não configurada.'], 400);
+                return;
+            }
+
+            $prompt = "Você é um assistente especializado em extrair informações de orçamentos de materiais de construção.\n\n"
+                . "CONTEXTO:\n"
+                . "Pedido: {$order['code']}\n"
+                . "Fornecedor: " . ($supplier['name'] ?? 'N/A') . "\n\n"
+                . "ITENS DO PEDIDO (referência):\n";
+
+            foreach ($itemsList as $i => $item) {
+                $prompt .= ($i + 1) . ". {$item['name']}"
+                    . ($item['specification'] ? " - {$item['specification']}" : '')
+                    . " - Qtd: {$item['quantity']} {$item['unit']}\n";
+            }
+
+            $prompt .= "\nMENSAGENS DO FORNECEDOR (orçamento recebido via WhatsApp):\n"
+                . "---\n{$messages}\n---\n\n"
+                . "TAREFA: Extraia os preços unitários de cada material e as condições comerciais.\n"
+                . "Associe cada preço ao item correto do pedido baseado no nome/descrição.\n\n"
+                . "RETORNE um JSON com esta estrutura EXATA:\n"
+                . "{\n"
+                . "  \"items\": [\n"
+                . "    {\"name\": \"nome do material\", \"unit_price\": 45.00, \"matched_item_id\": 123}\n"
+                . "  ],\n"
+                . "  \"delivery_days\": \"5 dias úteis\",\n"
+                . "  \"payment_method\": \"boleto\",\n"
+                . "  \"payment_condition\": \"28 dias\",\n"
+                . "  \"freight\": 150.00,\n"
+                . "  \"discount\": 0,\n"
+                . "  \"notes\": \"observações adicionais\"\n"
+                . "}\n\n"
+                . "REGRAS:\n"
+                . "- unit_price deve ser o preço UNITÁRIO em reais (número decimal)\n"
+                . "- matched_item_id deve corresponder ao id do item do pedido, se possível\n"
+                . "- Se não encontrar preço para um item, omita-o do array\n"
+                . "- freight em reais (0 se incluso ou não mencionado)\n"
+                . "- Retorne APENAS o JSON, sem markdown ou texto adicional";
+
+            $data = [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'system', 'content' => 'Você extrai dados de orçamentos de construção e retorna JSON válido. Responda APENAS com JSON.'],
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+                'temperature' => 0.2,
+                'max_tokens' => 2048,
+            ];
+
+            $ch = curl_init('https://api.openai.com/v1/chat/completions');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode($data),
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json',
+                    'Authorization: Bearer ' . $apiKey,
+                ],
+                CURLOPT_TIMEOUT => 60,
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
+                $this->json(['error' => 'Erro na API da IA (HTTP ' . $httpCode . ').'], 500);
+                return;
+            }
+
+            $result = json_decode($response, true);
+            $content = $result['choices'][0]['message']['content'] ?? '';
+
+            // Limpar possíveis marcadores de code block
+            $content = trim($content);
+            $content = preg_replace('/^```json\s*/i', '', $content);
+            $content = preg_replace('/\s*```$/i', '', $content);
+
+            $parsed = json_decode($content, true);
+
+            if (!is_array($parsed) || !isset($parsed['items'])) {
+                $this->json(['error' => 'A IA não conseguiu extrair dados válidos das mensagens.'], 400);
+                return;
+            }
+
+            // Salvar no banco para referência
+            \App\Core\Database::insert('quote_messages', [
+                'order_id' => $orderId,
+                'supplier_id' => $supplierId,
+                'contact_id' => null,
+                'raw_messages' => $messages,
+                'parsed_data' => json_encode($parsed),
+                'parsed_at' => date('Y-m-d H:i:s'),
+                'applied' => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            $this->json(['success' => true, 'parsed' => $parsed]);
+
+        } catch (\Exception $e) {
+            $this->json(['error' => 'Erro ao processar: ' . $e->getMessage()], 500);
+        }
     }
 
     /**
