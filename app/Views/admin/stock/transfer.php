@@ -17,13 +17,7 @@ ob_start();
                             <select name="material_id" id="transferMaterial" required style="display:none;">
                                 <option value="">Selecione o material...</option>
                                 <?php foreach ($materials as $mat): ?>
-                                    <option value="<?= $mat['id'] ?>"
-                                            data-name="<?= htmlspecialchars($mat['name']) ?>"
-                                            data-unit="<?= htmlspecialchars($mat['unit_abbr'] ?? '') ?>">
-                                        <?= htmlspecialchars($mat['name']) ?>
-                                        <?= !empty($mat['unit_abbr']) ? ' (' . $mat['unit_abbr'] . ')' : '' ?>
-                                        <?= !empty($mat['specification'] ?? $mat['category_name'] ?? '') ? ' - ' . htmlspecialchars($mat['specification'] ?? $mat['category_name'] ?? '') : '' ?>
-                                    </option>
+                                    <option value="<?= $mat['id'] ?>" data-name="<?= htmlspecialchars($mat['name']) ?>" data-unit="<?= htmlspecialchars($mat['unit_abbr'] ?? '') ?>"><?= htmlspecialchars($mat['name']) ?><?= !empty($mat['unit_abbr']) ? ' (' . $mat['unit_abbr'] . ')' : '' ?><?= !empty($mat['specification'] ?? $mat['category_name'] ?? '') ? ' - ' . htmlspecialchars($mat['specification'] ?? $mat['category_name'] ?? '') : '' ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>

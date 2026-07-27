@@ -50,11 +50,7 @@ ob_start();
                                 <select name="material_id" id="materialSelect" required style="display:none;">
                                     <option value="">Selecione o material...</option>
                                     <?php foreach ($materials as $mat): ?>
-                                        <option value="<?= $mat['id'] ?>">
-                                            <?= htmlspecialchars($mat['name']) ?>
-                                            <?= !empty($mat['unit_abbr']) ? ' (' . $mat['unit_abbr'] . ')' : '' ?>
-                                            <?= !empty($mat['specification'] ?? $mat['category_name'] ?? '') ? ' - ' . htmlspecialchars($mat['specification'] ?? $mat['category_name']) : '' ?>
-                                        </option>
+                                        <option value="<?= $mat['id'] ?>"><?= htmlspecialchars($mat['name']) ?><?= !empty($mat['unit_abbr']) ? ' (' . $mat['unit_abbr'] . ')' : '' ?><?= !empty($mat['specification'] ?? $mat['category_name'] ?? '') ? ' - ' . htmlspecialchars($mat['specification'] ?? $mat['category_name']) : '' ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             <?php endif; ?>
