@@ -200,6 +200,9 @@
                             <button type="button" class="btn btn-outline-secondary" id="btnModeUnit" onclick="setPriceMode('unit')">Unitário</button>
                             <button type="button" class="btn btn-outline-secondary active" id="btnModeTotal" onclick="setPriceMode('total')">Total do item</button>
                         </div>
+                        <small class="text-muted" id="priceModeHint" style="font-size:0.7rem;">
+                            <i class="bi bi-info-circle"></i> No modo "Total do item", informe o valor total (ex: 2un x R$11 = digite R$22). O sistema calcula o unitário automaticamente.
+                        </small>
                     </div>
                     
                     <div class="mb-3">
@@ -1247,6 +1250,26 @@ function showReviewModal() {
             html += '<td class="text-end fw-bold">R$ ' + formatBRL(totalPrice) + '</td></tr>';
         });
         html += '</tbody></table>';
+        
+        // Financeiros
+        const getFinVal = (field) => parseBRL(block.querySelector(`[name="supplier_financials[${sid}][${field}]"]`)?.value) || 0;
+        const freight = getFinVal('freight');
+        const discountVal = getFinVal('discount_value');
+        const surchargeVal = getFinVal('surcharge_value');
+        const ipi = getFinVal('ipi_percent');
+        const icms = getFinVal('icms_percent');
+        
+        let finHtml = '';
+        if (freight) finHtml += `<span class="me-2">Frete: <strong>R$ ${formatBRL(freight)}</strong></span>`;
+        if (discountVal) finHtml += `<span class="me-2 text-success">Desc: ${discountVal}${block.querySelector('[name*="discount_type"]')?.value === 'fixed' ? ' R$' : '%'}</span>`;
+        if (surchargeVal) finHtml += `<span class="me-2 text-danger">Acresc: ${surchargeVal}${block.querySelector('[name*="surcharge_type"]')?.value === 'fixed' ? ' R$' : '%'}</span>`;
+        if (ipi) finHtml += `<span class="me-2">IPI: ${ipi}%</span>`;
+        if (icms) finHtml += `<span class="me-2">ICMS: ${icms}%</span>`;
+        
+        if (finHtml) {
+            html += `<div class="small text-muted mt-1 pt-1 border-top">${finHtml}</div>`;
+        }
+        
         html += '</div></div>';
     });
 
