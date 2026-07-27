@@ -2437,7 +2437,7 @@ async function parseAiForSupplier(sid) {
                     if (oiName.includes(parsedName) || parsedName.includes(oiName)) {
                         const input = document.querySelector(`input[name="supplier_prices[${sid}][${oi.id}]"]`);
                         if (input && !input.value) {
-                            input.value = parseFloat(parsedItem.unit_price).toFixed(2).replace('.', ',');
+                            input.value = (priceMode === 'total' ? parseFloat(parsedItem.unit_price) * (parseFloat(oi.quantity) || 1) : parseFloat(parsedItem.unit_price)).toFixed(2).replace('.', ',');
                             input.dispatchEvent(new Event('input', { bubbles: true }));
                             applied++;
                             matched = true;
@@ -2611,14 +2611,14 @@ async function parseAiForSupplierMap(sid) {
                     if (oiName.includes(parsedName) || parsedName.includes(oiName) || matchScore >= 0.5) {
                         const mapInput = document.querySelector(`input.map-price-input[data-sid="${sid}"][data-item="${oi.id}"]`);
                         if (mapInput && !mapInput.value) {
-                            mapInput.value = parseFloat(parsedItem.unit_price).toFixed(2).replace('.', ',');
+                            mapInput.value = (priceMode === 'total' ? parseFloat(parsedItem.unit_price) * (parseFloat(oi.quantity) || 1) : parseFloat(parsedItem.unit_price)).toFixed(2).replace('.', ',');
                             mapInput.dispatchEvent(new Event('input', { bubbles: true }));
                             applied++;
                             matched = true;
                         }
                         const listInput = document.querySelector(`input[name="supplier_prices[${sid}][${oi.id}]"]`);
                         if (listInput && !listInput.value) {
-                            listInput.value = parseFloat(parsedItem.unit_price).toFixed(2).replace('.', ',');
+                            listInput.value = (priceMode === 'total' ? parseFloat(parsedItem.unit_price) * (parseFloat(oi.quantity) || 1) : parseFloat(parsedItem.unit_price)).toFixed(2).replace('.', ',');
                             listInput.dispatchEvent(new Event('input', { bubbles: true }));
                         }
                     }
@@ -2629,13 +2629,13 @@ async function parseAiForSupplierMap(sid) {
                     const oi = quoteItems[pIdx];
                     const mapInput = document.querySelector(`input.map-price-input[data-sid="${sid}"][data-item="${oi.id}"]`);
                     if (mapInput && !mapInput.value) {
-                        mapInput.value = parseFloat(parsedItem.unit_price).toFixed(2).replace('.', ',');
+                        mapInput.value = (priceMode === 'total' ? parseFloat(parsedItem.unit_price) * (parseFloat(oi.quantity) || 1) : parseFloat(parsedItem.unit_price)).toFixed(2).replace('.', ',');
                         mapInput.dispatchEvent(new Event('input', { bubbles: true }));
                         applied++;
                     }
                     const listInput = document.querySelector(`input[name="supplier_prices[${sid}][${oi.id}]"]`);
                     if (listInput && !listInput.value) {
-                        listInput.value = parseFloat(parsedItem.unit_price).toFixed(2).replace('.', ',');
+                        listInput.value = (priceMode === 'total' ? parseFloat(parsedItem.unit_price) * (parseFloat(oi.quantity) || 1) : parseFloat(parsedItem.unit_price)).toFixed(2).replace('.', ',');
                         listInput.dispatchEvent(new Event('input', { bubbles: true }));
                     }
                 }
