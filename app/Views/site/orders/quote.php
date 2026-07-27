@@ -288,6 +288,7 @@
     <script src="/assets/js/searchable-select.js"></script>
     <script>
     const items = <?= json_encode($items) ?>;
+    const quoteOnlyItems = items.filter(i => !i.source_type || i.source_type === 'purchase');
     const priceHistory = <?= json_encode($priceHistory ?? []) ?>;
     const orderType = '<?= $order['order_type'] ?? 'material' ?>';
     const orderId = <?= (int)$order['id'] ?>;
@@ -511,7 +512,7 @@
         block.id = 'supplier-block-' + sid;
         
         let itemsHtml = '';
-        items.forEach(item => {
+        quoteOnlyItems.forEach(item => {
             // Buscar histórico de preço deste material com este fornecedor
             const hist = priceHistory.filter(h => h.material_id == item.material_id && h.supplier_id == sid);
             const lastPrice = hist.length > 0 ? hist[0] : null;
@@ -816,7 +817,7 @@
 
         // Body
         let bodyHtml = '';
-        items.forEach(item => {
+        quoteOnlyItems.forEach(item => {
             bodyHtml += `<tr><td style="position:sticky; left:0; background:#fff; z-index:1;"><strong style="font-size:0.75rem;">${item.material_name}</strong></td>`;
             bodyHtml += `<td class="text-center">${item.quantity}</td>`;
             addedSuppliers.forEach(sid => {
