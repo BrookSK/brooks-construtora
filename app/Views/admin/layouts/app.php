@@ -228,11 +228,6 @@
                     <i class="bi bi-truck"></i> Transporte
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'transport_orders' ? 'active' : '' ?>" href="/admin/transport/orders">
-                    <i class="bi bi-eye"></i> Ver Pedidos
-                </a>
-            </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('stock')): ?>
             <li class="nav-item">

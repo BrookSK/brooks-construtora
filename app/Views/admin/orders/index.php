@@ -8,6 +8,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <span class="badge bg-secondary"><?= count($orders) ?> pedidos</span>
     <div class="d-flex flex-wrap gap-1 justify-content-end">
+        <?php if (\App\Core\Auth::hasPermission('orders.create')): ?>
         <a href="/admin/orders/tracking" class="btn btn-outline-dark btn-sm">
             <i class="bi bi-clipboard-check"></i> <span class="d-none d-sm-inline">Acompanhamento</span><span class="d-sm-none">Acomp.</span>
         </a>
@@ -17,6 +18,7 @@
         <a href="/admin/orders/create" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">Novo Pedido</span><span class="d-sm-none">Novo</span>
         </a>
+        <?php endif; ?>
     </div>
 </div>
 

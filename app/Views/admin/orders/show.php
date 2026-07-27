@@ -974,6 +974,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
     <!-- Coluna lateral -->
     <div class="col-lg-4 order-1 order-lg-2 mb-3">
         <!-- Ações -->
+        <?php if (!\App\Core\Auth::hasPermission('transport') || \App\Core\Auth::hasPermission('orders.create')): ?>
         <div class="card mb-3">
             <div class="card-header">Ações</div>
             <div class="card-body d-grid gap-2">
@@ -1058,6 +1059,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <?php endif; ?>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Links públicos -->
         <div class="card mb-3">
