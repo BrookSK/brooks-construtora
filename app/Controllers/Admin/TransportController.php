@@ -293,6 +293,8 @@ class TransportController extends Controller
         $fromName = $fromSite['name'] ?? 'N/A';
         $toName = $toSite['name'] ?? 'N/A';
         $userName = Auth::user()['name'] ?? 'Transporte';
+        $qty = (float) $movement['quantity'];
+        $qtyFmt = $qty == (int) $qty ? number_format($qty, 0) : number_format($qty, 2, ',', '.');
 
         // Notificar via webhook de conclusão
         $webhookUrl = Setting::get('orders_completed_webhook', '');
@@ -300,7 +302,7 @@ class TransportController extends Controller
             $type = $movement['type'] === 'transfer' ? 'TRANSFERÊNCIA CONCLUÍDA' : 'ENTREGA DE MATERIAL';
             $message = "*{$type}*\n\n"
                 . "*Material:* {$materialName}\n"
-                . "*Quantidade:* {$movement['quantity']}\n"
+                . "*Quantidade:* {$qtyFmt}\n"
                 . "*Origem:* {$fromName}\n"
                 . ($toSite ? "*Destino:* {$toName}\n" : '')
                 . "*Entregue por:* {$userName}\n"
@@ -309,7 +311,7 @@ class TransportController extends Controller
             NotificationService::queueWebhook($webhookUrl, [
                 'event' => 'stock_delivered',
                 'material' => $materialName,
-                'quantity' => $movement['quantity'],
+                'quantity' => $qtyFmt,
                 'from_site' => $fromName,
                 'to_site' => $toName,
                 'delivered_by' => $userName,
