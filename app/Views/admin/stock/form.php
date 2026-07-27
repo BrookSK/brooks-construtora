@@ -4,6 +4,8 @@ $isEdit = !empty($item);
 ob_start();
 ?>
 
+<link rel="stylesheet" href="/assets/css/searchable-select.css">
+
 <div class="row justify-content-center">
     <div class="col-lg-8">
         <div class="card">
@@ -35,22 +37,26 @@ ob_start();
 
                         <div class="col-md-6">
                             <label class="form-label">Material *</label>
-                            <select name="material_id" id="materialSelect" required <?= $isEdit ? 'disabled' : '' ?> style="<?= $isEdit ? '' : 'display:none;' ?>">
-                                <option value="">Selecione o material...</option>
-                                <?php foreach ($materials as $mat): ?>
-                                    <option value="<?= $mat['id'] ?>" 
-                                            data-name="<?= htmlspecialchars($mat['name']) ?>"
-                                            data-spec="<?= htmlspecialchars($mat['specification'] ?? $mat['category_name'] ?? '') ?>"
-                                            data-unit="<?= htmlspecialchars($mat['unit_abbr'] ?? '') ?>"
-                                            <?= ($isEdit && $item['material_id'] == $mat['id']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($mat['name']) ?>
-                                        <?= !empty($mat['unit_abbr']) ? ' (' . $mat['unit_abbr'] . ')' : '' ?>
-                                        <?= !empty($mat['specification'] ?? $mat['category_name'] ?? '') ? ' - ' . htmlspecialchars($mat['specification'] ?? $mat['category_name']) : '' ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
                             <?php if ($isEdit): ?>
+                                <select name="material_id_display" class="form-select" disabled>
+                                    <?php foreach ($materials as $mat): ?>
+                                        <option value="<?= $mat['id'] ?>" <?= $item['material_id'] == $mat['id'] ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($mat['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                                 <input type="hidden" name="material_id" value="<?= $item['material_id'] ?>">
+                            <?php else: ?>
+                                <select name="material_id" id="materialSelect" required style="display:none;">
+                                    <option value="">Selecione o material...</option>
+                                    <?php foreach ($materials as $mat): ?>
+                                        <option value="<?= $mat['id'] ?>">
+                                            <?= htmlspecialchars($mat['name']) ?>
+                                            <?= !empty($mat['unit_abbr']) ? ' (' . $mat['unit_abbr'] . ')' : '' ?>
+                                            <?= !empty($mat['specification'] ?? $mat['category_name'] ?? '') ? ' - ' . htmlspecialchars($mat['specification'] ?? $mat['category_name']) : '' ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             <?php endif; ?>
                         </div>
 
@@ -96,19 +102,19 @@ ob_start();
     </div>
 </div>
 
-<?php
-$content = ob_get_clean();
-require ROOT_PATH . '/app/Views/admin/layouts/app.php';
-?>
-<link rel="stylesheet" href="/assets/css/searchable-select.css">
 <script src="/assets/js/searchable-select.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const select = document.getElementById('materialSelect');
-    if (select && !select.disabled) {
+    if (select) {
         new SearchableSelect(select, {
             placeholder: 'Buscar material...'
         });
     }
 });
 </script>
+
+<?php
+$content = ob_get_clean();
+require ROOT_PATH . '/app/Views/admin/layouts/app.php';
+?>
