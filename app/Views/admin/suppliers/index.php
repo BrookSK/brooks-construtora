@@ -41,6 +41,7 @@
                     <td><?= htmlspecialchars($s['phone'] ?? '-') ?></td>
                     <td><?= $s['active'] ? '<span class="badge bg-success">Ativo</span>' : '<span class="badge bg-secondary">Inativo</span>' ?></td>
                     <td class="text-end">
+                        <a href="/admin/suppliers/contacts/<?= $s['id'] ?>" class="btn btn-sm btn-outline-success" title="Vendedores"><i class="bi bi-people"></i></a>
                         <a href="/admin/suppliers/edit/<?= $s['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
                         <?php if ($s['active']): ?>
                         <form method="POST" action="/admin/suppliers/delete" class="d-inline" onsubmit="return confirm('Desativar?')">

@@ -341,6 +341,7 @@ class Router
             'pedido/cotacao/comentario' => ['PurchaseOrderController', 'quoteComment'],
             'pedido/cotacao/send-to-supplier' => ['PurchaseOrderController', 'sendToSupplier'],
             'pedido/cotacao/parse-ai-quote' => ['PurchaseOrderController', 'parseAiQuote'],
+            'pedido/cotacao/get-contacts' => ['PurchaseOrderController', 'getSupplierContacts'],
 
             // PIN Auth
             'pin/login' => ['PinAuthController', 'login'],

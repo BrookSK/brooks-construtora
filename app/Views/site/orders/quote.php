@@ -2231,7 +2231,7 @@ function removeServiceMaterial(sid, idx) {
 
 // Carregar vendedores ao adicionar fornecedor
 function loadVendorsForSupplier(sid) {
-    fetch(`/admin/suppliers/get-contacts?supplier_id=${sid}`)
+    fetch(`/pedido/cotacao/get-contacts?supplier_id=${sid}`)
         .then(r => r.json())
         .then(data => {
             const contacts = data.contacts || [];
