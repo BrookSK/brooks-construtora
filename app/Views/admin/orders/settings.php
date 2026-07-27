@@ -71,7 +71,7 @@
         <div class="card-header"><i class="bi bi-shield-check"></i> <strong>Aprovação de Transferência</strong></div>
         <div class="card-body">
             <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" name="orders_require_transfer_approval" value="1" id="requireTransferApproval" <?= ($settings['orders_require_transfer_approval'] ?? '0') === '1' ? 'checked' : '' ?>>
+                <input class="form-check-input" type="checkbox" name="orders_require_transfer_approval" value="1" id="requireTransferApproval" <?= ($settings['orders_require_transfer_approval'] ?? '1') === '1' ? 'checked' : '' ?>>
                 <label class="form-check-label fw-bold" for="requireTransferApproval">Exigir aprovação para itens de transferência/estoque</label>
             </div>
             <p class="text-muted small mt-2 mb-0">

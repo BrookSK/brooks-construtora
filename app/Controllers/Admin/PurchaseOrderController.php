@@ -281,7 +281,7 @@ class PurchaseOrderController extends Controller
         }
 
         // Determinar se precisa de cotação/aprovação ou se vai direto
-        $requireTransferApproval = Setting::get('orders_require_transfer_approval', '0') === '1';
+        $requireTransferApproval = Setting::get('orders_require_transfer_approval', '1') === '1';
         $allFromStock = !$hasQuoteItems; // Se não tem itens de compra, todos são de estoque
 
         // Montar descrição do histórico

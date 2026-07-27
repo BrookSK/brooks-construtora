@@ -167,7 +167,7 @@
                 <?php if (!empty($stockItems)): ?>
                 <div class="alert alert-success small py-2 mb-3">
                     <i class="bi bi-box-seam"></i> <strong><?= count($stockItems) ?> item(ns) de estoque/transferência</strong>
-                    <?php if (\App\Models\Setting::get('orders_require_transfer_approval', '0') === '1'): ?>
+                    <?php if (\App\Models\Setting::get('orders_require_transfer_approval', '1') === '1'): ?>
                         — precisam de aprovação
                     <?php else: ?>
                         — aprovados automaticamente (não precisam de ação)
@@ -209,7 +209,7 @@
                 <!-- VISUALIZAÇÃO LISTA (por item) -->
                 <div id="approvalListView" style="display:none;">
                 <?php 
-                $requireTransferApproval = \App\Models\Setting::get('orders_require_transfer_approval', '0') === '1';
+                $requireTransferApproval = \App\Models\Setting::get('orders_require_transfer_approval', '1') === '1';
                 $itemsToApprove = $requireTransferApproval ? $items : $purchaseItems;
                 ?>
                 <?php foreach ($itemsToApprove as $item): ?>
