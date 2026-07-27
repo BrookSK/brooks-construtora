@@ -1067,6 +1067,11 @@
                 if (listInput) listInput.value = this.value;
             });
         });
+
+        // Carregar vendedores pré-cadastrados para os selects do mapa
+        addedSuppliers.forEach(sid => {
+            loadVendorsForSupplier(sid);
+        });
     }
 
     function renderMapFooter() {
