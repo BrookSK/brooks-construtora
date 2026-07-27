@@ -14,7 +14,7 @@ ob_start();
                     <div class="row g-3">
                         <div class="col-md-12">
                             <label class="form-label">Material *</label>
-                            <select name="material_id" id="transferMaterial" class="form-select" required style="display:none;">
+                            <select name="material_id" id="transferMaterial" required style="display:none;">
                                 <option value="">Selecione o material...</option>
                                 <?php foreach ($materials as $mat): ?>
                                     <option value="<?= $mat['id'] ?>"
@@ -26,7 +26,6 @@ ob_start();
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <div id="transferMaterialWrap"></div>
                         </div>
 
                         <div class="col-md-6">
@@ -88,7 +87,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     new SearchableSelect(materialSelect, {
         placeholder: 'Buscar material...',
-        containerTarget: document.getElementById('transferMaterialWrap'),
         onSelect: function() { checkAvailableStock(); }
     });
 

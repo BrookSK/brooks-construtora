@@ -35,7 +35,7 @@ ob_start();
 
                         <div class="col-md-6">
                             <label class="form-label">Material *</label>
-                            <select name="material_id" id="materialSelect" class="form-select" required <?= $isEdit ? 'disabled' : '' ?> style="display:none;">
+                            <select name="material_id" id="materialSelect" required <?= $isEdit ? 'disabled' : '' ?> style="<?= $isEdit ? '' : 'display:none;' ?>">
                                 <option value="">Selecione o material...</option>
                                 <?php foreach ($materials as $mat): ?>
                                     <option value="<?= $mat['id'] ?>" 
@@ -49,7 +49,6 @@ ob_start();
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <div id="materialSearchWrap"></div>
                             <?php if ($isEdit): ?>
                                 <input type="hidden" name="material_id" value="<?= $item['material_id'] ?>">
                             <?php endif; ?>
@@ -108,8 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const select = document.getElementById('materialSelect');
     if (select && !select.disabled) {
         new SearchableSelect(select, {
-            placeholder: 'Buscar material...',
-            containerTarget: document.getElementById('materialSearchWrap')
+            placeholder: 'Buscar material...'
         });
     }
 });
