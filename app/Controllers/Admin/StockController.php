@@ -6,6 +6,7 @@ use App\Core\Controller;
 use App\Core\Auth;
 use App\Core\Database;
 use App\Models\StockItem;
+use App\Models\StockLocation;
 use App\Models\StockMovement;
 use App\Models\Material;
 use App\Models\ConstructionSite;
@@ -28,23 +29,124 @@ class StockController extends Controller
     }
 
     /**
-     * Listagem de estoque (por obra ou geral)
+     * Listagem de estoque (por depósito ou geral)
      */
     public function index(): void
     {
-        $siteId = $this->input('site_id') ? (int) $this->input('site_id') : null;
-        $sites = ConstructionSite::allActive();
-        $items = StockItem::allWithRelations($siteId);
+        $locationId = $this->input('location_id') ? (int) $this->input('location_id') : null;
+        $locations = StockLocation::allActive();
+        $items = StockItem::allWithRelations($locationId);
 
         $this->view('admin.stock.index', [
             'items' => $items,
-            'sites' => $sites,
-            'selectedSite' => $siteId,
+            'locations' => $locations,
+            'selectedLocation' => $locationId,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
-            'pageTitle' => 'Estoque por Obra',
+            'pageTitle' => 'Estoque',
             'currentPage' => 'stock',
         ]);
+    }
+
+    /**
+     * CRUD de depósitos/estoques
+     */
+    public function locations(): void
+    {
+        $locations = StockLocation::allActive();
+
+        $this->view('admin.stock.locations', [
+            'locations' => $locations,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+            'pageTitle' => 'Depósitos / Estoques',
+            'currentPage' => 'stock',
+        ]);
+    }
+
+    /**
+     * Salvar novo depósito
+     */
+    public function storeLocation(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/stock/locations');
+            return;
+        }
+
+        $name = trim($this->input('name', ''));
+        if (empty($name)) {
+            $this->setFlash('error', 'Nome do estoque é obrigatório.');
+            $this->redirect('/admin/stock/locations');
+            return;
+        }
+
+        StockLocation::create([
+            'name' => $name,
+            'code' => StockLocation::generateCode(),
+            'construction_site_id' => $this->input('construction_site_id') ? (int) $this->input('construction_site_id') : null,
+            'address' => trim($this->input('address', '')),
+            'responsible_name' => trim($this->input('responsible_name', '')),
+            'notes' => trim($this->input('notes', '')),
+            'active' => 1,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->setFlash('success', 'Estoque/Depósito criado com sucesso!');
+        $this->redirect('/admin/stock/locations');
+    }
+
+    /**
+     * Atualizar depósito
+     */
+    public function updateLocation(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/stock/locations');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $location = StockLocation::find($id);
+        if (!$location) {
+            $this->setFlash('error', 'Estoque não encontrado.');
+            $this->redirect('/admin/stock/locations');
+            return;
+        }
+
+        $name = trim($this->input('name', ''));
+        if (empty($name)) {
+            $this->setFlash('error', 'Nome é obrigatório.');
+            $this->redirect('/admin/stock/locations');
+            return;
+        }
+
+        StockLocation::updateById($id, [
+            'name' => $name,
+            'construction_site_id' => $this->input('construction_site_id') ? (int) $this->input('construction_site_id') : null,
+            'address' => trim($this->input('address', '')),
+            'responsible_name' => trim($this->input('responsible_name', '')),
+            'notes' => trim($this->input('notes', '')),
+        ]);
+
+        $this->setFlash('success', 'Estoque atualizado!');
+        $this->redirect('/admin/stock/locations');
+    }
+
+    /**
+     * Excluir depósito
+     */
+    public function deleteLocation(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/stock/locations');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        StockLocation::updateById($id, ['active' => 0]);
+        $this->setFlash('success', 'Estoque desativado.');
+        $this->redirect('/admin/stock/locations');
     }
 
     /**
@@ -53,12 +155,12 @@ class StockController extends Controller
     public function create(): void
     {
         $materials = Material::allActive();
-        $sites = ConstructionSite::allActive();
+        $locations = StockLocation::allActive();
 
         $this->view('admin.stock.form', [
             'item' => null,
             'materials' => $materials,
-            'sites' => $sites,
+            'locations' => $locations,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
             'pageTitle' => 'Cadastrar Item no Estoque',
@@ -77,27 +179,27 @@ class StockController extends Controller
         }
 
         $materialId = (int) $this->input('material_id', 0);
-        $siteId = (int) $this->input('construction_site_id', 0);
+        $locationId = (int) $this->input('stock_location_id', 0);
         $quantity = (float) str_replace(',', '.', $this->input('quantity', '0'));
         $minQuantity = (float) str_replace(',', '.', $this->input('min_quantity', '0'));
 
-        if (!$materialId || !$siteId) {
-            $this->setFlash('error', 'Material e obra são obrigatórios.');
+        if (!$materialId || !$locationId) {
+            $this->setFlash('error', 'Material e estoque são obrigatórios.');
             $this->redirect('/admin/stock/create');
             return;
         }
 
         // Verificar se já existe
-        $existing = StockItem::findByMaterialAndSite($materialId, $siteId);
+        $existing = StockItem::findByMaterialAndLocation($materialId, $locationId);
         if ($existing) {
-            $this->setFlash('error', 'Este material já está cadastrado no estoque desta obra. Edite o item existente.');
+            $this->setFlash('error', 'Este material já está cadastrado neste estoque. Edite o item existente.');
             $this->redirect('/admin/stock');
             return;
         }
 
-        $id = StockItem::create([
+        StockItem::create([
             'material_id' => $materialId,
-            'construction_site_id' => $siteId,
+            'stock_location_id' => $locationId,
             'quantity' => $quantity,
             'min_quantity' => $minQuantity,
             'location_detail' => trim($this->input('location_detail', '')),
@@ -110,7 +212,9 @@ class StockController extends Controller
             StockMovement::record([
                 'material_id' => $materialId,
                 'from_site_id' => null,
-                'to_site_id' => $siteId,
+                'to_site_id' => null,
+                'from_location_id' => null,
+                'to_location_id' => $locationId,
                 'quantity' => $quantity,
                 'type' => StockMovement::TYPE_ENTRY,
                 'status' => StockMovement::STATUS_DELIVERED,
@@ -122,7 +226,7 @@ class StockController extends Controller
         }
 
         $this->setFlash('success', 'Item cadastrado no estoque com sucesso!');
-        $this->redirect('/admin/stock?site_id=' . $siteId);
+        $this->redirect('/admin/stock?location_id=' . $locationId);
     }
 
     /**
@@ -140,12 +244,12 @@ class StockController extends Controller
         }
 
         $materials = Material::allActive();
-        $sites = ConstructionSite::allActive();
+        $locations = StockLocation::allActive();
 
         $this->view('admin.stock.form', [
             'item' => $item,
             'materials' => $materials,
-            'sites' => $sites,
+            'locations' => $locations,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
             'pageTitle' => 'Editar Item do Estoque',
@@ -186,10 +290,13 @@ class StockController extends Controller
         // Se a quantidade mudou, registrar ajuste
         if ($newQuantity != $oldQuantity) {
             $diff = $newQuantity - $oldQuantity;
+            $locationId = $item['stock_location_id'] ?? null;
             StockMovement::record([
                 'material_id' => $item['material_id'],
-                'from_site_id' => $diff < 0 ? $item['construction_site_id'] : null,
-                'to_site_id' => $diff > 0 ? $item['construction_site_id'] : null,
+                'from_site_id' => null,
+                'to_site_id' => null,
+                'from_location_id' => $diff < 0 ? $locationId : null,
+                'to_location_id' => $diff > 0 ? $locationId : null,
                 'quantity' => abs($diff),
                 'type' => StockMovement::TYPE_ADJUSTMENT,
                 'status' => StockMovement::STATUS_DELIVERED,
@@ -201,7 +308,7 @@ class StockController extends Controller
         }
 
         $this->setFlash('success', 'Estoque atualizado com sucesso!');
-        $this->redirect('/admin/stock?site_id=' . $item['construction_site_id']);
+        $this->redirect('/admin/stock?location_id=' . ($item['stock_location_id'] ?? ''));
     }
 
     /**
@@ -225,7 +332,7 @@ class StockController extends Controller
 
         StockItem::deleteById($id);
         $this->setFlash('success', 'Item removido do estoque.');
-        $this->redirect('/admin/stock?site_id=' . $item['construction_site_id']);
+        $this->redirect('/admin/stock?location_id=' . ($item['stock_location_id'] ?? ''));
     }
 
     /**
@@ -234,11 +341,11 @@ class StockController extends Controller
     public function transfer(): void
     {
         $materials = Material::allActive();
-        $sites = ConstructionSite::allActive();
+        $locations = StockLocation::allActive();
 
         $this->view('admin.stock.transfer', [
             'materials' => $materials,
-            'sites' => $sites,
+            'locations' => $locations,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
             'pageTitle' => 'Transferir Estoque',
@@ -257,24 +364,24 @@ class StockController extends Controller
         }
 
         $materialId = (int) $this->input('material_id', 0);
-        $fromSiteId = (int) $this->input('from_site_id', 0);
-        $toSiteId = (int) $this->input('to_site_id', 0);
+        $fromLocationId = (int) $this->input('from_location_id', 0);
+        $toLocationId = (int) $this->input('to_location_id', 0);
         $quantity = (float) str_replace(',', '.', $this->input('quantity', '0'));
 
-        if (!$materialId || !$fromSiteId || !$toSiteId || $quantity <= 0) {
+        if (!$materialId || !$fromLocationId || !$toLocationId || $quantity <= 0) {
             $this->setFlash('error', 'Preencha todos os campos corretamente.');
             $this->redirect('/admin/stock/transfer');
             return;
         }
 
-        if ($fromSiteId === $toSiteId) {
-            $this->setFlash('error', 'A obra de origem e destino devem ser diferentes.');
+        if ($fromLocationId === $toLocationId) {
+            $this->setFlash('error', 'O estoque de origem e destino devem ser diferentes.');
             $this->redirect('/admin/stock/transfer');
             return;
         }
 
         // Verificar estoque disponível
-        $stockItem = StockItem::findByMaterialAndSite($materialId, $fromSiteId);
+        $stockItem = StockItem::findByMaterialAndLocation($materialId, $fromLocationId);
         if (!$stockItem || $stockItem['quantity'] < $quantity) {
             $available = $stockItem ? $stockItem['quantity'] : 0;
             $this->setFlash('error', "Estoque insuficiente. Disponível: {$available}");
@@ -283,13 +390,17 @@ class StockController extends Controller
         }
 
         // Registrar movimentação (pendente para o Wilton)
-        $movementId = StockMovement::transfer(
-            $materialId,
-            $fromSiteId,
-            $toSiteId,
-            $quantity,
-            Auth::user()['name']
-        );
+        $movementId = StockMovement::record([
+            'material_id' => $materialId,
+            'from_site_id' => null,
+            'to_site_id' => null,
+            'from_location_id' => $fromLocationId,
+            'to_location_id' => $toLocationId,
+            'quantity' => $quantity,
+            'type' => StockMovement::TYPE_TRANSFER,
+            'status' => StockMovement::STATUS_PENDING,
+            'requested_by' => Auth::user()['name'],
+        ]);
 
         // Notificar o Wilton (transporte)
         $this->notifyTransport($movementId);
@@ -301,31 +412,47 @@ class StockController extends Controller
     /**
      * Histórico de movimentações
      */
-    public function movements(int $siteId = 0): void
+    public function movements(int $locationId = 0): void
     {
-        $siteId = $siteId ?: (int) $this->input('site_id', 0);
-        $sites = ConstructionSite::allActive();
+        $locationId = $locationId ?: (int) $this->input('location_id', 0);
+        $locations = StockLocation::allActive();
 
-        $movements = $siteId
-            ? StockMovement::getBySite($siteId)
-            : Database::fetchAll(
+        if ($locationId) {
+            $movements = Database::fetchAll(
                 "SELECT sm.*, m.name as material_name, m.specification,
                         mu.abbreviation as unit_abbr,
-                        cs_from.name as from_site_name,
-                        cs_to.name as to_site_name
+                        sl_from.name as from_location_name,
+                        sl_to.name as to_location_name
                  FROM stock_movements sm
                  JOIN materials m ON sm.material_id = m.id
                  LEFT JOIN measurement_units mu ON m.unit_id = mu.id
-                 LEFT JOIN construction_sites cs_from ON sm.from_site_id = cs_from.id
-                 LEFT JOIN construction_sites cs_to ON sm.to_site_id = cs_to.id
+                 LEFT JOIN stock_locations sl_from ON sm.from_location_id = sl_from.id
+                 LEFT JOIN stock_locations sl_to ON sm.to_location_id = sl_to.id
+                 WHERE sm.from_location_id = ? OR sm.to_location_id = ?
+                 ORDER BY sm.created_at DESC
+                 LIMIT 200",
+                [$locationId, $locationId]
+            );
+        } else {
+            $movements = Database::fetchAll(
+                "SELECT sm.*, m.name as material_name, m.specification,
+                        mu.abbreviation as unit_abbr,
+                        sl_from.name as from_location_name,
+                        sl_to.name as to_location_name
+                 FROM stock_movements sm
+                 JOIN materials m ON sm.material_id = m.id
+                 LEFT JOIN measurement_units mu ON m.unit_id = mu.id
+                 LEFT JOIN stock_locations sl_from ON sm.from_location_id = sl_from.id
+                 LEFT JOIN stock_locations sl_to ON sm.to_location_id = sl_to.id
                  ORDER BY sm.created_at DESC
                  LIMIT 200"
             );
+        }
 
         $this->view('admin.stock.movements', [
             'movements' => $movements,
-            'sites' => $sites,
-            'selectedSite' => $siteId,
+            'locations' => $locations,
+            'selectedLocation' => $locationId,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
             'pageTitle' => 'Movimentações de Estoque',
@@ -343,9 +470,9 @@ class StockController extends Controller
             return;
         }
 
-        $items = json_decode(file_get_contents('php://input'), true)['items'] ?? [];
-        $targetSiteId = (int) ($items['target_site_id'] ?? 0);
-        $orderItems = $items['items'] ?? [];
+        $input = json_decode(file_get_contents('php://input'), true);
+        $targetSiteId = (int) ($input['items']['target_site_id'] ?? 0);
+        $orderItems = $input['items']['items'] ?? [];
 
         if (empty($orderItems)) {
             $this->json(['availability' => []]);
@@ -372,28 +499,28 @@ class StockController extends Controller
     public function searchStock(): void
     {
         $materialId = (int) $this->input('material_id', 0);
-        $excludeSiteId = (int) $this->input('exclude_site_id', 0);
+        $excludeLocationId = (int) $this->input('exclude_location_id', 0);
 
         if (!$materialId) {
             $this->json(['stocks' => []]);
             return;
         }
 
-        $stocks = StockItem::findMaterialInAllStocks($materialId, $excludeSiteId ?: null);
+        $stocks = StockItem::findMaterialInAllStocks($materialId, $excludeLocationId ?: null);
         $this->json(['stocks' => $stocks]);
     }
 
     /**
-     * Cadastro em massa (múltiplos materiais para uma obra)
+     * Cadastro em massa (múltiplos materiais para um depósito)
      */
     public function bulkCreate(): void
     {
-        $sites = ConstructionSite::allActive();
+        $locations = StockLocation::allActive();
         $materials = Material::allActive();
 
         $this->view('admin.stock.bulk_create', [
             'materials' => $materials,
-            'sites' => $sites,
+            'locations' => $locations,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
             'pageTitle' => 'Cadastro em Massa - Estoque',
@@ -411,11 +538,11 @@ class StockController extends Controller
             return;
         }
 
-        $siteId = (int) $this->input('construction_site_id', 0);
+        $locationId = (int) $this->input('stock_location_id', 0);
         $stockItems = $_POST['stock_items'] ?? [];
 
-        if (!$siteId || empty($stockItems)) {
-            $this->setFlash('error', 'Selecione a obra e adicione itens.');
+        if (!$locationId || empty($stockItems)) {
+            $this->setFlash('error', 'Selecione o estoque e adicione itens.');
             $this->redirect('/admin/stock/bulk-create');
             return;
         }
@@ -429,16 +556,15 @@ class StockController extends Controller
 
             if (!$materialId || $quantity <= 0) continue;
 
-            $existing = StockItem::findByMaterialAndSite($materialId, $siteId);
+            $existing = StockItem::findByMaterialAndLocation($materialId, $locationId);
 
             if ($existing) {
-                // Somar ao existente
                 StockItem::credit($existing['id'], $quantity);
                 $updated++;
             } else {
                 StockItem::create([
                     'material_id' => $materialId,
-                    'construction_site_id' => $siteId,
+                    'stock_location_id' => $locationId,
                     'quantity' => $quantity,
                     'min_quantity' => 0,
                     'created_at' => date('Y-m-d H:i:s'),
@@ -450,7 +576,9 @@ class StockController extends Controller
             StockMovement::record([
                 'material_id' => $materialId,
                 'from_site_id' => null,
-                'to_site_id' => $siteId,
+                'to_site_id' => null,
+                'from_location_id' => null,
+                'to_location_id' => $locationId,
                 'quantity' => $quantity,
                 'type' => StockMovement::TYPE_ENTRY,
                 'status' => StockMovement::STATUS_DELIVERED,
@@ -462,7 +590,7 @@ class StockController extends Controller
         }
 
         $this->setFlash('success', "Estoque atualizado! {$created} novo(s), {$updated} atualizado(s).");
-        $this->redirect('/admin/stock?site_id=' . $siteId);
+        $this->redirect('/admin/stock?location_id=' . $locationId);
     }
 
     /**
@@ -474,12 +602,12 @@ class StockController extends Controller
         if (!$movement) return;
 
         $material = Material::find($movement['material_id']);
-        $fromSite = $movement['from_site_id'] ? ConstructionSite::find($movement['from_site_id']) : null;
-        $toSite = $movement['to_site_id'] ? ConstructionSite::find($movement['to_site_id']) : null;
+        $fromLocation = $movement['from_location_id'] ? StockLocation::findFull($movement['from_location_id']) : null;
+        $toLocation = $movement['to_location_id'] ? StockLocation::findFull($movement['to_location_id']) : null;
 
         $materialName = $material['name'] ?? 'Material';
-        $fromName = $fromSite['name'] ?? 'N/A';
-        $toName = $toSite['name'] ?? 'N/A';
+        $fromName = $fromLocation['name'] ?? 'N/A';
+        $toName = $toLocation['name'] ?? 'N/A';
         $qty = $movement['quantity'];
         $type = $movement['type'] === 'transfer' ? 'TRANSFERÊNCIA' : 'SAÍDA DE ESTOQUE';
 
@@ -491,7 +619,7 @@ class StockController extends Controller
                 . "<p><strong>Material:</strong> {$materialName}</p>"
                 . "<p><strong>Quantidade:</strong> {$qty}</p>"
                 . "<p><strong>Origem:</strong> {$fromName}</p>"
-                . ($toSite ? "<p><strong>Destino:</strong> {$toName}</p>" : '')
+                . ($toLocation ? "<p><strong>Destino:</strong> {$toName}</p>" : '')
                 . "<p><strong>Solicitado por:</strong> {$movement['requested_by']}</p>"
                 . "<p><strong>Data:</strong> " . date('d/m/Y H:i') . "</p>"
                 . "<br><p>Acesse o painel de transporte para mais detalhes.</p>";
@@ -506,7 +634,7 @@ class StockController extends Controller
                 . "*Material:* {$materialName}\n"
                 . "*Quantidade:* {$qty}\n"
                 . "*Origem:* {$fromName}\n"
-                . ($toSite ? "*Destino:* {$toName}\n" : '')
+                . ($toLocation ? "*Destino:* {$toName}\n" : '')
                 . "*Solicitado por:* {$movement['requested_by']}\n"
                 . "*Data:* " . date('d/m/Y H:i');
 
@@ -515,8 +643,8 @@ class StockController extends Controller
                 'type' => $movement['type'],
                 'material' => $materialName,
                 'quantity' => $qty,
-                'from_site' => $fromName,
-                'to_site' => $toName,
+                'from_location' => $fromName,
+                'to_location' => $toName,
                 'requested_by' => $movement['requested_by'],
                 'message' => $message,
                 'phone' => Setting::get('orders_transport_phone', ''),

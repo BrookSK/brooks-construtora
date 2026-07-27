@@ -14,34 +14,38 @@ ob_start();
                     <div class="row g-3">
                         <div class="col-md-12">
                             <label class="form-label">Material *</label>
-                            <select name="material_id" id="transferMaterial" class="form-select" required>
+                            <select name="material_id" id="transferMaterial" class="form-select" required style="display:none;">
                                 <option value="">Selecione o material...</option>
                                 <?php foreach ($materials as $mat): ?>
-                                    <option value="<?= $mat['id'] ?>">
+                                    <option value="<?= $mat['id'] ?>"
+                                            data-name="<?= htmlspecialchars($mat['name']) ?>"
+                                            data-unit="<?= htmlspecialchars($mat['unit_abbr'] ?? '') ?>">
                                         <?= htmlspecialchars($mat['name']) ?>
                                         <?= !empty($mat['unit_abbr']) ? ' (' . $mat['unit_abbr'] . ')' : '' ?>
+                                        <?= !empty($mat['specification'] ?? $mat['category_name'] ?? '') ? ' - ' . htmlspecialchars($mat['specification'] ?? $mat['category_name'] ?? '') : '' ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
+                            <div id="transferMaterialWrap"></div>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label">Obra de Origem *</label>
-                            <select name="from_site_id" id="fromSite" class="form-select" required>
+                            <label class="form-label">Estoque de Origem *</label>
+                            <select name="from_location_id" id="fromSite" class="form-select" required>
                                 <option value="">De onde sai...</option>
-                                <?php foreach ($sites as $site): ?>
-                                    <option value="<?= $site['id'] ?>"><?= htmlspecialchars($site['name']) ?></option>
+                                <?php foreach ($locations as $loc): ?>
+                                    <option value="<?= $loc['id'] ?>"><?= htmlspecialchars($loc['name']) ?><?= !empty($loc['construction_site_name']) ? ' (' . $loc['construction_site_name'] . ')' : '' ?></option>
                                 <?php endforeach; ?>
                             </select>
                             <small class="text-muted" id="fromStockInfo"></small>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label">Obra de Destino *</label>
-                            <select name="to_site_id" id="toSite" class="form-select" required>
+                            <label class="form-label">Estoque de Destino *</label>
+                            <select name="to_location_id" id="toSite" class="form-select" required>
                                 <option value="">Para onde vai...</option>
-                                <?php foreach ($sites as $site): ?>
-                                    <option value="<?= $site['id'] ?>"><?= htmlspecialchars($site['name']) ?></option>
+                                <?php foreach ($locations as $loc): ?>
+                                    <option value="<?= $loc['id'] ?>"><?= htmlspecialchars($loc['name']) ?><?= !empty($loc['construction_site_name']) ? ' (' . $loc['construction_site_name'] . ')' : '' ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -74,11 +78,19 @@ ob_start();
     </div>
 </div>
 
+<link rel="stylesheet" href="/assets/css/searchable-select.css">
+<script src="/assets/js/searchable-select.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const materialSelect = document.getElementById('transferMaterial');
     const fromSiteSelect = document.getElementById('fromSite');
     const fromStockInfo = document.getElementById('fromStockInfo');
+
+    new SearchableSelect(materialSelect, {
+        placeholder: 'Buscar material...',
+        containerTarget: document.getElementById('transferMaterialWrap'),
+        onSelect: function() { checkAvailableStock(); }
+    });
 
     function checkAvailableStock() {
         const materialId = materialSelect.value;
@@ -103,7 +115,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    materialSelect.addEventListener('change', checkAvailableStock);
     fromSiteSelect.addEventListener('change', checkAvailableStock);
 });
 </script>

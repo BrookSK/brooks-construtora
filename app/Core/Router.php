@@ -180,6 +180,10 @@ class Router
 
             // Estoque
             'stock' => ['StockController', 'index'],
+            'stock/locations' => ['StockController', 'locations'],
+            'stock/store-location' => ['StockController', 'storeLocation'],
+            'stock/update-location' => ['StockController', 'updateLocation'],
+            'stock/delete-location' => ['StockController', 'deleteLocation'],
             'stock/create' => ['StockController', 'create'],
             'stock/store' => ['StockController', 'store'],
             'stock/edit' => ['StockController', 'edit'],

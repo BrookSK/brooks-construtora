@@ -1,5 +1,5 @@
 <?php
-$pageTitle = $pageTitle ?? 'Estoque por Obra';
+$pageTitle = $pageTitle ?? 'Estoque';
 $currentPage = 'stock';
 ob_start();
 ?>
@@ -7,22 +7,26 @@ ob_start();
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div class="d-flex align-items-center gap-2 flex-wrap">
         <form method="GET" action="/admin/stock" class="d-flex align-items-center gap-2">
-            <select name="site_id" class="form-select form-select-sm" style="min-width:200px;" onchange="this.form.submit()">
-                <option value="">Todas as obras</option>
-                <?php foreach ($sites as $site): ?>
-                    <option value="<?= $site['id'] ?>" <?= ($selectedSite ?? '') == $site['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($site['name']) ?>
+            <select name="location_id" class="form-select form-select-sm" style="min-width:200px;" onchange="this.form.submit()">
+                <option value="">Todos os estoques</option>
+                <?php foreach ($locations as $loc): ?>
+                    <option value="<?= $loc['id'] ?>" <?= ($selectedLocation ?? '') == $loc['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($loc['name']) ?>
+                        <?= !empty($loc['construction_site_name']) ? ' (' . $loc['construction_site_name'] . ')' : '' ?>
                     </option>
                 <?php endforeach; ?>
             </select>
         </form>
     </div>
     <div class="d-flex gap-2 flex-wrap">
+        <a href="/admin/stock/locations" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-geo-alt"></i> Depósitos
+        </a>
         <a href="/admin/stock/create" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg"></i> Cadastrar Item
         </a>
         <a href="/admin/stock/bulk-create" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-collection"></i> Cadastro em Massa
+            <i class="bi bi-collection"></i> Em Massa
         </a>
         <a href="/admin/stock/transfer" class="btn btn-outline-primary btn-sm">
             <i class="bi bi-arrow-left-right"></i> Transferir
@@ -33,12 +37,20 @@ ob_start();
     </div>
 </div>
 
-<?php if (empty($items)): ?>
+<?php if (empty($locations)): ?>
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-geo-alt text-muted" style="font-size:3rem;"></i>
+            <p class="text-muted mt-3 mb-2">Nenhum estoque/depósito cadastrado.</p>
+            <a href="/admin/stock/locations" class="btn btn-primary">Cadastrar Primeiro Estoque</a>
+        </div>
+    </div>
+<?php elseif (empty($items)): ?>
     <div class="card">
         <div class="card-body text-center py-5">
             <i class="bi bi-box-seam text-muted" style="font-size:3rem;"></i>
             <p class="text-muted mt-3 mb-0">
-                <?= $selectedSite ? 'Nenhum item cadastrado no estoque desta obra.' : 'Nenhum item no estoque. Cadastre o primeiro!' ?>
+                <?= $selectedLocation ? 'Nenhum item cadastrado neste estoque.' : 'Nenhum item no estoque. Cadastre o primeiro!' ?>
             </p>
         </div>
     </div>
@@ -56,8 +68,8 @@ ob_start();
         <div class="col-6 col-md-3">
             <div class="card stat-card">
                 <div class="card-body py-2 px-3">
-                    <small class="text-muted">Obras</small>
-                    <div class="stat-number" style="font-size:1.5rem;"><?= count(array_unique(array_column($items, 'construction_site_id'))) ?></div>
+                    <small class="text-muted">Depósitos</small>
+                    <div class="stat-number" style="font-size:1.5rem;"><?= count(array_unique(array_column($items, 'stock_location_id'))) ?></div>
                 </div>
             </div>
         </div>
@@ -91,7 +103,7 @@ ob_start();
                         <tr>
                             <th>Material</th>
                             <th class="d-none d-md-table-cell">Especificação</th>
-                            <th>Obra</th>
+                            <th>Estoque</th>
                             <th class="text-center">Qtd</th>
                             <th class="text-center d-none d-sm-table-cell">Mín</th>
                             <th class="text-center">Status</th>
@@ -113,8 +125,8 @@ ob_start();
                                     <small class="text-muted"><?= htmlspecialchars($item['specification'] ?? '-') ?></small>
                                 </td>
                                 <td>
-                                    <span class="badge bg-secondary"><?= htmlspecialchars($item['site_code'] ?? '') ?></span>
-                                    <br><small><?= htmlspecialchars($item['site_name']) ?></small>
+                                    <span class="badge bg-secondary"><?= htmlspecialchars($item['location_code'] ?? '') ?></span>
+                                    <br><small><?= htmlspecialchars($item['location_name'] ?? '-') ?></small>
                                 </td>
                                 <td class="text-center">
                                     <strong class="<?= $isEmpty ? 'text-danger' : ($isLow ? 'text-warning' : '') ?>">

@@ -10,86 +10,107 @@ class StockItem extends Model
     protected static string $table = 'stock_items';
 
     /**
-     * Lista estoque por obra
+     * Lista estoque por depósito
      */
-    public static function getBySite(int $siteId): array
+    public static function getByLocation(int $locationId): array
     {
         return Database::fetchAll(
             "SELECT si.*, m.name as material_name, m.specification, m.classification,
                     mu.name as unit_name, mu.abbreviation as unit_abbr,
-                    mc.name as category_name, cs.name as site_name
+                    mc.name as category_name, sl.name as location_name, sl.code as location_code
              FROM stock_items si
              JOIN materials m ON si.material_id = m.id
              LEFT JOIN measurement_units mu ON m.unit_id = mu.id
              LEFT JOIN material_categories mc ON m.category_id = mc.id
-             JOIN construction_sites cs ON si.construction_site_id = cs.id
-             WHERE si.construction_site_id = ?
+             LEFT JOIN stock_locations sl ON si.stock_location_id = sl.id
+             WHERE si.stock_location_id = ?
              ORDER BY m.name ASC",
-            [$siteId]
+            [$locationId]
         );
     }
 
     /**
      * Lista todo o estoque com filtros
      */
-    public static function allWithRelations(?int $siteId = null): array
+    public static function allWithRelations(?int $locationId = null): array
     {
         $where = '1=1';
         $params = [];
 
-        if ($siteId) {
-            $where .= ' AND si.construction_site_id = ?';
-            $params[] = $siteId;
+        if ($locationId) {
+            $where .= ' AND si.stock_location_id = ?';
+            $params[] = $locationId;
         }
 
         return Database::fetchAll(
             "SELECT si.*, m.name as material_name, m.specification, m.classification,
                     mu.name as unit_name, mu.abbreviation as unit_abbr,
-                    mc.name as category_name, cs.name as site_name, cs.code as site_code
+                    mc.name as category_name, 
+                    sl.name as location_name, sl.code as location_code,
+                    cs.name as site_name, cs.code as site_code
              FROM stock_items si
              JOIN materials m ON si.material_id = m.id
              LEFT JOIN measurement_units mu ON m.unit_id = mu.id
              LEFT JOIN material_categories mc ON m.category_id = mc.id
-             JOIN construction_sites cs ON si.construction_site_id = cs.id
+             LEFT JOIN stock_locations sl ON si.stock_location_id = sl.id
+             LEFT JOIN construction_sites cs ON sl.construction_site_id = cs.id
              WHERE {$where}
-             ORDER BY cs.name ASC, m.name ASC",
+             ORDER BY sl.name ASC, m.name ASC",
             $params
         );
     }
 
     /**
-     * Busca item específico: material + obra
+     * Busca item específico: material + depósito
+     */
+    public static function findByMaterialAndLocation(int $materialId, int $locationId): ?array
+    {
+        return Database::fetch(
+            "SELECT si.*, m.name as material_name, sl.name as location_name
+             FROM stock_items si
+             JOIN materials m ON si.material_id = m.id
+             LEFT JOIN stock_locations sl ON si.stock_location_id = sl.id
+             WHERE si.material_id = ? AND si.stock_location_id = ?",
+            [$materialId, $locationId]
+        );
+    }
+
+    /**
+     * Compat: busca por material + obra (busca o depósito vinculado à obra)
      */
     public static function findByMaterialAndSite(int $materialId, int $siteId): ?array
     {
         return Database::fetch(
-            "SELECT si.*, m.name as material_name, cs.name as site_name
+            "SELECT si.*, m.name as material_name, sl.name as location_name, sl.id as stock_location_id
              FROM stock_items si
              JOIN materials m ON si.material_id = m.id
-             JOIN construction_sites cs ON si.construction_site_id = cs.id
-             WHERE si.material_id = ? AND si.construction_site_id = ?",
+             JOIN stock_locations sl ON si.stock_location_id = sl.id
+             WHERE si.material_id = ? AND sl.construction_site_id = ?",
             [$materialId, $siteId]
         );
     }
 
     /**
-     * Busca material em TODOS os estoques (exceto a obra destino)
+     * Busca material em TODOS os estoques (exceto um depósito específico)
      */
-    public static function findMaterialInAllStocks(int $materialId, ?int $excludeSiteId = null): array
+    public static function findMaterialInAllStocks(int $materialId, ?int $excludeLocationId = null): array
     {
         $where = 'si.material_id = ? AND si.quantity > 0';
         $params = [$materialId];
 
-        if ($excludeSiteId) {
-            $where .= ' AND si.construction_site_id != ?';
-            $params[] = $excludeSiteId;
+        if ($excludeLocationId) {
+            $where .= ' AND si.stock_location_id != ?';
+            $params[] = $excludeLocationId;
         }
 
         return Database::fetchAll(
-            "SELECT si.*, cs.name as site_name, cs.code as site_code,
+            "SELECT si.*, sl.name as location_name, sl.code as location_code,
+                    sl.construction_site_id,
+                    cs.name as site_name, cs.code as site_code,
                     m.name as material_name, mu.abbreviation as unit_abbr
              FROM stock_items si
-             JOIN construction_sites cs ON si.construction_site_id = cs.id
+             JOIN stock_locations sl ON si.stock_location_id = sl.id
+             LEFT JOIN construction_sites cs ON sl.construction_site_id = cs.id
              JOIN materials m ON si.material_id = m.id
              LEFT JOIN measurement_units mu ON m.unit_id = mu.id
              WHERE {$where}
@@ -99,7 +120,7 @@ class StockItem extends Model
     }
 
     /**
-     * Verifica disponibilidade de múltiplos materiais em todos os estoques
+     * Verifica disponibilidade de múltiplos materiais em todos os depósitos
      * Retorna array indexado por material_id
      */
     public static function checkAvailability(array $materialIds, ?int $targetSiteId = null): array
@@ -109,16 +130,20 @@ class StockItem extends Model
         $placeholders = implode(',', array_fill(0, count($materialIds), '?'));
         $params = $materialIds;
 
-        $query = "SELECT si.*, cs.name as site_name, cs.code as site_code,
+        $query = "SELECT si.*, sl.name as location_name, sl.code as location_code,
+                         sl.construction_site_id,
+                         cs.name as site_name, cs.code as site_code,
                          m.name as material_name, mu.abbreviation as unit_abbr
                   FROM stock_items si
-                  JOIN construction_sites cs ON si.construction_site_id = cs.id
+                  JOIN stock_locations sl ON si.stock_location_id = sl.id
+                  LEFT JOIN construction_sites cs ON sl.construction_site_id = cs.id
                   JOIN materials m ON si.material_id = m.id
                   LEFT JOIN measurement_units mu ON m.unit_id = mu.id
                   WHERE si.material_id IN ({$placeholders}) AND si.quantity > 0";
 
         if ($targetSiteId) {
-            $query .= " AND si.construction_site_id != ?";
+            // Excluir o depósito vinculado à obra destino
+            $query .= " AND (sl.construction_site_id != ? OR sl.construction_site_id IS NULL)";
             $params[] = $targetSiteId;
         }
 
@@ -132,16 +157,19 @@ class StockItem extends Model
             $grouped[$row['material_id']][] = $row;
         }
 
-        // Também verificar estoque na obra destino
+        // Também verificar estoque no depósito da obra destino
         if ($targetSiteId) {
             $localResults = Database::fetchAll(
-                "SELECT si.*, cs.name as site_name, cs.code as site_code,
+                "SELECT si.*, sl.name as location_name, sl.code as location_code,
+                        sl.construction_site_id,
+                        cs.name as site_name, cs.code as site_code,
                         m.name as material_name, mu.abbreviation as unit_abbr
                  FROM stock_items si
-                 JOIN construction_sites cs ON si.construction_site_id = cs.id
+                 JOIN stock_locations sl ON si.stock_location_id = sl.id
+                 LEFT JOIN construction_sites cs ON sl.construction_site_id = cs.id
                  JOIN materials m ON si.material_id = m.id
                  LEFT JOIN measurement_units mu ON m.unit_id = mu.id
-                 WHERE si.material_id IN ({$placeholders}) AND si.construction_site_id = ? AND si.quantity > 0",
+                 WHERE si.material_id IN ({$placeholders}) AND sl.construction_site_id = ? AND si.quantity > 0",
                 array_merge($materialIds, [$targetSiteId])
             );
 
@@ -179,19 +207,43 @@ class StockItem extends Model
     }
 
     /**
-     * Buscar ou criar item de estoque
+     * Buscar ou criar item de estoque por depósito
      */
-    public static function findOrCreate(int $materialId, int $siteId): int
+    public static function findOrCreate(int $materialId, int $locationId): int
     {
-        $existing = self::findByMaterialAndSite($materialId, $siteId);
+        $existing = self::findByMaterialAndLocation($materialId, $locationId);
         if ($existing) return $existing['id'];
 
         return self::create([
             'material_id' => $materialId,
-            'construction_site_id' => $siteId,
+            'stock_location_id' => $locationId,
             'quantity' => 0,
             'min_quantity' => 0,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
+    }
+
+    /**
+     * Compat: Buscar ou criar por obra (encontra/cria o depósito da obra)
+     */
+    public static function findOrCreateBySite(int $materialId, int $siteId): int
+    {
+        // Buscar depósito vinculado à obra
+        $location = StockLocation::findBySite($siteId);
+        if (!$location) {
+            // Criar depósito automaticamente para a obra
+            $site = \App\Models\ConstructionSite::find($siteId);
+            $locationId = StockLocation::create([
+                'name' => 'Estoque ' . ($site['name'] ?? 'Obra'),
+                'code' => StockLocation::generateCode(),
+                'construction_site_id' => $siteId,
+                'active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+        } else {
+            $locationId = $location['id'];
+        }
+
+        return self::findOrCreate($materialId, $locationId);
     }
 }

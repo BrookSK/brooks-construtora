@@ -5,11 +5,11 @@ ob_start();
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <form method="GET" action="/admin/stock/movements" class="d-flex align-items-center gap-2">
-        <select name="site_id" class="form-select form-select-sm" style="min-width:200px;" onchange="this.form.submit()">
-            <option value="">Todas as obras</option>
-            <?php foreach ($sites as $site): ?>
-                <option value="<?= $site['id'] ?>" <?= ($selectedSite ?? '') == $site['id'] ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($site['name']) ?>
+        <select name="location_id" class="form-select form-select-sm" style="min-width:200px;" onchange="this.form.submit()">
+            <option value="">Todos os estoques</option>
+            <?php foreach ($locations as $loc): ?>
+                <option value="<?= $loc['id'] ?>" <?= ($selectedLocation ?? '') == $loc['id'] ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($loc['name']) ?>
                 </option>
             <?php endforeach; ?>
         </select>
@@ -65,8 +65,8 @@ ob_start();
                                     <strong><?= number_format($mov['quantity'], 2, ',', '.') ?></strong>
                                     <small class="text-muted"><?= $mov['unit_abbr'] ?? '' ?></small>
                                 </td>
-                                <td><?= htmlspecialchars($mov['from_site_name'] ?? '-') ?></td>
-                                <td><?= htmlspecialchars($mov['to_site_name'] ?? '-') ?></td>
+                                <td><?= htmlspecialchars($mov['from_location_name'] ?? $mov['from_site_name'] ?? '-') ?></td>
+                                <td><?= htmlspecialchars($mov['to_location_name'] ?? $mov['to_site_name'] ?? '-') ?></td>
                                 <td>
                                     <?php
                                     $statusLabels = [

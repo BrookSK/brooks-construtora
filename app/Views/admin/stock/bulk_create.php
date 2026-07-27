@@ -13,11 +13,11 @@ ob_start();
                 <form method="POST" action="/admin/stock/bulk-store" id="bulkForm">
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label class="form-label">Obra *</label>
-                            <select name="construction_site_id" class="form-select" required>
-                                <option value="">Selecione a obra...</option>
-                                <?php foreach ($sites as $site): ?>
-                                    <option value="<?= $site['id'] ?>"><?= htmlspecialchars($site['name']) ?></option>
+                            <label class="form-label">Estoque/Depósito *</label>
+                            <select name="stock_location_id" class="form-select" required>
+                                <option value="">Selecione o estoque...</option>
+                                <?php foreach ($locations as $loc): ?>
+                                    <option value="<?= $loc['id'] ?>"><?= htmlspecialchars($loc['name']) ?><?= !empty($loc['construction_site_name']) ? ' (' . $loc['construction_site_name'] . ')' : '' ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -32,12 +32,13 @@ ob_start();
                         <div class="row g-2 mb-2 item-row align-items-end">
                             <div class="col-md-7">
                                 <label class="form-label small">Material</label>
-                                <select name="stock_items[0][material_id]" class="form-select form-select-sm" required>
+                                <select name="stock_items[0][material_id]" class="form-select form-select-sm" required style="display:none;">
                                     <option value="">Selecione...</option>
                                     <?php foreach ($materials as $mat): ?>
                                         <option value="<?= $mat['id'] ?>">
                                             <?= htmlspecialchars($mat['name']) ?>
                                             <?= !empty($mat['unit_abbr']) ? ' (' . $mat['unit_abbr'] . ')' : '' ?>
+                                            <?= !empty($mat['specification'] ?? $mat['category_name'] ?? '') ? ' - ' . htmlspecialchars($mat['specification'] ?? $mat['category_name'] ?? '') : '' ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -68,18 +69,33 @@ ob_start();
     </div>
 </div>
 
+<link rel="stylesheet" href="/assets/css/searchable-select.css">
+<script src="/assets/js/searchable-select.js"></script>
 <script>
 let itemIndex = 1;
 
+function initMaterialSearch(selectEl) {
+    new SearchableSelect(selectEl, {
+        placeholder: 'Buscar material...'
+    });
+}
+
+// Inicializar o primeiro
+document.addEventListener('DOMContentLoaded', function() {
+    const firstSelect = document.querySelector('.item-row select');
+    if (firstSelect) initMaterialSearch(firstSelect);
+});
+
 function addItem() {
     const container = document.getElementById('itemsContainer');
-    const materialsOptions = container.querySelector('select').innerHTML;
+    const firstSelect = container.querySelector('select');
+    const materialsOptions = firstSelect.innerHTML;
     
     const row = document.createElement('div');
     row.className = 'row g-2 mb-2 item-row align-items-end';
     row.innerHTML = `
         <div class="col-md-7">
-            <select name="stock_items[${itemIndex}][material_id]" class="form-select form-select-sm" required>
+            <select name="stock_items[${itemIndex}][material_id]" class="form-select form-select-sm" required style="display:none;">
                 ${materialsOptions}
             </select>
         </div>
@@ -93,6 +109,11 @@ function addItem() {
         </div>
     `;
     container.appendChild(row);
+    
+    // Inicializar SearchableSelect no novo select
+    const newSelect = row.querySelector('select');
+    initMaterialSearch(newSelect);
+    
     itemIndex++;
 }
 

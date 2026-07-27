@@ -18,31 +18,38 @@ ob_start();
 
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Obra *</label>
-                            <select name="construction_site_id" class="form-select" required <?= $isEdit ? 'disabled' : '' ?>>
-                                <option value="">Selecione a obra...</option>
-                                <?php foreach ($sites as $site): ?>
-                                    <option value="<?= $site['id'] ?>" <?= ($isEdit && $item['construction_site_id'] == $site['id']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($site['name']) ?>
+                            <label class="form-label">Estoque/Depósito *</label>
+                            <select name="stock_location_id" class="form-select" required <?= $isEdit ? 'disabled' : '' ?>>
+                                <option value="">Selecione o estoque...</option>
+                                <?php foreach ($locations as $loc): ?>
+                                    <option value="<?= $loc['id'] ?>" <?= ($isEdit && ($item['stock_location_id'] ?? '') == $loc['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($loc['name']) ?>
+                                        <?= !empty($loc['construction_site_name']) ? ' (' . $loc['construction_site_name'] . ')' : '' ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                             <?php if ($isEdit): ?>
-                                <input type="hidden" name="construction_site_id" value="<?= $item['construction_site_id'] ?>">
+                                <input type="hidden" name="stock_location_id" value="<?= $item['stock_location_id'] ?? '' ?>">
                             <?php endif; ?>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label">Material *</label>
-                            <select name="material_id" class="form-select" required <?= $isEdit ? 'disabled' : '' ?>>
+                            <select name="material_id" id="materialSelect" class="form-select" required <?= $isEdit ? 'disabled' : '' ?> style="display:none;">
                                 <option value="">Selecione o material...</option>
                                 <?php foreach ($materials as $mat): ?>
-                                    <option value="<?= $mat['id'] ?>" <?= ($isEdit && $item['material_id'] == $mat['id']) ? 'selected' : '' ?>>
+                                    <option value="<?= $mat['id'] ?>" 
+                                            data-name="<?= htmlspecialchars($mat['name']) ?>"
+                                            data-spec="<?= htmlspecialchars($mat['specification'] ?? $mat['category_name'] ?? '') ?>"
+                                            data-unit="<?= htmlspecialchars($mat['unit_abbr'] ?? '') ?>"
+                                            <?= ($isEdit && $item['material_id'] == $mat['id']) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($mat['name']) ?>
                                         <?= !empty($mat['unit_abbr']) ? ' (' . $mat['unit_abbr'] . ')' : '' ?>
+                                        <?= !empty($mat['specification'] ?? $mat['category_name'] ?? '') ? ' - ' . htmlspecialchars($mat['specification'] ?? $mat['category_name']) : '' ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
+                            <div id="materialSearchWrap"></div>
                             <?php if ($isEdit): ?>
                                 <input type="hidden" name="material_id" value="<?= $item['material_id'] ?>">
                             <?php endif; ?>
@@ -94,3 +101,16 @@ ob_start();
 $content = ob_get_clean();
 require ROOT_PATH . '/app/Views/admin/layouts/app.php';
 ?>
+<link rel="stylesheet" href="/assets/css/searchable-select.css">
+<script src="/assets/js/searchable-select.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('materialSelect');
+    if (select && !select.disabled) {
+        new SearchableSelect(select, {
+            placeholder: 'Buscar material...',
+            containerTarget: document.getElementById('materialSearchWrap')
+        });
+    }
+});
+</script>
