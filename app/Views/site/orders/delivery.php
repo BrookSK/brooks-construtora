@@ -67,7 +67,15 @@
 
 <?php
 $deliveriesBySupplier = [];
-foreach ($deliveries as $d) { $deliveriesBySupplier[$d['supplier_name'] ?? 'Sem fornecedor'][] = $d; }
+foreach ($deliveries as $d) {
+    // Separar itens de estoque/transferência dos comprados
+    if (!empty($d['source_type']) && $d['source_type'] !== 'purchase') {
+        $groupName = $d['source_type'] === 'stock_transfer' ? '↔ Transferência de Estoque' : '✓ Saída de Estoque';
+    } else {
+        $groupName = $d['supplier_name'] ?? 'Sem fornecedor';
+    }
+    $deliveriesBySupplier[$groupName][] = $d;
+}
 $today = date('Y-m-d');
 $statusLabelsDelivery = \App\Models\PurchaseOrderDelivery::$statusLabels;
 $supplierPaymentInfo = [];

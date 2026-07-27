@@ -1772,35 +1772,51 @@ class PurchaseOrderController extends Controller
         if (!$movement) return;
 
         $material = Material::find($movement['material_id']);
-        $fromSite = $movement['from_site_id'] ? \App\Models\ConstructionSite::find($movement['from_site_id']) : null;
-        $toSite = $movement['to_site_id'] ? \App\Models\ConstructionSite::find($movement['to_site_id']) : null;
+        
+        // Buscar nomes: primeiro tenta location, depois site
+        $fromName = 'N/A';
+        $toName = 'N/A';
+        if ($movement['from_location_id']) {
+            $fromLoc = \App\Models\StockLocation::findFull($movement['from_location_id']);
+            $fromName = $fromLoc['name'] ?? 'N/A';
+        } elseif ($movement['from_site_id']) {
+            $fromSite = \App\Models\ConstructionSite::find($movement['from_site_id']);
+            $fromName = $fromSite['name'] ?? 'N/A';
+        }
+        if ($movement['to_location_id']) {
+            $toLoc = \App\Models\StockLocation::findFull($movement['to_location_id']);
+            $toName = $toLoc['name'] ?? 'N/A';
+        } elseif ($movement['to_site_id']) {
+            $toSite = \App\Models\ConstructionSite::find($movement['to_site_id']);
+            $toName = $toSite['name'] ?? 'N/A';
+        }
 
         $materialName = $material['name'] ?? 'Material';
-        $fromName = $fromSite['name'] ?? 'N/A';
-        $toName = $toSite['name'] ?? 'N/A';
-        $qty = $movement['quantity'];
+        $qty = (float) $movement['quantity'];
+        $qtyFmt = $qty == (int) $qty ? number_format($qty, 0) : number_format($qty, 2, ',', '.');
         $type = $movement['type'] === 'transfer' ? 'TRANSFERÊNCIA' : 'SAÍDA DE ESTOQUE';
+        $hasDestination = ($movement['to_location_id'] || $movement['to_site_id']);
 
         $emails = Setting::get('orders_transport_emails', '');
         if (!empty($emails)) {
             $subject = "{$type} - {$materialName}";
             $body = "<h2>{$type} de Material</h2>"
                 . "<p><strong>Material:</strong> {$materialName}</p>"
-                . "<p><strong>Quantidade:</strong> {$qty}</p>"
+                . "<p><strong>Quantidade:</strong> {$qtyFmt}</p>"
                 . "<p><strong>Origem:</strong> {$fromName}</p>"
-                . ($toSite ? "<p><strong>Destino:</strong> {$toName}</p>" : '')
+                . ($hasDestination ? "<p><strong>Destino:</strong> {$toName}</p>" : '')
                 . "<p><strong>Solicitado por:</strong> {$movement['requested_by']}</p>"
                 . "<p><strong>Data:</strong> " . date('d/m/Y H:i') . "</p>";
-            NotificationService::queueEmails($emails, $subject, $body, null, 'stock_transport');
+            NotificationService::queueEmails($emails, $subject, $body, $movement['order_id'], 'stock_transport');
         }
 
         $webhookUrl = Setting::get('orders_transport_webhook', '');
         if (!empty(trim($webhookUrl))) {
             $message = "*{$type}*\n\n"
                 . "*Material:* {$materialName}\n"
-                . "*Quantidade:* {$qty}\n"
+                . "*Quantidade:* {$qtyFmt}\n"
                 . "*Origem:* {$fromName}\n"
-                . ($toSite ? "*Destino:* {$toName}\n" : '')
+                . ($hasDestination ? "*Destino:* {$toName}\n" : '')
                 . "*Solicitado por:* {$movement['requested_by']}\n"
                 . "*Data:* " . date('d/m/Y H:i');
 
@@ -1808,14 +1824,14 @@ class PurchaseOrderController extends Controller
                 'event' => 'stock_movement',
                 'type' => $movement['type'],
                 'material' => $materialName,
-                'quantity' => $qty,
-                'from_site' => $fromName,
-                'to_site' => $toName,
+                'quantity' => $qtyFmt,
+                'from_location' => $fromName,
+                'to_location' => $toName,
                 'requested_by' => $movement['requested_by'],
                 'message' => $message,
                 'phone' => Setting::get('orders_transport_phone', ''),
                 'phone_name' => Setting::get('orders_transport_phone_name', ''),
-            ], null, 'stock_transport');
+            ], $movement['order_id'], 'stock_transport');
         }
     }
 
@@ -2416,7 +2432,7 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        $validPhases = ['quote_requested', 'approval_requested', 'order_approved', 'order_rejected', 'payment_uploaded', 'delivery_ready', 'spare_item'];
+        $validPhases = ['quote_requested', 'approval_requested', 'order_approved', 'order_rejected', 'payment_uploaded', 'delivery_ready', 'spare_item', 'stock_transport'];
 
         if (!in_array($phase, $validPhases)) {
             $this->json(['error' => 'Fase inválida.'], 400);
@@ -2665,6 +2681,14 @@ class PurchaseOrderController extends Controller
                 break;
 
             case 'spare_item':
+                break;
+
+            case 'stock_transport':
+                // Reenviar notificações de transporte para os itens de estoque deste pedido
+                $stockMovements = \App\Models\StockMovement::getByOrder($orderId);
+                foreach ($stockMovements as $mov) {
+                    $this->notifyTransportMovement($mov['id']);
+                }
                 break;
         }
 

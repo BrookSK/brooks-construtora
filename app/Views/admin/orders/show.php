@@ -163,6 +163,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <th>Class.</th>
                             <th>Unid.</th>
                             <th class="text-center">Qtd</th>
+                            <th>Origem</th>
                             <?php if ($order['total_estimated'] > 0): ?>
                             <th class="text-end">Unit.</th>
                             <th class="text-end">Total</th>
@@ -181,13 +182,24 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         }
                         ?>
                         <?php foreach ($items as $i => $item): ?>
-                        <tr>
+                        <tr class="<?= !empty($item['source_type']) && $item['source_type'] !== 'purchase' ? 'table-success' : '' ?>">
                             <td><?= $i + 1 ?></td>
                             <td><strong><?= htmlspecialchars($item['material_name']) ?></strong></td>
                             <td><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
                             <td class="text-center"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
+                            <td>
+                                <?php if (!empty($item['source_type']) && $item['source_type'] !== 'purchase'): ?>
+                                    <?php if ($item['source_type'] === 'stock_transfer'): ?>
+                                        <span class="badge bg-primary" style="font-size:0.65rem;"><i class="bi bi-arrow-left-right"></i> Transferência</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-success" style="font-size:0.65rem;"><i class="bi bi-box-seam"></i> Estoque</span>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <span class="badge bg-warning text-dark" style="font-size:0.65rem;"><i class="bi bi-cart"></i> Compra</span>
+                                <?php endif; ?>
+                            </td>
                             <?php if ($order['total_estimated'] > 0): ?>
                             <td class="text-end"><?= $item['unit_price'] ? 'R$ ' . number_format($item['unit_price'], 2, ',', '.') : '-' ?></td>
                             <td class="text-end fw-bold"><?= $item['total_price'] ? 'R$ ' . number_format($item['total_price'], 2, ',', '.') : '-' ?></td>
@@ -864,6 +876,13 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <?php endif; ?>
                         <?php if (!empty($order['delivery_token'])): ?>
                         <button class="btn btn-sm btn-outline-dark" onclick="resendPhase(<?= $order['id'] ?>, 'delivery_ready')"><i class="bi bi-arrow-repeat"></i> Entrega</button>
+                        <?php endif; ?>
+                        <?php
+                        // Verificar se tem itens de estoque/transferência neste pedido
+                        $hasStockItems = !empty(array_filter($items ?? [], fn($i) => !empty($i['source_type']) && $i['source_type'] !== 'purchase'));
+                        ?>
+                        <?php if ($hasStockItems): ?>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="resendPhase(<?= $order['id'] ?>, 'stock_transport')"><i class="bi bi-truck"></i> Transporte</button>
                         <?php endif; ?>
                     </div>
                     <div class="d-flex gap-2 align-items-center">

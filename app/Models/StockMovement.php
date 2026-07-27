@@ -32,14 +32,20 @@ class StockMovement extends Model
     }
 
     /**
-     * Registrar transferência entre obras
+     * Registrar transferência entre obras/estoques
      */
-    public static function transfer(int $materialId, int $fromSiteId, int $toSiteId, float $quantity, string $requestedBy, ?int $orderId = null): int
+    public static function transfer(int $materialId, int $fromSiteId, ?int $toSiteId, float $quantity, string $requestedBy, ?int $orderId = null): int
     {
+        // Buscar location vinculada à obra
+        $fromLocation = \App\Models\StockLocation::findBySite($fromSiteId);
+        $toLocation = $toSiteId ? \App\Models\StockLocation::findBySite($toSiteId) : null;
+
         return self::record([
             'material_id' => $materialId,
             'from_site_id' => $fromSiteId,
             'to_site_id' => $toSiteId,
+            'from_location_id' => $fromLocation ? $fromLocation['id'] : null,
+            'to_location_id' => $toLocation ? $toLocation['id'] : null,
             'quantity' => $quantity,
             'type' => self::TYPE_TRANSFER,
             'status' => self::STATUS_PENDING,
@@ -53,10 +59,14 @@ class StockMovement extends Model
      */
     public static function stockExit(int $materialId, int $siteId, float $quantity, string $requestedBy, ?int $orderId = null): int
     {
+        $fromLocation = \App\Models\StockLocation::findBySite($siteId);
+
         return self::record([
             'material_id' => $materialId,
             'from_site_id' => $siteId,
             'to_site_id' => null,
+            'from_location_id' => $fromLocation ? $fromLocation['id'] : null,
+            'to_location_id' => null,
             'quantity' => $quantity,
             'type' => self::TYPE_EXIT,
             'status' => self::STATUS_PENDING,

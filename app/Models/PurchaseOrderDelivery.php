@@ -32,6 +32,7 @@ class PurchaseOrderDelivery extends Model
     {
         return Database::fetchAll(
             "SELECT pod.*, poi.material_name, poi.quantity, poi.unit, poi.approved_supplier_id,
+                    poi.source_type, poi.stock_movement_id,
                     s.name as supplier_name
              FROM purchase_order_deliveries pod
              JOIN purchase_order_items poi ON pod.item_id = poi.id

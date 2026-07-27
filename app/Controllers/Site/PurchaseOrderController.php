@@ -743,9 +743,9 @@ class PurchaseOrderController extends Controller
         }
 
         if ($hasMultiSupplier) {
-            $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Unid.', 'Qtd', 'Unit.', 'Total', 'Fornecedor'], 'header');
+            $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Unid.', 'Qtd', 'Unit.', 'Total', 'Fornecedor', 'Origem'], 'header');
         } else {
-            $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Unid.', 'Qtd', 'Unit.', 'Total'], 'header');
+            $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Unid.', 'Qtd', 'Unit.', 'Total', 'Origem'], 'header');
         }
 
         // Itens
@@ -755,14 +755,29 @@ class PurchaseOrderController extends Controller
             $totalPrice = $item['total_price'] ?? 0;
             $subtotalInsumos += $totalPrice;
 
-            $materialLabel = $item['material_name'];
+            // Determinar origem
+            $origemLabel = 'Compra';
             if (!empty($item['source_type']) && $item['source_type'] !== 'purchase') {
-                $materialLabel .= $item['source_type'] === 'stock_transfer' ? ' [TRANSFERIDO]' : ' [ESTOQUE]';
+                if ($item['source_type'] === 'stock_transfer') {
+                    $origemLabel = 'Transferência';
+                } else {
+                    $origemLabel = 'Estoque';
+                }
+                // Tentar buscar de qual estoque veio
+                if (!empty($item['stock_movement_id'])) {
+                    $mov = \App\Models\StockMovement::find($item['stock_movement_id']);
+                    if ($mov) {
+                        $fromLoc = $mov['from_location_id'] ? \App\Models\StockLocation::find($mov['from_location_id']) : null;
+                        $toLoc = $mov['to_location_id'] ? \App\Models\StockLocation::find($mov['to_location_id']) : null;
+                        if ($fromLoc) $origemLabel .= ' de ' . $fromLoc['name'];
+                        if ($toLoc) $origemLabel .= ' → ' . $toLoc['name'];
+                    }
+                }
             }
 
             $row = [
                 $i + 1,
-                $materialLabel,
+                $item['material_name'],
                 $item['specification'] ?? '',
                 $item['classification'] ?? '',
                 $item['unit'] ?? '',
@@ -773,6 +788,7 @@ class PurchaseOrderController extends Controller
             if ($hasMultiSupplier) {
                 $row[] = $supplierNamesMap[$item['approved_supplier_id'] ?? 0] ?? '-';
             }
+            $row[] = $origemLabel;
             $xlsx->addRow($row);
         }
 
