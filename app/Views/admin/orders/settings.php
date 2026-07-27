@@ -500,11 +500,36 @@ async function testWebhook(type) {
             phone: document.querySelector('[name="orders_spare_phone"]')?.value || '',
             phone_name: document.querySelector('[name="orders_spare_phone_name"]')?.value || '',
             message: '*ITEM SOBRESSALENTE ADICIONADO*\n\n*Pedido:* PED-TESTE-001\n*Item:* Fita Isolante 20m\n*Valor:* R$ 12,90\n*Comprado por:* Mestre de Obras\n\n*Saldo semanal:*\nGasto: R$ 350,00 / R$ 1.000,00\nRestante: R$ 650,00'
+        },
+        transport: {
+            event: 'stock_movement',
+            test: true,
+            type: 'transfer',
+            material: 'Cano PVC 100mm',
+            quantity: 10,
+            from_site: 'Obra Alpha',
+            to_site: 'Obra Beta',
+            requested_by: 'Comprador Teste',
+            phone: document.querySelector('[name="orders_transport_phone"]')?.value || '',
+            phone_name: document.querySelector('[name="orders_transport_phone_name"]')?.value || '',
+            message: '*TRANSFERÊNCIA*\n\n*Material:* Cano PVC 100mm\n*Quantidade:* 10\n*Origem:* Obra Alpha\n*Destino:* Obra Beta\n*Solicitado por:* Comprador Teste\n*Data:* ' + new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
+        },
+        quote_send: {
+            event: 'quote_send_to_supplier',
+            test: true,
+            order_id: 999,
+            supplier_id: 1,
+            contact_id: 1,
+            supplier_name: 'Fornecedor de Teste LTDA',
+            vendor_name: 'Vendedor Teste',
+            phone: document.querySelector('[name="orders_quote_send_phone"]')?.value || '',
+            phone_name: document.querySelector('[name="orders_quote_send_phone_name"]')?.value || '',
+            message: 'Olá! Bom dia, tudo bem?\n\nPrecisamos de cotação para os seguintes itens:\n\n1. Cano PVC 100mm - Qtd: 10 un\n2. Joelho 40mm - Qtd: 20 un\n3. Cimento 50kg - Qtd: 30 sc\n\nObra: Obra Teste\nPedido: PED-TESTE-001\n\nPoderia nos enviar o orçamento?\n\nObrigado!'
         }
     };
 
     const payload = payloads[type];
-    const labels = { quote: 'Cotação', approval: 'Aprovação', completed: 'Conclusão', payment: 'Pagamento/NF', delivery: 'Entrega', spare: 'Sobressalentes' };
+    const labels = { quote: 'Cotação', approval: 'Aprovação', completed: 'Conclusão', payment: 'Pagamento/NF', delivery: 'Entrega', spare: 'Sobressalentes', transport: 'Transporte', quote_send: 'Envio de Cotação' };
 
     // Mostrar modal
     document.getElementById('testResultTitle').textContent = 'Teste Webhook - ' + labels[type];
