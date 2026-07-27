@@ -1,13 +1,18 @@
 <?php $pageTitle = 'Configurações'; $currentPage = 'settings'; ob_start(); ?>
 
 <?php
-// Detectar branch e banco de dados atual
+// Detectar branch/ambiente atual (prioriza domínio, fallback .git/HEAD)
 $_currentBranch = 'main';
-$_headFile = ROOT_PATH . '/.git/HEAD';
-if (file_exists($_headFile)) {
-    $_head = trim(file_get_contents($_headFile));
-    if (str_starts_with($_head, 'ref: refs/heads/')) {
-        $_currentBranch = substr($_head, strlen('ref: refs/heads/'));
+$_host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+if (str_contains($_host, 'plesk.page') || str_contains($_host, 'beta')) {
+    $_currentBranch = 'estoque';
+} else {
+    $_headFile = ROOT_PATH . '/.git/HEAD';
+    if (file_exists($_headFile)) {
+        $_head = trim(file_get_contents($_headFile));
+        if (str_starts_with($_head, 'ref: refs/heads/')) {
+            $_currentBranch = substr($_head, strlen('ref: refs/heads/'));
+        }
     }
 }
 $_config = require ROOT_PATH . '/app/Config/app.php';

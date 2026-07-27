@@ -11,20 +11,16 @@ return [
     'timezone' => 'America/Sao_Paulo',
     'charset' => 'UTF-8',
 
-    // Configurações do banco de dados (detecta branch automaticamente)
+    // Configurações do banco de dados (detecta ambiente pelo domínio ou .git/HEAD)
     'database' => (function () {
         $branch = 'main';
 
-        // 1. Prioridade: variável de ambiente (definida no Plesk ou .env)
-        $envBranch = getenv('APP_BRANCH');
-        if ($envBranch !== false && $envBranch !== '') {
-            $branch = $envBranch;
+        // 1. Prioridade: detecta pelo domínio (funciona mesmo se .git/HEAD estiver incorreto)
+        $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        if (str_contains($host, 'plesk.page') || str_contains($host, 'beta')) {
+            $branch = 'beta';
         }
-        // 2. Fallback: arquivo .branch na raiz (útil para deploys que não preservam .git)
-        elseif (file_exists(ROOT_PATH . '/.branch')) {
-            $branch = trim(file_get_contents(ROOT_PATH . '/.branch'));
-        }
-        // 3. Fallback: leitura do .git/HEAD
+        // 2. Fallback: leitura do .git/HEAD (funciona local e em deploys que preservam o HEAD)
         else {
             $headFile = ROOT_PATH . '/.git/HEAD';
             if (file_exists($headFile)) {
