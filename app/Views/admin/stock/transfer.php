@@ -93,17 +93,27 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        fetch(`/admin/stock/search-stock?material_id=${materialId}&exclude_site_id=0`)
+        fetch(`/admin/stock/search-stock?material_id=${materialId}&exclude_location_id=0`)
             .then(r => r.json())
             .then(data => {
-                const stock = data.stocks.find(s => s.construction_site_id == fromSiteId);
+                const stocks = data.stocks || [];
+                const stock = stocks.find(s => String(s.stock_location_id) === String(fromSiteId));
                 if (stock) {
                     fromStockInfo.textContent = `Disponível: ${stock.quantity} ${stock.unit_abbr || ''}`;
                     fromStockInfo.className = 'text-success small';
+                } else if (stocks.length > 0) {
+                    // Material existe em outro depósito
+                    const other = stocks[0];
+                    fromStockInfo.textContent = `Não encontrado aqui. Tem ${other.quantity} em: ${other.location_name || 'outro depósito'}`;
+                    fromStockInfo.className = 'text-warning small';
                 } else {
-                    fromStockInfo.textContent = 'Sem estoque nesta obra';
+                    fromStockInfo.textContent = 'Material sem estoque em nenhum depósito';
                     fromStockInfo.className = 'text-danger small';
                 }
+            })
+            .catch(() => {
+                fromStockInfo.textContent = 'Erro ao verificar estoque';
+                fromStockInfo.className = 'text-danger small';
             });
     }
 
