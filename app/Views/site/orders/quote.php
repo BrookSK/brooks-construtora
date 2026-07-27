@@ -126,11 +126,6 @@
 
             <form method="POST" action="/pedido/cotacao/enviar/<?= $token ?>" id="quoteForm">
                 <div class="card-body p-3 p-md-4">
-                    <!-- Enviar cotação para fornecedor via WhatsApp -->
-                    <?php require ROOT_PATH . '/app/Views/site/orders/partials/quote_send_supplier.php'; ?>
-
-                    <!-- Auto-preenchimento de orçamento via IA -->
-                    <?php require ROOT_PATH . '/app/Views/site/orders/partials/quote_ai_parse.php'; ?>
 
                     <!-- Identificação -->
                     <h6 class="mb-3"><i class="bi bi-person"></i> Identificação</h6>
@@ -564,19 +559,41 @@
             <div class="row g-2 mb-3 p-2 bg-light rounded">
                 <div class="col-12 col-md-4">
                     <label class="form-label small text-muted mb-0">Vendedor</label>
-                    <input type="text" class="form-control form-control-sm" name="supplier_vendor[${sid}][name]" placeholder="Nome do vendedor">
+                    <input type="text" class="form-control form-control-sm" name="supplier_vendor[${sid}][name]" placeholder="Nome do vendedor" id="vendor-name-${sid}">
                 </div>
                 <div class="col-6 col-md-3">
                     <label class="form-label small text-muted mb-0">Tel. vendedor</label>
-                    <input type="text" inputmode="tel" class="form-control form-control-sm" name="supplier_vendor[${sid}][phone]" placeholder="(11) 99999-9999">
+                    <input type="text" inputmode="tel" class="form-control form-control-sm" name="supplier_vendor[${sid}][phone]" placeholder="(11) 99999-9999" id="vendor-phone-${sid}">
                 </div>
                 <div class="col-6 col-md-3">
                     <label class="form-label small text-muted mb-0">E-mail vendedor</label>
-                    <input type="email" class="form-control form-control-sm" name="supplier_vendor[${sid}][email]" placeholder="email@loja.com">
+                    <input type="email" class="form-control form-control-sm" name="supplier_vendor[${sid}][email]" placeholder="email@loja.com" id="vendor-email-${sid}">
                 </div>
                 <div class="col-6 col-md-2">
                     <label class="form-label small text-muted mb-0">Prazo (dias)</label>
                     <input type="number" inputmode="numeric" class="form-control form-control-sm" name="supplier_vendor[${sid}][delivery_days]" placeholder="0" min="0">
+                </div>
+                <!-- Botões rápidos: Enviar Cotação + IA -->
+                <div class="col-12 mt-2">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="sendQuoteToVendor('${sid}')">
+                            <i class="bi bi-whatsapp"></i> Enviar Cotação
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="toggleAiParse('${sid}')">
+                            <i class="bi bi-robot"></i> Preencher com IA
+                        </button>
+                    </div>
+                    <div id="ai-parse-area-${sid}" style="display:none;" class="mt-2 p-2 border rounded bg-info bg-opacity-10">
+                        <label class="form-label small fw-bold mb-1">Cole as mensagens do fornecedor:</label>
+                        <textarea class="form-control form-control-sm" id="ai-messages-${sid}" rows="4" placeholder="Cole aqui as mensagens do WhatsApp com o orçamento..."></textarea>
+                        <div class="d-flex justify-content-end mt-2">
+                            <button type="button" class="btn btn-sm btn-info" onclick="parseAiForSupplier('${sid}')">
+                                <i class="bi bi-magic"></i> Processar com IA
+                            </button>
+                        </div>
+                        <div id="ai-result-${sid}" class="mt-2" style="display:none;"></div>
+                    </div>
+                    <div id="send-quote-status-${sid}" class="mt-1" style="display:none;"></div>
                 </div>
             </div>
 
@@ -2173,6 +2190,155 @@ function removeServiceMaterial(sid, idx) {
     // 8) Expor função para limpar draft manualmente (debug)
     window.clearQuoteDraft = clearDraft;
 })();
+
+// ─── Funções de Envio de Cotação e IA (dentro de cada bloco de fornecedor) ───
+
+const quoteOrderId = <?= $order['id'] ?>;
+const quoteOrderCode = '<?= $order['code'] ?>';
+const quoteSiteName = '<?= htmlspecialchars($order['construction_site_name'] ?? 'N/A') ?>';
+const defaultQuoteMessage = <?= json_encode(\App\Models\Setting::get('orders_quote_default_message', "Olá! Bom dia, tudo bem?\n\nPrecisamos de cotação para os seguintes itens:\n\n{items_list}\n\nObra: {construction_site}\nPedido: {order_code}\n\nPoderia nos enviar o orçamento?\n\nObrigado!")) ?>;
+
+function sendQuoteToVendor(sid) {
+    const vendorName = document.getElementById('vendor-name-' + sid)?.value || '';
+    const vendorPhone = document.getElementById('vendor-phone-' + sid)?.value || '';
+    const supplierName = supplierNames[sid] || '';
+    const statusEl = document.getElementById('send-quote-status-' + sid);
+
+    if (!vendorPhone) {
+        alert('Preencha o telefone do vendedor antes de enviar.');
+        document.getElementById('vendor-phone-' + sid)?.focus();
+        return;
+    }
+
+    // Montar lista de itens
+    let itemsList = '';
+    items.forEach((item, i) => {
+        const qty = parseFloat(item.quantity);
+        const qtyFmt = qty % 1 === 0 ? qty.toFixed(0) : qty.toFixed(2).replace('.', ',');
+        itemsList += (i+1) + '. ' + item.material_name;
+        if (item.specification) itemsList += ' - ' + item.specification;
+        itemsList += ' - Qtd: ' + qtyFmt;
+        if (item.unit) itemsList += ' ' + item.unit;
+        itemsList += '\n';
+    });
+
+    // Montar mensagem
+    let message = defaultQuoteMessage
+        .replace('{items_list}', itemsList.trim())
+        .replace('{construction_site}', quoteSiteName)
+        .replace('{order_code}', quoteOrderCode)
+        .replace('{supplier_name}', supplierName)
+        .replace('{vendor_name}', vendorName);
+
+    // Confirmar envio
+    if (!confirm('Enviar cotação via WhatsApp para ' + (vendorName || vendorPhone) + '?')) return;
+
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<small class="text-muted"><span class="spinner-border spinner-border-sm"></span> Enviando...</small>';
+
+    fetch('/pedido/cotacao/send-to-supplier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            order_id: quoteOrderId,
+            supplier_id: sid,
+            contact_id: 0,
+            phone: vendorPhone,
+            vendor_name: vendorName,
+            supplier_name: supplierName,
+            message: message,
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            statusEl.innerHTML = '<small class="text-success"><i class="bi bi-check-circle"></i> Enviado!</small>';
+        } else {
+            statusEl.innerHTML = '<small class="text-danger"><i class="bi bi-x-circle"></i> ' + (data.error || 'Erro') + '</small>';
+        }
+    })
+    .catch(() => {
+        statusEl.innerHTML = '<small class="text-danger"><i class="bi bi-x-circle"></i> Erro de conexão</small>';
+    });
+}
+
+function toggleAiParse(sid) {
+    const area = document.getElementById('ai-parse-area-' + sid);
+    area.style.display = area.style.display === 'none' ? 'block' : 'none';
+}
+
+async function parseAiForSupplier(sid) {
+    const messagesEl = document.getElementById('ai-messages-' + sid);
+    const resultEl = document.getElementById('ai-result-' + sid);
+    const messages = messagesEl.value.trim();
+
+    if (!messages || messages.length < 10) {
+        alert('Cole as mensagens do fornecedor (mínimo 10 caracteres).');
+        return;
+    }
+
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<small class="text-muted"><span class="spinner-border spinner-border-sm"></span> Processando com IA...</small>';
+
+    try {
+        const resp = await fetch('/pedido/cotacao/parse-ai-quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                order_id: quoteOrderId,
+                supplier_id: sid,
+                messages: messages,
+            })
+        });
+        const data = await resp.json();
+
+        if (data.success && data.parsed) {
+            // Auto-preencher os campos de preço
+            const parsed = data.parsed;
+            let applied = 0;
+
+            (parsed.items || []).forEach(parsedItem => {
+                if (!parsedItem.unit_price) return;
+                const parsedName = (parsedItem.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+                // Tentar match por nome
+                let matched = false;
+                items.forEach(oi => {
+                    const oiName = (oi.material_name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    if (oiName.includes(parsedName) || parsedName.includes(oiName)) {
+                        const input = document.querySelector(`input[name="supplier_prices[${sid}][${oi.id}]"]`);
+                        if (input && !input.value) {
+                            input.value = parseFloat(parsedItem.unit_price).toFixed(2).replace('.', ',');
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
+                            applied++;
+                            matched = true;
+                        }
+                    }
+                });
+            });
+
+            // Preencher condições
+            if (parsed.freight) {
+                const freightInput = document.querySelector(`input[name="supplier_financials[${sid}][freight]"]`);
+                if (freightInput) freightInput.value = parseFloat(parsed.freight).toFixed(2).replace('.', ',');
+            }
+            if (parsed.delivery_days) {
+                const daysInput = document.querySelector(`input[name="supplier_vendor[${sid}][delivery_days]"]`);
+                if (daysInput) daysInput.value = parsed.delivery_days.toString().replace(/\D/g, '');
+            }
+            if (parsed.payment_condition) {
+                const pcInput = document.querySelector(`input[name="supplier_vendor[${sid}][payment_condition]"]`);
+                if (pcInput) pcInput.value = parsed.payment_condition;
+            }
+
+            resultEl.innerHTML = `<small class="text-success"><i class="bi bi-check-circle"></i> ${applied} preço(s) preenchido(s)! Revise os valores.</small>`;
+        } else {
+            resultEl.innerHTML = `<small class="text-danger"><i class="bi bi-x-circle"></i> ${data.error || 'Não foi possível extrair dados.'}</small>`;
+        }
+    } catch (e) {
+        resultEl.innerHTML = '<small class="text-danger"><i class="bi bi-x-circle"></i> Erro de conexão</small>';
+    }
+}
 // ═══════════════════════════════════════════════════════════════════════════════
 </script>
 </body>
