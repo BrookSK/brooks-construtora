@@ -130,20 +130,24 @@ class StockItem extends Model
         $placeholders = implode(',', array_fill(0, count($materialIds), '?'));
         $params = $materialIds;
 
-        $query = "SELECT si.*, sl.name as location_name, sl.code as location_code,
-                         sl.construction_site_id,
-                         cs.name as site_name, cs.code as site_code,
+        $query = "SELECT si.*, 
+                         COALESCE(sl.name, cs_direct.name) as location_name, 
+                         COALESCE(sl.code, '') as location_code,
+                         COALESCE(sl.construction_site_id, si.construction_site_id) as construction_site_id,
+                         COALESCE(cs.name, cs_direct.name) as site_name, 
+                         COALESCE(cs.code, cs_direct.code) as site_code,
                          m.name as material_name, mu.abbreviation as unit_abbr
                   FROM stock_items si
-                  JOIN stock_locations sl ON si.stock_location_id = sl.id
+                  LEFT JOIN stock_locations sl ON si.stock_location_id = sl.id
                   LEFT JOIN construction_sites cs ON sl.construction_site_id = cs.id
+                  LEFT JOIN construction_sites cs_direct ON si.construction_site_id = cs_direct.id
                   JOIN materials m ON si.material_id = m.id
                   LEFT JOIN measurement_units mu ON m.unit_id = mu.id
                   WHERE si.material_id IN ({$placeholders}) AND si.quantity > 0";
 
         if ($targetSiteId) {
-            // Excluir o depósito vinculado à obra destino
-            $query .= " AND (sl.construction_site_id != ? OR sl.construction_site_id IS NULL)";
+            // Excluir o depósito vinculado à obra destino (por location ou direto)
+            $query .= " AND (COALESCE(sl.construction_site_id, si.construction_site_id) != ? OR (sl.construction_site_id IS NULL AND si.construction_site_id IS NULL))";
             $params[] = $targetSiteId;
         }
 
@@ -160,17 +164,23 @@ class StockItem extends Model
         // Também verificar estoque no depósito da obra destino
         if ($targetSiteId) {
             $localResults = Database::fetchAll(
-                "SELECT si.*, sl.name as location_name, sl.code as location_code,
-                        sl.construction_site_id,
-                        cs.name as site_name, cs.code as site_code,
+                "SELECT si.*, 
+                        COALESCE(sl.name, cs_direct.name) as location_name, 
+                        COALESCE(sl.code, '') as location_code,
+                        COALESCE(sl.construction_site_id, si.construction_site_id) as construction_site_id,
+                        COALESCE(cs.name, cs_direct.name) as site_name, 
+                        COALESCE(cs.code, cs_direct.code) as site_code,
                         m.name as material_name, mu.abbreviation as unit_abbr
                  FROM stock_items si
-                 JOIN stock_locations sl ON si.stock_location_id = sl.id
+                 LEFT JOIN stock_locations sl ON si.stock_location_id = sl.id
                  LEFT JOIN construction_sites cs ON sl.construction_site_id = cs.id
+                 LEFT JOIN construction_sites cs_direct ON si.construction_site_id = cs_direct.id
                  JOIN materials m ON si.material_id = m.id
                  LEFT JOIN measurement_units mu ON m.unit_id = mu.id
-                 WHERE si.material_id IN ({$placeholders}) AND sl.construction_site_id = ? AND si.quantity > 0",
-                array_merge($materialIds, [$targetSiteId])
+                 WHERE si.material_id IN ({$placeholders}) 
+                   AND (sl.construction_site_id = ? OR si.construction_site_id = ?) 
+                   AND si.quantity > 0",
+                array_merge($materialIds, [$targetSiteId, $targetSiteId])
             );
 
             foreach ($localResults as $row) {
