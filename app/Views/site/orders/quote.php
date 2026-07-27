@@ -2514,22 +2514,32 @@ async function parseAiForSupplierMap(sid) {
             const parsed = data.parsed;
             let applied = 0;
 
-            // Preencher preços na tabela do mapa
-            (parsed.items || []).forEach(parsedItem => {
-                if (!parsedItem.unit_price) return;
-                const parsedName = (parsedItem.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            // Filtrar itens de cotação (excluir estoque)
+            const quoteItems = items.filter(i => !i.source_type || i.source_type === 'purchase');
 
-                items.forEach(oi => {
-                    const oiName = (oi.material_name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                    if (oiName.includes(parsedName) || parsedName.includes(oiName)) {
-                        // Preencher no mapa (input da coluna deste fornecedor)
-                        const mapInput = document.querySelector(`input.map-price-input[data-sid="${sid}"][data-item-id="${oi.id}"]`);
+            // Preencher preços na tabela do mapa
+            (parsed.items || []).forEach((parsedItem, pIdx) => {
+                if (!parsedItem.unit_price) return;
+                const parsedName = (parsedItem.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').trim();
+
+                let matched = false;
+                quoteItems.forEach(oi => {
+                    if (matched) return;
+                    const oiName = (oi.material_name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').trim();
+                    // Match: contém ou palavras em comum
+                    const pWords = parsedName.split(/\s+/).filter(w => w.length > 2);
+                    const oWords = oiName.split(/\s+/).filter(w => w.length > 2);
+                    const commonWords = pWords.filter(w => oWords.includes(w)).length;
+                    const matchScore = pWords.length > 0 ? commonWords / pWords.length : 0;
+
+                    if (oiName.includes(parsedName) || parsedName.includes(oiName) || matchScore >= 0.5) {
+                        const mapInput = document.querySelector(`input.map-price-input[data-sid="${sid}"][data-item="${oi.id}"]`);
                         if (mapInput && !mapInput.value) {
                             mapInput.value = parseFloat(parsedItem.unit_price).toFixed(2).replace('.', ',');
                             mapInput.dispatchEvent(new Event('input', { bubbles: true }));
                             applied++;
+                            matched = true;
                         }
-                        // Também na view lista
                         const listInput = document.querySelector(`input[name="supplier_prices[${sid}][${oi.id}]"]`);
                         if (listInput && !listInput.value) {
                             listInput.value = parseFloat(parsedItem.unit_price).toFixed(2).replace('.', ',');
@@ -2537,6 +2547,22 @@ async function parseAiForSupplierMap(sid) {
                         }
                     }
                 });
+
+                // Fallback: por posição se não achou por nome
+                if (!matched && pIdx < quoteItems.length) {
+                    const oi = quoteItems[pIdx];
+                    const mapInput = document.querySelector(`input.map-price-input[data-sid="${sid}"][data-item="${oi.id}"]`);
+                    if (mapInput && !mapInput.value) {
+                        mapInput.value = parseFloat(parsedItem.unit_price).toFixed(2).replace('.', ',');
+                        mapInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        applied++;
+                    }
+                    const listInput = document.querySelector(`input[name="supplier_prices[${sid}][${oi.id}]"]`);
+                    if (listInput && !listInput.value) {
+                        listInput.value = parseFloat(parsedItem.unit_price).toFixed(2).replace('.', ',');
+                        listInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                }
             });
 
             // Preencher financeiros
