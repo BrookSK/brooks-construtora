@@ -62,6 +62,8 @@ class Router
             'newsletter' => ['NewsletterController', 'index'],
             'newsletter/export' => ['NewsletterController', 'export'],
             'newsletter/delete' => ['NewsletterController', 'delete'],
+            'newsletter/resend-whatsapp' => ['NewsletterController', 'resendWhatsapp'],
+            'newsletter/resend-whatsapp-all' => ['NewsletterController', 'resendWhatsappAll'],
             'users' => ['UserController', 'index'],
             'users/create' => ['UserController', 'create'],
             'users/store' => ['UserController', 'store'],
