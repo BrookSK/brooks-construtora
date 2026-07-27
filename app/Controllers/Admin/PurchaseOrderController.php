@@ -1539,11 +1539,15 @@ class PurchaseOrderController extends Controller
         // E-mail (via fila)
         $emails = Setting::get('orders_quote_emails', '');
         if (!empty($emails)) {
+            // Filtrar apenas itens que precisam de cotação
+            $quoteItems = array_filter($items, function($item) {
+                return empty($item['source_type']) || $item['source_type'] === 'purchase';
+            });
             $subject = "Cotação Pendente - Pedido {$order['code']}";
             if (!empty($order['construction_site_name'])) {
                 $subject .= " - Obra: {$order['construction_site_name']}";
             }
-            $body = EmailTemplate::purchaseOrderQuote($order, $items, $quoteUrl, $orderSuppliers);
+            $body = EmailTemplate::purchaseOrderQuote($order, array_values($quoteItems), $quoteUrl, $orderSuppliers);
             NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'quote_requested');
         }
 
@@ -1551,8 +1555,12 @@ class PurchaseOrderController extends Controller
         $webhookUrl = Setting::get('orders_quote_webhook', '');
         if (!empty($webhookUrl)) {
             $itemsList = '';
-            foreach ($items as $i => $item) {
-                $itemsList .= ($i + 1) . ". {$item['material_name']}";
+            $itemNum = 0;
+            foreach ($items as $item) {
+                // Só incluir itens que precisam de cotação
+                if (!empty($item['source_type']) && $item['source_type'] !== 'purchase') continue;
+                $itemNum++;
+                $itemsList .= $itemNum . ". {$item['material_name']}";
                 if ($item['classification']) $itemsList .= " ({$item['classification']})";
                 $qty = (float) $item['quantity'];
                 $qtyFmt = $qty == (int) $qty ? number_format($qty, 0) : number_format($qty, 2, ',', '.');
@@ -1572,7 +1580,7 @@ class PurchaseOrderController extends Controller
                 . $obraInfo
                 . "*Solicitado por:* {$order['created_by_name']}\n"
                 . "*Data:* " . date('d/m/Y H:i', strtotime($order['created_at'])) . "\n"
-                . "*Itens:* " . count($items) . "\n\n"
+                . "*Itens:* {$itemNum}\n\n"
                 . $suppliersList
                 . "*Lista de materiais:*\n{$itemsList}\n"
                 . (!empty($order['description']) ? "*Obs:* {$order['description']}\n\n" : "\n")
@@ -1587,7 +1595,7 @@ class PurchaseOrderController extends Controller
                     'name' => $order['construction_site_name'],
                 ] : null,
                 'suppliers' => $suppliersArray,
-                'items_count' => count($items),
+                'items_count' => $itemNum,
                 'quote_url' => $quoteUrl,
                 'created_by' => $order['created_by_name'],
                 'created_at' => $order['created_at'],
@@ -2437,15 +2445,18 @@ class PurchaseOrderController extends Controller
                         $baseUrl = $this->getBaseUrl();
                         $quoteUrl = "{$baseUrl}/pedido/cotacao/{$order['quote_token']}";
                         $itemsList = '';
-                        foreach ($items as $i => $item) {
+                        $quoteItemCount = 0;
+                        foreach ($items as $item) {
+                            if (!empty($item['source_type']) && $item['source_type'] !== 'purchase') continue;
+                            $quoteItemCount++;
                             $qty = (float) $item['quantity'];
                             $qtyFmt = $qty == (int) $qty ? number_format($qty, 0) : number_format($qty, 2, ',', '.');
-                            $itemsList .= ($i + 1) . ". {$item['material_name']} - Qtd: {$qtyFmt} {$item['unit']}\n";
+                            $itemsList .= $quoteItemCount . ". {$item['material_name']} - Qtd: {$qtyFmt} {$item['unit']}\n";
                         }
-                        $message = "*NOVO PEDIDO - COTAÇÃO PENDENTE*\n\n*Pedido:* {$order['code']}\n*Itens:* " . count($items) . "\n\n*Link:*\n{$quoteUrl}";
+                        $message = "*NOVO PEDIDO - COTAÇÃO PENDENTE*\n\n*Pedido:* {$order['code']}\n*Itens:* " . $quoteItemCount . "\n\n*Link:*\n{$quoteUrl}";
                         $this->sendWebhook($webhookUrl, [
                             'event' => 'quote_requested', 'order_code' => $order['code'],
-                            'items_count' => count($items), 'quote_url' => $quoteUrl,
+                            'items_count' => $quoteItemCount, 'quote_url' => $quoteUrl,
                             'phone' => Setting::get('orders_quote_phone', ''),
                             'phone_name' => Setting::get('orders_quote_phone_name', ''),
                             'message' => $message,

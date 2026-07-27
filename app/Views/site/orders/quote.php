@@ -2301,9 +2301,12 @@ function sendQuoteToVendor(sid) {
         return;
     }
 
+    // Filtrar apenas itens que precisam de cotação (excluir estoque)
+    const quoteItems = items.filter(i => !i.source_type || i.source_type === 'purchase');
+
     // Montar lista de itens
     let itemsList = '';
-    items.forEach((item, i) => {
+    quoteItems.forEach((item, i) => {
         const qty = parseFloat(item.quantity);
         const qtyFmt = qty % 1 === 0 ? qty.toFixed(0) : qty.toFixed(2).replace('.', ',');
         itemsList += (i+1) + '. ' + item.material_name;
@@ -2443,8 +2446,11 @@ function sendQuoteToVendorMap(sid) {
         return;
     }
 
+    // Filtrar apenas itens que precisam de cotação
+    const quoteItems = items.filter(i => !i.source_type || i.source_type === 'purchase');
+
     let itemsList = '';
-    items.forEach((item, i) => {
+    quoteItems.forEach((item, i) => {
         const qty = parseFloat(item.quantity);
         const qtyFmt = qty % 1 === 0 ? qty.toFixed(0) : qty.toFixed(2).replace('.', ',');
         itemsList += (i+1) + '. ' + item.material_name;
