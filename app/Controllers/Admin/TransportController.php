@@ -67,6 +67,9 @@ class TransportController extends Controller
         $userName = Auth::user()['name'] ?? 'Transporte';
         StockMovement::markInTransit($id, $userName);
 
+        // Notificar quem recebe o checklist de entrega
+        $this->notifyDeliveryRecipient($movement, 'in_transit', $userName);
+
         $this->setFlash('success', 'Marcado como em trânsito!');
         $this->redirect('/admin/transport');
     }
@@ -92,6 +95,9 @@ class TransportController extends Controller
 
         $userName = Auth::user()['name'] ?? 'Transporte';
         StockMovement::markDelivered($id, $userName);
+
+        // Notificar quem recebe o checklist de entrega
+        $this->notifyDeliveryRecipient($movement, 'delivered', $userName);
 
         // Notificar quem solicitou sobre a entrega
         $this->notifyDeliveryCompleted($id, $movement);
@@ -194,6 +200,84 @@ class TransportController extends Controller
             'pageTitle' => 'Pedidos (Visualização)',
             'currentPage' => 'transport_orders',
         ]);
+    }
+
+    /**
+     * Notificar quem recebe o checklist de entrega sobre status do transporte
+     */
+    private function notifyDeliveryRecipient(array $movement, string $status, string $transportedBy): void
+    {
+        $material = \App\Models\Material::find($movement['material_id']);
+        $materialName = $material['name'] ?? 'Material';
+        $qty = (float) $movement['quantity'];
+        $qtyFmt = $qty == (int) $qty ? number_format($qty, 0) : number_format($qty, 2, ',', '.');
+
+        $fromName = 'N/A';
+        $toName = 'N/A';
+        if ($movement['from_location_id']) {
+            $loc = \App\Models\StockLocation::findFull($movement['from_location_id']);
+            $fromName = $loc['name'] ?? 'N/A';
+        } elseif ($movement['from_site_id']) {
+            $site = \App\Models\ConstructionSite::find($movement['from_site_id']);
+            $fromName = $site['name'] ?? 'N/A';
+        }
+        if ($movement['to_location_id']) {
+            $loc = \App\Models\StockLocation::findFull($movement['to_location_id']);
+            $toName = $loc['name'] ?? 'N/A';
+        } elseif ($movement['to_site_id']) {
+            $site = \App\Models\ConstructionSite::find($movement['to_site_id']);
+            $toName = $site['name'] ?? 'N/A';
+        }
+
+        $statusLabel = $status === 'in_transit' ? 'EM TRANSPORTE' : 'ENTREGUE';
+        $emoji = $status === 'in_transit' ? '🚚' : '✅';
+        $orderCode = '';
+        if ($movement['order_id']) {
+            $order = PurchaseOrder::find($movement['order_id']);
+            $orderCode = $order ? $order['code'] : '';
+        }
+
+        // Webhook para quem recebe o checklist
+        $webhookUrl = Setting::get('orders_delivery_webhook', '');
+        if (!empty(trim($webhookUrl))) {
+            $message = "*{$emoji} TRANSFERÊNCIA {$statusLabel}*\n\n"
+                . "*Material:* {$materialName}\n"
+                . "*Quantidade:* {$qtyFmt}\n"
+                . "*De:* {$fromName}\n"
+                . "*Para:* {$toName}\n"
+                . ($orderCode ? "*Pedido:* {$orderCode}\n" : '')
+                . "*{$statusLabel} por:* {$transportedBy}\n"
+                . "*Data:* " . date('d/m/Y H:i');
+
+            NotificationService::queueWebhook($webhookUrl, [
+                'event' => 'stock_transport_' . $status,
+                'material' => $materialName,
+                'quantity' => $qtyFmt,
+                'from' => $fromName,
+                'to' => $toName,
+                'order_code' => $orderCode,
+                'status' => $statusLabel,
+                'by' => $transportedBy,
+                'message' => $message,
+                'phone' => Setting::get('orders_delivery_phone', ''),
+                'phone_name' => Setting::get('orders_delivery_phone_name', ''),
+            ], $movement['order_id'] ?? null, 'stock_transport_' . $status);
+        }
+
+        // Email
+        $emails = Setting::get('orders_delivery_emails', '');
+        if (!empty($emails)) {
+            $subject = "Transferência {$statusLabel} - {$materialName}";
+            $body = "<h2>{$emoji} Transferência {$statusLabel}</h2>"
+                . "<p><strong>Material:</strong> {$materialName}</p>"
+                . "<p><strong>Quantidade:</strong> {$qtyFmt}</p>"
+                . "<p><strong>De:</strong> {$fromName}</p>"
+                . "<p><strong>Para:</strong> {$toName}</p>"
+                . ($orderCode ? "<p><strong>Pedido:</strong> {$orderCode}</p>" : '')
+                . "<p><strong>{$statusLabel} por:</strong> {$transportedBy}</p>"
+                . "<p><strong>Data:</strong> " . date('d/m/Y H:i') . "</p>";
+            NotificationService::queueEmails($emails, $subject, $body, $movement['order_id'] ?? null, 'stock_transport_' . $status);
+        }
     }
 
     /**
