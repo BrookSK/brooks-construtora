@@ -14,17 +14,22 @@ class Newsletter extends Model
         return Database::fetch("SELECT * FROM newsletter_subscribers WHERE email = ?", [$email]);
     }
 
-    public static function subscribe(string $email, string $name = ''): bool
+    public static function subscribe(string $email, string $name = '', string $phone = ''): bool
     {
         $existing = self::findByEmail($email);
 
         if ($existing) {
+            // Atualizar telefone se não tinha e agora tem
+            if (!empty($phone) && empty($existing['phone'])) {
+                Database::update('newsletter_subscribers', ['phone' => $phone], 'id = ?', [$existing['id']]);
+            }
             return false; // Já inscrito
         }
 
         Database::insert('newsletter_subscribers', [
             'email' => $email,
             'name' => $name,
+            'phone' => $phone ?: null,
             'subscribed_at' => date('Y-m-d H:i:s'),
             'active' => 1,
         ]);

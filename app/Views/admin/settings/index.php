@@ -247,6 +247,31 @@ $_isProduction = $_currentBranch === 'main';
         </div>
     </div>
 
+    <!-- Revista - Webhook WhatsApp -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-whatsapp"></i> Revista - Notificação WhatsApp</h6>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">Ao publicar uma nova revista, envia notificação via webhook para os assinantes que cadastraram o WhatsApp. O telefone padrão é usado quando nenhum assinante tem telefone cadastrado.</p>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Nome (padrão)</label>
+                    <input type="text" class="form-control" name="magazine_webhook_phone_name" value="<?= htmlspecialchars($settings['magazine_webhook_phone_name'] ?? '') ?>" placeholder="Ex: Brooks Construtora">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Telefone (padrão)</label>
+                    <input type="text" class="form-control" name="magazine_webhook_phone" value="<?= htmlspecialchars($settings['magazine_webhook_phone'] ?? '') ?>" placeholder="5511999999999">
+                    <small class="text-muted">Usado quando nenhum assinante tem WhatsApp</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">URL Webhook</label>
+                    <input type="url" class="form-control" name="magazine_webhook_url" value="<?= htmlspecialchars($settings['magazine_webhook_url'] ?? '') ?>" placeholder="https://...">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="text-end">
         <button type="submit" class="btn btn-primary btn-lg">
             <i class="bi bi-check-lg"></i> Salvar Configurações

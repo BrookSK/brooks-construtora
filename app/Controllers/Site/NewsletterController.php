@@ -16,6 +16,7 @@ class NewsletterController extends Controller
 
         $email = trim($this->input('email'));
         $name = trim($this->input('name', ''));
+        $phone = trim($this->input('phone', ''));
 
         if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             if ($this->isAjax()) {
@@ -27,7 +28,7 @@ class NewsletterController extends Controller
             return;
         }
 
-        $result = Newsletter::subscribe($email, $name);
+        $result = Newsletter::subscribe($email, $name, $phone);
 
         if ($this->isAjax()) {
             if ($result) {

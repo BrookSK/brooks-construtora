@@ -24,6 +24,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                     <form action="/newsletter/subscribe" method="POST" class="newsletter-form-ajax" style="display: flex; flex-direction: column; gap: var(--space-md);">
                         <input type="text" name="name" placeholder="Seu nome" required style="padding: 12px 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-md); color: white; font-size: var(--text-sm); outline: none;">
                         <input type="email" name="email" placeholder="Seu melhor e-mail" required style="padding: 12px 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-md); color: white; font-size: var(--text-sm); outline: none;">
+                        <input type="tel" name="phone" placeholder="WhatsApp (opcional)" style="padding: 12px 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-md); color: white; font-size: var(--text-sm); outline: none;">
                         <button type="submit" class="btn btn--primary" style="width: 100%;">Assinar Grátis</button>
                     </form>
                     <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.3); text-align: center; margin-top: var(--space-sm);">Sem spam. Cancele quando quiser.</p>
@@ -81,9 +82,10 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     <div class="container text-center reveal">
         <h2 class="headline-subsection">Não perca nenhuma edição</h2>
         <p class="subtitle subtitle--centered" style="margin-bottom: var(--space-xl);">Assine gratuitamente e receba conteúdo sobre construção, reformas e arquitetura direto no seu e-mail.</p>
-        <form action="/newsletter/subscribe" method="POST" class="newsletter-form-ajax" style="display: flex; gap: var(--space-sm); max-width: 480px; margin: 0 auto; flex-wrap: wrap; justify-content: center;">
-            <input type="text" name="name" placeholder="Seu nome" required style="flex: 1; min-width: 140px; padding: 14px 16px; border: 1px solid var(--brooks-gray-200); border-radius: var(--radius-md); font-size: var(--text-sm); outline: none;">
-            <input type="email" name="email" placeholder="Seu e-mail" required style="flex: 1; min-width: 180px; padding: 14px 16px; border: 1px solid var(--brooks-gray-200); border-radius: var(--radius-md); font-size: var(--text-sm); outline: none;">
+        <form action="/newsletter/subscribe" method="POST" class="newsletter-form-ajax" style="display: flex; gap: var(--space-sm); max-width: 600px; margin: 0 auto; flex-wrap: wrap; justify-content: center;">
+            <input type="text" name="name" placeholder="Seu nome" required style="flex: 1; min-width: 120px; padding: 14px 16px; border: 1px solid var(--brooks-gray-200); border-radius: var(--radius-md); font-size: var(--text-sm); outline: none;">
+            <input type="email" name="email" placeholder="Seu e-mail" required style="flex: 1; min-width: 160px; padding: 14px 16px; border: 1px solid var(--brooks-gray-200); border-radius: var(--radius-md); font-size: var(--text-sm); outline: none;">
+            <input type="tel" name="phone" placeholder="WhatsApp" style="flex: 1; min-width: 130px; padding: 14px 16px; border: 1px solid var(--brooks-gray-200); border-radius: var(--radius-md); font-size: var(--text-sm); outline: none;">
             <button type="submit" class="btn btn--primary">Assinar</button>
         </form>
     </div>

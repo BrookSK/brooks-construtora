@@ -1282,6 +1282,7 @@ class MagazineController extends Controller
             $mail = new MailService();
             $displayTitle = $topicTitle ?: $magazine['title'];
 
+            // Enviar e-mails
             foreach ($subscribers as $subscriber) {
                 $htmlBody = \App\Services\EmailTemplate::magazinePublished(
                     $magazine['title'],
@@ -1298,8 +1299,69 @@ class MagazineController extends Controller
                     true
                 );
             }
+
+            // Enviar webhook WhatsApp
+            $this->sendMagazineWebhook($magazineId, $magazine, $displayTitle, $subscribers);
+
         } catch (\Exception $e) {
             error_log('Erro ao enviar newsletter: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Enviar webhook de nova revista para assinantes com WhatsApp
+     */
+    private function sendMagazineWebhook(int $magazineId, array $magazine, string $displayTitle, array $subscribers): void
+    {
+        $webhookUrl = \App\Models\Setting::get('magazine_webhook_url', '');
+        if (empty(trim($webhookUrl))) return;
+
+        $defaultPhone = \App\Models\Setting::get('magazine_webhook_phone', '');
+        $defaultPhoneName = \App\Models\Setting::get('magazine_webhook_phone_name', '');
+        $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'www.brooksconstrutora.com.br');
+        $magazineUrl = "{$baseUrl}/revista/ver/{$magazineId}";
+
+        $message = "*Nova Revista Brooks!*\n\n"
+            . "*{$displayTitle}*\n\n"
+            . "Uma nova edição da Revista Brooks acabou de ser publicada!\n\n"
+            . "*Leia agora:*\n{$magazineUrl}";
+
+        // Coletar telefones dos assinantes
+        $phones = [];
+        $phoneNames = [];
+        foreach ($subscribers as $sub) {
+            if (!empty($sub['phone'])) {
+                $phone = preg_replace('/\D/', '', $sub['phone']);
+                if (strlen($phone) >= 10) {
+                    $phones[] = $phone;
+                    $phoneNames[] = $sub['name'] ?: $phone;
+                }
+            }
+        }
+
+        // Se nenhum assinante tem telefone, usar o padrão
+        if (empty($phones)) {
+            if (!empty($defaultPhone)) {
+                $phones[] = $defaultPhone;
+                $phoneNames[] = $defaultPhoneName ?: $defaultPhone;
+            } else {
+                return; // Sem telefones pra enviar
+            }
+        }
+
+        // Enviar um webhook por telefone (igual ao sistema de pedidos)
+        foreach ($phones as $i => $phone) {
+            $recipientName = $phoneNames[$i] ?? $phone;
+
+            \App\Services\NotificationService::queueWebhook($webhookUrl, [
+                'event' => 'magazine_published',
+                'magazine_id' => $magazineId,
+                'title' => $displayTitle,
+                'magazine_url' => $magazineUrl,
+                'phone' => $phone,
+                'phone_name' => $recipientName,
+                'message' => $message,
+            ], null, 'magazine_published');
         }
     }
 }

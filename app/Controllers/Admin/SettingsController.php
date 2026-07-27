@@ -55,6 +55,11 @@ class SettingsController extends Controller
             // E-mails de notificação
             'notification_emails' => Setting::get('notification_emails', ''),
 
+            // Revista - Webhook WhatsApp
+            'magazine_webhook_url' => Setting::get('magazine_webhook_url', ''),
+            'magazine_webhook_phone' => Setting::get('magazine_webhook_phone', ''),
+            'magazine_webhook_phone_name' => Setting::get('magazine_webhook_phone_name', ''),
+
             // Site
             'site_title' => Setting::get('site_title', 'Brooks Construtora'),
             'site_description' => Setting::get('site_description', ''),
@@ -89,6 +94,7 @@ class SettingsController extends Controller
             'magazine_day_of_week', 'magazine_day_of_month',
             'cron_token',
             'notification_emails',
+            'magazine_webhook_url', 'magazine_webhook_phone', 'magazine_webhook_phone_name',
             'site_title', 'site_description', 'site_phone', 'site_email',
             'site_address', 'site_instagram', 'site_facebook',
             'site_linkedin', 'site_whatsapp',

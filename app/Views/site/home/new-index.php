@@ -353,6 +353,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <form action="/newsletter/subscribe" method="POST" class="newsletter-form-ajax" style="display: flex; flex-direction: column; gap: var(--space-md);">
                     <input type="text" name="name" placeholder="Seu nome" style="padding: 14px 18px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-md); color: white; font-size: var(--text-sm); outline: none;" required>
                     <input type="email" name="email" placeholder="Seu melhor e-mail" style="padding: 14px 18px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-md); color: white; font-size: var(--text-sm); outline: none;" required>
+                    <input type="tel" name="phone" placeholder="WhatsApp (opcional)" style="padding: 14px 18px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-md); color: white; font-size: var(--text-sm); outline: none;">
                     <button type="submit" class="btn btn--primary" style="width: 100%;">Assinar Gratuitamente</button>
                     <p style="font-size: var(--text-xs); color: rgba(255,255,255,0.35); text-align: center;">Sem spam. Cancele quando quiser.</p>
                 </form>
