@@ -557,6 +557,12 @@
             
             <!-- Vendedor e prazo -->
             <div class="row g-2 mb-3 p-2 bg-light rounded">
+                <div class="col-12 mb-1">
+                    <label class="form-label small text-muted mb-0">Selecionar vendedor cadastrado</label>
+                    <select class="form-select form-select-sm vendor-select-prefill" data-sid="${sid}" onchange="fillVendorFromSelectList(this, '${sid}')">
+                        <option value="">-- Preencher manualmente --</option>
+                    </select>
+                </div>
                 <div class="col-12 col-md-4">
                     <label class="form-label small text-muted mb-0">Vendedor</label>
                     <input type="text" class="form-control form-control-sm" name="supplier_vendor[${sid}][name]" placeholder="Nome do vendedor" id="vendor-name-${sid}">
@@ -693,6 +699,9 @@
         `;
 
         document.getElementById('suppliersContainer').appendChild(block);
+
+        // Carregar vendedores pré-cadastrados deste fornecedor
+        loadVendorsForSupplier(sid);
 
         // Bind events para calcular
         block.querySelectorAll('.price-input, input[name*="financials"]').forEach(input => {
@@ -877,6 +886,12 @@
                 <div id="mapFin${sid}" class="accordion-collapse collapse show">
                     <div class="accordion-body p-2">
                         <div class="row g-2">
+                            <div class="col-12 mb-1">
+                                <label class="form-label small text-muted mb-0">Selecionar vendedor cadastrado</label>
+                                <select class="form-select form-select-sm map-vendor-select" data-sid="${sid}" onchange="fillVendorFromSelect(this, '${sid}')">
+                                    <option value="">-- Preencher manualmente --</option>
+                                </select>
+                            </div>
                             <div class="col-md-3">
                                 <label class="form-label small text-muted mb-0">Vendedor</label>
                                 <input type="text" class="form-control form-control-sm map-vendor-field" data-sid="${sid}" data-field="name" value="${getVendorVal('name')}" placeholder="Nome do vendedor">
@@ -2213,6 +2228,56 @@ function removeServiceMaterial(sid, idx) {
 })();
 
 // ─── Funções de Envio de Cotação e IA (dentro de cada bloco de fornecedor) ───
+
+// Carregar vendedores ao adicionar fornecedor
+function loadVendorsForSupplier(sid) {
+    fetch(`/admin/suppliers/get-contacts?supplier_id=${sid}`)
+        .then(r => r.json())
+        .then(data => {
+            const contacts = data.contacts || [];
+            // Preencher selects de vendedor (lista e mapa)
+            const selects = document.querySelectorAll(`select.vendor-select-prefill[data-sid="${sid}"], select.map-vendor-select[data-sid="${sid}"]`);
+            selects.forEach(sel => {
+                sel.innerHTML = '<option value="">-- Preencher manualmente --</option>';
+                contacts.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name + (c.phone ? ' (' + c.phone + ')' : '');
+                    opt.dataset.name = c.name || '';
+                    opt.dataset.phone = c.phone || '';
+                    opt.dataset.email = c.email || '';
+                    sel.appendChild(opt);
+                });
+            });
+        })
+        .catch(() => {});
+}
+
+function fillVendorFromSelectList(sel, sid) {
+    const opt = sel.selectedOptions[0];
+    if (!opt || !opt.value) return;
+    document.getElementById('vendor-name-' + sid).value = opt.dataset.name || '';
+    document.getElementById('vendor-phone-' + sid).value = opt.dataset.phone || '';
+    document.getElementById('vendor-email-' + sid).value = opt.dataset.email || '';
+}
+
+function fillVendorFromSelect(sel, sid) {
+    const opt = sel.selectedOptions[0];
+    if (!opt || !opt.value) return;
+    const nameEl = document.querySelector(`.map-vendor-field[data-sid="${sid}"][data-field="name"]`);
+    const phoneEl = document.querySelector(`.map-vendor-field[data-sid="${sid}"][data-field="phone"]`);
+    const emailEl = document.querySelector(`.map-vendor-field[data-sid="${sid}"][data-field="email"]`);
+    if (nameEl) nameEl.value = opt.dataset.name || '';
+    if (phoneEl) phoneEl.value = opt.dataset.phone || '';
+    if (emailEl) emailEl.value = opt.dataset.email || '';
+    // Sync para a view lista
+    const listName = document.getElementById('vendor-name-' + sid);
+    const listPhone = document.getElementById('vendor-phone-' + sid);
+    const listEmail = document.getElementById('vendor-email-' + sid);
+    if (listName) listName.value = opt.dataset.name || '';
+    if (listPhone) listPhone.value = opt.dataset.phone || '';
+    if (listEmail) listEmail.value = opt.dataset.email || '';
+}
 
 const quoteOrderId = <?= $order['id'] ?>;
 const quoteOrderCode = '<?= $order['code'] ?>';

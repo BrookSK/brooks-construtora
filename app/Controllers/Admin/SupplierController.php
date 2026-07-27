@@ -280,6 +280,30 @@ class SupplierController extends Controller
             return;
         }
         $contacts = \App\Models\SupplierContact::getBySupplier($supplierId);
+
+        // Se não tem contatos cadastrados, importar do histórico de cotações
+        if (empty($contacts)) {
+            $vendors = \App\Core\Database::fetchAll(
+                "SELECT DISTINCT vendor_name, vendor_phone, vendor_email
+                 FROM purchase_order_suppliers
+                 WHERE supplier_id = ? AND vendor_name IS NOT NULL AND vendor_name != ''",
+                [$supplierId]
+            );
+            foreach ($vendors as $v) {
+                \App\Models\SupplierContact::create([
+                    'supplier_id' => $supplierId,
+                    'name' => $v['vendor_name'],
+                    'phone' => $v['vendor_phone'] ?? '',
+                    'email' => $v['vendor_email'] ?? '',
+                    'role' => 'vendedor',
+                    'active' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+            }
+            // Buscar novamente
+            $contacts = \App\Models\SupplierContact::getBySupplier($supplierId);
+        }
+
         $this->json(['contacts' => $contacts]);
     }
 
