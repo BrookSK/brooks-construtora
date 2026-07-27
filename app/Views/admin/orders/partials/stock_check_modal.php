@@ -312,20 +312,8 @@ function fmtQty(val) {
     return num % 1 === 0 ? num.toFixed(0) : num.toFixed(2).replace('.', ',');
 }
 
-// Override do confirmSubmit original para interceptar com verificação de estoque
-const originalConfirmSubmit = window.confirmSubmit;
-window.confirmSubmit = function() {
-    // Fechar modal de revisão
-    bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
-
-    // Verificar se tem obra selecionada (estoque é por obra)
-    const siteSelect = document.getElementById('constructionSiteSelect');
-    if (!siteSelect || !siteSelect.value) {
-        // Sem obra, não verifica estoque
-        document.getElementById('orderForm').submit();
-        return;
-    }
-
+// Override do confirmSubmit para interceptar com verificação de estoque
+function checkStockBeforeSubmit() {
     // Verificar se há materiais com material_id (necessário para buscar estoque)
     const rows = document.querySelectorAll('#itemsBodyDesktop tr');
     let hasMaterialIds = false;
@@ -343,5 +331,5 @@ window.confirmSubmit = function() {
     const stockModal = new bootstrap.Modal(document.getElementById('stockCheckModal'));
     stockModal.show();
     checkStockAvailability();
-};
+}
 </script>

@@ -635,7 +635,13 @@ function showReview() {
 
 function confirmSubmit() {
     bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
-    document.getElementById('orderForm').submit();
+    
+    // Verificar estoque antes de enviar
+    if (typeof checkStockBeforeSubmit === 'function') {
+        checkStockBeforeSubmit();
+    } else {
+        document.getElementById('orderForm').submit();
+    }
 }
 
 // Quick add steps
