@@ -2425,6 +2425,47 @@ async function parseAiForSupplier(sid) {
                 const pcInput = document.querySelector(`input[name="supplier_vendor[${sid}][payment_condition]"]`);
                 if (pcInput) pcInput.value = parsed.payment_condition;
             }
+            if (parsed.payment_method) {
+                const pmSelect = document.querySelector(`select[name="supplier_vendor[${sid}][payment_method]"]`);
+                if (pmSelect) {
+                    const method = parsed.payment_method.toLowerCase();
+                    for (let opt of pmSelect.options) {
+                        if (opt.value === method) { pmSelect.value = method; break; }
+                    }
+                }
+            }
+            if (parsed.payment_first_due) {
+                const pfInput = document.querySelector(`input[name="supplier_vendor[${sid}][payment_first_due]"]`);
+                if (pfInput) pfInput.value = parsed.payment_first_due;
+            }
+            if (parsed.payment_notes) {
+                const pnInput = document.querySelector(`input[name="supplier_vendor[${sid}][payment_notes]"]`);
+                if (pnInput) pnInput.value = parsed.payment_notes;
+            }
+            if (parsed.discount_value) {
+                const dInput = document.querySelector(`input[name="supplier_financials[${sid}][discount_value]"]`);
+                if (dInput) dInput.value = parsed.discount_value;
+                if (parsed.discount_type) {
+                    const dType = document.querySelector(`select[name="supplier_financials[${sid}][discount_type]"]`);
+                    if (dType) dType.value = parsed.discount_type;
+                }
+            }
+            if (parsed.surcharge_value) {
+                const sInput = document.querySelector(`input[name="supplier_financials[${sid}][surcharge_value]"]`);
+                if (sInput) sInput.value = parsed.surcharge_value;
+                if (parsed.surcharge_type) {
+                    const sType = document.querySelector(`select[name="supplier_financials[${sid}][surcharge_type]"]`);
+                    if (sType) sType.value = parsed.surcharge_type;
+                }
+            }
+            if (parsed.ipi_percent) {
+                const ipiInput = document.querySelector(`input[name="supplier_financials[${sid}][ipi_percent]"]`);
+                if (ipiInput) ipiInput.value = parsed.ipi_percent;
+            }
+            if (parsed.icms_percent) {
+                const icmsInput = document.querySelector(`input[name="supplier_financials[${sid}][icms_percent]"]`);
+                if (icmsInput) icmsInput.value = parsed.icms_percent;
+            }
 
             resultEl.innerHTML = `<small class="text-success"><i class="bi bi-check-circle"></i> ${applied} preço(s) preenchido(s)! Revise os valores.</small>`;
         } else {
@@ -2574,6 +2615,51 @@ async function parseAiForSupplierMap(sid) {
             if (parsed.delivery_days) {
                 const el = document.querySelector(`.map-vendor-field[data-sid="${sid}"][data-field="delivery_days"]`);
                 if (el) el.value = parsed.delivery_days.toString().replace(/\D/g, '');
+            }
+            if (parsed.payment_method) {
+                const el = document.querySelector(`.map-vendor-field[data-sid="${sid}"][data-field="payment_method"]`);
+                if (el) {
+                    const method = parsed.payment_method.toLowerCase();
+                    for (let opt of el.options) {
+                        if (opt.value === method) { el.value = method; break; }
+                    }
+                }
+            }
+            if (parsed.payment_condition) {
+                const el = document.querySelector(`.map-vendor-field[data-sid="${sid}"][data-field="payment_condition"]`);
+                if (el) el.value = parsed.payment_condition;
+            }
+            if (parsed.payment_first_due) {
+                const el = document.querySelector(`.map-vendor-field[data-sid="${sid}"][data-field="payment_first_due"]`);
+                if (el) el.value = parsed.payment_first_due;
+            }
+            if (parsed.payment_notes) {
+                const el = document.querySelector(`.map-vendor-field[data-sid="${sid}"][data-field="payment_notes"]`);
+                if (el) el.value = parsed.payment_notes;
+            }
+            if (parsed.discount_value) {
+                const el = document.querySelector(`.map-fin-field[data-sid="${sid}"][data-field="discount_value"]`);
+                if (el) el.value = parsed.discount_value;
+                if (parsed.discount_type) {
+                    const sel = document.querySelector(`.map-fin-select[data-sid="${sid}"][data-field="discount_type"]`);
+                    if (sel) sel.value = parsed.discount_type;
+                }
+            }
+            if (parsed.surcharge_value) {
+                const el = document.querySelector(`.map-fin-field[data-sid="${sid}"][data-field="surcharge_value"]`);
+                if (el) el.value = parsed.surcharge_value;
+                if (parsed.surcharge_type) {
+                    const sel = document.querySelector(`.map-fin-select[data-sid="${sid}"][data-field="surcharge_type"]`);
+                    if (sel) sel.value = parsed.surcharge_type;
+                }
+            }
+            if (parsed.ipi_percent) {
+                const el = document.querySelector(`.map-fin-field[data-sid="${sid}"][data-field="ipi_percent"]`);
+                if (el) el.value = parsed.ipi_percent;
+            }
+            if (parsed.icms_percent) {
+                const el = document.querySelector(`.map-fin-field[data-sid="${sid}"][data-field="icms_percent"]`);
+                if (el) el.value = parsed.icms_percent;
             }
 
             resultEl.innerHTML = `<small class="text-success"><i class="bi bi-check-circle"></i> ${applied} preço(s) preenchido(s)!</small>`;

@@ -1108,7 +1108,9 @@ class PurchaseOrderController extends Controller
                 return;
             }
 
+            $today = date('d/m/Y');
             $prompt = "Você é um assistente especializado em extrair informações de orçamentos de materiais de construção.\n\n"
+                . "DATA DE HOJE: {$today}\n\n"
                 . "CONTEXTO:\n"
                 . "Pedido: {$order['code']}\n"
                 . "Fornecedor: " . ($supplier['name'] ?? 'N/A') . "\n\n"
@@ -1129,11 +1131,18 @@ class PurchaseOrderController extends Controller
                 . "  \"items\": [\n"
                 . "    {\"name\": \"nome do material\", \"unit_price\": 45.00, \"matched_item_id\": 123}\n"
                 . "  ],\n"
-                . "  \"delivery_days\": \"5 dias úteis\",\n"
-                . "  \"payment_method\": \"boleto\",\n"
-                . "  \"payment_condition\": \"28 dias\",\n"
+                . "  \"delivery_days\": \"5\",\n"
+                . "  \"payment_method\": \"pix\",\n"
+                . "  \"payment_condition\": \"30/60/90\",\n"
+                . "  \"payment_first_due\": \"2026-08-15\",\n"
+                . "  \"payment_notes\": \"observações sobre pagamento\",\n"
                 . "  \"freight\": 150.00,\n"
-                . "  \"discount\": 0,\n"
+                . "  \"discount_value\": 5,\n"
+                . "  \"discount_type\": \"percent\",\n"
+                . "  \"surcharge_value\": 0,\n"
+                . "  \"surcharge_type\": \"percent\",\n"
+                . "  \"ipi_percent\": 0,\n"
+                . "  \"icms_percent\": 0,\n"
                 . "  \"notes\": \"observações adicionais\"\n"
                 . "}\n\n"
                 . "REGRAS:\n"
@@ -1141,6 +1150,16 @@ class PurchaseOrderController extends Controller
                 . "- matched_item_id deve corresponder ao id do item do pedido, se possível\n"
                 . "- Se não encontrar preço para um item, omita-o do array\n"
                 . "- freight em reais (0 se incluso ou não mencionado)\n"
+                . "- delivery_days: apenas o NÚMERO de dias (ex: \"5\", \"7\"). Se disser 'amanhã', calcule baseado na data de hoje\n"
+                . "- payment_method: use EXATAMENTE um destes valores: 'pix', 'boleto', 'cartao', 'transferencia', 'dinheiro', 'outro'\n"
+                . "- payment_condition: condição de pagamento (ex: 'à vista', '30 dias', '30/60/90', '28 dias')\n"
+                . "- payment_first_due: data do primeiro vencimento no formato YYYY-MM-DD (se mencionado)\n"
+                . "- payment_notes: observações sobre pagamento\n"
+                . "- discount_value: valor do desconto (número). discount_type: 'percent' ou 'fixed'\n"
+                . "- surcharge_value: valor do acréscimo (número). surcharge_type: 'percent' ou 'fixed'\n"
+                . "- ipi_percent: percentual de IPI (número, 0 se não mencionado)\n"
+                . "- icms_percent: percentual de ICMS (número, 0 se não mencionado)\n"
+                . "- Se algum campo não for mencionado, use null ou 0\n"
                 . "- Retorne APENAS o JSON, sem markdown ou texto adicional";
 
             $data = [
