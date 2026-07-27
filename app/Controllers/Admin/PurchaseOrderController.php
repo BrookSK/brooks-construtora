@@ -852,6 +852,8 @@ class PurchaseOrderController extends Controller
             'orders_transport_phone',
             'orders_transport_phone_name',
             'orders_quote_send_webhook',
+            'orders_quote_send_phone',
+            'orders_quote_send_phone_name',
             'orders_quote_default_message',
             'orders_pin_code',
             'require_pin_login',

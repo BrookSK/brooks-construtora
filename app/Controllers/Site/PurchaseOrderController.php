@@ -949,16 +949,20 @@ class PurchaseOrderController extends Controller
             return;
         }
 
+        // Fallback de phone/phone_name caso não tenha vendedor selecionado
+        $finalPhone = !empty($phone) ? $phone : Setting::get('orders_quote_send_phone', '');
+        $finalPhoneName = !empty($vendorName) ? $vendorName : Setting::get('orders_quote_send_phone_name', '');
+
         // Enviar via webhook
         $payload = [
             'event' => 'quote_send_to_supplier',
             'order_id' => $orderId,
             'supplier_id' => $supplierId,
             'contact_id' => $contactId,
-            'phone' => $phone,
-            'phone_name' => $vendorName,
+            'phone' => $finalPhone,
+            'phone_name' => $finalPhoneName,
             'supplier_name' => $supplierName,
-            'vendor_name' => $vendorName,
+            'vendor_name' => $finalPhoneName,
             'message' => $message,
         ];
 

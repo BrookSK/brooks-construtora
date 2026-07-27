@@ -296,6 +296,16 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
+                        <label class="form-label small">Nome (padrão)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_quote_send_phone_name" placeholder="Ex: Comprador" value="<?= htmlspecialchars($settings['orders_quote_send_phone_name'] ?? '') ?>">
+                        <small class="text-muted">Usado quando não há vendedor selecionado</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Telefone (padrão)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_quote_send_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_quote_send_phone'] ?? '') ?>">
+                        <small class="text-muted">Usado quando não há vendedor selecionado</small>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label small">URL Webhook (envio)</label>
                         <div class="input-group input-group-sm">
                             <input type="url" class="form-control" name="orders_quote_send_webhook" id="webhook_quote_send" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_quote_send_webhook'] ?? '') ?>">
@@ -327,6 +337,8 @@
         <div class="d-flex flex-wrap align-items-center gap-2 justify-content-center">
             <span class="badge bg-secondary p-2">1. Pedido Criado</span>
             <i class="bi bi-arrow-right text-muted"></i>
+            <span class="badge bg-success p-2" style="background-color:#198754!important;">1.5 Verificação Estoque</span>
+            <i class="bi bi-arrow-right text-muted"></i>
             <span class="badge bg-warning p-2">2. Cotação</span>
             <i class="bi bi-arrow-right text-muted"></i>
             <span class="badge bg-info p-2">3. Aprovação</span>
@@ -341,8 +353,13 @@
             <span class="badge bg-warning text-dark p-2">⚡ Sobressalentes</span>
             <span class="text-muted small">— Pode ocorrer a qualquer momento após aprovação</span>
         </div>
+        <div class="d-flex flex-wrap align-items-center gap-2 justify-content-center mt-2">
+            <span class="badge p-2" style="background-color:#0dcaf0;">🚚 Transporte (Estoque)</span>
+            <span class="text-muted small">— Notifica o responsável quando sai material do estoque</span>
+        </div>
         <p class="text-muted small text-center mt-3 mb-0">
             Cada fase envia notificações (e-mail + webhook) para os responsáveis configurados.<br>
+            Na verificação de estoque, o sistema checa disponibilidade em todas as obras antes de enviar para cotação.<br>
             Itens sobressalentes disparam notificação imediata com controle de saldo semanal.
         </p>
     </div>
