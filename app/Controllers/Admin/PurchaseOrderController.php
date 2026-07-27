@@ -191,11 +191,17 @@ class PurchaseOrderController extends Controller
                 $stockFromSiteId = !empty($decision['from_site_id']) ? (int) $decision['from_site_id'] : null;
                 $stockFromLocationId = !empty($decision['from_location_id']) ? (int) $decision['from_location_id'] : null;
 
+                // Fallback: se tem site mas não tem location, buscar
+                if ($stockFromSiteId && !$stockFromLocationId) {
+                    $loc = \App\Models\StockLocation::findBySite($stockFromSiteId);
+                    if ($loc) $stockFromLocationId = (int) $loc['id'];
+                }
+
                 // Quantidade que sai do estoque
                 $fromStockQty = $isPartial ? $stockQty : $quantity;
 
                 // Registrar movimentação de estoque
-                if ($materialId && ($stockFromSiteId || $stockFromLocationId)) {
+                if ($materialId) {
                     $movData = [
                         'material_id' => $materialId,
                         'from_site_id' => $stockFromSiteId,
