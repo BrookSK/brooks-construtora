@@ -558,7 +558,8 @@ class PurchaseOrderController extends Controller
             $this->sendCompletedNotifications($order['id']);
 
             // Enviar notificação de NF pendente (apenas se tem itens de compra)
-            $hasItemsCompra = !empty(array_filter($items, fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase'));
+            $orderItems = PurchaseOrderItem::getByOrder($order['id']);
+            $hasItemsCompra = !empty(array_filter($orderItems, fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase'));
             if ($hasItemsCompra) {
                 $this->sendPaymentPendingNotification($order['id']);
             }
