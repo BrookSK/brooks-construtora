@@ -893,6 +893,27 @@
                                 <label class="form-label small text-muted mb-0">Prazo (dias)</label>
                                 <input type="number" class="form-control form-control-sm map-vendor-field" data-sid="${sid}" data-field="delivery_days" value="${getVendorVal('delivery_days')}" placeholder="0" min="0">
                             </div>
+                            <div class="col-12 mt-1">
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="sendQuoteToVendorMap('${sid}')">
+                                        <i class="bi bi-whatsapp"></i> Enviar Cotação
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="toggleAiParseMap('${sid}')">
+                                        <i class="bi bi-robot"></i> Preencher com IA
+                                    </button>
+                                </div>
+                                <div id="ai-parse-area-map-${sid}" style="display:none;" class="mt-2 p-2 border rounded bg-info bg-opacity-10">
+                                    <label class="form-label small fw-bold mb-1">Cole as mensagens do fornecedor:</label>
+                                    <textarea class="form-control form-control-sm" id="ai-messages-map-${sid}" rows="4" placeholder="Cole aqui as mensagens do WhatsApp com o orçamento..."></textarea>
+                                    <div class="d-flex justify-content-end mt-2">
+                                        <button type="button" class="btn btn-sm btn-info" onclick="parseAiForSupplierMap('${sid}')">
+                                            <i class="bi bi-magic"></i> Processar
+                                        </button>
+                                    </div>
+                                    <div id="ai-result-map-${sid}" class="mt-2" style="display:none;"></div>
+                                </div>
+                                <div id="send-quote-status-map-${sid}" class="mt-1" style="display:none;"></div>
+                            </div>
                         </div>
                         <div class="row g-2 mt-1">
                             <div class="col-4 col-md-2">
@@ -2339,6 +2360,128 @@ async function parseAiForSupplier(sid) {
         resultEl.innerHTML = '<small class="text-danger"><i class="bi bi-x-circle"></i> Erro de conexão</small>';
     }
 }
+// ─── Funções de Envio de Cotação e IA (versão MAPA) ───
+
+function sendQuoteToVendorMap(sid) {
+    const vendorName = document.querySelector(`.map-vendor-field[data-sid="${sid}"][data-field="name"]`)?.value || '';
+    const vendorPhone = document.querySelector(`.map-vendor-field[data-sid="${sid}"][data-field="phone"]`)?.value || '';
+    const supplierName = supplierNames[sid] || '';
+    const statusEl = document.getElementById('send-quote-status-map-' + sid);
+
+    if (!vendorPhone) {
+        alert('Preencha o telefone do vendedor antes de enviar.');
+        return;
+    }
+
+    let itemsList = '';
+    items.forEach((item, i) => {
+        const qty = parseFloat(item.quantity);
+        const qtyFmt = qty % 1 === 0 ? qty.toFixed(0) : qty.toFixed(2).replace('.', ',');
+        itemsList += (i+1) + '. ' + item.material_name;
+        if (item.specification) itemsList += ' - ' + item.specification;
+        itemsList += ' - Qtd: ' + qtyFmt;
+        if (item.unit) itemsList += ' ' + item.unit;
+        itemsList += '\n';
+    });
+
+    let message = defaultQuoteMessage
+        .replace('{items_list}', itemsList.trim())
+        .replace('{construction_site}', quoteSiteName)
+        .replace('{order_code}', quoteOrderCode)
+        .replace('{supplier_name}', supplierName)
+        .replace('{vendor_name}', vendorName);
+
+    if (!confirm('Enviar cotação via WhatsApp para ' + (vendorName || vendorPhone) + '?')) return;
+
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<small class="text-muted"><span class="spinner-border spinner-border-sm"></span> Enviando...</small>';
+
+    fetch('/pedido/cotacao/send-to-supplier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            order_id: quoteOrderId, supplier_id: sid, contact_id: 0,
+            phone: vendorPhone, vendor_name: vendorName, supplier_name: supplierName, message: message,
+        })
+    }).then(r => r.json()).then(data => {
+        statusEl.innerHTML = data.success
+            ? '<small class="text-success"><i class="bi bi-check-circle"></i> Enviado!</small>'
+            : '<small class="text-danger"><i class="bi bi-x-circle"></i> ' + (data.error || 'Erro') + '</small>';
+    }).catch(() => {
+        statusEl.innerHTML = '<small class="text-danger"><i class="bi bi-x-circle"></i> Erro</small>';
+    });
+}
+
+function toggleAiParseMap(sid) {
+    const area = document.getElementById('ai-parse-area-map-' + sid);
+    area.style.display = area.style.display === 'none' ? 'block' : 'none';
+}
+
+async function parseAiForSupplierMap(sid) {
+    const messages = document.getElementById('ai-messages-map-' + sid).value.trim();
+    const resultEl = document.getElementById('ai-result-map-' + sid);
+
+    if (!messages || messages.length < 10) { alert('Cole as mensagens (mínimo 10 caracteres).'); return; }
+
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<small class="text-muted"><span class="spinner-border spinner-border-sm"></span> Processando...</small>';
+
+    try {
+        const resp = await fetch('/pedido/cotacao/parse-ai-quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ order_id: quoteOrderId, supplier_id: sid, messages: messages })
+        });
+        const data = await resp.json();
+
+        if (data.success && data.parsed) {
+            const parsed = data.parsed;
+            let applied = 0;
+
+            // Preencher preços na tabela do mapa
+            (parsed.items || []).forEach(parsedItem => {
+                if (!parsedItem.unit_price) return;
+                const parsedName = (parsedItem.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+                items.forEach(oi => {
+                    const oiName = (oi.material_name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    if (oiName.includes(parsedName) || parsedName.includes(oiName)) {
+                        // Preencher no mapa (input da coluna deste fornecedor)
+                        const mapInput = document.querySelector(`input.map-price-input[data-sid="${sid}"][data-item-id="${oi.id}"]`);
+                        if (mapInput && !mapInput.value) {
+                            mapInput.value = parseFloat(parsedItem.unit_price).toFixed(2).replace('.', ',');
+                            mapInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            applied++;
+                        }
+                        // Também na view lista
+                        const listInput = document.querySelector(`input[name="supplier_prices[${sid}][${oi.id}]"]`);
+                        if (listInput && !listInput.value) {
+                            listInput.value = parseFloat(parsedItem.unit_price).toFixed(2).replace('.', ',');
+                            listInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                    }
+                });
+            });
+
+            // Preencher financeiros
+            if (parsed.freight) {
+                const el = document.querySelector(`.map-fin-field[data-sid="${sid}"][data-field="freight"]`);
+                if (el) el.value = parseFloat(parsed.freight).toFixed(2).replace('.', ',');
+            }
+            if (parsed.delivery_days) {
+                const el = document.querySelector(`.map-vendor-field[data-sid="${sid}"][data-field="delivery_days"]`);
+                if (el) el.value = parsed.delivery_days.toString().replace(/\D/g, '');
+            }
+
+            resultEl.innerHTML = `<small class="text-success"><i class="bi bi-check-circle"></i> ${applied} preço(s) preenchido(s)!</small>`;
+        } else {
+            resultEl.innerHTML = `<small class="text-danger"><i class="bi bi-x-circle"></i> ${data.error || 'Falha'}</small>`;
+        }
+    } catch (e) {
+        resultEl.innerHTML = '<small class="text-danger"><i class="bi bi-x-circle"></i> Erro de conexão</small>';
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 </script>
 </body>
