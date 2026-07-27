@@ -117,7 +117,7 @@ function renderStockDecisions(items, availability, targetSiteId) {
         html += `<div class="card mb-3 border-success">
             <div class="card-header bg-success bg-opacity-10 py-2">
                 <strong>${escapeHtml(item.material_name)}</strong>
-                <span class="badge bg-primary ms-2">${item.quantity} ${item.unit}</span>
+                <span class="badge bg-primary ms-2">${fmtQty(item.quantity)} ${item.unit}</span>
             </div>
             <div class="card-body py-2">`;
 
@@ -125,7 +125,7 @@ function renderStockDecisions(items, availability, targetSiteId) {
         if (item.localStock) {
             html += `<div class="mb-2 p-2 bg-light rounded">
                 <i class="bi bi-geo-alt text-success"></i> 
-                <strong>Estoque na obra destino:</strong> ${item.localStock.quantity} ${item.localStock.unit_abbr || ''} 
+                <strong>Estoque na obra destino:</strong> ${fmtQty(item.localStock.quantity)} ${item.localStock.unit_abbr || ''} 
                 <small class="text-muted">(${escapeHtml(item.localStock.site_name)})</small>
             </div>`;
         }
@@ -134,7 +134,7 @@ function renderStockDecisions(items, availability, targetSiteId) {
         if (item.stocks.length > 0) {
             html += `<div class="mb-2"><small class="text-muted">Disponível em outras obras:</small><ul class="list-unstyled mb-0 ms-2">`;
             item.stocks.forEach(s => {
-                html += `<li class="small"><i class="bi bi-buildings"></i> ${escapeHtml(s.site_name)} - <strong>${s.quantity} ${s.unit_abbr || ''}</strong></li>`;
+                html += `<li class="small"><i class="bi bi-buildings"></i> ${escapeHtml(s.site_name || s.location_name || '')} - <strong>${fmtQty(s.quantity)} ${s.unit_abbr || ''}</strong></li>`;
             });
             html += `</ul></div>`;
         }
@@ -163,14 +163,12 @@ function renderStockDecisions(items, availability, targetSiteId) {
 
         // Opção: Usar parcial do estoque + comprar o resto
         if (isPartial) {
-            const fmtLocal = localQty % 1 === 0 ? localQty.toFixed(0) : localQty.toFixed(2);
-            const fmtRemaining = remaining % 1 === 0 ? remaining.toFixed(0) : remaining.toFixed(2);
             html += `<div class="form-check">
                 <input class="form-check-input stock-decision" type="radio" name="stock_decision_${item.row_id}" 
                        value="partial_local" data-row="${item.row_id}" data-site="${item.localStock.construction_site_id}"
                        onchange="updateStockDecision('${item.row_id}', 'stock_partial', ${item.localStock.construction_site_id}, null, ${localQty})">
                 <label class="form-check-label small">
-                    <i class="bi bi-pie-chart text-info"></i> Usar <strong>${fmtLocal}</strong> do estoque + comprar <strong>${fmtRemaining}</strong> (cotação)
+                    <i class="bi bi-pie-chart text-info"></i> Usar <strong>${fmtQty(localQty)}</strong> do estoque + comprar <strong>${fmtQty(remaining)}</strong> (cotação)
                 </label>
             </div>`;
         }
@@ -184,19 +182,17 @@ function renderStockDecisions(items, availability, targetSiteId) {
                            value="transfer_${s.construction_site_id || s.stock_location_id}" data-row="${item.row_id}" data-site="${s.construction_site_id || s.stock_location_id}"
                            onchange="updateStockDecision('${item.row_id}', 'stock_transfer', ${s.construction_site_id || s.stock_location_id}, null, ${neededQty})">
                     <label class="form-check-label small">
-                        <i class="bi bi-arrow-left-right text-primary"></i> Transferir de ${escapeHtml(s.site_name || s.location_name)} (${stockQty} ${s.unit_abbr || ''} disponíveis)
+                        <i class="bi bi-arrow-left-right text-primary"></i> Transferir de ${escapeHtml(s.site_name || s.location_name)} (${fmtQty(stockQty)} ${s.unit_abbr || ''} disponíveis)
                     </label>
                 </div>`;
             } else if (stockQty > 0) {
                 // Transferência parcial
-                const fmtStock = stockQty % 1 === 0 ? stockQty.toFixed(0) : stockQty.toFixed(2);
-                const fmtRest = (neededQty - stockQty) % 1 === 0 ? (neededQty - stockQty).toFixed(0) : (neededQty - stockQty).toFixed(2);
                 html += `<div class="form-check">
                     <input class="form-check-input stock-decision" type="radio" name="stock_decision_${item.row_id}" 
                            value="transfer_partial_${s.construction_site_id || s.stock_location_id}" data-row="${item.row_id}" data-site="${s.construction_site_id || s.stock_location_id}"
                            onchange="updateStockDecision('${item.row_id}', 'stock_transfer_partial', ${s.construction_site_id || s.stock_location_id}, null, ${stockQty})">
                     <label class="form-check-label small">
-                        <i class="bi bi-pie-chart text-primary"></i> Transferir <strong>${fmtStock}</strong> de ${escapeHtml(s.site_name || s.location_name)} + comprar <strong>${fmtRest}</strong> (cotação)
+                        <i class="bi bi-pie-chart text-primary"></i> Transferir <strong>${fmtQty(stockQty)}</strong> de ${escapeHtml(s.site_name || s.location_name)} + comprar <strong>${fmtQty(neededQty - stockQty)}</strong> (cotação)
                     </label>
                 </div>`;
             }
@@ -308,6 +304,12 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text || '';
     return div.innerHTML;
+}
+
+function fmtQty(val) {
+    const num = parseFloat(val);
+    if (isNaN(num)) return '0';
+    return num % 1 === 0 ? num.toFixed(0) : num.toFixed(2).replace('.', ',');
 }
 
 // Override do confirmSubmit original para interceptar com verificação de estoque
