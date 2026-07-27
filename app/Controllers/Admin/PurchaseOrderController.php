@@ -1554,7 +1554,9 @@ class PurchaseOrderController extends Controller
             foreach ($items as $i => $item) {
                 $itemsList .= ($i + 1) . ". {$item['material_name']}";
                 if ($item['classification']) $itemsList .= " ({$item['classification']})";
-                $itemsList .= " - Qtd: {$item['quantity']} {$item['unit']}\n";
+                $qty = (float) $item['quantity'];
+                $qtyFmt = $qty == (int) $qty ? number_format($qty, 0) : number_format($qty, 2, ',', '.');
+                $itemsList .= " - Qtd: {$qtyFmt} {$item['unit']}\n";
             }
 
             $suppliersList = '';
@@ -2436,7 +2438,9 @@ class PurchaseOrderController extends Controller
                         $quoteUrl = "{$baseUrl}/pedido/cotacao/{$order['quote_token']}";
                         $itemsList = '';
                         foreach ($items as $i => $item) {
-                            $itemsList .= ($i + 1) . ". {$item['material_name']} - Qtd: {$item['quantity']} {$item['unit']}\n";
+                            $qty = (float) $item['quantity'];
+                            $qtyFmt = $qty == (int) $qty ? number_format($qty, 0) : number_format($qty, 2, ',', '.');
+                            $itemsList .= ($i + 1) . ". {$item['material_name']} - Qtd: {$qtyFmt} {$item['unit']}\n";
                         }
                         $message = "*NOVO PEDIDO - COTAÇÃO PENDENTE*\n\n*Pedido:* {$order['code']}\n*Itens:* " . count($items) . "\n\n*Link:*\n{$quoteUrl}";
                         $this->sendWebhook($webhookUrl, [
