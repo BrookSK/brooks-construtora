@@ -1321,6 +1321,17 @@ function confirmSubmit() {
         });
     }
     
+    // Validar nome antes de submeter
+    const nameInput = document.querySelector('input[name="quoted_by_name"]');
+    if (!nameInput || !nameInput.value.trim()) {
+        bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+        nameInput.classList.add('is-invalid');
+        nameInput.focus();
+        nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        alert('Informe seu nome para registrar a cotação.');
+        return;
+    }
+    
     bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
     document.getElementById('quoteForm').submit();
 }
