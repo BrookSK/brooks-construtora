@@ -18,6 +18,7 @@
                             <th>#</th>
                             <th>Nome</th>
                             <th>E-mail</th>
+                            <th>WhatsApp</th>
                             <th>Data de Inscrição</th>
                             <th>Status</th>
                             <th>Ações</th>
@@ -29,6 +30,7 @@
                             <td><?= $index + 1 ?></td>
                             <td><?= htmlspecialchars($sub['name'] ?: '-') ?></td>
                             <td><?= htmlspecialchars($sub['email']) ?></td>
+                            <td><?= htmlspecialchars($sub['phone'] ?? '-') ?></td>
                             <td><?= date('d/m/Y H:i', strtotime($sub['subscribed_at'])) ?></td>
                             <td>
                                 <span class="badge bg-<?= $sub['active'] ? 'success' : 'secondary' ?>">
