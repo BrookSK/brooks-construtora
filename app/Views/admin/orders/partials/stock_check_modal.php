@@ -144,27 +144,59 @@ function renderStockDecisions(items, availability, targetSiteId) {
             <label class="form-label small fw-bold mb-1">O que fazer com este item?</label>
             <div class="d-flex flex-column gap-1">`;
 
-        // Opção: Usar do estoque local
-        if (item.localStock && parseFloat(item.localStock.quantity) >= item.quantity) {
+        const localQty = item.localStock ? parseFloat(item.localStock.quantity) : 0;
+        const neededQty = item.quantity;
+        const isPartial = localQty > 0 && localQty < neededQty;
+        const remaining = neededQty - localQty;
+
+        // Opção: Usar do estoque local (total - quando tem suficiente)
+        if (item.localStock && localQty >= neededQty) {
             html += `<div class="form-check">
                 <input class="form-check-input stock-decision" type="radio" name="stock_decision_${item.row_id}" 
                        value="use_local" data-row="${item.row_id}" data-site="${item.localStock.construction_site_id}"
-                       onchange="updateStockDecision('${item.row_id}', 'stock_use', ${item.localStock.construction_site_id})">
+                       onchange="updateStockDecision('${item.row_id}', 'stock_use', ${item.localStock.construction_site_id}, null, ${neededQty})">
                 <label class="form-check-label small">
-                    <i class="bi bi-check-circle text-success"></i> Usar do estoque atual (${escapeHtml(item.localStock.site_name)})
+                    <i class="bi bi-check-circle text-success"></i> Usar tudo do estoque (${escapeHtml(item.localStock.site_name || item.localStock.location_name || '')})
                 </label>
             </div>`;
         }
 
-        // Opção: Transferir de outra obra
+        // Opção: Usar parcial do estoque + comprar o resto
+        if (isPartial) {
+            const fmtLocal = localQty % 1 === 0 ? localQty.toFixed(0) : localQty.toFixed(2);
+            const fmtRemaining = remaining % 1 === 0 ? remaining.toFixed(0) : remaining.toFixed(2);
+            html += `<div class="form-check">
+                <input class="form-check-input stock-decision" type="radio" name="stock_decision_${item.row_id}" 
+                       value="partial_local" data-row="${item.row_id}" data-site="${item.localStock.construction_site_id}"
+                       onchange="updateStockDecision('${item.row_id}', 'stock_partial', ${item.localStock.construction_site_id}, null, ${localQty})">
+                <label class="form-check-label small">
+                    <i class="bi bi-pie-chart text-info"></i> Usar <strong>${fmtLocal}</strong> do estoque + comprar <strong>${fmtRemaining}</strong> (cotação)
+                </label>
+            </div>`;
+        }
+
+        // Opção: Transferir de outra obra (total)
         item.stocks.forEach(s => {
-            if (parseFloat(s.quantity) >= item.quantity) {
+            const stockQty = parseFloat(s.quantity);
+            if (stockQty >= neededQty) {
                 html += `<div class="form-check">
                     <input class="form-check-input stock-decision" type="radio" name="stock_decision_${item.row_id}" 
-                           value="transfer_${s.construction_site_id}" data-row="${item.row_id}" data-site="${s.construction_site_id}"
-                           onchange="updateStockDecision('${item.row_id}', 'stock_transfer', ${s.construction_site_id})">
+                           value="transfer_${s.construction_site_id || s.stock_location_id}" data-row="${item.row_id}" data-site="${s.construction_site_id || s.stock_location_id}"
+                           onchange="updateStockDecision('${item.row_id}', 'stock_transfer', ${s.construction_site_id || s.stock_location_id}, null, ${neededQty})">
                     <label class="form-check-label small">
-                        <i class="bi bi-arrow-left-right text-primary"></i> Transferir de ${escapeHtml(s.site_name)} (${s.quantity} ${s.unit_abbr || ''} disponíveis)
+                        <i class="bi bi-arrow-left-right text-primary"></i> Transferir de ${escapeHtml(s.site_name || s.location_name)} (${stockQty} ${s.unit_abbr || ''} disponíveis)
+                    </label>
+                </div>`;
+            } else if (stockQty > 0) {
+                // Transferência parcial
+                const fmtStock = stockQty % 1 === 0 ? stockQty.toFixed(0) : stockQty.toFixed(2);
+                const fmtRest = (neededQty - stockQty) % 1 === 0 ? (neededQty - stockQty).toFixed(0) : (neededQty - stockQty).toFixed(2);
+                html += `<div class="form-check">
+                    <input class="form-check-input stock-decision" type="radio" name="stock_decision_${item.row_id}" 
+                           value="transfer_partial_${s.construction_site_id || s.stock_location_id}" data-row="${item.row_id}" data-site="${s.construction_site_id || s.stock_location_id}"
+                           onchange="updateStockDecision('${item.row_id}', 'stock_transfer_partial', ${s.construction_site_id || s.stock_location_id}, null, ${stockQty})">
+                    <label class="form-check-label small">
+                        <i class="bi bi-pie-chart text-primary"></i> Transferir <strong>${fmtStock}</strong> de ${escapeHtml(s.site_name || s.location_name)} + comprar <strong>${fmtRest}</strong> (cotação)
                     </label>
                 </div>`;
             }
@@ -213,8 +245,8 @@ function renderNoStockCheck(items) {
     document.getElementById('stockConfirmBtn').disabled = false;
 }
 
-function updateStockDecision(rowId, action, fromSiteId) {
-    stockDecisions[rowId] = { action: action, from_site_id: fromSiteId };
+function updateStockDecision(rowId, action, fromSiteId, toSiteId, stockQty) {
+    stockDecisions[rowId] = { action: action, from_site_id: fromSiteId, stock_qty: stockQty || null };
     validateStockDecisions();
 }
 
@@ -255,6 +287,15 @@ function confirmStockDecisions() {
             siteInput.value = decision.from_site_id;
             siteInput.className = 'stock-decision-input';
             form.appendChild(siteInput);
+        }
+
+        if (decision.stock_qty) {
+            const qtyInput = document.createElement('input');
+            qtyInput.type = 'hidden';
+            qtyInput.name = `stock_decisions[${rowId}][stock_qty]`;
+            qtyInput.value = decision.stock_qty;
+            qtyInput.className = 'stock-decision-input';
+            form.appendChild(qtyInput);
         }
     });
 
