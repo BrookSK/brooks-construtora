@@ -1176,8 +1176,8 @@ class PurchaseOrderController extends Controller
                 $base64 = base64_encode($fileContent);
                 $mimeType = $file['type'] ?: 'application/pdf';
 
-                if (in_array($mimeType, ['image/jpeg', 'image/png', 'image/webp'])) {
-                    // Imagem: usar vision
+                if (in_array($mimeType, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
+                    // Imagem: usar vision direto
                     $userContent = [
                         ['type' => 'text', 'text' => $prompt],
                         ['type' => 'image_url', 'image_url' => ['url' => "data:{$mimeType};base64,{$base64}"]],
@@ -1186,29 +1186,33 @@ class PurchaseOrderController extends Controller
                         $userContent[] = ['type' => 'text', 'text' => "\nMENSAGENS ADICIONAIS:\n{$messages}"];
                     }
                 } else {
-                    // PDF: extrair texto e enviar como texto
-                    $pdfText = '';
+                    // PDF: fazer upload via Files API e referenciar
+                    $fileId = $this->uploadFileToOpenAI($apiKey, $file['tmp_name'], $file['name']);
                     
-                    // Tentar extrair texto do PDF com shell (pdftotext)
-                    $tmpFile = tempnam(sys_get_temp_dir(), 'pdf_');
-                    file_put_contents($tmpFile, $fileContent);
-                    $txtFile = $tmpFile . '.txt';
-                    @exec("pdftotext -layout \"{$tmpFile}\" \"{$txtFile}\" 2>/dev/null");
-                    if (file_exists($txtFile)) {
-                        $pdfText = file_get_contents($txtFile);
-                        @unlink($txtFile);
-                    }
-                    @unlink($tmpFile);
-
-                    // Se não conseguiu extrair texto, tentar como imagem (modelo com vision)
-                    if (empty(trim($pdfText))) {
+                    if ($fileId) {
                         $userContent = [
                             ['type' => 'text', 'text' => $prompt],
-                            ['type' => 'image_url', 'image_url' => ['url' => "data:{$mimeType};base64,{$base64}", 'detail' => 'high']],
+                            ['type' => 'file', 'file' => ['file_id' => $fileId]],
                         ];
+                        if (!empty($messages)) {
+                            $userContent[] = ['type' => 'text', 'text' => "\nMENSAGENS ADICIONAIS:\n{$messages}"];
+                        }
                     } else {
-                        // Adicionar texto do PDF ao prompt
-                        $prompt .= "\n\nCONTEÚDO DO PDF/ORÇAMENTO:\n---\n" . mb_substr($pdfText, 0, 8000) . "\n---";
+                        // Fallback: tentar extrair texto
+                        $pdfText = '';
+                        $tmpFile = tempnam(sys_get_temp_dir(), 'pdf_');
+                        file_put_contents($tmpFile, $fileContent);
+                        $txtFile = $tmpFile . '.txt';
+                        @exec("pdftotext -layout \"{$tmpFile}\" \"{$txtFile}\" 2>/dev/null");
+                        if (file_exists($txtFile)) {
+                            $pdfText = file_get_contents($txtFile);
+                            @unlink($txtFile);
+                        }
+                        @unlink($tmpFile);
+
+                        if (!empty(trim($pdfText))) {
+                            $prompt .= "\n\nCONTEÚDO DO ORÇAMENTO (PDF):\n---\n" . mb_substr($pdfText, 0, 10000) . "\n---";
+                        }
                         if (!empty($messages)) {
                             $prompt .= "\n\nMENSAGENS ADICIONAIS:\n{$messages}";
                         }
@@ -1282,6 +1286,40 @@ class PurchaseOrderController extends Controller
         } catch (\Exception $e) {
             $this->json(['error' => 'Erro ao processar: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Upload de arquivo pra OpenAI Files API
+     */
+    private function uploadFileToOpenAI(string $apiKey, string $filePath, string $fileName): ?string
+    {
+        $ch = curl_init('https://api.openai.com/v1/files');
+        $postFields = [
+            'purpose' => 'assistants',
+            'file' => new \CURLFile($filePath, 'application/pdf', $fileName),
+        ];
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $postFields,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $apiKey,
+            ],
+            CURLOPT_TIMEOUT => 30,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200) {
+            $result = json_decode($response, true);
+            return $result['id'] ?? null;
+        }
+
+        error_log("[BROOKS_AI] File upload failed: HTTP {$httpCode} - {$response}");
+        return null;
     }
 
     /**
