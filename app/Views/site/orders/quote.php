@@ -1110,8 +1110,10 @@
             pricesBySupplier[p.supplier_id][p.item_id] = p.unit_price;
         });
 
+        // Fornecedores da tabela purchase_order_suppliers
+        const loadedSuppliers = new Set();
         <?php foreach ($orderSuppliers as $os): ?>
-        // Adicionar fornecedor <?= $os['supplier_name'] ?>
+        loadedSuppliers.add('<?= $os['supplier_id'] ?>');
         addedSuppliers.push('<?= $os['supplier_id'] ?>');
         addSupplierBlock('<?= $os['supplier_id'] ?>', '<?= htmlspecialchars($os['supplier_name']) ?>');
         
@@ -1121,14 +1123,14 @@
             if (!block) return;
             const prices = pricesBySupplier['<?= $os['supplier_id'] ?>'] || {};
             for (const itemId in prices) {
-                const input = block.querySelector('[name="supplier_prices[<?= $os['supplier_id'] ?>][' + itemId + ']"]');
+                const input = block.querySelector('input[name="supplier_prices[<?= $os['supplier_id'] ?>][' + itemId + ']"]');
                 if (input) {
                     const numVal = parseFloat(prices[itemId]) || 0;
                     const qty = parseFloat(input.dataset.qty) || 1;
                     // Se está no modo "total do item", multiplicar unit_price pela quantidade
                     const displayVal = priceMode === 'total' ? numVal * qty : numVal;
                     input.value = displayVal.toFixed(2).replace('.', ',');
-                    input.dispatchEvent(new Event('input'));
+                    input.dispatchEvent(new Event('input', {bubbles:true}));
                 }
             }
             // Preencher vendedor
@@ -1155,11 +1157,37 @@
             const fr = block.querySelector('[name*="[freight]"]'); if (fr) fr.value = '<?= str_replace('.', ',', $os['freight']) ?>';
             <?php endif; ?>
             // Recalcular total
-            setTimeout(function() { calculateSupplierTotal('<?= $os['supplier_id'] ?>'); }, 500);
-        }, 300);
+            setTimeout(function() { calculateSupplierTotal('<?= $os['supplier_id'] ?>'); }, 800);
+        }, 500);
         <?php endforeach; ?>
 
         document.getElementById('submitBtn').disabled = false;
+
+        // Fornecedores que têm preços mas NÃO estão na purchase_order_suppliers
+        for (const sid in pricesBySupplier) {
+            if (!loadedSuppliers.has(String(sid))) {
+                const priceEntry = existingPrices.find(p => String(p.supplier_id) === String(sid));
+                const supplierName = priceEntry?.supplier_name || 'Fornecedor #' + sid;
+                loadedSuppliers.add(String(sid));
+                addedSuppliers.push(String(sid));
+                addSupplierBlock(String(sid), supplierName);
+                setTimeout(function() {
+                    const blk = document.getElementById('supplier-block-' + sid);
+                    if (!blk) return;
+                    const prs = pricesBySupplier[sid] || {};
+                    for (const iid in prs) {
+                        const inp = blk.querySelector('input[name="supplier_prices[' + sid + '][' + iid + ']"]');
+                        if (inp) {
+                            const nv = parseFloat(prs[iid]) || 0;
+                            const qt = parseFloat(inp.dataset.qty) || 1;
+                            inp.value = (priceMode === 'total' ? nv * qt : nv).toFixed(2).replace('.', ',');
+                            inp.dispatchEvent(new Event('input', {bubbles:true}));
+                        }
+                    }
+                    setTimeout(function() { calculateSupplierTotal(String(sid)); }, 800);
+                }, 500);
+            }
+        }
     })();
     <?php endif; ?>
     </script>
@@ -2185,7 +2213,7 @@ function removeServiceMaterial(sid, idx) {
                     }, 200);
                 });
 
-                document.getElementById('submitBtn').disabled = addedSuppliers.length === 0;
+                        document.getElementById('submitBtn').disabled = addedSuppliers.length === 0;
             }
 
             draftRestoredFromStorage = true;
