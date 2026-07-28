@@ -28,7 +28,22 @@ class NewsletterController extends Controller
             return;
         }
 
-        $result = Newsletter::subscribe($email, $name, $phone);
+        try {
+            $result = Newsletter::subscribe($email, $name, $phone);
+        } catch (\Exception $e) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Erro interno. Tente novamente mais tarde.'], 500);
+            } else {
+                $this->setFlash('error', 'Erro interno. Tente novamente mais tarde.');
+                $this->redirect('/');
+            }
+            return;
+        }
+
+        // Enviar e-mail de boas-vindas para novo inscrito
+        if ($result) {
+            $this->sendWelcomeEmail($email, $name);
+        }
 
         if ($this->isAjax()) {
             if ($result) {
@@ -43,6 +58,20 @@ class NewsletterController extends Controller
                 $this->setFlash('info', 'Este e-mail já está inscrito na nossa newsletter.');
             }
             $this->redirect('/');
+        }
+    }
+
+    /**
+     * Envia e-mail de boas-vindas ao novo inscrito na newsletter
+     */
+    private function sendWelcomeEmail(string $email, string $name): void
+    {
+        try {
+            $mailService = new \App\Services\MailService();
+            $body = \App\Services\EmailTemplate::newsletterWelcome($email, $name);
+            $mailService->send($email, 'Bem-vindo à Revista Brooks!', $body, true);
+        } catch (\Exception $e) {
+            // Não impede a inscrição se o e-mail falhar
         }
     }
 

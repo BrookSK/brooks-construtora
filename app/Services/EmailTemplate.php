@@ -188,6 +188,67 @@ HTML;
         return self::wrap('Nova Revista: ' . $displayTitle, $body);
     }
 
+    public static function newsletterWelcome(string $email, string $name = ''): string
+    {
+        $baseUrl = self::baseUrl();
+        $revistaUrl = "{$baseUrl}/revista";
+        $unsubscribeUrl = "{$baseUrl}/newsletter/unsubscribe?email=" . urlencode($email);
+        $greeting = !empty($name) ? "Olá, {$name}!" : "Olá!";
+
+        $body = <<<HTML
+<p style="margin-bottom:15px; font-size:16px;">{$greeting}</p>
+
+<p style="margin-bottom:15px;">Obrigado por se inscrever na <strong>Revista Brooks</strong>! Estamos felizes em ter você com a gente.</p>
+
+<p style="margin-bottom:20px;">A partir de agora, você receberá edições exclusivas com conteúdo sobre:</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa; border-radius:8px; margin-bottom:25px;">
+<tr><td style="padding: 20px 25px;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td style="padding: 8px 0; font-size:14px; color:#444;">
+                <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">▸</span> Construção civil de alto padrão
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; font-size:14px; color:#444;">
+                <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">▸</span> Reformas e projetos de arquitetura
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; font-size:14px; color:#444;">
+                <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">▸</span> Tendências e inovação no setor
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; font-size:14px; color:#444;">
+                <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">▸</span> Sustentabilidade e tecnologia na obra
+            </td>
+        </tr>
+    </table>
+</td></tr>
+</table>
+
+<p style="margin-bottom:20px; font-size:14px; color:#555;">Enquanto isso, que tal conferir nossas edições anteriores?</p>
+
+<p style="text-align:center; margin: 25px 0 15px;">
+    <a href="{$revistaUrl}" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Ver Revista Digital</a>
+</p>
+
+<p style="margin-top:25px; padding-top:20px; border-top:1px solid #eee; font-size:13px; color:#888; line-height:1.6;">
+    Fique à vontade para responder este e-mail se tiver dúvidas ou sugestões.<br>
+    Publicamos novas edições periodicamente — você será notificado sempre que uma nova sair!
+</p>
+
+<p style="font-size:12px; color:#999; margin-top:20px; text-align:center;">
+    Você recebeu este e-mail porque se inscreveu na Revista Brooks Construtora.<br>
+    <a href="{$unsubscribeUrl}" style="color:#999; text-decoration:underline;">Cancelar inscrição</a>
+</p>
+HTML;
+
+        return self::wrap('Bem-vindo à Revista Brooks!', $body);
+    }
+
     public static function purchaseOrderQuote(array $order, array $items, string $quoteUrl, array $orderSuppliers = []): string
     {
         $itemsHtml = '';
