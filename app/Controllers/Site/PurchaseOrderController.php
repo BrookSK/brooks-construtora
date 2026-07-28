@@ -1169,27 +1169,51 @@ class PurchaseOrderController extends Controller
             // Montar conteúdo da mensagem do usuário
             $userContent = [];
 
-            // Se tem PDF/imagem, converter pra base64
+            // Se tem PDF/imagem, processar
             if ($hasFile) {
                 $file = $_FILES['pdf'];
                 $fileContent = file_get_contents($file['tmp_name']);
                 $base64 = base64_encode($fileContent);
                 $mimeType = $file['type'] ?: 'application/pdf';
 
-                if ($mimeType === 'application/pdf') {
-                    // PDFs: converter cada página como imagem seria ideal, mas GPT-4o aceita PDF inline
-                    // Usar como image_url com data URI
-                    $userContent[] = ['type' => 'text', 'text' => $prompt];
-                    $userContent[] = ['type' => 'image_url', 'image_url' => ['url' => "data:{$mimeType};base64,{$base64}"]];
+                if (in_array($mimeType, ['image/jpeg', 'image/png', 'image/webp'])) {
+                    // Imagem: usar vision
+                    $userContent = [
+                        ['type' => 'text', 'text' => $prompt],
+                        ['type' => 'image_url', 'image_url' => ['url' => "data:{$mimeType};base64,{$base64}"]],
+                    ];
+                    if (!empty($messages)) {
+                        $userContent[] = ['type' => 'text', 'text' => "\nMENSAGENS ADICIONAIS:\n{$messages}"];
+                    }
                 } else {
-                    // Imagem direta
-                    $userContent[] = ['type' => 'text', 'text' => $prompt];
-                    $userContent[] = ['type' => 'image_url', 'image_url' => ['url' => "data:{$mimeType};base64,{$base64}"]];
-                }
+                    // PDF: extrair texto e enviar como texto
+                    $pdfText = '';
+                    
+                    // Tentar extrair texto do PDF com shell (pdftotext)
+                    $tmpFile = tempnam(sys_get_temp_dir(), 'pdf_');
+                    file_put_contents($tmpFile, $fileContent);
+                    $txtFile = $tmpFile . '.txt';
+                    @exec("pdftotext -layout \"{$tmpFile}\" \"{$txtFile}\" 2>/dev/null");
+                    if (file_exists($txtFile)) {
+                        $pdfText = file_get_contents($txtFile);
+                        @unlink($txtFile);
+                    }
+                    @unlink($tmpFile);
 
-                // Se tem mensagens de texto além do PDF, adicionar
-                if (!empty($messages)) {
-                    $userContent[] = ['type' => 'text', 'text' => "\n\nMENSAGENS ADICIONAIS DO FORNECEDOR:\n{$messages}"];
+                    // Se não conseguiu extrair texto, tentar como imagem (modelo com vision)
+                    if (empty(trim($pdfText))) {
+                        $userContent = [
+                            ['type' => 'text', 'text' => $prompt],
+                            ['type' => 'image_url', 'image_url' => ['url' => "data:{$mimeType};base64,{$base64}", 'detail' => 'high']],
+                        ];
+                    } else {
+                        // Adicionar texto do PDF ao prompt
+                        $prompt .= "\n\nCONTEÚDO DO PDF/ORÇAMENTO:\n---\n" . mb_substr($pdfText, 0, 8000) . "\n---";
+                        if (!empty($messages)) {
+                            $prompt .= "\n\nMENSAGENS ADICIONAIS:\n{$messages}";
+                        }
+                        $userContent = $prompt;
+                    }
                 }
             } else {
                 $userContent = $prompt;
