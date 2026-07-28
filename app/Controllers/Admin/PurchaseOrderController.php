@@ -187,7 +187,8 @@ class PurchaseOrderController extends Controller
             if ($decision && $decision['action'] !== 'purchase') {
                 $stockQty = isset($decision['stock_qty']) ? (float) $decision['stock_qty'] : $quantity;
                 $isPartial = in_array($decision['action'], ['stock_partial', 'stock_transfer_partial']);
-                $sourceType = str_replace('_partial', '', $decision['action']); // stock_use ou stock_transfer
+                $isMulti = in_array($decision['action'], ['stock_multi', 'stock_multi_partial']);
+                $sourceType = str_replace(['_partial', '_multi'], '', $decision['action']); // stock_use ou stock_transfer
                 $stockFromSiteId = !empty($decision['from_site_id']) ? (int) $decision['from_site_id'] : null;
                 $stockFromLocationId = !empty($decision['from_location_id']) ? (int) $decision['from_location_id'] : null;
 
@@ -197,55 +198,105 @@ class PurchaseOrderController extends Controller
                     if ($loc) $stockFromLocationId = (int) $loc['id'];
                 }
 
-                // Quantidade que sai do estoque
-                $fromStockQty = $isPartial ? $stockQty : $quantity;
+                if ($isMulti) {
+                    // Múltiplos estoques
+                    $distributions = json_decode($decision['distributions'] ?? '[]', true) ?: [];
+                    $purchaseQty = isset($decision['purchase_qty']) ? (float) $decision['purchase_qty'] : 0;
 
-                // Registrar movimentação de estoque
-                if ($materialId) {
-                    $movData = [
-                        'material_id' => $materialId,
-                        'from_site_id' => $stockFromSiteId,
-                        'to_site_id' => $constructionSiteId,
-                        'from_location_id' => $stockFromLocationId,
-                        'to_location_id' => null,
-                        'quantity' => $fromStockQty,
-                        'type' => $sourceType === 'stock_transfer' ? \App\Models\StockMovement::TYPE_TRANSFER : \App\Models\StockMovement::TYPE_EXIT,
-                        'status' => \App\Models\StockMovement::STATUS_PENDING,
-                        'requested_by' => Auth::user()['name'],
-                        'order_id' => $orderId,
-                    ];
+                    foreach ($distributions as $dist) {
+                        $distQty = (float) ($dist['quantity'] ?? 0);
+                        $distSiteId = (int) ($dist['site_id'] ?? 0);
+                        $distLocationId = (int) ($dist['location_id'] ?? 0);
+                        $distIsLocal = !empty($dist['is_local']);
 
-                    // Se é transferência pra uma obra destino, buscar location da obra destino
-                    if ($sourceType === 'stock_transfer' && $constructionSiteId) {
-                        $destLocation = \App\Models\StockLocation::findBySite($constructionSiteId);
-                        if ($destLocation) {
-                            $movData['to_location_id'] = $destLocation['id'];
+                        if ($distQty <= 0) continue;
+
+                        // Fallback location
+                        if ($distSiteId && !$distLocationId) {
+                            $loc = \App\Models\StockLocation::findBySite($distSiteId);
+                            if ($loc) $distLocationId = (int) $loc['id'];
                         }
+
+                        $movData = [
+                            'material_id' => $materialId,
+                            'from_site_id' => $distSiteId ?: null,
+                            'to_site_id' => $constructionSiteId,
+                            'from_location_id' => $distLocationId ?: null,
+                            'to_location_id' => null,
+                            'quantity' => $distQty,
+                            'type' => $distIsLocal ? \App\Models\StockMovement::TYPE_EXIT : \App\Models\StockMovement::TYPE_TRANSFER,
+                            'status' => \App\Models\StockMovement::STATUS_PENDING,
+                            'requested_by' => Auth::user()['name'],
+                            'order_id' => $orderId,
+                        ];
+                        if (!$distIsLocal && $constructionSiteId) {
+                            $destLocation = \App\Models\StockLocation::findBySite($constructionSiteId);
+                            if ($destLocation) $movData['to_location_id'] = $destLocation['id'];
+                        }
+
+                        $movId = \App\Models\StockMovement::record($movData);
+                        $stockMovements[] = $movId;
+
+                        // Criar item do pedido para esta parte do estoque
+                        PurchaseOrderItem::create([
+                            'order_id' => $orderId,
+                            'material_id' => $materialId,
+                            'material_name' => $item['material_name'],
+                            'specification' => $item['specification'] ?? '',
+                            'classification' => $item['classification'] ?? '',
+                            'unit' => $item['unit'] ?? '',
+                            'quantity' => $distQty,
+                            'source_type' => $distIsLocal ? 'stock_use' : 'stock_transfer',
+                            'stock_from_site_id' => $distSiteId ?: null,
+                            'stock_movement_id' => $movId,
+                            'created_at' => date('Y-m-d H:i:s'),
+                        ]);
                     }
 
-                    $movId = \App\Models\StockMovement::record($movData);
-                    $stockMovementId = $movId;
-                    $stockMovements[] = $movId;
-                }
+                    // Se tem parte pra cotação
+                    if ($purchaseQty > 0) {
+                        $hasQuoteItems = true;
+                        PurchaseOrderItem::create([
+                            'order_id' => $orderId,
+                            'material_id' => $materialId,
+                            'material_name' => $item['material_name'],
+                            'specification' => $item['specification'] ?? '',
+                            'classification' => $item['classification'] ?? '',
+                            'unit' => $item['unit'] ?? '',
+                            'quantity' => $purchaseQty,
+                            'source_type' => 'purchase',
+                            'created_at' => date('Y-m-d H:i:s'),
+                        ]);
+                    }
 
-                // Criar item de estoque (com a quantidade do estoque)
-                PurchaseOrderItem::create([
-                    'order_id' => $orderId,
-                    'material_id' => $materialId,
-                    'material_name' => $item['material_name'],
-                    'specification' => $item['specification'] ?? '',
-                    'classification' => $item['classification'] ?? '',
-                    'unit' => $item['unit'] ?? '',
-                    'quantity' => $fromStockQty,
-                    'source_type' => $sourceType,
-                    'stock_from_site_id' => $stockFromSiteId,
-                    'stock_movement_id' => $stockMovementId,
-                    'created_at' => date('Y-m-d H:i:s'),
-                ]);
+                } else {
+                    // Um único estoque (lógica existente)
+                    $fromStockQty = $isPartial ? $stockQty : $quantity;
 
-                // Se é parcial, criar segundo item para cotação (restante)
-                if ($isPartial && ($quantity - $fromStockQty) > 0) {
-                    $hasQuoteItems = true;
+                    // Registrar movimentação de estoque
+                    if ($materialId) {
+                        $movData = [
+                            'material_id' => $materialId,
+                            'from_site_id' => $stockFromSiteId,
+                            'to_site_id' => $constructionSiteId,
+                            'from_location_id' => $stockFromLocationId,
+                            'to_location_id' => null,
+                            'quantity' => $fromStockQty,
+                            'type' => $sourceType === 'stock_transfer' ? \App\Models\StockMovement::TYPE_TRANSFER : \App\Models\StockMovement::TYPE_EXIT,
+                            'status' => \App\Models\StockMovement::STATUS_PENDING,
+                            'requested_by' => Auth::user()['name'],
+                            'order_id' => $orderId,
+                        ];
+                        if ($sourceType === 'stock_transfer' && $constructionSiteId) {
+                            $destLocation = \App\Models\StockLocation::findBySite($constructionSiteId);
+                            if ($destLocation) $movData['to_location_id'] = $destLocation['id'];
+                        }
+                        $movId = \App\Models\StockMovement::record($movData);
+                        $stockMovementId = $movId;
+                        $stockMovements[] = $movId;
+                    }
+
+                    // Criar item de estoque
                     PurchaseOrderItem::create([
                         'order_id' => $orderId,
                         'material_id' => $materialId,
@@ -253,10 +304,28 @@ class PurchaseOrderController extends Controller
                         'specification' => $item['specification'] ?? '',
                         'classification' => $item['classification'] ?? '',
                         'unit' => $item['unit'] ?? '',
-                        'quantity' => $quantity - $fromStockQty,
-                        'source_type' => 'purchase',
+                        'quantity' => $fromStockQty,
+                        'source_type' => $sourceType,
+                        'stock_from_site_id' => $stockFromSiteId,
+                        'stock_movement_id' => $stockMovementId,
                         'created_at' => date('Y-m-d H:i:s'),
                     ]);
+
+                    // Se é parcial, criar segundo item para cotação
+                    if ($isPartial && ($quantity - $fromStockQty) > 0) {
+                        $hasQuoteItems = true;
+                        PurchaseOrderItem::create([
+                            'order_id' => $orderId,
+                            'material_id' => $materialId,
+                            'material_name' => $item['material_name'],
+                            'specification' => $item['specification'] ?? '',
+                            'classification' => $item['classification'] ?? '',
+                            'unit' => $item['unit'] ?? '',
+                            'quantity' => $quantity - $fromStockQty,
+                            'source_type' => 'purchase',
+                            'created_at' => date('Y-m-d H:i:s'),
+                        ]);
+                    }
                 }
             } else {
                 $hasQuoteItems = true;

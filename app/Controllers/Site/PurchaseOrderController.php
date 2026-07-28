@@ -1115,7 +1115,7 @@ class PurchaseOrderController extends Controller
                 . "CONTEXTO:\n"
                 . "Pedido: {$order['code']}\n"
                 . "Fornecedor: " . ($supplier['name'] ?? 'N/A') . "\n\n"
-                . "ITENS DO PEDIDO (referência):\n";
+                . "ITENS DO PEDIDO que precisam de preço (referência):\n";
 
             foreach ($itemsList as $i => $item) {
                 $prompt .= ($i + 1) . ". {$item['name']}"
@@ -1126,7 +1126,9 @@ class PurchaseOrderController extends Controller
             $prompt .= "\nMENSAGENS DO FORNECEDOR (orçamento recebido via WhatsApp):\n"
                 . "---\n{$messages}\n---\n\n"
                 . "TAREFA: Extraia os preços unitários de cada material e as condições comerciais.\n"
-                . "Associe cada preço ao item correto do pedido baseado no nome/descrição.\n\n"
+                . "IMPORTANTE: A mensagem pode ser informal (ex: 'fica 52 o produto', 'cobro 15 o frete', 'paga no pix').\n"
+                . "Se há apenas 1 item no pedido e a mensagem menciona um preço, associe esse preço ao item.\n"
+                . "Interprete valores monetários mesmo sem 'R$' (ex: 'fica 52' = R$ 52,00).\n"
                 . "RETORNE um JSON com esta estrutura EXATA:\n"
                 . "{\n"
                 . "  \"items\": [\n"
