@@ -62,16 +62,22 @@ class NewsletterController extends Controller
     }
 
     /**
-     * Envia e-mail de boas-vindas ao novo inscrito na newsletter
+     * Envia e-mail de boas-vindas ao novo inscrito na newsletter (via fila)
      */
     private function sendWelcomeEmail(string $email, string $name): void
     {
         try {
-            $mailService = new \App\Services\MailService();
             $body = \App\Services\EmailTemplate::newsletterWelcome($email, $name);
-            $mailService->send($email, 'Bem-vindo à Revista Brooks!', $body, true);
+            \App\Services\NotificationService::queueEmails(
+                $email,
+                'Bem-vindo à Revista Brooks!',
+                $body,
+                null,
+                'newsletter_welcome'
+            );
         } catch (\Exception $e) {
             // Não impede a inscrição se o e-mail falhar
+            error_log('[BROOKS_NEWSLETTER] Erro ao enfileirar welcome email: ' . $e->getMessage());
         }
     }
 
