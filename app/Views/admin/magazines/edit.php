@@ -336,13 +336,13 @@ function addNewPage() {
                 <h5 style="margin-bottom:0.5rem;"><i class="bi bi-file-earmark-plus"></i> Adicionar Nova Página</h5>
                 <p style="color:#666;font-size:0.85rem;margin-bottom:1.5rem;">Escolha o estilo de página que deseja adicionar. Ela será inserida antes da contracapa.</p>
                 <div style="display:grid;gap:8px;">
-                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_01')"><strong>Manchete</strong> <small class="text-muted">— Título grande + 2 fotos</small></button>
-                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_02')"><strong>Subtema</strong> <small class="text-muted">— Subtítulo + texto + 2 fotos</small></button>
-                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_03')"><strong>Artigo com legenda</strong> <small class="text-muted">— Texto longo + 2 fotos + legenda</small></button>
-                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_04')"><strong>Impacto</strong> <small class="text-muted">— Frase de impacto + 1 foto grande</small></button>
-                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_05')"><strong>Duas colunas</strong> <small class="text-muted">— Texto em 2 colunas + 2 fotos</small></button>
-                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_06')"><strong>Galeria</strong> <small class="text-muted">— Grid com 3 fotos + texto</small></button>
-                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_07')"><strong>Citação</strong> <small class="text-muted">— Frase grande de destaque + 1 foto</small></button>
+                    <button class="btn btn-light border text-start" style="padding:12px 16px;" onclick="confirmAddPage('internal_01')"><strong>Manchete</strong> <small class="text-muted">— Título grande + 2 fotos</small></button>
+                    <button class="btn btn-light border text-start" style="padding:12px 16px;" onclick="confirmAddPage('internal_02')"><strong>Subtema</strong> <small class="text-muted">— Subtítulo + texto + 2 fotos</small></button>
+                    <button class="btn btn-light border text-start" style="padding:12px 16px;" onclick="confirmAddPage('internal_03')"><strong>Artigo com legenda</strong> <small class="text-muted">— Texto longo + 2 fotos + legenda</small></button>
+                    <button class="btn btn-light border text-start" style="padding:12px 16px;" onclick="confirmAddPage('internal_04')"><strong>Impacto</strong> <small class="text-muted">— Frase de impacto + 1 foto grande</small></button>
+                    <button class="btn btn-light border text-start" style="padding:12px 16px;" onclick="confirmAddPage('internal_05')"><strong>Duas colunas</strong> <small class="text-muted">— Texto em 2 colunas + 2 fotos</small></button>
+                    <button class="btn btn-light border text-start" style="padding:12px 16px;" onclick="confirmAddPage('internal_06')"><strong>Galeria</strong> <small class="text-muted">— Grid com 3 fotos + texto</small></button>
+                    <button class="btn btn-light border text-start" style="padding:12px 16px;" onclick="confirmAddPage('internal_07')"><strong>Citação</strong> <small class="text-muted">— Frase grande de destaque + 1 foto</small></button>
                 </div>
                 <div style="text-align:center;margin-top:1rem;">
                     <button class="btn btn-outline-secondary btn-sm" onclick="this.closest('[style*=fixed]').remove()">Cancelar</button>
