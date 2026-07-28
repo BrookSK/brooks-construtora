@@ -25,7 +25,7 @@
 </head>
 <body>
     <div class="card">
-        <img src="/assets/images/wp/2024/11/logo-brooks-1400x396.webp" alt="Brooks Construtora">
+        <img src="/assets/images/wp/2023/06/logo-brooks-construtora.webp" alt="Brooks Construtora">
         
         <?php if (!empty($success)): ?>
             <div class="success">
