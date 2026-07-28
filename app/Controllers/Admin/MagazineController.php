@@ -705,6 +705,62 @@ class MagazineController extends Controller
     }
 
     /**
+     * Adicionar nova página à revista (AJAX)
+     */
+    public function addPage(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $magazineId = (int) $this->input('magazine_id', 0);
+        $layoutType = $this->input('layout_type', 'internal_01');
+
+        $magazine = Magazine::find($magazineId);
+        if (!$magazine) {
+            $this->json(['error' => 'Revista não encontrada.'], 404);
+            return;
+        }
+
+        // Pegar o número da última página antes da backcover
+        $pages = Magazine::getPages($magazineId);
+        $backcoverPage = null;
+        $maxPageNum = 0;
+
+        foreach ($pages as $p) {
+            if ($p['layout_type'] === 'backcover') {
+                $backcoverPage = $p;
+            }
+            if ($p['page_number'] > $maxPageNum) {
+                $maxPageNum = $p['page_number'];
+            }
+        }
+
+        // Inserir nova página antes da backcover
+        $newPageNum = $backcoverPage ? $backcoverPage['page_number'] : $maxPageNum + 1;
+
+        // Mover backcover pra frente
+        if ($backcoverPage) {
+            Database::update('magazine_pages', ['page_number' => $newPageNum + 1], 'id = ?', [$backcoverPage['id']]);
+        }
+
+        // Criar nova página
+        $pageId = Database::insert('magazine_pages', [
+            'magazine_id' => $magazineId,
+            'page_number' => $newPageNum,
+            'layout_type' => $layoutType,
+            'title' => '',
+            'subtitle' => '',
+            'content' => '',
+            'image_suggestion' => '',
+            'image_suggestion_2' => '',
+        ]);
+
+        $this->json(['success' => true, 'page_id' => $pageId, 'page_number' => $newPageNum]);
+    }
+
+    /**
      * Deletar imagem de uma página (AJAX)
      */
     public function deletePageImage(): void

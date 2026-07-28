@@ -255,6 +255,14 @@
             </div>
             <?php endforeach; ?>
 
+            <!-- Botão adicionar página -->
+            <div class="text-center mb-3">
+                <button type="button" class="btn btn-outline-primary" onclick="addNewPage()">
+                    <i class="bi bi-plus-lg"></i> Adicionar Página
+                </button>
+                <small class="text-muted d-block mt-1">Nova página será inserida antes da contracapa</small>
+            </div>
+
             <!-- Fontes / Referências -->
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -316,6 +324,49 @@ async function deletePageImage(pageId, field, btn) {
         btn.remove();
     } else {
         alert(data.error || 'Erro ao remover.');
+    }
+}
+
+// Adicionar nova página
+async function addNewPage() {
+    const layoutOptions = [
+        'internal_01', 'internal_02', 'internal_03', 'internal_04',
+        'internal_05', 'internal_06', 'internal_07'
+    ];
+    const layoutLabels = {
+        'internal_01': 'Interna 01 (manchete + 2 imagens)',
+        'internal_02': 'Interna 02 (subtema + 2 imagens)',
+        'internal_03': 'Interna 03 (título + 2 imagens + legenda)',
+        'internal_04': 'Interna 04 (impacto + 1 imagem)',
+        'internal_05': 'Interna 05 (2 colunas + 2 imagens)',
+        'internal_06': 'Interna 06 (grid 3 imagens)',
+        'internal_07': 'Interna 07 (citação + 1 imagem)',
+    };
+
+    let selectHtml = '<select id="newPageLayout" class="form-select form-select-sm">';
+    layoutOptions.forEach(l => {
+        selectHtml += `<option value="${l}">${layoutLabels[l]}</option>`;
+    });
+    selectHtml += '</select>';
+
+    const layout = prompt('Escolha o layout da nova página:\n\n1. internal_01 - Manchete + 2 imagens\n2. internal_02 - Subtema + 2 imagens\n3. internal_03 - Título + 2 imagens + legenda\n4. internal_04 - Impacto + 1 imagem\n5. internal_05 - 2 colunas + 2 imagens\n6. internal_06 - Grid 3 imagens\n7. internal_07 - Citação + 1 imagem\n\nDigite o número (1-7):');
+    
+    if (!layout) return;
+    const layoutMap = {'1':'internal_01','2':'internal_02','3':'internal_03','4':'internal_04','5':'internal_05','6':'internal_06','7':'internal_07'};
+    const selectedLayout = layoutMap[layout];
+    if (!selectedLayout) { alert('Opção inválida.'); return; }
+
+    const resp = await fetch('/admin/magazines/add-page', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({ magazine_id: <?= $magazine['id'] ?>, layout_type: selectedLayout })
+    });
+    const data = await resp.json();
+    if (data.success) {
+        alert('Página adicionada! Recarregando...');
+        location.reload();
+    } else {
+        alert(data.error || 'Erro ao adicionar.');
     }
 }
 
