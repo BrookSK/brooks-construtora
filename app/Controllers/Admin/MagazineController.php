@@ -704,6 +704,40 @@ class MagazineController extends Controller
         }
     }
 
+    /**
+     * Deletar imagem de uma página (AJAX)
+     */
+    public function deletePageImage(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $pageId = (int) $this->input('page_id', 0);
+        $field = $this->input('field', '');
+
+        $allowedFields = ['image_url', 'image_url_2', 'image_url_3'];
+        if (!$pageId || !in_array($field, $allowedFields)) {
+            $this->json(['error' => 'Dados inválidos.'], 400);
+            return;
+        }
+
+        // Buscar imagem atual pra deletar o arquivo
+        $page = Database::fetch("SELECT {$field} FROM magazine_pages WHERE id = ?", [$pageId]);
+        if ($page && !empty($page[$field])) {
+            $filePath = ROOT_PATH . '/public' . $page[$field];
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+        }
+
+        // Limpar campo no banco
+        Magazine::updatePage($pageId, [$field => null]);
+
+        $this->json(['success' => true]);
+    }
+
     public function uploadImage(): void
     {
         if (!$this->isPost()) {

@@ -83,6 +83,7 @@ class Router
             'magazines/update' => ['MagazineController', 'update'],
             'magazines/upload-cover' => ['MagazineController', 'uploadCover'],
             'magazines/upload-image' => ['MagazineController', 'uploadImage'],
+            'magazines/delete-page-image' => ['MagazineController', 'deletePageImage'],
             'magazines/generate-image' => ['MagazineController', 'generatePageImage'],
             'magazines/image-proxy' => ['MagazineController', 'imageProxy'],
             'magazines/pending-images' => ['MagazineController', 'pendingImages'],

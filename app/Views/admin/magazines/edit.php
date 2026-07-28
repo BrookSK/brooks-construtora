@@ -204,6 +204,7 @@
                             <div class="border rounded p-2" style="min-height:80px;background:#f9f9f9;">
                                 <?php if ($page['image_url']): ?>
                                     <img src="<?= $page['image_url'] ?>" alt="" style="width:100%;max-height:80px;object-fit:cover;border-radius:4px;margin-bottom:5px;">
+                                    <button type="button" class="btn btn-sm btn-outline-danger w-100 mb-1" style="font-size:0.6rem;" onclick="deletePageImage(<?= $page['id'] ?>, 'image_url', this)"><i class="bi bi-trash"></i> Remover</button>
                                 <?php else: ?>
                                     <div class="text-center text-muted small py-2"><i class="bi bi-image"></i></div>
                                 <?php endif; ?>
@@ -217,6 +218,7 @@
                             <div class="border rounded p-2" style="min-height:80px;background:#f9f9f9;">
                                 <?php if ($page['image_url_2'] ?? null): ?>
                                     <img src="<?= $page['image_url_2'] ?>" alt="" style="width:100%;max-height:80px;object-fit:cover;border-radius:4px;margin-bottom:5px;">
+                                    <button type="button" class="btn btn-sm btn-outline-danger w-100 mb-1" style="font-size:0.6rem;" onclick="deletePageImage(<?= $page['id'] ?>, 'image_url_2', this)"><i class="bi bi-trash"></i> Remover</button>
                                 <?php else: ?>
                                     <div class="text-center text-muted small py-2"><i class="bi bi-image"></i></div>
                                 <?php endif; ?>
@@ -231,6 +233,7 @@
                             <div class="border rounded p-2" style="min-height:80px;background:#f9f9f9;">
                                 <?php if ($page['image_url_3'] ?? null): ?>
                                     <img src="<?= $page['image_url_3'] ?>" alt="" style="width:100%;max-height:80px;object-fit:cover;border-radius:4px;margin-bottom:5px;">
+                                    <button type="button" class="btn btn-sm btn-outline-danger w-100 mb-1" style="font-size:0.6rem;" onclick="deletePageImage(<?= $page['id'] ?>, 'image_url_3', this)"><i class="bi bi-trash"></i> Remover</button>
                                 <?php else: ?>
                                     <div class="text-center text-muted small py-2"><i class="bi bi-image"></i></div>
                                 <?php endif; ?>
@@ -296,6 +299,25 @@ document.getElementById('cover-form').addEventListener('submit', function(e) {
         else alert(d.error||'Erro.');
     }).catch(()=>alert('Erro.'));
 });
+
+// Deletar imagem de página
+async function deletePageImage(pageId, field, btn) {
+    if (!confirm('Remover esta imagem?')) return;
+    const resp = await fetch('/admin/magazines/delete-page-image', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({ page_id: pageId, field: field })
+    });
+    const data = await resp.json();
+    if (data.success) {
+        const container = btn.parentElement;
+        const img = container.querySelector('img');
+        if (img) img.remove();
+        btn.remove();
+    } else {
+        alert(data.error || 'Erro ao remover.');
+    }
+}
 
 // Gerar imagem com IA
 document.querySelectorAll('.generate-img-btn').forEach(btn=>{
