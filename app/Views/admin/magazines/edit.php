@@ -354,7 +354,11 @@ function addNewPage() {
 }
 
 async function confirmAddPage(layout) {
-    document.querySelector('[style*="position:fixed"][style*="z-index:9999"]')?.remove();
+    // Mostrar loading nos botões
+    const modal = document.querySelector('[style*="position:fixed"][style*="z-index:9999"]');
+    if (modal) {
+        modal.querySelector('[style*="display:grid"]').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted small">Salvando alterações e adicionando página...</p></div>';
+    }
     
     // Salvar alterações do formulário antes de adicionar a página
     const form = document.querySelector('form[action="/admin/magazines/update"]');
@@ -373,6 +377,7 @@ async function confirmAddPage(layout) {
         location.reload();
     } else {
         alert(data.error || 'Erro ao adicionar.');
+        modal?.remove();
     }
 }
 
