@@ -138,16 +138,22 @@
             <?php elseif (!empty($isGlobal)): ?>
                 <!-- Link global (pede email) -->
                 <h1>Cadastre seu WhatsApp</h1>
-                <p class="subtitle">Informe seu e-mail de assinante e cadastre o WhatsApp para receber nossas revistas no celular.</p>
+                <p class="subtitle">Informe seu e-mail e cadastre o WhatsApp para receber nossas revistas no celular.</p>
 
                 <?php if (!empty($errorMsg)): ?>
                     <div class="error-msg"><i class="bi bi-exclamation-circle"></i> <?= htmlspecialchars($errorMsg) ?></div>
                 <?php endif; ?>
 
-                <form method="POST" action="/newsletter/atualizar">
+                <form method="POST" action="/newsletter/atualizar" id="whatsappForm">
                     <div class="form-group">
                         <label>Seu e-mail</label>
-                        <input type="email" name="email" placeholder="seu@email.com" required autofocus>
+                        <input type="email" name="email" id="emailInput" placeholder="seu@email.com" required autofocus>
+                        <p class="hint" id="emailStatus"></p>
+                    </div>
+                    <div class="form-group" id="nameGroup" style="display:none;">
+                        <label>Seu nome</label>
+                        <input type="text" name="name" id="nameInput" placeholder="Seu nome completo">
+                        <p class="hint">Como não encontramos seu e-mail, vamos fazer seu cadastro</p>
                     </div>
                     <div class="form-group">
                         <label>Seu WhatsApp</label>
@@ -158,6 +164,46 @@
                         <i class="bi bi-whatsapp"></i> Salvar WhatsApp
                     </button>
                 </form>
+
+                <script>
+                let emailCheckTimer = null;
+                let emailFound = false;
+                const emailInput = document.getElementById('emailInput');
+                const nameGroup = document.getElementById('nameGroup');
+                const emailStatus = document.getElementById('emailStatus');
+
+                emailInput.addEventListener('blur', checkEmail);
+                emailInput.addEventListener('input', function() {
+                    clearTimeout(emailCheckTimer);
+                    emailCheckTimer = setTimeout(checkEmail, 800);
+                });
+
+                async function checkEmail() {
+                    const email = emailInput.value.trim();
+                    if (!email || !email.includes('@') || !email.includes('.')) {
+                        emailStatus.textContent = '';
+                        nameGroup.style.display = 'none';
+                        return;
+                    }
+
+                    try {
+                        const resp = await fetch('/newsletter/check-email?email=' + encodeURIComponent(email));
+                        const data = await resp.json();
+                        
+                        if (data.found) {
+                            emailFound = true;
+                            emailStatus.innerHTML = '<span style="color:#25D366;"><i class="bi bi-check-circle"></i> ' + (data.name ? 'Olá, ' + data.name + '!' : 'E-mail encontrado!') + '</span>';
+                            nameGroup.style.display = 'none';
+                        } else {
+                            emailFound = false;
+                            emailStatus.innerHTML = '<span style="color:#666;">Novo por aqui? Sem problema! Preencha seu nome abaixo.</span>';
+                            nameGroup.style.display = 'block';
+                        }
+                    } catch (e) {
+                        emailStatus.textContent = '';
+                    }
+                }
+                </script>
 
             <?php else: ?>
                 <!-- Token inválido -->

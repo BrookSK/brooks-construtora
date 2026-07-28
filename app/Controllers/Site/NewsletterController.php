@@ -47,11 +47,11 @@ class NewsletterController extends Controller
     }
 
     /**
-     * Página pra assinante atualizar o WhatsApp (via token único)
+     * Página pra assinante atualizar o WhatsApp (via token único ou link global)
      */
     public function updatePhone(string $token = ''): void
     {
-        // Se não tem token, é o link global (pede email pra identificar)
+        // Se não tem token, é o link global
         if (empty($token)) {
             $subscriber = null;
             $success = false;
@@ -61,24 +61,28 @@ class NewsletterController extends Controller
             if ($this->isPost()) {
                 $email = trim($this->input('email', ''));
                 $phone = trim($this->input('phone', ''));
+                $name = trim($this->input('name', ''));
 
                 if (!empty($email) && !empty($phone)) {
-                    $subscriber = Newsletter::findByEmail($email);
-                    if ($subscriber) {
-                        $phone = preg_replace('/\D/', '', $phone);
-                        if (strlen($phone) < 10) {
-                            $errorMsg = 'Número inválido. Use DDD + número.';
-                        } else {
+                    $phone = preg_replace('/\D/', '', $phone);
+                    if (strlen($phone) < 10) {
+                        $errorMsg = 'Número inválido. Use DDD + número.';
+                    } else {
+                        $subscriber = Newsletter::findByEmail($email);
+                        if ($subscriber) {
+                            // Atualizar telefone do assinante existente
                             \App\Core\Database::update('newsletter_subscribers', ['phone' => $phone], 'id = ?', [$subscriber['id']]);
                             $subscriber['phone'] = $phone;
                             $success = true;
+                        } else {
+                            // Cadastro novo (email não encontrado)
+                            Newsletter::subscribe($email, $name, $phone);
+                            $subscriber = Newsletter::findByEmail($email);
+                            $success = true;
                         }
-                    } else {
-                        $errorMsg = 'E-mail não encontrado na nossa lista de assinantes.';
                     }
                 } elseif (!empty($email)) {
                     $errorMsg = 'Informe seu WhatsApp.';
-                    $subscriber = Newsletter::findByEmail($email);
                 }
             }
 
@@ -111,6 +115,24 @@ class NewsletterController extends Controller
         include ROOT_PATH . '/app/Views/site/newsletter/update_phone.php';
     }
 
+    /**
+     * Verificar se email existe na newsletter (AJAX)
+     */
+    public function checkEmail(): void
+    {
+        $email = trim($this->input('email', ''));
+        if (empty($email)) {
+            $this->json(['found' => false]);
+            return;
+        }
+        $subscriber = Newsletter::findByEmail($email);
+        if ($subscriber) {
+            $this->json(['found' => true, 'name' => $subscriber['name'] ?? '']);
+        } else {
+            $this->json(['found' => false]);
+        }
+    }
+
     public function unsubscribe(): void
     {
         $email = trim($this->input('email'));
@@ -126,14 +148,12 @@ class NewsletterController extends Controller
 
         if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
             if ($this->isPost()) {
-                // Confirma o cancelamento
                 $result = Newsletter::unsubscribe($email);
                 $success = true;
                 $message = 'Sua inscrição foi cancelada com sucesso. Você não receberá mais nossos e-mails.';
             }
         }
 
-        // Mostra a página de confirmação
         $pageTitle = 'Cancelar Inscrição';
         $currentPage = '';
         include ROOT_PATH . '/app/Views/site/newsletter/unsubscribe.php';
