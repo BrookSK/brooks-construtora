@@ -25,9 +25,7 @@
 </head>
 <body>
     <div class="card">
-        <div style="background:#3a3b4e; padding:12px 24px; border-radius:8px; display:inline-block; margin-bottom:1.5rem;">
-            <img src="/assets/images/wp/2024/11/logo-brooks-1-800x227.webp" alt="Brooks Construtora">
-        </div>
+        <h2 style="color:#3a3b4e; font-size:1.1rem; font-weight:700; letter-spacing:1px; margin-bottom:1.5rem;">BROOKS CONSTRUTORA</h2>
         
         <?php if (!empty($success)): ?>
             <div class="success">
