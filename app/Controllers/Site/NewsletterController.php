@@ -46,6 +46,35 @@ class NewsletterController extends Controller
         }
     }
 
+    /**
+     * Página pra assinante atualizar o WhatsApp (via token único)
+     */
+    public function updatePhone(string $token = ''): void
+    {
+        $subscriber = Newsletter::findByToken($token);
+        $success = false;
+        $errorMsg = '';
+
+        if ($subscriber && $this->isPost()) {
+            $phone = trim($this->input('phone', ''));
+            if (empty($phone)) {
+                $errorMsg = 'Informe seu WhatsApp.';
+            } else {
+                // Limpar formatação
+                $phone = preg_replace('/\D/', '', $phone);
+                if (strlen($phone) < 10) {
+                    $errorMsg = 'Número inválido. Use DDD + número.';
+                } else {
+                    \App\Core\Database::update('newsletter_subscribers', ['phone' => $phone], 'id = ?', [$subscriber['id']]);
+                    $subscriber['phone'] = $phone;
+                    $success = true;
+                }
+            }
+        }
+
+        include ROOT_PATH . '/app/Views/site/newsletter/update_phone.php';
+    }
+
     public function unsubscribe(): void
     {
         $email = trim($this->input('email'));

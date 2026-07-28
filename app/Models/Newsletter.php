@@ -30,11 +30,33 @@ class Newsletter extends Model
             'email' => $email,
             'name' => $name,
             'phone' => $phone ?: null,
+            'update_token' => bin2hex(random_bytes(16)),
             'subscribed_at' => date('Y-m-d H:i:s'),
             'active' => 1,
         ]);
 
         return true;
+    }
+
+    /**
+     * Buscar por token de atualização
+     */
+    public static function findByToken(string $token): ?array
+    {
+        if (empty($token)) return null;
+        return Database::fetch("SELECT * FROM newsletter_subscribers WHERE update_token = ? AND active = 1", [$token]);
+    }
+
+    /**
+     * Gerar tokens pra quem não tem
+     */
+    public static function generateMissingTokens(): int
+    {
+        $subscribers = Database::fetchAll("SELECT id FROM newsletter_subscribers WHERE update_token IS NULL OR update_token = ''");
+        foreach ($subscribers as $sub) {
+            Database::update('newsletter_subscribers', ['update_token' => bin2hex(random_bytes(16))], 'id = ?', [$sub['id']]);
+        }
+        return count($subscribers);
     }
 
     public static function unsubscribe(string $email): bool

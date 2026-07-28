@@ -4,6 +4,9 @@
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="mb-0">Lista de Inscritos</h6>
         <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="generateTokens()" title="Gerar links de atualização pra quem não tem">
+                <i class="bi bi-link-45deg"></i> Gerar Links WhatsApp
+            </button>
             <button type="button" class="btn btn-sm btn-outline-success" onclick="resendMagazineAll()" title="Reenviar última revista via WhatsApp para todos com telefone">
                 <i class="bi bi-whatsapp"></i> Reenviar Revista (WhatsApp)
             </button>
@@ -35,7 +38,17 @@
                             <td><?= $index + 1 ?></td>
                             <td><?= htmlspecialchars($sub['name'] ?: '-') ?></td>
                             <td><?= htmlspecialchars($sub['email']) ?></td>
-                            <td><?= htmlspecialchars($sub['phone'] ?? '-') ?></td>
+                            <td>
+                                <?php if (!empty($sub['phone'])): ?>
+                                    <?= htmlspecialchars($sub['phone']) ?>
+                                <?php elseif (!empty($sub['update_token'])): ?>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" style="font-size:0.65rem;" onclick="copyLink('<?= htmlspecialchars($sub['update_token']) ?>')" title="Copiar link de atualização">
+                                        <i class="bi bi-clipboard"></i> Copiar Link
+                                    </button>
+                                <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                <?php endif; ?>
+                            </td>
                             <td><?= date('d/m/Y H:i', strtotime($sub['subscribed_at'])) ?></td>
                             <td>
                                 <span class="badge bg-<?= $sub['active'] ? 'success' : 'secondary' ?>">
@@ -88,6 +101,29 @@ async function resendMagazineTo(subscriberId, name) {
     } catch (e) {
         alert('Erro de conexão.');
     }
+}
+
+function copyLink(token) {
+    const url = window.location.origin + '/newsletter/atualizar/' + token;
+    navigator.clipboard.writeText(url).then(() => {
+        alert('Link copiado!\n\n' + url);
+    }).catch(() => {
+        prompt('Copie o link:', url);
+    });
+}
+
+async function generateTokens() {
+    if (!confirm('Gerar links de atualização para todos os assinantes que não têm token?')) return;
+    try {
+        const resp = await fetch('/admin/newsletter/generate-tokens', { method: 'POST' });
+        const data = await resp.json();
+        if (data.success) {
+            alert(data.count + ' link(s) gerado(s)!');
+            location.reload();
+        } else {
+            alert(data.error || 'Erro');
+        }
+    } catch (e) { alert('Erro de conexão.'); }
 }
 
 async function resendMagazineAll() {

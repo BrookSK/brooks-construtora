@@ -73,6 +73,20 @@ class NewsletterController extends Controller
     }
 
     /**
+     * Gerar tokens de atualização pra assinantes que não têm (AJAX)
+     */
+    public function generateTokens(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $count = Newsletter::generateMissingTokens();
+        $this->json(['success' => true, 'count' => $count]);
+    }
+
+    /**
      * Reenviar última revista via WhatsApp para um inscrito específico
      */
     public function resendWhatsapp(): void
