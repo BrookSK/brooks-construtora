@@ -51,16 +51,52 @@ class NewsletterController extends Controller
      */
     public function updatePhone(string $token = ''): void
     {
+        // Se não tem token, é o link global (pede email pra identificar)
+        if (empty($token)) {
+            $subscriber = null;
+            $success = false;
+            $errorMsg = '';
+            $isGlobal = true;
+
+            if ($this->isPost()) {
+                $email = trim($this->input('email', ''));
+                $phone = trim($this->input('phone', ''));
+
+                if (!empty($email) && !empty($phone)) {
+                    $subscriber = Newsletter::findByEmail($email);
+                    if ($subscriber) {
+                        $phone = preg_replace('/\D/', '', $phone);
+                        if (strlen($phone) < 10) {
+                            $errorMsg = 'Número inválido. Use DDD + número.';
+                        } else {
+                            \App\Core\Database::update('newsletter_subscribers', ['phone' => $phone], 'id = ?', [$subscriber['id']]);
+                            $subscriber['phone'] = $phone;
+                            $success = true;
+                        }
+                    } else {
+                        $errorMsg = 'E-mail não encontrado na nossa lista de assinantes.';
+                    }
+                } elseif (!empty($email)) {
+                    $errorMsg = 'Informe seu WhatsApp.';
+                    $subscriber = Newsletter::findByEmail($email);
+                }
+            }
+
+            include ROOT_PATH . '/app/Views/site/newsletter/update_phone.php';
+            return;
+        }
+
+        // Com token — identifica direto
         $subscriber = Newsletter::findByToken($token);
         $success = false;
         $errorMsg = '';
+        $isGlobal = false;
 
         if ($subscriber && $this->isPost()) {
             $phone = trim($this->input('phone', ''));
             if (empty($phone)) {
                 $errorMsg = 'Informe seu WhatsApp.';
             } else {
-                // Limpar formatação
                 $phone = preg_replace('/\D/', '', $phone);
                 if (strlen($phone) < 10) {
                     $errorMsg = 'Número inválido. Use DDD + número.';
