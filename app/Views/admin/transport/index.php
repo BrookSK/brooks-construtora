@@ -37,6 +37,27 @@ ob_start();
 }
 </style>
 
+<!-- Filtro por obra -->
+<div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+    <select id="filterSite" class="form-select form-select-sm" style="max-width:250px;" onchange="filterKanban()">
+        <option value="">Todas as obras</option>
+        <?php
+        $sites = array_unique(array_filter(array_merge(
+            array_column($pending, 'from_site_name'),
+            array_column($pending, 'to_site_name'),
+            array_column($inTransit, 'from_site_name'),
+            array_column($inTransit, 'to_site_name'),
+            array_column($delivered, 'from_site_name'),
+            array_column($delivered, 'to_site_name')
+        )));
+        sort($sites);
+        foreach ($sites as $site): ?>
+            <option value="<?= htmlspecialchars($site) ?>"><?= htmlspecialchars($site) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <small class="text-muted">Filtrar por obra/estoque</small>
+</div>
+
 <!-- Resumo rápido -->
 <div class="row g-2 mb-3">
     <div class="col-4">
@@ -75,7 +96,7 @@ ob_start();
                 </div>
             <?php else: ?>
                 <?php foreach ($pending as $mov): ?>
-                    <div class="kanban-card type-<?= $mov['type'] ?>">
+                    <div class="kanban-card type-<?= $mov['type'] ?>" data-from="<?= htmlspecialchars($mov['from_site_name'] ?? $mov['from_location_name'] ?? '') ?>" data-to="<?= htmlspecialchars($mov['to_site_name'] ?? $mov['to_location_name'] ?? '') ?>">
                         <div class="card-material"><?= htmlspecialchars($mov['material_name']) ?></div>
                         <div class="card-meta">
                             <div><i class="bi bi-hash"></i> <?= number_format($mov['quantity'], 2, ',', '.') ?> <?= $mov['unit_abbr'] ?? '' ?></div>
@@ -128,7 +149,7 @@ ob_start();
                 </div>
             <?php else: ?>
                 <?php foreach ($inTransit as $mov): ?>
-                    <div class="kanban-card type-<?= $mov['type'] ?>">
+                    <div class="kanban-card type-<?= $mov['type'] ?>" data-from="<?= htmlspecialchars($mov['from_site_name'] ?? $mov['from_location_name'] ?? '') ?>" data-to="<?= htmlspecialchars($mov['to_site_name'] ?? $mov['to_location_name'] ?? '') ?>">
                         <div class="card-material"><?= htmlspecialchars($mov['material_name']) ?></div>
                         <div class="card-meta">
                             <div><i class="bi bi-hash"></i> <?= number_format($mov['quantity'], 2, ',', '.') ?> <?= $mov['unit_abbr'] ?? '' ?></div>
@@ -172,7 +193,7 @@ ob_start();
                 </div>
             <?php else: ?>
                 <?php foreach ($delivered as $mov): ?>
-                    <div class="kanban-card type-<?= $mov['type'] ?>" style="opacity:0.8;">
+                    <div class="kanban-card type-<?= $mov['type'] ?>" style="opacity:0.8;" data-from="<?= htmlspecialchars($mov['from_site_name'] ?? $mov['from_location_name'] ?? '') ?>" data-to="<?= htmlspecialchars($mov['to_site_name'] ?? $mov['to_location_name'] ?? '') ?>">
                         <div class="card-material"><?= htmlspecialchars($mov['material_name']) ?></div>
                         <div class="card-meta">
                             <div><i class="bi bi-hash"></i> <?= number_format($mov['quantity'], 2, ',', '.') ?> <?= $mov['unit_abbr'] ?? '' ?></div>
@@ -201,6 +222,18 @@ ob_start();
         <i class="bi bi-arrow-clockwise" style="font-size:1.4rem;"></i>
     </a>
 </div>
+
+<script>
+function filterKanban() {
+    const filter = document.getElementById('filterSite').value.toLowerCase();
+    document.querySelectorAll('.kanban-card').forEach(card => {
+        if (!filter) { card.style.display = ''; return; }
+        const from = (card.dataset.from || '').toLowerCase();
+        const to = (card.dataset.to || '').toLowerCase();
+        card.style.display = (from.includes(filter) || to.includes(filter)) ? '' : 'none';
+    });
+}
+</script>
 
 <?php
 $content = ob_get_clean();

@@ -594,11 +594,14 @@
                         </button>
                     </div>
                     <div id="ai-parse-area-${sid}" style="display:none;" class="mt-2 p-2 border rounded bg-info bg-opacity-10">
-                        <label class="form-label small fw-bold mb-1">Cole as mensagens do fornecedor:</label>
+                        <label class="form-label small fw-bold mb-1">Cole as mensagens ou envie um PDF:</label>
                         <textarea class="form-control form-control-sm" id="ai-messages-${sid}" rows="4" placeholder="Cole aqui as mensagens do WhatsApp com o orçamento..."></textarea>
-                        <div class="d-flex justify-content-end mt-2">
+                        <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                            <div class="flex-grow-1">
+                                <input type="file" class="form-control form-control-sm" id="ai-pdf-${sid}" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                            </div>
                             <button type="button" class="btn btn-sm btn-info" onclick="parseAiForSupplier('${sid}')">
-                                <i class="bi bi-magic"></i> Processar com IA
+                                <i class="bi bi-magic"></i> Processar
                             </button>
                         </div>
                         <div id="ai-result-${sid}" class="mt-2" style="display:none;"></div>
@@ -922,9 +925,12 @@
                                     </button>
                                 </div>
                                 <div id="ai-parse-area-map-${sid}" style="display:none;" class="mt-2 p-2 border rounded bg-info bg-opacity-10">
-                                    <label class="form-label small fw-bold mb-1">Cole as mensagens do fornecedor:</label>
+                                    <label class="form-label small fw-bold mb-1">Cole as mensagens ou envie um PDF:</label>
                                     <textarea class="form-control form-control-sm" id="ai-messages-map-${sid}" rows="4" placeholder="Cole aqui as mensagens do WhatsApp com o orçamento..."></textarea>
-                                    <div class="d-flex justify-content-end mt-2">
+                                    <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                                        <div class="flex-grow-1">
+                                            <input type="file" class="form-control form-control-sm" id="ai-pdf-map-${sid}" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                        </div>
                                         <button type="button" class="btn btn-sm btn-info" onclick="parseAiForSupplierMap('${sid}')">
                                             <i class="bi bi-magic"></i> Processar
                                         </button>
@@ -2398,11 +2404,13 @@ function toggleAiParse(sid) {
 
 async function parseAiForSupplier(sid) {
     const messagesEl = document.getElementById('ai-messages-' + sid);
+    const fileInput = document.getElementById('ai-pdf-' + sid);
     const resultEl = document.getElementById('ai-result-' + sid);
     const messages = messagesEl.value.trim();
+    const hasFile = fileInput && fileInput.files.length > 0;
 
-    if (!messages || messages.length < 10) {
-        alert('Cole as mensagens do fornecedor (mínimo 10 caracteres).');
+    if ((!messages || messages.length < 10) && !hasFile) {
+        alert('Cole as mensagens ou envie um PDF.');
         return;
     }
 
@@ -2410,15 +2418,25 @@ async function parseAiForSupplier(sid) {
     resultEl.innerHTML = '<small class="text-muted"><span class="spinner-border spinner-border-sm"></span> Processando com IA...</small>';
 
     try {
-        const resp = await fetch('/pedido/cotacao/parse-ai-quote', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                order_id: quoteOrderId,
-                supplier_id: sid,
-                messages: messages,
-            })
-        });
+        let resp;
+        if (hasFile) {
+            const formData = new FormData();
+            formData.append('order_id', quoteOrderId);
+            formData.append('supplier_id', sid);
+            formData.append('messages', messages);
+            formData.append('pdf', fileInput.files[0]);
+            resp = await fetch('/pedido/cotacao/parse-ai-quote', { method: 'POST', body: formData });
+        } else {
+            resp = await fetch('/pedido/cotacao/parse-ai-quote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    order_id: quoteOrderId,
+                    supplier_id: sid,
+                    messages: messages,
+                })
+            });
+        }
         const data = await resp.json();
 
         if (data.success && data.parsed) {
@@ -2571,19 +2589,34 @@ function toggleAiParseMap(sid) {
 
 async function parseAiForSupplierMap(sid) {
     const messages = document.getElementById('ai-messages-map-' + sid).value.trim();
+    const fileInput = document.getElementById('ai-pdf-map-' + sid);
     const resultEl = document.getElementById('ai-result-map-' + sid);
+    const hasFile = fileInput && fileInput.files.length > 0;
 
-    if (!messages || messages.length < 10) { alert('Cole as mensagens (mínimo 10 caracteres).'); return; }
+    if ((!messages || messages.length < 10) && !hasFile) {
+        alert('Cole as mensagens ou envie um PDF.');
+        return;
+    }
 
     resultEl.style.display = 'block';
     resultEl.innerHTML = '<small class="text-muted"><span class="spinner-border spinner-border-sm"></span> Processando...</small>';
 
     try {
-        const resp = await fetch('/pedido/cotacao/parse-ai-quote', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ order_id: quoteOrderId, supplier_id: sid, messages: messages })
-        });
+        let resp;
+        if (hasFile) {
+            const formData = new FormData();
+            formData.append('order_id', quoteOrderId);
+            formData.append('supplier_id', sid);
+            formData.append('messages', messages);
+            formData.append('pdf', fileInput.files[0]);
+            resp = await fetch('/pedido/cotacao/parse-ai-quote', { method: 'POST', body: formData });
+        } else {
+            resp = await fetch('/pedido/cotacao/parse-ai-quote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ order_id: quoteOrderId, supplier_id: sid, messages: messages })
+            });
+        }
         const data = await resp.json();
 
         if (data.success && data.parsed) {

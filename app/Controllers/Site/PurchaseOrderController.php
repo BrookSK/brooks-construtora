@@ -1072,8 +1072,9 @@ class PurchaseOrderController extends Controller
         $orderId = (int) $this->input('order_id', 0);
         $supplierId = (int) $this->input('supplier_id', 0);
         $messages = trim($this->input('messages', ''));
+        $hasFile = isset($_FILES['pdf']) && $_FILES['pdf']['error'] === UPLOAD_ERR_OK;
 
-        if (!$orderId || !$supplierId || empty($messages)) {
+        if (!$orderId || !$supplierId || (empty($messages) && !$hasFile)) {
             $this->json(['error' => 'Dados incompletos.'], 400);
             return;
         }
@@ -1165,14 +1166,43 @@ class PurchaseOrderController extends Controller
                 . "- Se algum campo não for mencionado, use null ou 0\n"
                 . "- Retorne APENAS o JSON, sem markdown ou texto adicional";
 
+            // Montar conteúdo da mensagem do usuário
+            $userContent = [];
+
+            // Se tem PDF/imagem, converter pra base64
+            if ($hasFile) {
+                $file = $_FILES['pdf'];
+                $fileContent = file_get_contents($file['tmp_name']);
+                $base64 = base64_encode($fileContent);
+                $mimeType = $file['type'] ?: 'application/pdf';
+
+                if ($mimeType === 'application/pdf') {
+                    // PDFs: converter cada página como imagem seria ideal, mas GPT-4o aceita PDF inline
+                    // Usar como image_url com data URI
+                    $userContent[] = ['type' => 'text', 'text' => $prompt];
+                    $userContent[] = ['type' => 'image_url', 'image_url' => ['url' => "data:{$mimeType};base64,{$base64}"]];
+                } else {
+                    // Imagem direta
+                    $userContent[] = ['type' => 'text', 'text' => $prompt];
+                    $userContent[] = ['type' => 'image_url', 'image_url' => ['url' => "data:{$mimeType};base64,{$base64}"]];
+                }
+
+                // Se tem mensagens de texto além do PDF, adicionar
+                if (!empty($messages)) {
+                    $userContent[] = ['type' => 'text', 'text' => "\n\nMENSAGENS ADICIONAIS DO FORNECEDOR:\n{$messages}"];
+                }
+            } else {
+                $userContent = $prompt;
+            }
+
             $data = [
                 'model' => $model,
                 'messages' => [
                     ['role' => 'system', 'content' => 'Você extrai dados de orçamentos de construção e retorna JSON válido. Responda APENAS com JSON.'],
-                    ['role' => 'user', 'content' => $prompt],
+                    ['role' => 'user', 'content' => $userContent],
                 ],
                 'temperature' => 0.2,
-                'max_tokens' => 2048,
+                'max_tokens' => 4096,
             ];
 
             $ch = curl_init('https://api.openai.com/v1/chat/completions');
