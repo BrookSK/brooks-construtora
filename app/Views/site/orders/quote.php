@@ -1101,7 +1101,7 @@
     }).observe(document.getElementById('suppliersContainer'), { childList: true });
 
     // Auto-carregar fornecedores existentes (quando pedido já foi cotado e está sendo editado)
-    <?php if ($order['status'] === 'pending_approval' && !empty($orderSuppliers)): ?>
+    <?php if (in_array($order['status'], ['pending_approval', 'pending_quote']) && !empty($orderSuppliers)): ?>
     (function() {
         const existingPrices = <?= json_encode($itemPrices ?? []) ?>;
         const pricesBySupplier = {};
@@ -1123,9 +1123,11 @@
             for (const itemId in prices) {
                 const input = block.querySelector('[name="supplier_prices[<?= $os['supplier_id'] ?>][' + itemId + ']"]');
                 if (input) {
-                    // Converter formato do banco (100.00) para formato BR (100,00)
                     const numVal = parseFloat(prices[itemId]) || 0;
-                    input.value = numVal.toFixed(2).replace('.', ',');
+                    const qty = parseFloat(input.dataset.qty) || 1;
+                    // Se está no modo "total do item", multiplicar unit_price pela quantidade
+                    const displayVal = priceMode === 'total' ? numVal * qty : numVal;
+                    input.value = displayVal.toFixed(2).replace('.', ',');
                     input.dispatchEvent(new Event('input'));
                 }
             }
