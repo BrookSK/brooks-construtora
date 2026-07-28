@@ -356,6 +356,13 @@ function addNewPage() {
 async function confirmAddPage(layout) {
     document.querySelector('[style*="position:fixed"][style*="z-index:9999"]')?.remove();
     
+    // Salvar alterações do formulário antes de adicionar a página
+    const form = document.querySelector('form[action="/admin/magazines/update"]');
+    if (form) {
+        const formData = new FormData(form);
+        await fetch('/admin/magazines/update', { method: 'POST', body: formData });
+    }
+
     const resp = await fetch('/admin/magazines/add-page', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
