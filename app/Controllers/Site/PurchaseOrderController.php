@@ -1167,7 +1167,7 @@ class PurchaseOrderController extends Controller
                 . "- Retorne APENAS o JSON, sem markdown ou texto adicional";
 
             // Montar conteúdo da mensagem do usuário
-            $userContent = [];
+            $userContent = $prompt;
 
             // Se tem PDF/imagem, processar
             if ($hasFile) {
@@ -1177,7 +1177,7 @@ class PurchaseOrderController extends Controller
                 $mimeType = $file['type'] ?: 'application/pdf';
 
                 if (in_array($mimeType, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])) {
-                    // Imagem: usar vision direto
+                    // Imagem: usar vision direto na Chat Completions
                     $userContent = [
                         ['type' => 'text', 'text' => $prompt],
                         ['type' => 'image_url', 'image_url' => ['url' => "data:{$mimeType};base64,{$base64}"]],
@@ -1186,19 +1186,96 @@ class PurchaseOrderController extends Controller
                         $userContent[] = ['type' => 'text', 'text' => "\nMENSAGENS ADICIONAIS:\n{$messages}"];
                     }
                 } else {
-                    // PDF: fazer upload via Files API e referenciar
+                    // PDF: upload via Files API + usar Responses API
                     $fileId = $this->uploadFileToOpenAI($apiKey, $file['tmp_name'], $file['name']);
-                    
+
                     if ($fileId) {
-                        $userContent = [
-                            ['type' => 'text', 'text' => $prompt],
-                            ['type' => 'file', 'file' => ['file_id' => $fileId]],
+                        // Usar Responses API que aceita file nativamente
+                        $inputContent = [
+                            ['type' => 'input_text', 'text' => $prompt],
+                            ['type' => 'input_file', 'file_id' => $fileId],
                         ];
                         if (!empty($messages)) {
-                            $userContent[] = ['type' => 'text', 'text' => "\nMENSAGENS ADICIONAIS:\n{$messages}"];
+                            $inputContent[] = ['type' => 'input_text', 'text' => "\nMENSAGENS ADICIONAIS:\n{$messages}"];
                         }
+
+                        $responsesData = [
+                            'model' => $model,
+                            'input' => [
+                                ['role' => 'user', 'content' => $inputContent],
+                            ],
+                            'temperature' => 0.2,
+                            'instructions' => 'Você extrai dados de orçamentos de construção e retorna JSON válido. Responda APENAS com JSON, sem markdown.',
+                        ];
+
+                        $ch = curl_init('https://api.openai.com/v1/responses');
+                        curl_setopt_array($ch, [
+                            CURLOPT_RETURNTRANSFER => true,
+                            CURLOPT_POST => true,
+                            CURLOPT_POSTFIELDS => json_encode($responsesData),
+                            CURLOPT_HTTPHEADER => [
+                                'Content-Type: application/json',
+                                'Authorization: Bearer ' . $apiKey,
+                            ],
+                            CURLOPT_TIMEOUT => 120,
+                        ]);
+
+                        $response = curl_exec($ch);
+                        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                        curl_close($ch);
+
+                        // Deletar arquivo da OpenAI (limpeza)
+                        $this->deleteOpenAIFile($apiKey, $fileId);
+
+                        if ($httpCode !== 200) {
+                            error_log("[BROOKS_AI] Responses API failed: HTTP {$httpCode} - {$response}");
+                            $this->json(['error' => 'Erro na API da IA (HTTP ' . $httpCode . ').'], 500);
+                            return;
+                        }
+
+                        $result = json_decode($response, true);
+                        $content = '';
+                        // Extrair texto da resposta (Responses API tem formato diferente)
+                        if (isset($result['output'])) {
+                            foreach ($result['output'] as $output) {
+                                if (isset($output['content'])) {
+                                    foreach ($output['content'] as $c) {
+                                        if ($c['type'] === 'output_text') {
+                                            $content = $c['text'];
+                                            break 2;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Limpar e parsear
+                        $content = trim($content);
+                        $content = preg_replace('/^```json\s*/i', '', $content);
+                        $content = preg_replace('/\s*```$/i', '', $content);
+
+                        $parsed = json_decode($content, true);
+                        if (!is_array($parsed) || !isset($parsed['items'])) {
+                            $this->json(['error' => 'A IA não conseguiu extrair dados válidos do PDF.'], 400);
+                            return;
+                        }
+
+                        // Salvar e retornar
+                        \App\Core\Database::insert('quote_messages', [
+                            'order_id' => $orderId,
+                            'supplier_id' => $supplierId,
+                            'contact_id' => null,
+                            'raw_messages' => '[PDF: ' . ($file['name'] ?? 'arquivo') . ']' . ($messages ? "\n" . $messages : ''),
+                            'parsed_data' => json_encode($parsed),
+                            'parsed_at' => date('Y-m-d H:i:s'),
+                            'applied' => 0,
+                            'created_at' => date('Y-m-d H:i:s'),
+                        ]);
+
+                        $this->json(['success' => true, 'parsed' => $parsed]);
+                        return;
                     } else {
-                        // Fallback: tentar extrair texto
+                        // Fallback: pdftotext
                         $pdfText = '';
                         $tmpFile = tempnam(sys_get_temp_dir(), 'pdf_');
                         file_put_contents($tmpFile, $fileContent);
@@ -1212,6 +1289,9 @@ class PurchaseOrderController extends Controller
 
                         if (!empty(trim($pdfText))) {
                             $prompt .= "\n\nCONTEÚDO DO ORÇAMENTO (PDF):\n---\n" . mb_substr($pdfText, 0, 10000) . "\n---";
+                        } else {
+                            $this->json(['error' => 'Não foi possível ler o PDF. Tente enviar como imagem (JPG/PNG).'], 400);
+                            return;
                         }
                         if (!empty($messages)) {
                             $prompt .= "\n\nMENSAGENS ADICIONAIS:\n{$messages}";
@@ -1219,10 +1299,9 @@ class PurchaseOrderController extends Controller
                         $userContent = $prompt;
                     }
                 }
-            } else {
-                $userContent = $prompt;
             }
 
+            // Chat Completions (pra texto e imagens)
             $data = [
                 'model' => $model,
                 'messages' => [
@@ -1320,6 +1399,24 @@ class PurchaseOrderController extends Controller
 
         error_log("[BROOKS_AI] File upload failed: HTTP {$httpCode} - {$response}");
         return null;
+    }
+
+    /**
+     * Deletar arquivo da OpenAI (limpeza após uso)
+     */
+    private function deleteOpenAIFile(string $apiKey, string $fileId): void
+    {
+        $ch = curl_init("https://api.openai.com/v1/files/{$fileId}");
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST => 'DELETE',
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $apiKey,
+            ],
+            CURLOPT_TIMEOUT => 10,
+        ]);
+        curl_exec($ch);
+        curl_close($ch);
     }
 
     /**
