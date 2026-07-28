@@ -328,42 +328,41 @@ async function deletePageImage(pageId, field, btn) {
 }
 
 // Adicionar nova página
-async function addNewPage() {
-    const layoutOptions = [
-        'internal_01', 'internal_02', 'internal_03', 'internal_04',
-        'internal_05', 'internal_06', 'internal_07'
-    ];
-    const layoutLabels = {
-        'internal_01': 'Interna 01 (manchete + 2 imagens)',
-        'internal_02': 'Interna 02 (subtema + 2 imagens)',
-        'internal_03': 'Interna 03 (título + 2 imagens + legenda)',
-        'internal_04': 'Interna 04 (impacto + 1 imagem)',
-        'internal_05': 'Interna 05 (2 colunas + 2 imagens)',
-        'internal_06': 'Interna 06 (grid 3 imagens)',
-        'internal_07': 'Interna 07 (citação + 1 imagem)',
-    };
+function addNewPage() {
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+        <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;">
+            <div style="background:#fff;border-radius:16px;max-width:500px;width:100%;padding:2rem;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <h5 style="margin-bottom:0.5rem;"><i class="bi bi-file-earmark-plus"></i> Adicionar Nova Página</h5>
+                <p style="color:#666;font-size:0.85rem;margin-bottom:1.5rem;">Escolha o estilo de página que deseja adicionar. Ela será inserida antes da contracapa.</p>
+                <div style="display:grid;gap:8px;">
+                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_01')"><strong>Manchete</strong> <small class="text-muted">— Título grande + 2 fotos</small></button>
+                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_02')"><strong>Subtema</strong> <small class="text-muted">— Subtítulo + texto + 2 fotos</small></button>
+                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_03')"><strong>Artigo com legenda</strong> <small class="text-muted">— Texto longo + 2 fotos + legenda</small></button>
+                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_04')"><strong>Impacto</strong> <small class="text-muted">— Frase de impacto + 1 foto grande</small></button>
+                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_05')"><strong>Duas colunas</strong> <small class="text-muted">— Texto em 2 colunas + 2 fotos</small></button>
+                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_06')"><strong>Galeria</strong> <small class="text-muted">— Grid com 3 fotos + texto</small></button>
+                    <button class="btn btn-outline-primary text-start" onclick="confirmAddPage('internal_07')"><strong>Citação</strong> <small class="text-muted">— Frase grande de destaque + 1 foto</small></button>
+                </div>
+                <div style="text-align:center;margin-top:1rem;">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="this.closest('[style*=fixed]').remove()">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal.firstElementChild);
+}
 
-    let selectHtml = '<select id="newPageLayout" class="form-select form-select-sm">';
-    layoutOptions.forEach(l => {
-        selectHtml += `<option value="${l}">${layoutLabels[l]}</option>`;
-    });
-    selectHtml += '</select>';
-
-    const layout = prompt('Escolha o layout da nova página:\n\n1. internal_01 - Manchete + 2 imagens\n2. internal_02 - Subtema + 2 imagens\n3. internal_03 - Título + 2 imagens + legenda\n4. internal_04 - Impacto + 1 imagem\n5. internal_05 - 2 colunas + 2 imagens\n6. internal_06 - Grid 3 imagens\n7. internal_07 - Citação + 1 imagem\n\nDigite o número (1-7):');
+async function confirmAddPage(layout) {
+    document.querySelector('[style*="position:fixed"][style*="z-index:9999"]')?.remove();
     
-    if (!layout) return;
-    const layoutMap = {'1':'internal_01','2':'internal_02','3':'internal_03','4':'internal_04','5':'internal_05','6':'internal_06','7':'internal_07'};
-    const selectedLayout = layoutMap[layout];
-    if (!selectedLayout) { alert('Opção inválida.'); return; }
-
     const resp = await fetch('/admin/magazines/add-page', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({ magazine_id: <?= $magazine['id'] ?>, layout_type: selectedLayout })
+        body: new URLSearchParams({ magazine_id: <?= $magazine['id'] ?>, layout_type: layout })
     });
     const data = await resp.json();
     if (data.success) {
-        alert('Página adicionada! Recarregando...');
         location.reload();
     } else {
         alert(data.error || 'Erro ao adicionar.');
