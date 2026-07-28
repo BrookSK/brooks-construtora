@@ -12,3 +12,6 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
     ('magazine_webhook_phone', ''),
     ('magazine_webhook_phone_name', '')
 ON DUPLICATE KEY UPDATE `setting_key` = `setting_key`;
+
+-- 3. Token de atualização pra assinantes cadastrarem WhatsApp via link
+ALTER TABLE `newsletter_subscribers` ADD COLUMN `update_token` VARCHAR(64) NULL AFTER `phone`;
