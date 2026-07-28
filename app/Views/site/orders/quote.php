@@ -708,7 +708,7 @@
         document.getElementById('suppliersContainer').appendChild(block);
 
         // Carregar vendedores pré-cadastrados deste fornecedor
-        loadVendorsForSupplier(sid);
+        if (typeof loadVendorsForSupplier === 'function') loadVendorsForSupplier(sid);
 
         // Bind events para calcular
         block.querySelectorAll('.price-input, input[name*="financials"]').forEach(input => {
@@ -1080,7 +1080,7 @@
 
         // Carregar vendedores pré-cadastrados para os selects do mapa
         addedSuppliers.forEach(sid => {
-            loadVendorsForSupplier(sid);
+            if (typeof loadVendorsForSupplier === 'function') loadVendorsForSupplier(sid);
         });
     }
 
