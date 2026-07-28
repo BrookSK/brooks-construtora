@@ -21,19 +21,34 @@ class Newsletter extends Model
         if ($existing) {
             // Atualizar telefone se não tinha e agora tem
             if (!empty($phone) && empty($existing['phone'])) {
-                Database::update('newsletter_subscribers', ['phone' => $phone], 'id = ?', [$existing['id']]);
+                try {
+                    Database::update('newsletter_subscribers', ['phone' => $phone], 'id = ?', [$existing['id']]);
+                } catch (\Exception $e) {
+                    // Coluna phone pode não existir ainda
+                }
             }
             return false; // Já inscrito
         }
 
-        Database::insert('newsletter_subscribers', [
-            'email' => $email,
-            'name' => $name,
-            'phone' => $phone ?: null,
-            'update_token' => bin2hex(random_bytes(16)),
-            'subscribed_at' => date('Y-m-d H:i:s'),
-            'active' => 1,
-        ]);
+        // Tenta inserir com todos os campos (incluindo phone e update_token)
+        try {
+            Database::insert('newsletter_subscribers', [
+                'email' => $email,
+                'name' => $name,
+                'phone' => $phone ?: null,
+                'update_token' => bin2hex(random_bytes(16)),
+                'subscribed_at' => date('Y-m-d H:i:s'),
+                'active' => 1,
+            ]);
+        } catch (\Exception $e) {
+            // Se falhou (coluna phone/update_token não existe), tenta sem esses campos
+            Database::insert('newsletter_subscribers', [
+                'email' => $email,
+                'name' => $name,
+                'subscribed_at' => date('Y-m-d H:i:s'),
+                'active' => 1,
+            ]);
+        }
 
         return true;
     }
