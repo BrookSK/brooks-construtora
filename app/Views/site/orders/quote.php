@@ -1120,10 +1120,12 @@
         // Preencher preços
         setTimeout(function() {
             const block = document.getElementById('supplier-block-<?= $os['supplier_id'] ?>');
-            if (!block) return;
+            if (!block) { console.warn('Block not found for supplier <?= $os['supplier_id'] ?>'); return; }
             const prices = pricesBySupplier['<?= $os['supplier_id'] ?>'] || {};
+            console.log('Filling prices for supplier <?= $os['supplier_id'] ?>:', prices);
             for (const itemId in prices) {
                 const input = block.querySelector('input[name="supplier_prices[<?= $os['supplier_id'] ?>][' + itemId + ']"]');
+                console.log('  Item', itemId, '-> input found:', !!input, 'value:', prices[itemId]);
                 if (input) {
                     const numVal = parseFloat(prices[itemId]) || 0;
                     const qty = parseFloat(input.dataset.qty) || 1;
@@ -1157,7 +1159,7 @@
             const fr = block.querySelector('[name*="[freight]"]'); if (fr) fr.value = '<?= str_replace('.', ',', $os['freight']) ?>';
             <?php endif; ?>
             // Recalcular total
-            setTimeout(function() { calculateSupplierTotal('<?= $os['supplier_id'] ?>'); }, 800);
+            setTimeout(function() { calculateSupplierTotal('<?= $os['supplier_id'] ?>'); if (typeof renderMap === 'function' && currentView === 'map') renderMap(); }, 800);
         }, 500);
         <?php endforeach; ?>
 
