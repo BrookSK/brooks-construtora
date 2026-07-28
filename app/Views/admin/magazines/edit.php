@@ -335,7 +335,7 @@ function addNewPage() {
             <div style="background:#fff;border-radius:16px;max-width:500px;width:100%;padding:2rem;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
                 <h5 style="margin-bottom:0.5rem;"><i class="bi bi-file-earmark-plus"></i> Adicionar Nova Página</h5>
                 <p style="color:#666;font-size:0.85rem;margin-bottom:1.5rem;">Escolha o estilo de página que deseja adicionar. Ela será inserida antes da contracapa.</p>
-                <div style="display:grid;gap:8px;">
+                <div id="addPageOptions" style="display:grid;gap:8px;">
                     <button class="btn btn-light border text-start" style="padding:12px 16px;" onclick="confirmAddPage('internal_01')"><strong>Manchete</strong> <small class="text-muted">— Título grande + 2 fotos</small></button>
                     <button class="btn btn-light border text-start" style="padding:12px 16px;" onclick="confirmAddPage('internal_02')"><strong>Subtema</strong> <small class="text-muted">— Subtítulo + texto + 2 fotos</small></button>
                     <button class="btn btn-light border text-start" style="padding:12px 16px;" onclick="confirmAddPage('internal_03')"><strong>Artigo com legenda</strong> <small class="text-muted">— Texto longo + 2 fotos + legenda</small></button>
@@ -354,10 +354,9 @@ function addNewPage() {
 }
 
 async function confirmAddPage(layout) {
-    // Mostrar loading nos botões
-    const modal = document.querySelector('[style*="position:fixed"][style*="z-index:9999"]');
-    if (modal) {
-        modal.querySelector('[style*="display:grid"]').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted small">Salvando alterações e adicionando página...</p></div>';
+    const optionsDiv = document.getElementById('addPageOptions');
+    if (optionsDiv) {
+        optionsDiv.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted small">Salvando alterações e adicionando página...</p></div>';
     }
     
     // Salvar alterações do formulário antes de adicionar a página
@@ -377,7 +376,7 @@ async function confirmAddPage(layout) {
         location.reload();
     } else {
         alert(data.error || 'Erro ao adicionar.');
-        modal?.remove();
+        document.querySelector('[style*="position:fixed"][style*="z-index:9999"]')?.remove();
     }
 }
 
