@@ -15,6 +15,12 @@ $statusInfo = $statusLabels[$order['status']] ?? ['Desconhecido', 'secondary', '
 $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'www.brooksconstrutora.com.br');
 ?>
 
+<div class="mb-3">
+    <a href="#" onclick="history.back(); return false;" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
 <div class="row">
     <!-- Coluna principal -->
     <div class="col-lg-8 order-2 order-lg-1">

@@ -306,6 +306,54 @@
 
     let activeStatus = 'all';
 
+    // Restaurar filtros da URL ao carregar
+    function loadFiltersFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('status')) {
+            activeStatus = params.get('status');
+            statusBtns.forEach(b => {
+                b.classList.toggle('active', b.dataset.status === activeStatus);
+            });
+        }
+        if (params.get('q') && searchInput) searchInput.value = params.get('q');
+        if (params.get('supplier') && supplierSelect) supplierSelect.value = params.get('supplier');
+        if (params.get('site') && siteSelect) siteSelect.value = params.get('site');
+        if (params.get('type') && typeSelect) typeSelect.value = params.get('type');
+        if (params.get('financial') && financialSelect) financialSelect.value = params.get('financial');
+        if (params.get('from') && dateFrom) dateFrom.value = params.get('from');
+        if (params.get('to') && dateTo) dateTo.value = params.get('to');
+        if (params.get('requester') && requesterSelect) requesterSelect.value = params.get('requester');
+
+        // Abrir painel de filtros se algum avançado estiver ativo
+        const hasAdvanced = params.get('q') || params.get('supplier') || params.get('site') || params.get('type') || params.get('financial') || params.get('from') || params.get('to') || params.get('requester');
+        if (hasAdvanced) {
+            const panel = document.getElementById('advancedFilters');
+            if (panel && typeof bootstrap !== 'undefined') {
+                new bootstrap.Collapse(panel, { show: true });
+            } else if (panel) {
+                panel.classList.add('show');
+            }
+        }
+    }
+
+    // Salvar filtros na URL (sem reload)
+    function saveFiltersToUrl() {
+        const params = new URLSearchParams();
+        if (activeStatus !== 'all') params.set('status', activeStatus);
+        if (searchInput && searchInput.value.trim()) params.set('q', searchInput.value.trim());
+        if (supplierSelect && supplierSelect.value) params.set('supplier', supplierSelect.value);
+        if (siteSelect && siteSelect.value) params.set('site', siteSelect.value);
+        if (typeSelect && typeSelect.value) params.set('type', typeSelect.value);
+        if (financialSelect && financialSelect.value) params.set('financial', financialSelect.value);
+        if (dateFrom && dateFrom.value) params.set('from', dateFrom.value);
+        if (dateTo && dateTo.value) params.set('to', dateTo.value);
+        if (requesterSelect && requesterSelect.value) params.set('requester', requesterSelect.value);
+
+        const qs = params.toString();
+        const newUrl = window.location.pathname + (qs ? '?' + qs : '');
+        history.replaceState(null, '', newUrl);
+    }
+
     function applyFilters() {
         const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
         const supplier = supplierSelect ? supplierSelect.value : '';
@@ -353,6 +401,7 @@
         });
 
         if (countEl) countEl.textContent = visible;
+        saveFiltersToUrl();
     }
 
     // Status buttons
@@ -403,6 +452,10 @@
             toggle.classList.add('collapsed');
         }
     }
+
+    // Inicializar: restaurar filtros da URL e aplicar
+    loadFiltersFromUrl();
+    applyFilters();
 })();
 </script>
 
