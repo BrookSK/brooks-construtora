@@ -232,7 +232,7 @@ function generatePDF() {
             .mag-preview .page { 
                 width: 210mm !important; height: 297mm !important; 
                 page-break-after: always !important; page-break-inside: avoid !important;
-                overflow: hidden !important; margin: 0 !important; padding: 0 !important;
+                overflow: hidden !important; margin: 0 !important;
                 box-shadow: none !important; border-radius: 0 !important;
             }
             .mag-preview .page:last-child { page-break-after: auto !important; }
