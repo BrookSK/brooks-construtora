@@ -369,6 +369,9 @@ function generatePDF() {
             .preview .page:last-child { page-break-after: auto !important; }
             #pdf-toolbar { display: none !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+            .preview .page * { text-shadow: none !important; }
+            .preview .page .title-big, .preview .page .title-upper, .preview .page h1, .preview .page h2 { background: transparent !important; -webkit-text-stroke: 0 !important; }
+            .preview .page img { image-rendering: auto !important; }
         }
     `;
     document.head.appendChild(printStyle);

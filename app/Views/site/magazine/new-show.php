@@ -241,6 +241,9 @@ function generatePDF() {
             }
             .mag-preview .page:last-child { page-break-after: auto !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+            .mag-preview .page * { text-shadow: none !important; }
+            .mag-preview .page .title-big, .mag-preview .page .title-upper, .mag-preview .page h1, .mag-preview .page h2 { background: transparent !important; -webkit-text-stroke: 0 !important; }
+            .mag-preview .page img { image-rendering: auto !important; }
         }
     `;
     document.head.appendChild(printStyle);
