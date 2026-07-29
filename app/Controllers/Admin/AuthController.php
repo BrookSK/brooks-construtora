@@ -44,6 +44,11 @@ class AuthController extends Controller
 
     public function logout(): void
     {
+        // Limpar cookie de sessão PIN (se existir)
+        if (isset($_COOKIE['pin_session'])) {
+            setcookie('pin_session', '', time() - 3600, '/');
+        }
+
         Auth::logout();
         $this->redirect('/admin/login');
     }
