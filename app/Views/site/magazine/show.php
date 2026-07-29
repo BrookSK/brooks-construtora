@@ -209,45 +209,36 @@ foreach ($pages as $page):
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-async function generatePDF() {
-    var btn = document.getElementById('btn-pdf');
-    btn.disabled = true; btn.textContent = 'Gerando PDF...';
-
-    var { jsPDF } = window.jspdf;
-    var pdf = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
-    var pdfW = 595.28;
-    var pdfH = 841.89;
-
+function generatePDF() {
+    var printWin = window.open('', '_blank');
     var container = document.querySelector('.mag-preview');
     var pages = container.querySelectorAll('.page');
-
-    // Esconde botões e mostra loading
-    var actions = document.getElementById('mag-actions');
-    var loading = document.getElementById('pdf-loading');
-    if (actions) actions.style.display = 'none';
-    if (loading) loading.style.display = 'block';
-
-    for (var i = 0; i < pages.length; i++) {
-        if (i > 0) pdf.addPage();
-
-        var canvas = await html2canvas(pages[i], {
-            scale: 4,
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            imageTimeout: 30000,
-            backgroundColor: null,
-            foreignObjectRendering: false
-        });
-
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfW, pdfH);
-    }
-
-    if (actions) actions.style.display = '';
-    if (loading) loading.style.display = 'none';
-
-    pdf.save('<?php $fn = iconv('UTF-8','ASCII//TRANSLIT', $magazine['title']); $fn = preg_replace('/[^a-zA-Z0-9_-]/', '_', $fn); $fn = preg_replace('/_+/', '_', trim($fn, '_')); echo $fn; ?>_Brooks_Construtora.pdf');
-    btn.disabled = false; btn.textContent = 'Baixar PDF';
+    
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Revista Brooks Construtora</title><style>';
+    html += '@page { size: A4 portrait; margin: 0; }';
+    html += '* { margin: 0; padding: 0; box-sizing: border-box; }';
+    html += 'body { font-family: "Segoe UI", Arial, sans-serif; }';
+    html += '.page { width: 210mm; height: 297mm; overflow: hidden; position: relative; page-break-after: always; page-break-inside: avoid; }';
+    html += '.page:last-child { page-break-after: auto; }';
+    html += 'img { max-width: 100%; height: auto; }';
+    html += '@media print { body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .page { width: 210mm; height: 297mm; } }';
+    html += '</style>';
+    
+    document.querySelectorAll('style').forEach(function(s) {
+        if (s.textContent.indexOf('mag-preview') > -1 || s.textContent.indexOf('.page') > -1 || s.textContent.indexOf('pg-') > -1) {
+            html += '<style>' + s.textContent + '</style>';
+        }
+    });
+    
+    html += '</head><body>';
+    pages.forEach(function(page) {
+        html += '<div class="page" style="width:210mm;height:297mm;overflow:hidden;page-break-after:always;">' + page.innerHTML + '</div>';
+    });
+    html += '<script>window.onload=function(){setTimeout(function(){window.print();},500);}<\/script>';
+    html += '</body></html>';
+    
+    printWin.document.write(html);
+    printWin.document.close();
 }
 </script>
 
