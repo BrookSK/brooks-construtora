@@ -600,6 +600,7 @@ class MagazineController extends Controller
                     'subtitle' => $subtitle,
                     'content' => $pageData['content'] ?? '',
                     'caption' => $pageData['caption'] ?? '',
+                    'show_images' => isset($pageData['show_images']) ? '1' : '0',
                 ]);
 
                 // Processa uploads de imagens da página

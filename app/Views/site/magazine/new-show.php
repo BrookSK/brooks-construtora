@@ -104,6 +104,8 @@ $intNum = 0;
 foreach ($pages as $page):
     $img1 = $page['image_url'] ?? '';
     $img2 = $page['image_url_2'] ?? '';
+    $showImages = ($page['show_images'] ?? '1') !== '0';
+    if (!$showImages) { $img1 = ''; $img2 = ''; }
     $layout = $page['layout_type'] ?? 'internal_01';
     if (!in_array($layout, ['cover','subcover','backcover'])) $intNum++;
     $displayPageNum = str_pad($intNum, 2, '0', STR_PAD_LEFT);

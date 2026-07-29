@@ -184,8 +184,30 @@
                     <?php if (!in_array($page['layout_type'], ['cover', 'subcover'])): ?>
                     <div class="mb-2">
                         <label class="form-label small">Conteúdo</label>
-                        <textarea class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][content]" rows="4"><?= htmlspecialchars($page['content'] ?? '') ?></textarea>
+                        <?php
+                        $charLimits = [
+                            'cover' => 100, 'subcover' => 100, 'backcover' => 200,
+                            'internal_01' => 800, 'internal_02' => 800, 'internal_03' => 2500,
+                            'internal_04' => 1200, 'internal_05' => 2000, 'internal_06' => 800,
+                            'internal_07' => 1000, 'guest_column' => 2000,
+                        ];
+                        $maxChars = $charLimits[$page['layout_type']] ?? 1500;
+                        $currentChars = mb_strlen($page['content'] ?? '');
+                        ?>
+                        <textarea class="form-control form-control-sm content-textarea" name="pages[<?= $page['id'] ?>][content]" rows="4" maxlength="<?= $maxChars ?>" data-max="<?= $maxChars ?>" oninput="updateCharCount(this)"><?= htmlspecialchars($page['content'] ?? '') ?></textarea>
+                        <small class="text-muted d-flex justify-content-between mt-1">
+                            <span>Máx: <?= $maxChars ?> caracteres (layout <?= $page['layout_type'] ?>)</span>
+                            <span class="char-counter <?= $currentChars > $maxChars ? 'text-danger' : '' ?>"><?= $currentChars ?>/<?= $maxChars ?></span>
+                        </small>
                     </div>
+
+                    <!-- Opção: Mostrar/esconder imagens nesta página -->
+                    <?php if (!in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])): ?>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="pages[<?= $page['id'] ?>][show_images]" value="1" id="showImages<?= $page['id'] ?>" <?= ($page['show_images'] ?? '1') !== '0' ? 'checked' : '' ?>>
+                        <label class="form-check-label small" for="showImages<?= $page['id'] ?>">Mostrar imagens nesta página</label>
+                    </div>
+                    <?php endif; ?>
                     <?php endif; ?>
 
                     <!-- Imagens -->
@@ -306,6 +328,30 @@ document.getElementById('cover-form').addEventListener('submit', function(e) {
         if(d.success){alert('Capa atualizada!');location.reload();}
         else alert(d.error||'Erro.');
     }).catch(()=>alert('Erro.'));
+});
+
+// Contador de caracteres
+function updateCharCount(textarea) {
+    const max = parseInt(textarea.dataset.max) || 1500;
+    const current = textarea.value.length;
+    const counter = textarea.parentElement.querySelector('.char-counter');
+    if (counter) {
+        counter.textContent = current + '/' + max;
+        counter.className = 'char-counter ' + (current > max ? 'text-danger fw-bold' : current > max * 0.9 ? 'text-warning' : '');
+    }
+}
+// Inicializar contadores
+document.querySelectorAll('.content-textarea').forEach(ta => updateCharCount(ta));
+
+// Toggle de imagens por página
+document.querySelectorAll('[id^="showImages"]').forEach(chk => {
+    const pageCard = chk.closest('.card');
+    const imageSection = pageCard?.querySelector('.row.g-2:has([name*="page_image"])') || pageCard?.querySelectorAll('.row.g-2')[1];
+    if (chk && imageSection) {
+        const toggle = () => { imageSection.style.display = chk.checked ? '' : 'none'; };
+        toggle();
+        chk.addEventListener('change', toggle);
+    }
 });
 
 // Deletar imagem de página

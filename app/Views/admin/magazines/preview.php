@@ -105,6 +105,8 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php foreach ($pages as $page):
     $img1 = $page['image_url'] ?? '';
     $img2 = $page['image_url_2'] ?? '';
+    $showImages = ($page['show_images'] ?? '1') !== '0';
+    if (!$showImages) { $img1 = ''; $img2 = ''; }
     $layout = $page['layout_type'] ?? 'internal_01';
     // Numeração começa em 01 a partir das páginas internas (ignora cover e subcover)
     static $internalPageNum = 0;
