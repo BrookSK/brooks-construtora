@@ -207,22 +207,38 @@ HTML;
     <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
             <td style="padding: 8px 0; font-size:14px; color:#444;">
+<<<<<<< HEAD
                 <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">&#9654;</span> Construção civil de alto padrão
+=======
+                <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">▸</span> Construção civil de alto padrão
+>>>>>>> estoque
             </td>
         </tr>
         <tr>
             <td style="padding: 8px 0; font-size:14px; color:#444;">
+<<<<<<< HEAD
                 <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">&#9654;</span> Reformas e projetos de arquitetura
+=======
+                <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">▸</span> Reformas e projetos de arquitetura
+>>>>>>> estoque
             </td>
         </tr>
         <tr>
             <td style="padding: 8px 0; font-size:14px; color:#444;">
+<<<<<<< HEAD
                 <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">&#9654;</span> Tendências e inovação no setor
+=======
+                <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">▸</span> Tendências e inovação no setor
+>>>>>>> estoque
             </td>
         </tr>
         <tr>
             <td style="padding: 8px 0; font-size:14px; color:#444;">
+<<<<<<< HEAD
                 <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">&#9654;</span> Sustentabilidade e tecnologia na obra
+=======
+                <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">▸</span> Sustentabilidade e tecnologia na obra
+>>>>>>> estoque
             </td>
         </tr>
     </table>

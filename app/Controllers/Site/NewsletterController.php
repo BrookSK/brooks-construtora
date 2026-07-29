@@ -31,7 +31,10 @@ class NewsletterController extends Controller
         try {
             $result = Newsletter::subscribe($email, $name, $phone);
         } catch (\Exception $e) {
+<<<<<<< HEAD
             error_log('[BROOKS_NEWSLETTER] Erro ao inscrever: ' . $e->getMessage());
+=======
+>>>>>>> estoque
             if ($this->isAjax()) {
                 $this->json(['success' => false, 'message' => 'Erro interno. Tente novamente mais tarde.'], 500);
             } else {
@@ -77,6 +80,10 @@ class NewsletterController extends Controller
                 'newsletter_welcome'
             );
         } catch (\Exception $e) {
+<<<<<<< HEAD
+=======
+            // Não impede a inscrição se o e-mail falhar
+>>>>>>> estoque
             error_log('[BROOKS_NEWSLETTER] Erro ao enfileirar welcome email: ' . $e->getMessage());
         }
     }
