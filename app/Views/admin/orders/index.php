@@ -2,7 +2,7 @@
 <?php ob_start(); ?>
 
 <style>
-.financial-reviewed td { background-color: rgba(34, 197, 94, 0.08) !important; }
+.financial-reviewed td { background-color: rgba(139, 92, 246, 0.08) !important; }
 .filters-panel { background: #f8f9fa; border-radius: 8px; padding: 12px; }
 .filters-panel select, .filters-panel input { font-size: 0.85rem; }
 .filter-btn.active { font-weight: 600; }
@@ -206,7 +206,7 @@
                         <td><?= htmlspecialchars($order['supplier_name'] ?? 'N/A') ?></td>
                         <td><span class="badge bg-<?= $label[1] ?>"><?= $label[0] ?></span>
                             <?php if ($showFinancialReview && !empty($order['financial_reviewed_at'])): ?>
-                            <span class="badge bg-success ms-1" style="font-size:0.6rem;" title="Revisado por <?= htmlspecialchars($order['financial_reviewed_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['financial_reviewed_at'])) ?>"><i class="bi bi-check2"></i> Financeiro</span>
+                            <span class="badge ms-1" style="font-size:0.6rem; background-color:#8b5cf6;" title="Revisado por <?= htmlspecialchars($order['financial_reviewed_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['financial_reviewed_at'])) ?>"><i class="bi bi-check2"></i> Financeiro</span>
                             <?php endif; ?>
                         </td>
                         <td>
@@ -258,7 +258,7 @@
                     <div>
                         <span class="badge bg-<?= $label[1] ?>" style="font-size:0.7rem;"><?= $label[0] ?></span>
                         <?php if ((\App\Core\Auth::isSuperAdmin() || \App\Core\Auth::hasPermission('orders.payment')) && !empty($order['financial_reviewed_at'])): ?>
-                        <span class="badge bg-success" style="font-size:0.6rem;"><i class="bi bi-check2"></i></span>
+                        <span class="badge" style="font-size:0.6rem; background-color:#8b5cf6;"><i class="bi bi-check2"></i></span>
                         <?php endif; ?>
                         <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
                         <span class="badge bg-dark" style="font-size:0.6rem;"><i class="bi bi-wrench"></i></span>

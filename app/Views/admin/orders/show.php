@@ -1041,12 +1041,12 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <?php if (empty($order['financial_reviewed_at'])): ?>
                 <form method="POST" action="/admin/orders/financial-review">
                     <input type="hidden" name="id" value="<?= $order['id'] ?>">
-                    <button type="submit" class="btn btn-outline-success w-100" onclick="return confirm('Marcar este pedido como revisado pelo financeiro?')">
+                    <button type="submit" class="btn w-100" style="border-color:#8b5cf6; color:#8b5cf6;" onmouseover="this.style.backgroundColor='#8b5cf6';this.style.color='#fff'" onmouseout="this.style.backgroundColor='transparent';this.style.color='#8b5cf6'" onclick="return confirm('Marcar este pedido como revisado pelo financeiro?')">
                         <i class="bi bi-check2-square"></i> Revisado pelo Financeiro
                     </button>
                 </form>
                 <?php else: ?>
-                <div class="alert alert-success py-2 px-3 small mb-2">
+                <div class="alert py-2 px-3 small mb-2" style="background-color: rgba(139, 92, 246, 0.1); border-color: #8b5cf6; color: #6d28d9;">
                     <i class="bi bi-check-circle-fill"></i> Revisado por <strong><?= htmlspecialchars($order['financial_reviewed_by'] ?? '') ?></strong>
                     <br><small class="text-muted"><?= date('d/m/Y H:i', strtotime($order['financial_reviewed_at'])) ?></small>
                 </div>
