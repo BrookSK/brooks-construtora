@@ -291,6 +291,7 @@
 
 <script>
 (function() {
+    const STORAGE_KEY = 'brooks_orders_filters';
     const rows = document.querySelectorAll('.order-row');
     const statusBtns = document.querySelectorAll('.filter-btn');
     const searchInput = document.getElementById('filterSearch');
@@ -306,27 +307,51 @@
 
     let activeStatus = 'all';
 
-    // Restaurar filtros da URL ao carregar
-    function loadFiltersFromUrl() {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('status')) {
-            activeStatus = params.get('status');
-            statusBtns.forEach(b => {
-                b.classList.toggle('active', b.dataset.status === activeStatus);
-            });
-        }
-        if (params.get('q') && searchInput) searchInput.value = params.get('q');
-        if (params.get('supplier') && supplierSelect) supplierSelect.value = params.get('supplier');
-        if (params.get('site') && siteSelect) siteSelect.value = params.get('site');
-        if (params.get('type') && typeSelect) typeSelect.value = params.get('type');
-        if (params.get('financial') && financialSelect) financialSelect.value = params.get('financial');
-        if (params.get('from') && dateFrom) dateFrom.value = params.get('from');
-        if (params.get('to') && dateTo) dateTo.value = params.get('to');
-        if (params.get('requester') && requesterSelect) requesterSelect.value = params.get('requester');
+    // Restaurar filtros do sessionStorage ou da URL
+    function loadFilters() {
+        let data = null;
 
-        // Abrir painel de filtros se algum avançado estiver ativo
-        const hasAdvanced = params.get('q') || params.get('supplier') || params.get('site') || params.get('type') || params.get('financial') || params.get('from') || params.get('to') || params.get('requester');
-        if (hasAdvanced) {
+        // Prioridade 1: sessionStorage (mantém filtros ao navegar entre páginas)
+        try {
+            const stored = sessionStorage.getItem(STORAGE_KEY);
+            if (stored) data = JSON.parse(stored);
+        } catch(e) {}
+
+        // Prioridade 2: URL params (para links diretos/compartilhados)
+        if (!data) {
+            const params = new URLSearchParams(window.location.search);
+            if (params.toString()) {
+                data = {
+                    status: params.get('status') || 'all',
+                    q: params.get('q') || '',
+                    supplier: params.get('supplier') || '',
+                    site: params.get('site') || '',
+                    type: params.get('type') || '',
+                    financial: params.get('financial') || '',
+                    from: params.get('from') || '',
+                    to: params.get('to') || '',
+                    requester: params.get('requester') || ''
+                };
+            }
+        }
+
+        if (!data) return;
+
+        if (data.status) {
+            activeStatus = data.status;
+            statusBtns.forEach(b => b.classList.toggle('active', b.dataset.status === activeStatus));
+        }
+        if (data.q && searchInput) searchInput.value = data.q;
+        if (data.supplier && supplierSelect) supplierSelect.value = data.supplier;
+        if (data.site && siteSelect) siteSelect.value = data.site;
+        if (data.type && typeSelect) typeSelect.value = data.type;
+        if (data.financial && financialSelect) financialSelect.value = data.financial;
+        if (data.from && dateFrom) dateFrom.value = data.from;
+        if (data.to && dateTo) dateTo.value = data.to;
+        if (data.requester && requesterSelect) requesterSelect.value = data.requester;
+
+        // Abrir painel se algum filtro avançado estiver ativo
+        if (data.q || data.supplier || data.site || data.type || data.financial || data.from || data.to || data.requester) {
             const panel = document.getElementById('advancedFilters');
             if (panel && typeof bootstrap !== 'undefined') {
                 new bootstrap.Collapse(panel, { show: true });
@@ -336,18 +361,34 @@
         }
     }
 
-    // Salvar filtros na URL (sem reload)
-    function saveFiltersToUrl() {
+    // Salvar filtros no sessionStorage e na URL
+    function saveFilters() {
+        const data = {
+            status: activeStatus,
+            q: searchInput ? searchInput.value.trim() : '',
+            supplier: supplierSelect ? supplierSelect.value : '',
+            site: siteSelect ? siteSelect.value : '',
+            type: typeSelect ? typeSelect.value : '',
+            financial: financialSelect ? financialSelect.value : '',
+            from: dateFrom ? dateFrom.value : '',
+            to: dateTo ? dateTo.value : '',
+            requester: requesterSelect ? requesterSelect.value : ''
+        };
+
+        // Salvar no sessionStorage
+        try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+
+        // Atualizar URL
         const params = new URLSearchParams();
-        if (activeStatus !== 'all') params.set('status', activeStatus);
-        if (searchInput && searchInput.value.trim()) params.set('q', searchInput.value.trim());
-        if (supplierSelect && supplierSelect.value) params.set('supplier', supplierSelect.value);
-        if (siteSelect && siteSelect.value) params.set('site', siteSelect.value);
-        if (typeSelect && typeSelect.value) params.set('type', typeSelect.value);
-        if (financialSelect && financialSelect.value) params.set('financial', financialSelect.value);
-        if (dateFrom && dateFrom.value) params.set('from', dateFrom.value);
-        if (dateTo && dateTo.value) params.set('to', dateTo.value);
-        if (requesterSelect && requesterSelect.value) params.set('requester', requesterSelect.value);
+        if (data.status !== 'all') params.set('status', data.status);
+        if (data.q) params.set('q', data.q);
+        if (data.supplier) params.set('supplier', data.supplier);
+        if (data.site) params.set('site', data.site);
+        if (data.type) params.set('type', data.type);
+        if (data.financial) params.set('financial', data.financial);
+        if (data.from) params.set('from', data.from);
+        if (data.to) params.set('to', data.to);
+        if (data.requester) params.set('requester', data.requester);
 
         const qs = params.toString();
         const newUrl = window.location.pathname + (qs ? '?' + qs : '');
@@ -369,39 +410,23 @@
         rows.forEach(row => {
             let show = true;
 
-            // Status
             if (activeStatus !== 'all' && row.dataset.status !== activeStatus) show = false;
-
-            // Search
             if (show && search && !(row.dataset.search || '').includes(search)) show = false;
-
-            // Supplier
             if (show && supplier && row.dataset.supplier !== supplier) show = false;
-
-            // Site
             if (show && site && row.dataset.site !== site) show = false;
-
-            // Type
             if (show && type && row.dataset.type !== type) show = false;
-
-            // Financial
             if (show && financial && row.dataset.financial !== financial) show = false;
-
-            // Date range
             if (show && from && row.dataset.date < from) show = false;
             if (show && to && row.dataset.date > to) show = false;
-
-            // Requester
             if (show && requester && row.dataset.requester !== requester) show = false;
 
-            // Show/hide
             const el = row.closest('tr') || row;
             el.style.display = show ? '' : 'none';
             if (show) visible++;
         });
 
         if (countEl) countEl.textContent = visible;
-        saveFiltersToUrl();
+        saveFilters();
     }
 
     // Status buttons
@@ -453,8 +478,8 @@
         }
     }
 
-    // Inicializar: restaurar filtros da URL e aplicar
-    loadFiltersFromUrl();
+    // Inicializar
+    loadFilters();
     applyFilters();
 })();
 </script>
