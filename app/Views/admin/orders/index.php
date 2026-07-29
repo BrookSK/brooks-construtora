@@ -307,32 +307,32 @@
 
     let activeStatus = 'all';
 
-    // Restaurar filtros do sessionStorage ou da URL
+    // Restaurar filtros: prioridade 1 = URL, prioridade 2 = sessionStorage (fallback)
     function loadFilters() {
         let data = null;
 
-        // Prioridade 1: sessionStorage (mantém filtros ao navegar entre páginas)
-        try {
-            const stored = sessionStorage.getItem(STORAGE_KEY);
-            if (stored) data = JSON.parse(stored);
-        } catch(e) {}
+        // Prioridade 1: URL params (funciona com history.back e links diretos)
+        const params = new URLSearchParams(window.location.search);
+        if (params.toString()) {
+            data = {
+                status: params.get('status') || 'all',
+                q: params.get('q') || '',
+                supplier: params.get('supplier') || '',
+                site: params.get('site') || '',
+                type: params.get('type') || '',
+                financial: params.get('financial') || '',
+                from: params.get('from') || '',
+                to: params.get('to') || '',
+                requester: params.get('requester') || ''
+            };
+        }
 
-        // Prioridade 2: URL params (para links diretos/compartilhados)
+        // Prioridade 2: sessionStorage (fallback para quando URL não preservou)
         if (!data) {
-            const params = new URLSearchParams(window.location.search);
-            if (params.toString()) {
-                data = {
-                    status: params.get('status') || 'all',
-                    q: params.get('q') || '',
-                    supplier: params.get('supplier') || '',
-                    site: params.get('site') || '',
-                    type: params.get('type') || '',
-                    financial: params.get('financial') || '',
-                    from: params.get('from') || '',
-                    to: params.get('to') || '',
-                    requester: params.get('requester') || ''
-                };
-            }
+            try {
+                const stored = sessionStorage.getItem(STORAGE_KEY);
+                if (stored) data = JSON.parse(stored);
+            } catch(e) {}
         }
 
         if (!data) return;
