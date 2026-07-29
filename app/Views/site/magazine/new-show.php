@@ -219,43 +219,37 @@ foreach ($pages as $page):
 function generatePDF() {
     var btn = document.getElementById('btn-pdf');
     btn.disabled = true;
-    
-    // Setar título pra sugerir nome do arquivo
-    var originalTitle = document.title;
-    document.title = 'Revista_Brooks_<?= preg_replace('/[^a-zA-Z0-9]/', '_', $magazine['title'] ?? 'Construtora') ?>';
-    
-    var printStyle = document.createElement('style');
-    printStyle.id = 'print-override';
-    printStyle.textContent = `
-        @media print {
-            @page { size: A4 portrait; margin: 0; }
-            html, body { margin: 0 !important; padding: 0 !important; background: white !important; width: 210mm !important; }
-            body > *:not(.mag-preview):not(#content) { display: none !important; }
-            header, footer, nav, .sidebar, #mag-actions, #pdf-loading { display: none !important; }
-            .mag-preview { display: block !important; margin: 0 !important; padding: 0 !important; max-width: none !important; }
-            .mag-preview .page { 
-                width: 210mm !important; height: 297mm !important; 
-                page-break-after: always !important; page-break-inside: avoid !important;
-                overflow: hidden !important; margin: 0 !important;
-                box-shadow: none !important; border-radius: 0 !important;
-            }
-            .mag-preview .page:last-child { page-break-after: auto !important; }
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
-            .mag-preview .page * { text-shadow: none !important; }
-            .mag-preview .page .title-big, .mag-preview .page .title-upper, .mag-preview .page h1, .mag-preview .page h2 { background: transparent !important; -webkit-text-stroke: 0 !important; }
-            .mag-preview .page img { image-rendering: auto !important; }
+    btn.innerHTML = '<span>Gerando PDF...</span>';
+    var loading = document.getElementById('pdf-loading');
+    if (loading) loading.style.display = 'block';
+
+    var container = document.querySelector('.mag-preview');
+    var pages = container.querySelectorAll('.page');
+    var { jsPDF } = window.jspdf;
+    var pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    var pdfW = 595.28;
+    var pdfH = 841.89;
+
+    (async function() {
+        for (var i = 0; i < pages.length; i++) {
+            if (i > 0) pdf.addPage();
+            var canvas = await html2canvas(pages[i], {
+                scale: 3,
+                useCORS: true,
+                allowTaint: true,
+                logging: false,
+                imageTimeout: 30000,
+                backgroundColor: null
+            });
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, pdfH);
         }
-    `;
-    document.head.appendChild(printStyle);
-    
-    setTimeout(function() {
-        window.print();
-        setTimeout(function() {
-            printStyle.remove();
-            btn.disabled = false;
-            document.title = originalTitle;
-        }, 1000);
-    }, 300);
+
+        pdf.save('Revista_Brooks_<?= preg_replace('/[^a-zA-Z0-9]/', '_', $magazine['title'] ?? 'Construtora') ?>.pdf');
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="download" style="width:16px;height:16px;"></i> Baixar PDF';
+        if (loading) loading.style.display = 'none';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    })();
 }
 </script>
 

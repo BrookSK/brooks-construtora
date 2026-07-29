@@ -343,47 +343,40 @@ if (!empty($sources)):
     </a>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 function generatePDF() {
+    var btn = document.getElementById('btn-pdf');
+    btn.disabled = true;
+    
     var toolbar = document.getElementById('pdf-toolbar');
     if (toolbar) toolbar.style.display = 'none';
-    
-    var originalTitle = document.title;
-    document.title = 'Revista_Brooks_<?= preg_replace('/[^a-zA-Z0-9]/', '_', $magazine['title'] ?? 'Construtora') ?>';
-    
-    var printStyle = document.createElement('style');
-    printStyle.id = 'print-override';
-    printStyle.textContent = `
-        @media print {
-            @page { size: A4 portrait; margin: 0; }
-            html, body { margin: 0 !important; padding: 0 !important; background: white !important; width: 210mm !important; }
-            body > *:not(.preview) { display: none !important; }
-            .preview { display: block !important; margin: 0 !important; padding: 0 !important; }
-            .preview .page { 
-                width: 210mm !important; height: 297mm !important; 
-                page-break-after: always !important; page-break-inside: avoid !important;
-                overflow: hidden !important; margin: 0 !important;
-                box-shadow: none !important; border-radius: 0 !important;
-                position: relative !important;
-            }
-            .preview .page:last-child { page-break-after: auto !important; }
-            #pdf-toolbar { display: none !important; }
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
-            .preview .page * { text-shadow: none !important; }
-            .preview .page .title-big, .preview .page .title-upper, .preview .page h1, .preview .page h2 { background: transparent !important; -webkit-text-stroke: 0 !important; }
-            .preview .page img { image-rendering: auto !important; }
+
+    var pages = document.querySelectorAll('.page');
+    var { jsPDF } = window.jspdf;
+    var pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    var pdfW = 595.28;
+    var pdfH = 841.89;
+
+    (async function() {
+        for (var i = 0; i < pages.length; i++) {
+            if (i > 0) pdf.addPage();
+            var canvas = await html2canvas(pages[i], {
+                scale: 3,
+                useCORS: true,
+                allowTaint: true,
+                logging: false,
+                imageTimeout: 30000,
+                backgroundColor: null
+            });
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, pdfH);
         }
-    `;
-    document.head.appendChild(printStyle);
-    
-    setTimeout(function() {
-        window.print();
-        setTimeout(function() {
-            printStyle.remove();
-            if (toolbar) toolbar.style.display = 'flex';
-            document.title = originalTitle;
-        }, 1000);
-    }, 300);
+
+        pdf.save('Revista_Brooks_<?= preg_replace('/[^a-zA-Z0-9]/', '_', $magazine['title'] ?? 'Construtora') ?>.pdf');
+        if (toolbar) toolbar.style.display = 'flex';
+        btn.disabled = false;
+    })();
 }
 </script>
 </script>
