@@ -220,6 +220,10 @@ function generatePDF() {
     var btn = document.getElementById('btn-pdf');
     btn.disabled = true;
     
+    // Setar título pra sugerir nome do arquivo
+    var originalTitle = document.title;
+    document.title = 'Revista_Brooks_<?= preg_replace('/[^a-zA-Z0-9]/', '_', $magazine['title'] ?? 'Construtora') ?>';
+    
     var printStyle = document.createElement('style');
     printStyle.id = 'print-override';
     printStyle.textContent = `
@@ -246,6 +250,7 @@ function generatePDF() {
         setTimeout(function() {
             printStyle.remove();
             btn.disabled = false;
+            document.title = originalTitle;
         }, 1000);
     }, 300);
 }

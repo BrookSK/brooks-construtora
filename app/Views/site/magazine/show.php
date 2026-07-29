@@ -213,6 +213,9 @@ function generatePDF() {
     var toolbar = document.getElementById('mag-actions');
     if (toolbar) toolbar.style.display = 'none';
     
+    var originalTitle = document.title;
+    document.title = 'Revista_Brooks_<?= preg_replace('/[^a-zA-Z0-9]/', '_', $magazine['title'] ?? 'Construtora') ?>';
+    
     var printStyle = document.createElement('style');
     printStyle.id = 'print-override';
     printStyle.textContent = `
@@ -239,6 +242,7 @@ function generatePDF() {
         setTimeout(function() {
             printStyle.remove();
             if (toolbar) toolbar.style.display = '';
+            document.title = originalTitle;
         }, 1000);
     }, 300);
 }

@@ -345,11 +345,12 @@ if (!empty($sources)):
 
 <script>
 function generatePDF() {
-    // Esconder toolbar e aplicar impressão na própria página
     var toolbar = document.getElementById('pdf-toolbar');
     if (toolbar) toolbar.style.display = 'none';
     
-    // Adicionar CSS de impressão temporário
+    var originalTitle = document.title;
+    document.title = 'Revista_Brooks_<?= preg_replace('/[^a-zA-Z0-9]/', '_', $magazine['title'] ?? 'Construtora') ?>';
+    
     var printStyle = document.createElement('style');
     printStyle.id = 'print-override';
     printStyle.textContent = `
@@ -372,13 +373,12 @@ function generatePDF() {
     `;
     document.head.appendChild(printStyle);
     
-    // Imprimir
     setTimeout(function() {
         window.print();
-        // Restaurar após impressão
         setTimeout(function() {
             printStyle.remove();
             if (toolbar) toolbar.style.display = 'flex';
+            document.title = originalTitle;
         }, 1000);
     }, 300);
 }
