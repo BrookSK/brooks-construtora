@@ -210,35 +210,37 @@ foreach ($pages as $page):
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 function generatePDF() {
-    var printWin = window.open('', '_blank');
-    var container = document.querySelector('.mag-preview');
-    var pages = container.querySelectorAll('.page');
+    var toolbar = document.getElementById('mag-actions');
+    if (toolbar) toolbar.style.display = 'none';
     
-    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Revista Brooks Construtora</title><style>';
-    html += '@page { size: A4 portrait; margin: 0; }';
-    html += '* { margin: 0; padding: 0; box-sizing: border-box; }';
-    html += 'body { font-family: "Segoe UI", Arial, sans-serif; }';
-    html += '.page { width: 210mm; height: 297mm; overflow: hidden; position: relative; page-break-after: always; page-break-inside: avoid; }';
-    html += '.page:last-child { page-break-after: auto; }';
-    html += 'img { max-width: 100%; height: auto; }';
-    html += '@media print { body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .page { width: 210mm; height: 297mm; } }';
-    html += '</style>';
-    
-    document.querySelectorAll('style').forEach(function(s) {
-        if (s.textContent.indexOf('mag-preview') > -1 || s.textContent.indexOf('.page') > -1 || s.textContent.indexOf('pg-') > -1) {
-            html += '<style>' + s.textContent + '</style>';
+    var printStyle = document.createElement('style');
+    printStyle.id = 'print-override';
+    printStyle.textContent = `
+        @media print {
+            @page { size: A4 portrait; margin: 0; }
+            body { margin: 0 !important; padding: 0 !important; }
+            body > *:not(.mag-preview):not(#content) { display: none !important; }
+            header, footer, nav, .sidebar, #mag-actions, #pdf-loading { display: none !important; }
+            .mag-preview { display: block !important; margin: 0 !important; padding: 0 !important; }
+            .mag-preview .page { 
+                width: 210mm !important; height: 297mm !important; 
+                page-break-after: always !important; page-break-inside: avoid !important;
+                overflow: hidden !important; margin: 0 !important;
+                box-shadow: none !important;
+            }
+            .mag-preview .page:last-child { page-break-after: auto !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
         }
-    });
+    `;
+    document.head.appendChild(printStyle);
     
-    html += '</head><body>';
-    pages.forEach(function(page) {
-        html += '<div class="page" style="width:210mm;height:297mm;overflow:hidden;page-break-after:always;">' + page.innerHTML + '</div>';
-    });
-    html += '<script>window.onload=function(){setTimeout(function(){window.print();},500);}<\/script>';
-    html += '</body></html>';
-    
-    printWin.document.write(html);
-    printWin.document.close();
+    setTimeout(function() {
+        window.print();
+        setTimeout(function() {
+            printStyle.remove();
+            if (toolbar) toolbar.style.display = '';
+        }, 1000);
+    }, 300);
 }
 </script>
 
