@@ -107,6 +107,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
     $img2 = $page['image_url_2'] ?? '';
     $showImages = ($page['show_images'] ?? '1') !== '0';
     if (!$showImages) { $img1 = ''; $img2 = ''; }
+    $hideImagesClass = !$showImages ? ' style="display:none"' : '';
     $layout = $page['layout_type'] ?? 'internal_01';
     // Numeração começa em 01 a partir das páginas internas (ignora cover e subcover)
     static $internalPageNum = 0;
@@ -188,11 +189,11 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <!-- PÁG INTERNA 01: Imagem full topo + texto 2 colunas com imagem -->
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <?php if ($img1): ?><img src="<?= $img1 ?>" class="img-full" style="height:300px;margin-bottom:18px" alt=""><?php else: ?><div class="img-full img-placeholder" style="height:300px;margin-bottom:18px">IMAGEM</div><?php endif; ?>
+    <?php if ($img1): ?><img src="<?= $img1 ?>" class="img-full" style="height:300px;margin-bottom:18px" alt=""><?php elseif ($showImages): ?><div class="img-full img-placeholder" style="height:300px;margin-bottom:18px">IMAGEM</div><?php endif; ?>
     <?php if ($page['title']): ?><div class="title-upper"><?= htmlspecialchars($page['title']) ?></div><?php endif; ?>
     <div class="two-col">
         <div class="col"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
-        <div class="col"><?php if($img2): ?><img src="<?= $img2 ?>" style="width:100%;height:280px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:280px">IMAGEM</div><?php endif; ?></div>
+        <div class="col"><?php if($img2): ?><img src="<?= $img2 ?>" style="width:100%;height:280px;object-fit:cover" alt=""><?php elseif($showImages): ?><div class="img-placeholder" style="width:100%;height:280px">IMAGEM</div><?php endif; ?></div>
     </div>
 </div>
 
@@ -201,7 +202,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <div class="two-col" style="margin-bottom:15px">
-        <div class="col"><?php if($img1): ?><img src="<?= $img1 ?>" style="width:100%;height:250px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:250px">IMAGEM</div><?php endif; ?></div>
+        <div class="col"><?php if($img1): ?><img src="<?= $img1 ?>" style="width:100%;height:250px;object-fit:cover" alt=""><?php elseif($showImages): ?><div class="img-placeholder" style="width:100%;height:250px">IMAGEM</div><?php endif; ?></div>
         <div class="col">
             <?php if($page['title']): ?><div class="title-upper" style="margin-top:10px"><?= htmlspecialchars($page['title']) ?></div><?php endif; ?>
             <p class="text-sm"><?= htmlspecialchars($page['subtitle'] ?? '') ?></p>
@@ -210,7 +211,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
     <div class="title-big"><?= htmlspecialchars($page['title'] ?? '') ?></div>
     <div class="two-col">
         <div class="col"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
-        <div class="col"><?php if($img2): ?><img src="<?= $img2 ?>" style="width:100%;height:150px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:150px">IMAGEM</div><?php endif; ?></div>
+        <div class="col"><?php if($img2): ?><img src="<?= $img2 ?>" style="width:100%;height:150px;object-fit:cover" alt=""><?php elseif($showImages): ?><div class="img-placeholder" style="width:100%;height:150px">IMAGEM</div><?php endif; ?></div>
     </div>
 </div>
 
@@ -222,8 +223,8 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
     <?php if($page['subtitle']??''): ?><div class="subtitle"><?= htmlspecialchars($page['subtitle']) ?></div><?php endif; ?>
     <?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
     <div style="display:flex;gap:10px;margin-top:15px">
-        <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php else: ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
-        <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php else: ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
+        <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
+        <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
     </div>
     <?php if($page['caption']??''): ?><div class="caption" style="margin-top:8px"><?= htmlspecialchars($page['caption']) ?></div><?php endif; ?>
 </div>
@@ -247,8 +248,8 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <div style="display:flex;gap:10px;margin-bottom:10px">
-        <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php else: ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
-        <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php else: ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
+        <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
+        <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
     </div>
     <?php if($page['caption']??''): ?><div class="caption"><?= htmlspecialchars($page['caption']) ?></div><div class="caption-sub"><?= htmlspecialchars($page['subtitle']??'') ?></div><?php endif; ?>
     <div style="margin-top:15px"><div class="title-big" style="font-size:1.8rem"><?= htmlspecialchars($page['title'] ?? '') ?></div></div>
