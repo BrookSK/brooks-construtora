@@ -355,14 +355,15 @@ function generatePDF() {
     printStyle.textContent = `
         @media print {
             @page { size: A4 portrait; margin: 0; }
-            body { margin: 0 !important; padding: 0 !important; }
+            html, body { margin: 0 !important; padding: 0 !important; background: white !important; width: 210mm !important; }
             body > *:not(.preview) { display: none !important; }
-            .preview { display: block !important; }
+            .preview { display: block !important; margin: 0 !important; padding: 0 !important; }
             .preview .page { 
                 width: 210mm !important; height: 297mm !important; 
                 page-break-after: always !important; page-break-inside: avoid !important;
-                overflow: hidden !important; margin: 0 !important;
-                box-shadow: none !important;
+                overflow: hidden !important; margin: 0 !important; padding: 0 !important;
+                box-shadow: none !important; border-radius: 0 !important;
+                position: relative !important;
             }
             .preview .page:last-child { page-break-after: auto !important; }
             #pdf-toolbar { display: none !important; }
