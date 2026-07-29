@@ -1,6 +1,6 @@
--- Migration: Pedido de Material - Campos do Jordão
+-- Migration: Pedido de Material - Campos do Jordão (v2)
 -- Data do pedido: 27/07/2026
--- Descrição: Pedido de materiais diversos (limpeza, EPIs, sinalização)
+-- Descrição: Pedido de materiais diversos (limpeza, EPIs, sinalização) - 13 itens
 
 -- Gerar tokens únicos para o pedido
 SET @quote_token = SHA2(CONCAT(UUID(), NOW(), RAND()), 256);
@@ -31,7 +31,7 @@ VALUES (
 
 SET @order_id = LAST_INSERT_ID();
 
--- Inserir os itens do pedido (busca material_id pelo nome, se não achar fica NULL)
+-- Inserir os 13 itens do pedido (busca material_id pelo nome, se não achar fica NULL)
 INSERT INTO purchase_order_items (order_id, material_id, material_name, specification, classification, unit, quantity, source_type, created_at) VALUES
 (@order_id, (SELECT id FROM materials WHERE name LIKE '%bafômetro%' AND active = 1 LIMIT 1), 'Aparelho Bafômetro', 'Equipamento', '', 'unid', 1, 'purchase', '2026-07-27 00:00:00'),
 (@order_id, (SELECT id FROM materials WHERE name LIKE '%sabão%líquido%' AND active = 1 LIMIT 1), 'Sabão Líquido 5L', 'limpeza', '5L', 'unid', 2, 'purchase', '2026-07-27 00:00:00'),
@@ -44,11 +44,12 @@ INSERT INTO purchase_order_items (order_id, material_id, material_name, specific
 (@order_id, (SELECT id FROM materials WHERE name LIKE '%placa%fumôdromo%' AND active = 1 LIMIT 1), 'Placa Fumôdromo (Padrão Brooks) 25x30cm', 'implantação', '25x30cm', 'unid', 1, 'purchase', '2026-07-27 00:00:00'),
 (@order_id, (SELECT id FROM materials WHERE name LIKE '%placa%banheiro%feminino%' AND active = 1 LIMIT 1), 'Placa Banheiro Feminino (Padrão Brooks) 15x20cm', 'implantação', '15x20cm', 'unid', 1, 'purchase', '2026-07-27 00:00:00'),
 (@order_id, (SELECT id FROM materials WHERE name LIKE '%luva%vaqueta%' AND active = 1 LIMIT 1), 'Luva Vaqueta', 'EPI', '', 'unid', 20, 'purchase', '2026-07-27 00:00:00'),
-(@order_id, (SELECT id FROM materials WHERE name LIKE '%luva%pigmentada%' AND active = 1 LIMIT 1), 'Luva Pigmentada', 'EPI', '', 'unid', 30, 'purchase', '2026-07-27 00:00:00');
+(@order_id, (SELECT id FROM materials WHERE name LIKE '%luva%pigmentada%' AND active = 1 LIMIT 1), 'Luva Pigmentada', 'EPI', '', 'unid', 30, 'purchase', '2026-07-27 00:00:00'),
+(@order_id, (SELECT id FROM materials WHERE name LIKE '%óculos%proteção%escur%' AND active = 1 LIMIT 1), 'Óculos de Proteção Escuros', 'EPI', '', 'unid', 24, 'purchase', '2026-07-27 00:00:00');
 
 -- Registrar no histórico
 INSERT INTO purchase_order_history (order_id, action, description, performed_by_name, performed_by_user_id, created_at)
 VALUES (@order_id, 'created', 'Pedido criado via importação direta - Campos do Jordão', 'Admin', 1, '2026-07-27 00:00:00');
 
 -- Resultado
-SELECT CONCAT('Pedido criado: ', @next_code, ' | Obra: ', COALESCE((SELECT name FROM construction_sites WHERE id = @site_id), 'N/A'), ' | Itens: 12') AS resultado;
+SELECT CONCAT('Pedido criado: ', @next_code, ' | Obra: ', COALESCE((SELECT name FROM construction_sites WHERE id = @site_id), 'N/A'), ' | Itens: 13') AS resultado;
