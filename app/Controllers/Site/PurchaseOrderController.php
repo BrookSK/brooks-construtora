@@ -71,7 +71,7 @@ class PurchaseOrderController extends Controller
         $itemPrices = PurchaseOrderItemPrice::getByOrder($order['id']);
         
         // Buscar histórico de preços para os materiais deste pedido
-        $materialIds = array_filter(array_column($items, 'material_id'));
+        $materialIds = array_values(array_filter(array_column($items, 'material_id')));
         $priceHistory = [];
         if (!empty($materialIds)) {
             $placeholders = implode(',', array_fill(0, count($materialIds), '?'));
