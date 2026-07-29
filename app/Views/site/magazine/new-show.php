@@ -251,6 +251,19 @@ function generatePDF() {
         if (typeof lucide !== 'undefined') lucide.createIcons();
     })();
 }
+
+// Auto-ajuste de font-size quando conteúdo não cabe na página
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.mag-preview .page').forEach(function(page) {
+        var maxH = page.offsetHeight;
+        var attempts = 0;
+        while (page.scrollHeight > maxH + 2 && attempts < 8) {
+            var currentSize = parseFloat(window.getComputedStyle(page).fontSize) || 14;
+            page.style.fontSize = (currentSize - 0.5) + 'px';
+            attempts++;
+        }
+    });
+});
 </script>
 
 <?php include ROOT_PATH . '/app/Views/site/layouts/new-footer.php'; ?>
