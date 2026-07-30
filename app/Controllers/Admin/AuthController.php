@@ -44,12 +44,21 @@ class AuthController extends Controller
 
     public function logout(): void
     {
+        // Verificar se é sessão de PIN antes de limpar
+        $isPinSession = !empty($_SESSION['pin_auth']);
+
         // Limpar cookie de sessão PIN (se existir)
         if (isset($_COOKIE['pin_session'])) {
             setcookie('pin_session', '', time() - 3600, '/');
         }
 
         Auth::logout();
-        $this->redirect('/admin/login');
+
+        // Se era sessão de PIN, redirecionar para login de PIN
+        if ($isPinSession) {
+            $this->redirect('/pedidos/login');
+        } else {
+            $this->redirect('/admin/login');
+        }
     }
 }
