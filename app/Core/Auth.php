@@ -56,6 +56,18 @@ class Auth
             }
         }
 
+        // Se é PIN individual sem telefone cadastrado, forçar atualização de cadastro
+        if (!empty($_SESSION['pin_auth']) && !empty($_SESSION['pin_user_id'])) {
+            $uri = $_SERVER['REQUEST_URI'] ?? '';
+            if (strpos($uri, '/pin/minha-conta') === false && strpos($uri, '/admin/logout') === false) {
+                $pinUser = \App\Models\PinUser::find((int) $_SESSION['pin_user_id']);
+                if ($pinUser && empty($pinUser['phone'])) {
+                    header('Location: /pin/minha-conta');
+                    exit;
+                }
+            }
+        }
+
         return true;
     }
 

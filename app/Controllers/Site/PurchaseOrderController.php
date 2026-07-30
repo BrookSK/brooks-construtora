@@ -1566,6 +1566,19 @@ class PurchaseOrderController extends Controller
                     return false;
                 }
             }
+
+            // Forçar cadastro de telefone para PIN individual
+            if (!empty($_SESSION['pin_user_id']) && $_SESSION['pin_user_id'] > 0) {
+                $uri = $_SERVER['REQUEST_URI'] ?? '';
+                if (strpos($uri, '/pin/minha-conta') === false) {
+                    $pu = PinUser::find((int) $_SESSION['pin_user_id']);
+                    if ($pu && empty($pu['phone'])) {
+                        header('Location: /pin/minha-conta');
+                        exit;
+                    }
+                }
+            }
+
             return true;
         }
 
@@ -1814,17 +1827,24 @@ class PurchaseOrderController extends Controller
             // Notificar o solicitante do pedido (se configuração ativa e tiver telefone)
             if (Setting::get('orders_notify_requester_delivery', '0') === '1' && !empty($order['created_by'])) {
                 $requester = PinUser::find((int) $order['created_by']);
-                if ($requester && !empty($requester['phone']) && $requester['active']) {
-                    $this->sendWebhook($webhookUrl, [
-                        'event' => 'delivery_checklist_ready',
-                        'order_code' => $order['code'],
-                        'suppliers' => $supplierNames,
-                        'items_count' => count($items),
-                        'checklist_url' => $checklistUrl,
-                        'phone' => $requester['phone'],
-                        'phone_name' => $requester['name'],
-                        'message' => $message,
-                    ], $orderId);
+                if ($requester && $requester['active']) {
+                    if (!empty($requester['phone'])) {
+                        $this->sendWebhook($webhookUrl, [
+                            'event' => 'delivery_checklist_ready',
+                            'order_code' => $order['code'],
+                            'suppliers' => $supplierNames,
+                            'items_count' => count($items),
+                            'checklist_url' => $checklistUrl,
+                            'phone' => $requester['phone'],
+                            'phone_name' => $requester['name'],
+                            'message' => $message,
+                        ], $orderId);
+                    }
+                    if (!empty($requester['email'])) {
+                        $subject = "Checklist de Entrega - Pedido {$order['code']}";
+                        $body = EmailTemplate::purchaseOrderDelivery($order, $items, $checklistUrl, $supplierDisplay);
+                        NotificationService::queueEmails($requester['email'], $subject, $body, $orderId, 'delivery_ready');
+                    }
                 }
             }
         }

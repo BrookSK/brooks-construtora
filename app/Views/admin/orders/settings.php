@@ -98,8 +98,8 @@
                 <label class="form-check-label fw-bold" for="notifyRequesterDelivery">Notificar quem solicitou o pedido na fase de entrega</label>
             </div>
             <p class="text-muted small mt-2 mb-0">
-                <strong>Ativado:</strong> Quando o checklist de entrega for gerado, além dos números configurados na fase 5 (Entrega), o sistema também envia a notificação via webhook para o WhatsApp de quem criou o pedido (se tiver telefone cadastrado na conta PIN).<br>
-                <strong>Desativado:</strong> Apenas os números configurados na fase de Entrega recebem a notificação.
+                <strong>Ativado:</strong> Quando o checklist de entrega for gerado, além dos números configurados na fase 5 (Entrega), o sistema também envia a notificação para quem criou o pedido — via WhatsApp (se tiver telefone) e via e-mail (se tiver e-mail cadastrado na conta PIN).<br>
+                <strong>Desativado:</strong> Apenas os números/e-mails configurados na fase de Entrega recebem a notificação.
             </p>
         </div>
     </div>

@@ -31,6 +31,12 @@
                 </div>
                 <?php endif; ?>
 
+                <?php if (empty($user['phone'])): ?>
+                <div class="alert alert-warning small py-2">
+                    <i class="bi bi-exclamation-triangle"></i> <strong>Cadastre seu WhatsApp</strong> para continuar usando o sistema.
+                </div>
+                <?php endif; ?>
+
                 <form method="POST" action="/pin/minha-conta/salvar">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Nome completo *</label>
@@ -59,7 +65,7 @@
                         <i class="bi bi-check-circle"></i> Salvar
                     </button>
 
-                    <a href="/pedidos" class="btn btn-outline-secondary w-100 mt-2">
+                    <a href="/pedidos" class="btn btn-outline-secondary w-100 mt-2 <?= empty($user['phone']) ? 'd-none' : '' ?>">
                         <i class="bi bi-arrow-left"></i> Voltar
                     </a>
                 </form>
