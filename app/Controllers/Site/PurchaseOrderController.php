@@ -81,6 +81,15 @@ class PurchaseOrderController extends Controller
             );
         }
 
+        // Verificar estoque disponível para itens que foram para cotação
+        $stockAvailability = [];
+        $purchaseItems = array_filter($items, fn($it) => empty($it['source_type']) || $it['source_type'] === 'purchase');
+        $purchaseMaterialIds = array_values(array_filter(array_column($purchaseItems, 'material_id')));
+        if (!empty($purchaseMaterialIds)) {
+            $constructionSiteId = $order['construction_site_id'] ?? null;
+            $stockAvailability = \App\Models\StockItem::checkAvailability($purchaseMaterialIds, $constructionSiteId ? (int) $constructionSiteId : null);
+        }
+
         $this->view('site.orders.quote', [
             'order' => $order,
             'items' => $items,
@@ -89,6 +98,7 @@ class PurchaseOrderController extends Controller
             'priceHistory' => $priceHistory,
             'comments' => $comments,
             'itemPrices' => $itemPrices,
+            'stockAvailability' => $stockAvailability,
             'token' => $token,
             'pinUser' => \App\Controllers\Site\PinAuthController::getLoggedUser(),
             'allMaterials' => ($order['order_type'] ?? 'material') === 'service' ? \App\Models\Material::allActive() : [],

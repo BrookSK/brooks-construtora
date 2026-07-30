@@ -182,6 +182,59 @@
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
+
+                        <?php
+                        // Verificar itens de cotação que possuem estoque disponível
+                        $itemsWithStock = [];
+                        if (!empty($stockAvailability)) {
+                            foreach ($purchaseItems as $pItem) {
+                                if (empty($pItem['material_id'])) continue;
+                                $mid = (int) $pItem['material_id'];
+                                $otherStocks = $stockAvailability[$mid] ?? [];
+                                $localStock = $stockAvailability['local'][$mid] ?? null;
+                                if (!empty($otherStocks) || $localStock) {
+                                    $totalAvailable = 0;
+                                    $locations = [];
+                                    if ($localStock) {
+                                        $totalAvailable += (float) $localStock['quantity'];
+                                        $locations[] = ($localStock['site_name'] ?? $localStock['location_name'] ?? 'Estoque local') . ': ' . (($localStock['quantity'] == (int)$localStock['quantity']) ? (int)$localStock['quantity'] : number_format($localStock['quantity'], 2, ',', '.'));
+                                    }
+                                    foreach ($otherStocks as $s) {
+                                        $totalAvailable += (float) $s['quantity'];
+                                        $locations[] = ($s['site_name'] ?? $s['location_name'] ?? 'Outro estoque') . ': ' . (($s['quantity'] == (int)$s['quantity']) ? (int)$s['quantity'] : number_format($s['quantity'], 2, ',', '.'));
+                                    }
+                                    $itemsWithStock[] = [
+                                        'name' => $pItem['material_name'],
+                                        'qty_needed' => $pItem['quantity'],
+                                        'qty_available' => $totalAvailable,
+                                        'locations' => $locations,
+                                        'unit' => $pItem['unit'] ?? '',
+                                    ];
+                                }
+                            }
+                        }
+                        ?>
+
+                        <?php if (!empty($itemsWithStock)): ?>
+                        <div class="alert alert-warning small py-2 mt-2 mb-0">
+                            <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle"></i> Atenção: Itens abaixo foram enviados para cotação, porém há estoque disponível:</div>
+                            <?php foreach ($itemsWithStock as $iws): ?>
+                            <div class="d-flex flex-wrap align-items-start gap-1 py-1 <?= $iws !== end($itemsWithStock) ? 'border-bottom' : '' ?>" style="border-color: rgba(0,0,0,0.1) !important;">
+                                <div>
+                                    <strong><?= htmlspecialchars($iws['name']) ?></strong>
+                                    <span class="text-muted">(precisa <?= $iws['qty_needed'] == (int)$iws['qty_needed'] ? (int)$iws['qty_needed'] : number_format($iws['qty_needed'], 2, ',', '.') ?> <?= $iws['unit'] ?>)</span>
+                                    <br>
+                                    <small class="text-dark">
+                                        <i class="bi bi-box-seam"></i> Encontrado no estoque:
+                                        <?= implode(' | ', array_map('htmlspecialchars', $iws['locations'])) ?>
+                                        — <strong>Total: <?= $iws['qty_available'] == (int)$iws['qty_available'] ? (int)$iws['qty_available'] : number_format($iws['qty_available'], 2, ',', '.') ?> <?= $iws['unit'] ?></strong>
+                                    </small>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                            <div class="mt-1 fst-italic" style="font-size:0.7rem;">O solicitante optou por cotar mesmo assim. Cotação pode ser feita apenas da diferença se preferir.</div>
+                        </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Fornecedores para cotação -->
