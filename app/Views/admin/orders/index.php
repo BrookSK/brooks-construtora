@@ -441,6 +441,7 @@
             if (show && type && row.dataset.type !== type) show = false;
             if (show && financial && financial !== 'all' && row.dataset.financial !== financial) show = false;
             if (show && !financial && row.dataset.financial === 'reviewed') show = false;
+            if (show && activeStatus === 'all' && row.dataset.status === 'cancelled') show = false;
             if (show && from && row.dataset.date < from) show = false;
             if (show && to && row.dataset.date > to) show = false;
             if (show && requester && row.dataset.requester !== requester) show = false;
