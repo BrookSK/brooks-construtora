@@ -1556,6 +1556,15 @@ class PurchaseOrderController extends Controller
                     setcookie('pin_session', '', time() - 3600, '/');
                     return false;
                 }
+            } elseif (empty($_SESSION['pin_user_id']) && ($_SESSION['user_id'] ?? null) === 0) {
+                // Sessão do PIN global — verificar se ainda está ativo
+                $pinGlobalActive = Setting::get('orders_pin_global_active', '1') === '1';
+                if (!$pinGlobalActive) {
+                    unset($_SESSION['pin_auth'], $_SESSION['user_id'], $_SESSION['user_name'],
+                          $_SESSION['user_email'], $_SESSION['user_role']);
+                    setcookie('pin_session', '', time() - 3600, '/');
+                    return false;
+                }
             }
             return true;
         }
