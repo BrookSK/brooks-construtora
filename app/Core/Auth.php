@@ -50,7 +50,9 @@ class Auth
                 if (isset($_COOKIE['pin_session'])) {
                     setcookie('pin_session', '', time() - 3600, '/');
                 }
-                return false;
+                // Redirecionar para login de PIN (não para o admin/login)
+                header('Location: /pedidos/login');
+                exit;
             }
         }
 
