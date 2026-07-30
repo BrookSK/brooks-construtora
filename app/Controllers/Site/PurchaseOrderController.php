@@ -180,6 +180,10 @@ class PurchaseOrderController extends Controller
                         $item = PurchaseOrderItem::find((int) $itemId);
                         if ($item && $item['order_id'] == $order['id']) {
                             $qty = (float) $item['quantity'];
+                            // Descontar quantidade já comprada
+                            if (!empty($item['already_purchased']) && !empty($item['already_purchased_qty'])) {
+                                $qty = max(0, $qty - (float) $item['already_purchased_qty']);
+                            }
                             // Se quantidade é 0 (comum em serviços/locação), trata como 1
                             // para que o preço unitário informado seja o total
                             $totalPrice = $qty > 0 ? $unitPrice * $qty : $unitPrice;
