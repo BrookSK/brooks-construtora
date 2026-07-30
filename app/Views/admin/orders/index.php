@@ -103,6 +103,9 @@
                         <option value="">Financeiro</option>
                         <option value="reviewed">Conferido</option>
                         <option value="not_reviewed">Não conferido</option>
+                        <option value="all">Todos (incluir conferidos)</option>
+                    </select>
+                        <option value="not_reviewed">Não conferido</option>
                     </select>
                 </div>
                 <!-- Período -->
@@ -438,7 +441,8 @@
             if (show && supplier && row.dataset.supplier !== supplier) show = false;
             if (show && site && row.dataset.site !== site) show = false;
             if (show && type && row.dataset.type !== type) show = false;
-            if (show && financial && row.dataset.financial !== financial) show = false;
+            if (show && financial && financial !== 'all' && row.dataset.financial !== financial) show = false;
+            if (show && !financial && row.dataset.financial === 'reviewed') show = false;
             if (show && from && row.dataset.date < from) show = false;
             if (show && to && row.dataset.date > to) show = false;
             if (show && requester && row.dataset.requester !== requester) show = false;
