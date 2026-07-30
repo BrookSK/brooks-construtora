@@ -978,6 +978,7 @@ class PurchaseOrderController extends Controller
             'orders_approval_webhook',
             'orders_approval_phone',
             'orders_approval_phone_name',
+            'orders_approval_notify_mode',
             'orders_completed_emails',
             'orders_completed_webhook',
             'orders_completed_phone',

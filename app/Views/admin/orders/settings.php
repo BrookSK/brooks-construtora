@@ -163,6 +163,19 @@
                             <button type="button" class="btn btn-outline-info" onclick="testWebhook('approval')" title="Testar"><i class="bi bi-lightning"></i></button>
                         </div>
                     </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Modo de notificação</label>
+                        <select class="form-select form-select-sm" name="orders_approval_notify_mode">
+                            <option value="both" <?= ($settings['orders_approval_notify_mode'] ?? 'both') === 'both' ? 'selected' : '' ?>>Obra + Global (ambos)</option>
+                            <option value="site_only" <?= ($settings['orders_approval_notify_mode'] ?? '') === 'site_only' ? 'selected' : '' ?>>Só aprovadores da obra</option>
+                            <option value="global_only" <?= ($settings['orders_approval_notify_mode'] ?? '') === 'global_only' ? 'selected' : '' ?>>Só configurados aqui</option>
+                        </select>
+                        <small class="text-muted" style="font-size:0.65rem;">
+                            <strong>Obra + Global:</strong> Envia para os aprovadores da obra E para os configurados aqui.<br>
+                            <strong>Só obra:</strong> Envia apenas para os aprovadores vinculados à obra. Se a obra não tiver, usa o global como fallback.<br>
+                            <strong>Só global:</strong> Ignora os aprovadores da obra e envia só para os configurados aqui.
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>

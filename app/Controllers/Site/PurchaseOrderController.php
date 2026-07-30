@@ -1772,16 +1772,28 @@ class PurchaseOrderController extends Controller
             $siteApprovers = ConstructionSite::getApprovers((int) $order['construction_site_id']);
         }
 
-        // Sempre enviar para os e-mails globais
-        $emails = Setting::get('orders_approval_emails', '');
-        if (!empty($emails)) {
-            $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
-            $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
-            NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'approval_requested');
+        // Modo de notificação: both (padrão), site_only, global_only
+        $notifyMode = Setting::get('orders_approval_notify_mode', 'both');
+        $sendGlobal = in_array($notifyMode, ['both', 'global_only']);
+        $sendSite = in_array($notifyMode, ['both', 'site_only']) && !empty($siteApprovers);
+
+        // Se modo é site_only mas não tem aprovadores na obra, usa global como fallback
+        if ($notifyMode === 'site_only' && empty($siteApprovers)) {
+            $sendGlobal = true;
         }
 
-        // Também enviar e-mail para os aprovadores da obra (se tiver)
-        if (!empty($siteApprovers)) {
+        // E-mails globais
+        if ($sendGlobal) {
+            $emails = Setting::get('orders_approval_emails', '');
+            if (!empty($emails)) {
+                $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
+                $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
+                NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'approval_requested');
+            }
+        }
+
+        // E-mails dos aprovadores da obra
+        if ($sendSite) {
             $approverEmails = array_filter(array_column($siteApprovers, 'email'));
             if (!empty($approverEmails)) {
                 $extraEmails = implode(',', $approverEmails);
@@ -1827,8 +1839,8 @@ class PurchaseOrderController extends Controller
                 . $alreadyPurchasedInfo
                 . "*Link para aprovar/rejeitar:*\n{$approvalUrl}";
 
-            if (!empty($siteApprovers)) {
-                // Enviar também para os aprovadores da obra
+            if ($sendSite) {
+                // Enviar para os aprovadores da obra
                 $approverPhones = array_filter(array_column($siteApprovers, 'phone'));
                 $approverNames = array_filter(array_column($siteApprovers, 'name'));
                 if (!empty($approverPhones)) {
@@ -1847,19 +1859,21 @@ class PurchaseOrderController extends Controller
                 }
             }
 
-            // Sempre enviar para os globais
-            $this->sendWebhook($webhookUrl, [
-                'event' => 'approval_requested',
-                'order_code' => $order['code'],
-                'suppliers' => $suppliersData,
-                'total' => $order['total_estimated'],
-                'items_count' => count($items),
-                'approval_url' => $approvalUrl,
-                'quoted_by' => $order['quoted_by_name'],
-                'phone' => Setting::get('orders_approval_phone', ''),
-                'phone_name' => Setting::get('orders_approval_phone_name', ''),
-                'message' => $message,
-            ]);
+            // Enviar para os globais
+            if ($sendGlobal) {
+                $this->sendWebhook($webhookUrl, [
+                    'event' => 'approval_requested',
+                    'order_code' => $order['code'],
+                    'suppliers' => $suppliersData,
+                    'total' => $order['total_estimated'],
+                    'items_count' => count($items),
+                    'approval_url' => $approvalUrl,
+                    'quoted_by' => $order['quoted_by_name'],
+                    'phone' => Setting::get('orders_approval_phone', ''),
+                    'phone_name' => Setting::get('orders_approval_phone_name', ''),
+                    'message' => $message,
+                ]);
+            }
         }
     }
 
