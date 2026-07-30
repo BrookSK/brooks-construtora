@@ -36,7 +36,25 @@ class Auth
 
     public static function check(): bool
     {
-        return isset($_SESSION['user_id']);
+        if (!isset($_SESSION['user_id'])) {
+            return false;
+        }
+
+        // Se é sessão do PIN global (user_id = 0), verificar se ainda está ativo
+        if (($_SESSION['user_id'] === 0 || $_SESSION['user_id'] === '0') && !empty($_SESSION['pin_auth']) && empty($_SESSION['pin_user_id'])) {
+            $pinGlobalActive = \App\Models\Setting::get('orders_pin_global_active', '1') === '1';
+            if (!$pinGlobalActive) {
+                // Invalidar sessão do PIN global
+                unset($_SESSION['pin_auth'], $_SESSION['user_id'], $_SESSION['user_name'],
+                      $_SESSION['user_email'], $_SESSION['user_role'], $_SESSION['pin_auth_time']);
+                if (isset($_COOKIE['pin_session'])) {
+                    setcookie('pin_session', '', time() - 3600, '/');
+                }
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static function user(): ?array
