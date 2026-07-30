@@ -141,11 +141,12 @@
                     <div class="table-responsive mb-4">
                         <table class="table table-sm table-bordered">
                             <thead class="table-light">
-                                <tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th class="text-center">Qtd</th><th>Origem</th></tr>
+                                <tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th class="text-center">Qtd</th><th>Origem</th><th class="text-center" style="min-width:160px;">Já comprado?</th></tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($items as $i => $item): ?>
-                                <tr class="<?= !empty($item['source_type']) && $item['source_type'] !== 'purchase' ? 'table-success' : '' ?>">
+                                <?php $isPurchaseItem = empty($item['source_type']) || $item['source_type'] === 'purchase'; ?>
+                                <tr class="<?= !$isPurchaseItem ? 'table-success' : '' ?>" id="item-row-<?= $item['id'] ?>">
                                     <td><?= $i + 1 ?></td>
                                     <td><strong><?= htmlspecialchars($item['material_name']) ?></strong></td>
                                     <td class="text-muted small"><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
@@ -163,6 +164,21 @@
                                             <?php endif; ?>
                                         <?php else: ?>
                                             <span class="badge bg-warning text-dark"><i class="bi bi-cart"></i> Cotação</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <?php if ($isPurchaseItem): ?>
+                                        <div class="d-flex flex-column align-items-center gap-1">
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" name="already_purchased[<?= $item['id'] ?>]" value="1" id="ap-<?= $item['id'] ?>" onchange="togglePurchasedPrice(<?= $item['id'] ?>, this.checked)" <?= !empty($item['already_purchased']) ? 'checked' : '' ?>>
+                                                <label class="form-check-label small" for="ap-<?= $item['id'] ?>">Sim</label>
+                                            </div>
+                                            <div id="ap-price-<?= $item['id'] ?>" style="display:<?= !empty($item['already_purchased']) ? 'block' : 'none' ?>;">
+                                                <input type="text" class="form-control form-control-sm text-center" name="already_purchased_price[<?= $item['id'] ?>]" placeholder="R$ 0,00" style="width:110px; font-size:0.75rem;" value="<?= !empty($item['already_purchased_price']) ? number_format($item['already_purchased_price'], 2, ',', '.') : '' ?>">
+                                            </div>
+                                        </div>
+                                        <?php else: ?>
+                                        <span class="text-muted small">—</span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -403,6 +419,28 @@
         return num.toFixed(2).replace('.', ',');
     }
     // ────────────────────────────────────────────────────────────────────────
+
+    // ─── Já comprado (toggle) ────────────────────────────────────────────────
+    function togglePurchasedPrice(itemId, checked) {
+        const priceDiv = document.getElementById('ap-price-' + itemId);
+        if (priceDiv) {
+            priceDiv.style.display = checked ? 'block' : 'none';
+            if (!checked) {
+                priceDiv.querySelector('input').value = '';
+            }
+        }
+        // Highlight da linha
+        const row = document.getElementById('item-row-' + itemId);
+        if (row) {
+            row.classList.toggle('table-info', checked);
+        }
+    }
+    // Inicializar linhas já marcadas
+    document.querySelectorAll('[id^="ap-"][type="checkbox"]:checked').forEach(cb => {
+        const itemId = cb.id.replace('ap-', '');
+        const row = document.getElementById('item-row-' + itemId);
+        if (row) row.classList.add('table-info');
+    });
 
     // ─── Modo de entrada de preço (unitário vs total) ────────────────────────
     let priceMode = 'total'; // 'unit' ou 'total' — padrão: total

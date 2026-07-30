@@ -1179,9 +1179,14 @@ class PurchaseOrderController extends Controller
             $totalPrice = $item['total_price'] ?? 0;
             $subtotalInsumos += $totalPrice;
 
+            $materialLabel = $item['material_name'];
+            if (!empty($item['already_purchased'])) {
+                $materialLabel .= ' [JÁ COMPRADO' . ($item['already_purchased_price'] ? ' - R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '') . ']';
+            }
+
             $row = [
                 $i + 1,
-                $item['material_name'],
+                $materialLabel,
                 $item['specification'] ?? '',
                 $item['classification'] ?? '',
                 $item['unit'] ?? '',
@@ -1272,10 +1277,14 @@ class PurchaseOrderController extends Controller
         $supplierFinal = $approvedSupplier ? $approvedSupplier['supplier_name'] : ($order['supplier_name'] ?? '');
 
         foreach ($items as $item) {
+            $materialLabel2 = $item['material_name'] . ($item['classification'] ? ' - ' . $item['classification'] : '');
+            if (!empty($item['already_purchased'])) {
+                $materialLabel2 .= ' [JÁ COMPRADO]';
+            }
             $xlsx->addRow([
                 $order['code'],
                 date('d/m/Y', strtotime($order['created_at'])),
-                $item['material_name'] . ($item['classification'] ? ' - ' . $item['classification'] : ''),
+                $materialLabel2,
                 $supplierFinal,
                 $item['unit_price'] ?? 0,
                 $item['total_price'] ?? 0,

@@ -327,6 +327,29 @@ class PurchaseOrderController extends Controller
             $lowestTotal = $totalEstimated;
         }
 
+        // Processar itens marcados como "já comprado"
+        $alreadyPurchased = $_POST['already_purchased'] ?? [];
+        $alreadyPurchasedPrices = $_POST['already_purchased_price'] ?? [];
+        foreach ($items as $item) {
+            $itemId = (int) $item['id'];
+            if (isset($alreadyPurchased[$itemId])) {
+                $priceStr = $alreadyPurchasedPrices[$itemId] ?? '0';
+                $price = (float) str_replace(['.', ','], ['', '.'], $priceStr);
+                PurchaseOrderItem::updateById($itemId, [
+                    'already_purchased' => 1,
+                    'already_purchased_price' => $price > 0 ? $price : null,
+                ]);
+            } else {
+                // Desmarcar se estava marcado antes
+                if (!empty($item['already_purchased'])) {
+                    PurchaseOrderItem::updateById($itemId, [
+                        'already_purchased' => 0,
+                        'already_purchased_price' => null,
+                    ]);
+                }
+            }
+        }
+
         // Atualizar pedido
         PurchaseOrder::updateById($order['id'], [
             'status' => 'pending_approval',
@@ -791,7 +814,7 @@ class PurchaseOrderController extends Controller
 
             $row = [
                 $i + 1,
-                $item['material_name'],
+                $item['material_name'] . (!empty($item['already_purchased']) ? ' [JÁ COMPRADO' . ($item['already_purchased_price'] ? ' - R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '') . ']' : ''),
                 $item['specification'] ?? '',
                 $item['classification'] ?? '',
                 $item['unit'] ?? '',
@@ -1658,12 +1681,25 @@ class PurchaseOrderController extends Controller
                 $supplierComparison .= "\n";
             }
 
+            // Itens já comprados
+            $alreadyPurchasedInfo = '';
+            $alreadyPurchasedList = array_filter($items, fn($it) => !empty($it['already_purchased']));
+            if (!empty($alreadyPurchasedList)) {
+                $alreadyPurchasedInfo = "*⚠️ Itens já comprados antes da cotação:*\n";
+                foreach ($alreadyPurchasedList as $api) {
+                    $priceLabel = $api['already_purchased_price'] ? 'R$ ' . number_format($api['already_purchased_price'], 2, ',', '.') : 'valor não informado';
+                    $alreadyPurchasedInfo .= "- {$api['material_name']} ({$priceLabel})\n";
+                }
+                $alreadyPurchasedInfo .= "\n";
+            }
+
             $message = "*PEDIDO AGUARDANDO APROVAÇÃO*\n\n"
                 . "*Pedido:* {$order['code']}\n"
                 . "*Itens:* " . count($items) . "\n"
                 . "*Cotado por:* {$order['quoted_by_name']}\n"
                 . "*Data cotação:* " . date('d/m/Y H:i', strtotime($order['quoted_at'])) . "\n\n"
                 . $supplierComparison
+                . $alreadyPurchasedInfo
                 . "*Link para aprovar/rejeitar:*\n{$approvalUrl}";
 
             $this->sendWebhook($webhookUrl, [
@@ -1722,8 +1758,19 @@ class PurchaseOrderController extends Controller
                 . "*Pedido:* {$order['code']}\n"
                 . "*Fornecedor(es):* {$supplierDisplay}\n"
                 . "*Valor Total:* {$totalFormatted}\n"
-                . "*Aprovado por:* {$order['approved_by_name']}\n\n"
-                . "*PDF do pedido:*\n{$pdfUrl}\n\n"
+                . "*Aprovado por:* {$order['approved_by_name']}\n";
+
+            // Itens já comprados
+            $alreadyPurchasedList = array_filter($items, fn($it) => !empty($it['already_purchased']));
+            if (!empty($alreadyPurchasedList)) {
+                $message .= "\n*⚠️ Itens já comprados:*\n";
+                foreach ($alreadyPurchasedList as $api) {
+                    $priceLabel = $api['already_purchased_price'] ? 'R$ ' . number_format($api['already_purchased_price'], 2, ',', '.') : '-';
+                    $message .= "- {$api['material_name']} ({$priceLabel})\n";
+                }
+            }
+
+            $message .= "\n*PDF do pedido:*\n{$pdfUrl}\n\n"
                 . "*Planilha do pedido:*\n{$xlsxUrl}";
 
             $this->sendWebhook($webhookUrl, [

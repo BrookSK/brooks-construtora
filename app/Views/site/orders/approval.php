@@ -195,6 +195,21 @@
                 </div>
                 <?php endif; ?>
 
+                <?php
+                $alreadyPurchasedItems = array_filter($items, fn($it) => !empty($it['already_purchased']));
+                ?>
+                <?php if (!empty($alreadyPurchasedItems)): ?>
+                <div class="alert alert-info small py-2 mb-3">
+                    <i class="bi bi-bag-check"></i> <strong><?= count($alreadyPurchasedItems) ?> item(ns) já comprado(s)</strong> antes da cotação:
+                    <?php foreach ($alreadyPurchasedItems as $api): ?>
+                    <div class="d-flex justify-content-between small py-1 mt-1 border-top" style="border-color:rgba(0,0,0,0.1)!important;">
+                        <span><?= htmlspecialchars($api['material_name']) ?> (<?= number_format($api['quantity'], $api['quantity'] == (int)$api['quantity'] ? 0 : 2) ?> <?= $api['unit'] ?? '' ?>)</span>
+                        <span class="fw-bold"><?= $api['already_purchased_price'] ? 'R$ ' . number_format($api['already_purchased_price'], 2, ',', '.') : '—' ?></span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+
                 <p class="text-muted small mb-3"><i class="bi bi-info-circle"></i> Você pode escolher fornecedores diferentes para cada material.</p>
                 <!-- Toggle de visualização -->
                 <?php if (count($orderSuppliers) >= 2): ?>
@@ -215,7 +230,12 @@
                 <?php foreach ($itemsToApprove as $item): ?>
                 <div class="item-card" id="item-card-<?= $item['id'] ?>">
                     <div class="item-info">
-                        <div class="item-title"><?= htmlspecialchars($item['material_name']) ?></div>
+                        <div class="item-title">
+                            <?= htmlspecialchars($item['material_name']) ?>
+                            <?php if (!empty($item['already_purchased'])): ?>
+                            <span class="badge bg-info" style="font-size:0.6rem;"><i class="bi bi-bag-check"></i> Já comprado<?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
+                            <?php endif; ?>
+                        </div>
                         <div class="item-qty">Qtd: <?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?><?= $item['unit'] ? ' ' . $item['unit'] : '' ?></div>
                     </div>
                     <div class="supplier-options">
@@ -260,6 +280,9 @@
                             <tr>
                                 <td style="position:sticky; left:0; background:#fff; z-index:1;">
                                     <strong style="font-size:0.72rem;"><?= htmlspecialchars($item['material_name']) ?></strong>
+                                    <?php if (!empty($item['already_purchased'])): ?>
+                                    <br><span class="badge bg-info" style="font-size:0.55rem;"><i class="bi bi-bag-check"></i> Já comprado<?= $item['already_purchased_price'] ? ' R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="text-center"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
                                 <?php foreach ($orderSuppliers as $os): ?>
