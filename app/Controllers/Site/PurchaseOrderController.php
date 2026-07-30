@@ -1810,6 +1810,23 @@ class PurchaseOrderController extends Controller
                 'phone_name' => Setting::get('orders_delivery_phone_name', ''),
                 'message' => $message,
             ], $orderId);
+
+            // Notificar o solicitante do pedido (se configuração ativa e tiver telefone)
+            if (Setting::get('orders_notify_requester_delivery', '0') === '1' && !empty($order['created_by'])) {
+                $requester = PinUser::find((int) $order['created_by']);
+                if ($requester && !empty($requester['phone']) && $requester['active']) {
+                    $this->sendWebhook($webhookUrl, [
+                        'event' => 'delivery_checklist_ready',
+                        'order_code' => $order['code'],
+                        'suppliers' => $supplierNames,
+                        'items_count' => count($items),
+                        'checklist_url' => $checklistUrl,
+                        'phone' => $requester['phone'],
+                        'phone_name' => $requester['name'],
+                        'message' => $message,
+                    ], $orderId);
+                }
+            }
         }
 
         PurchaseOrderHistory::log($orderId, 'delivery_init', 'Checklist de entrega criado automaticamente na aprovação', $order['approved_by_name'] ?? 'Sistema');

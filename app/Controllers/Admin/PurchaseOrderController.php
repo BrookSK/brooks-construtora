@@ -21,6 +21,7 @@ use App\Models\Material;
 use App\Models\MaterialCategory;
 use App\Models\MeasurementUnit;
 use App\Models\Setting;
+use App\Models\PinUser;
 use App\Services\MailService;
 use App\Services\XlsxService;
 use App\Services\EmailTemplate;
@@ -1006,6 +1007,7 @@ class PurchaseOrderController extends Controller
             'require_pin_login',
             'orders_require_pin_login',
             'orders_require_transfer_approval',
+            'orders_notify_requester_delivery',
             'spare_items_weekly_budget',
         ];
 
@@ -1025,6 +1027,9 @@ class PurchaseOrderController extends Controller
         }
         if (!isset($_POST['orders_pin_global_active'])) {
             $data['orders_pin_global_active'] = '0';
+        }
+        if (!isset($_POST['orders_notify_requester_delivery'])) {
+            $data['orders_notify_requester_delivery'] = '0';
         }
 
         Setting::setMultiple($data);
@@ -2052,6 +2057,23 @@ class PurchaseOrderController extends Controller
                 'phone_name' => Setting::get('orders_delivery_phone_name', ''),
                 'message' => $message,
             ]);
+
+            // Notificar o solicitante do pedido (se configuração ativa e tiver telefone)
+            if (Setting::get('orders_notify_requester_delivery', '0') === '1' && !empty($order['created_by'])) {
+                $requester = PinUser::find((int) $order['created_by']);
+                if ($requester && !empty($requester['phone']) && $requester['active']) {
+                    $this->sendWebhook($webhookUrl, [
+                        'event' => 'delivery_checklist_ready',
+                        'order_code' => $order['code'],
+                        'suppliers' => $supplierNames,
+                        'items_count' => count($items),
+                        'checklist_url' => $checklistUrl,
+                        'phone' => $requester['phone'],
+                        'phone_name' => $requester['name'],
+                        'message' => $message,
+                    ]);
+                }
+            }
         }
     }
 
@@ -2492,6 +2514,19 @@ class PurchaseOrderController extends Controller
         if (!in_array($role, $validRoles)) $role = 'all';
         Database::update('pin_users', ['role' => $role], 'id = ?', [$id]);
         $this->setFlash('success', 'Permissão atualizada.');
+        $this->redirect('/admin/orders/pin-users');
+    }
+
+    /**
+     * Atualizar telefone do usuário PIN
+     */
+    public function updatePinUserPhone(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/admin/orders/pin-users'); return; }
+        $id = (int) $this->input('id');
+        $phone = preg_replace('/[^0-9]/', '', $this->input('phone', ''));
+        Database::update('pin_users', ['phone' => $phone ?: null], 'id = ?', [$id]);
+        $this->setFlash('success', 'Telefone atualizado.');
         $this->redirect('/admin/orders/pin-users');
     }
 

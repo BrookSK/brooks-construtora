@@ -91,7 +91,7 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
             <div class="table-responsive">
                 <table class="table table-sm mb-0" style="font-size:0.8rem;">
                     <thead class="table-light">
-                        <tr><th>Nome</th><th>PIN</th><th>Permissão</th><th>E-mail</th><th>Último login</th><th></th></tr>
+                        <tr><th>Nome</th><th>PIN</th><th>Permissão</th><th>Telefone</th><th>E-mail</th><th>Último login</th><th></th></tr>
                     </thead>
                     <tbody>
                     <?php foreach ($users as $u): ?>
@@ -109,6 +109,15 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
                                     <option value="epi" <?= $u['role'] === 'epi' ? 'selected' : '' ?>>EPI</option>
                                     <option value="all" <?= $u['role'] === 'all' ? 'selected' : '' ?>>Completo</option>
                                 </select>
+                            </form>
+                        </td>
+                        <td>
+                            <form method="POST" action="/admin/orders/update-pin-user-phone" class="d-inline">
+                                <input type="hidden" name="id" value="<?= $u['id'] ?>">
+                                <div class="input-group input-group-sm" style="width:155px;">
+                                    <input type="text" class="form-control" name="phone" value="<?= htmlspecialchars($u['phone'] ?? '') ?>" placeholder="5511999999999" style="font-size:0.7rem;">
+                                    <button class="btn btn-outline-success p-0 px-1" title="Salvar telefone"><i class="bi bi-check"></i></button>
+                                </div>
                             </form>
                         </td>
                         <td><small><?= htmlspecialchars($u['email'] ?? '-') ?></small></td>

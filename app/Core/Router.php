@@ -140,6 +140,7 @@ class Router
             'orders/delete-invite' => ['PurchaseOrderController', 'deleteInvite'],
             'orders/delete-pin-user' => ['PurchaseOrderController', 'deletePinUser'],
             'orders/update-pin-user' => ['PurchaseOrderController', 'updatePinUser'],
+            'orders/update-pin-user-phone' => ['PurchaseOrderController', 'updatePinUserPhone'],
             'orders/send-invite-webhook' => ['PurchaseOrderController', 'sendInviteWebhook'],
 
             // Obras
@@ -359,6 +360,8 @@ class Router
             'pin/store' => ['PinAuthController', 'store'],
             'pin/recover' => ['PinAuthController', 'recover'],
             'pin/logout' => ['PinAuthController', 'logout'],
+            'pin/minha-conta' => ['PinAuthController', 'myAccount'],
+            'pin/minha-conta/salvar' => ['PinAuthController', 'updateAccount'],
 
             // Controle de EPIs (protegido por PIN individual)
             'cadastro-de-epi' => ['EpiController', 'catalog'],

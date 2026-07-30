@@ -89,6 +89,21 @@
         </div>
     </div>
 
+    <!-- Notificar Solicitante na Entrega -->
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-bell"></i> <strong>Notificar Solicitante</strong></div>
+        <div class="card-body">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="orders_notify_requester_delivery" value="1" id="notifyRequesterDelivery" <?= ($settings['orders_notify_requester_delivery'] ?? '0') === '1' ? 'checked' : '' ?>>
+                <label class="form-check-label fw-bold" for="notifyRequesterDelivery">Notificar quem solicitou o pedido na fase de entrega</label>
+            </div>
+            <p class="text-muted small mt-2 mb-0">
+                <strong>Ativado:</strong> Quando o checklist de entrega for gerado, além dos números configurados na fase 5 (Entrega), o sistema também envia a notificação via webhook para o WhatsApp de quem criou o pedido (se tiver telefone cadastrado na conta PIN).<br>
+                <strong>Desativado:</strong> Apenas os números configurados na fase de Entrega recebem a notificação.
+            </p>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Fase 1: Cotação -->
         <div class="col-12 col-lg-3 mb-3">

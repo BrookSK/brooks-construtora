@@ -215,6 +215,80 @@ class PinAuthController extends Controller
     }
 
     /**
+     * Tela Minha Conta
+     */
+    public function myAccount(): void
+    {
+        $user = self::getLoggedUser();
+        if (!$user) {
+            $this->redirect('/pin/login?redirect=/pin/minha-conta');
+            return;
+        }
+
+        $this->view('site.pin.my_account', [
+            'user' => $user,
+            'flash' => $this->getFlash(),
+        ]);
+    }
+
+    /**
+     * Salvar alterações da conta
+     */
+    public function updateAccount(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/pin/minha-conta'); return; }
+
+        $user = self::getLoggedUser();
+        if (!$user) { $this->redirect('/pin/login'); return; }
+
+        $name = trim($this->input('name', ''));
+        $email = trim($this->input('email', ''));
+        $phone = preg_replace('/[^0-9]/', '', $this->input('phone', ''));
+        $newPin = trim($this->input('new_pin', ''));
+
+        if (empty($name)) {
+            $this->setFlash('error', 'O nome é obrigatório.');
+            $this->redirect('/pin/minha-conta');
+            return;
+        }
+
+        $data = [
+            'name' => $name,
+            'email' => $email ?: null,
+            'phone' => $phone ?: null,
+        ];
+
+        // Se informou novo PIN, validar
+        if (!empty($newPin)) {
+            if (strlen($newPin) !== 4 || !ctype_digit($newPin)) {
+                $this->setFlash('error', 'O PIN deve ter exatamente 4 dígitos numéricos.');
+                $this->redirect('/pin/minha-conta');
+                return;
+            }
+
+            if (!PinUser::isPinAvailable($newPin, $user['id'])) {
+                $this->setFlash('error', 'Este PIN já está em uso. Escolha outro.');
+                $this->redirect('/pin/minha-conta');
+                return;
+            }
+
+            $globalPin = \App\Models\Setting::get('orders_pin_code', '');
+            if (!empty($globalPin) && $newPin === $globalPin) {
+                $this->setFlash('error', 'Este PIN é reservado pelo sistema. Escolha outro.');
+                $this->redirect('/pin/minha-conta');
+                return;
+            }
+
+            $data['pin'] = $newPin;
+        }
+
+        PinUser::updateById($user['id'], $data);
+
+        $this->setFlash('success', 'Dados atualizados com sucesso!');
+        $this->redirect('/pin/minha-conta');
+    }
+
+    /**
      * Verifica se o usuário está logado por PIN (estático, usado como middleware)
      */
     public static function getLoggedUser(): ?array

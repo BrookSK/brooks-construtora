@@ -322,6 +322,13 @@
                     <i class="bi bi-box-arrow-up-right"></i> Ver Site
                 </a>
             </li>
+            <?php if (!empty($_SESSION['pin_auth'])): ?>
+            <li class="nav-item">
+                <a class="nav-link" href="/pin/minha-conta">
+                    <i class="bi bi-person-circle"></i> Minha Conta
+                </a>
+            </li>
+            <?php endif; ?>
             <li class="nav-item">
                 <a class="nav-link" href="/admin/logout" style="color: var(--color-accent);">
                     <i class="bi bi-box-arrow-left"></i> Sair
