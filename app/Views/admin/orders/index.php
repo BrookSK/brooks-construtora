@@ -52,8 +52,12 @@
         <div class="filters-panel">
             <div class="row g-2">
                 <!-- Busca -->
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-3">
                     <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Buscar por código, obra, fornecedor...">
+                </div>
+                <!-- Busca Material -->
+                <div class="col-12 col-md-3">
+                    <input type="text" id="filterMaterial" class="form-control form-control-sm" placeholder="Buscar por material/item...">
                 </div>
                 <!-- Fornecedor -->
                 <div class="col-6 col-md-2">
@@ -187,6 +191,7 @@
                         data-financial="<?= !empty($order['financial_reviewed_at']) ? 'reviewed' : 'not_reviewed' ?>"
                         data-date="<?= date('Y-m-d', strtotime($order['created_at'])) ?>"
                         data-requester="<?= htmlspecialchars($order['created_by_name'] ?? '') ?>"
+                        data-items="<?= htmlspecialchars(strtolower($order['items_names'] ?? '')) ?>"
                         data-search="<?= htmlspecialchars(strtolower(($order['code'] ?? '') . ' ' . ($order['supplier_name'] ?? '') . ' ' . $siteName . ' ' . ($order['created_by_name'] ?? '') . ' ' . ($order['description'] ?? ''))) ?>">
                         <td>
                             <a href="/admin/orders/show/<?= $order['id'] ?>" class="fw-bold text-decoration-none">
@@ -212,6 +217,10 @@
                         <td>
                             <?php $orderTotal = $order['display_total'] ?? $order['total_estimated']; ?>
                             <?= $orderTotal > 0 ? '<strong>R$ ' . number_format($orderTotal, 2, ',', '.') . '</strong>' : '<span class="text-muted">-</span>' ?>
+                            <?php $nfTotal = (float)($order['nf_total'] ?? 0); ?>
+                            <?php if ($nfTotal > 0 && $nfTotal != $orderTotal): ?>
+                            <br><small class="text-muted" title="Valor NF"><i class="bi bi-receipt"></i> NF: R$ <?= number_format($nfTotal, 2, ',', '.') ?></small>
+                            <?php endif; ?>
                         </td>
                         <td><?= htmlspecialchars($order['created_by_name'] ?? '-') ?></td>
                         <td><small class="text-muted"><?= date('d/m/Y', strtotime($order['created_at'])) ?></small></td>
@@ -250,6 +259,7 @@
        data-financial="<?= !empty($order['financial_reviewed_at']) ? 'reviewed' : 'not_reviewed' ?>"
        data-date="<?= date('Y-m-d', strtotime($order['created_at'])) ?>"
        data-requester="<?= htmlspecialchars($order['created_by_name'] ?? '') ?>"
+       data-items="<?= htmlspecialchars(strtolower($order['items_names'] ?? '')) ?>"
        data-search="<?= htmlspecialchars(strtolower(($order['code'] ?? '') . ' ' . ($order['supplier_name'] ?? '') . ' ' . $siteName . ' ' . ($order['created_by_name'] ?? '') . ' ' . ($order['description'] ?? ''))) ?>">
         <div class="card mb-2">
             <div class="card-body py-2 px-3">
@@ -267,10 +277,16 @@
                 </div>
                 <div class="d-flex justify-content-between align-items-center mt-1">
                     <span class="text-muted small"><?= htmlspecialchars($order['supplier_name'] ?? 'Sem fornecedor') ?></span>
-                    <?php $orderTotal = $order['display_total'] ?? $order['total_estimated']; ?>
-                    <?php if ($orderTotal > 0): ?>
-                    <strong class="text-success small">R$ <?= number_format($orderTotal, 2, ',', '.') ?></strong>
-                    <?php endif; ?>
+                    <div class="text-end">
+                        <?php $orderTotal = $order['display_total'] ?? $order['total_estimated']; ?>
+                        <?php if ($orderTotal > 0): ?>
+                        <strong class="text-success small">R$ <?= number_format($orderTotal, 2, ',', '.') ?></strong>
+                        <?php endif; ?>
+                        <?php $nfTotal = (float)($order['nf_total'] ?? 0); ?>
+                        <?php if ($nfTotal > 0 && $nfTotal != $orderTotal): ?>
+                        <br><span class="text-muted" style="font-size:0.65rem;"><i class="bi bi-receipt"></i> NF: R$ <?= number_format($nfTotal, 2, ',', '.') ?></span>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <?php if (!empty($order['construction_site_name'])): ?>
                 <div class="mt-1">
@@ -295,6 +311,7 @@
     const rows = document.querySelectorAll('.order-row');
     const statusBtns = document.querySelectorAll('.filter-btn');
     const searchInput = document.getElementById('filterSearch');
+    const materialInput = document.getElementById('filterMaterial');
     const supplierSelect = document.getElementById('filterSupplier');
     const siteSelect = document.getElementById('filterSite');
     const typeSelect = document.getElementById('filterType');
@@ -317,6 +334,7 @@
             data = {
                 status: params.get('status') || 'all',
                 q: params.get('q') || '',
+                material: params.get('material') || '',
                 supplier: params.get('supplier') || '',
                 site: params.get('site') || '',
                 type: params.get('type') || '',
@@ -342,6 +360,7 @@
             statusBtns.forEach(b => b.classList.toggle('active', b.dataset.status === activeStatus));
         }
         if (data.q && searchInput) searchInput.value = data.q;
+        if (data.material && materialInput) materialInput.value = data.material;
         if (data.supplier && supplierSelect) supplierSelect.value = data.supplier;
         if (data.site && siteSelect) siteSelect.value = data.site;
         if (data.type && typeSelect) typeSelect.value = data.type;
@@ -351,7 +370,7 @@
         if (data.requester && requesterSelect) requesterSelect.value = data.requester;
 
         // Abrir painel se algum filtro avançado estiver ativo
-        if (data.q || data.supplier || data.site || data.type || data.financial || data.from || data.to || data.requester) {
+        if (data.q || data.material || data.supplier || data.site || data.type || data.financial || data.from || data.to || data.requester) {
             const panel = document.getElementById('advancedFilters');
             if (panel && typeof bootstrap !== 'undefined') {
                 new bootstrap.Collapse(panel, { show: true });
@@ -366,6 +385,7 @@
         const data = {
             status: activeStatus,
             q: searchInput ? searchInput.value.trim() : '',
+            material: materialInput ? materialInput.value.trim() : '',
             supplier: supplierSelect ? supplierSelect.value : '',
             site: siteSelect ? siteSelect.value : '',
             type: typeSelect ? typeSelect.value : '',
@@ -382,6 +402,7 @@
         const params = new URLSearchParams();
         if (data.status !== 'all') params.set('status', data.status);
         if (data.q) params.set('q', data.q);
+        if (data.material) params.set('material', data.material);
         if (data.supplier) params.set('supplier', data.supplier);
         if (data.site) params.set('site', data.site);
         if (data.type) params.set('type', data.type);
@@ -397,6 +418,7 @@
 
     function applyFilters() {
         const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
+        const material = (materialInput ? materialInput.value : '').toLowerCase().trim();
         const supplier = supplierSelect ? supplierSelect.value : '';
         const site = siteSelect ? siteSelect.value : '';
         const type = typeSelect ? typeSelect.value : '';
@@ -412,6 +434,7 @@
 
             if (activeStatus !== 'all' && row.dataset.status !== activeStatus) show = false;
             if (show && search && !(row.dataset.search || '').includes(search)) show = false;
+            if (show && material && !(row.dataset.items || '').includes(material)) show = false;
             if (show && supplier && row.dataset.supplier !== supplier) show = false;
             if (show && site && row.dataset.site !== site) show = false;
             if (show && type && row.dataset.type !== type) show = false;
@@ -441,6 +464,7 @@
 
     // Advanced filters
     if (searchInput) searchInput.addEventListener('input', applyFilters);
+    if (materialInput) materialInput.addEventListener('input', applyFilters);
     if (supplierSelect) supplierSelect.addEventListener('change', applyFilters);
     if (siteSelect) siteSelect.addEventListener('change', applyFilters);
     if (typeSelect) typeSelect.addEventListener('change', applyFilters);
@@ -453,6 +477,7 @@
     if (clearBtn) {
         clearBtn.addEventListener('click', function() {
             if (searchInput) searchInput.value = '';
+            if (materialInput) materialInput.value = '';
             if (supplierSelect) supplierSelect.value = '';
             if (siteSelect) siteSelect.value = '';
             if (typeSelect) typeSelect.value = '';

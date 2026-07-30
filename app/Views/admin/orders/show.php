@@ -119,6 +119,17 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         }
                         ?>
                         <strong class="text-success fs-5">R$ <?= number_format($displayTotal, 2, ',', '.') ?></strong>
+                        <?php
+                        $nfTotal = 0;
+                        if (!empty($payments)) {
+                            foreach ($payments as $p) {
+                                $nfTotal += (float)($p['amount'] ?? 0);
+                            }
+                        }
+                        ?>
+                        <?php if ($nfTotal > 0 && $nfTotal != $displayTotal): ?>
+                        <br><small class="text-muted"><i class="bi bi-receipt"></i> NF: <strong>R$ <?= number_format($nfTotal, 2, ',', '.') ?></strong></small>
+                        <?php endif; ?>
                     </div>
                     <?php endif; ?>
                     <?php if (!empty($order['quoted_by_name'])): ?>

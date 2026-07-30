@@ -99,7 +99,9 @@ class PurchaseOrder extends Model
                  COALESCE(
                     (SELECT pos.subtotal_final FROM purchase_order_suppliers pos WHERE pos.order_id = po.id AND pos.approved = 1 LIMIT 1),
                     po.total_estimated
-                 ) as display_total
+                 ) as display_total,
+                 (SELECT COALESCE(SUM(pop.amount), 0) FROM purchase_order_payments pop WHERE pop.order_id = po.id) as nf_total,
+                 (SELECT GROUP_CONCAT(poi.material_name SEPARATOR ' | ') FROM purchase_order_items poi WHERE poi.order_id = po.id) as items_names
                  FROM purchase_orders po
                  LEFT JOIN suppliers s ON po.supplier_id = s.id
                  LEFT JOIN construction_sites cs ON po.construction_site_id = cs.id
@@ -111,7 +113,9 @@ class PurchaseOrder extends Model
              COALESCE(
                 (SELECT pos.subtotal_final FROM purchase_order_suppliers pos WHERE pos.order_id = po.id AND pos.approved = 1 LIMIT 1),
                 po.total_estimated
-             ) as display_total
+             ) as display_total,
+             (SELECT COALESCE(SUM(pop.amount), 0) FROM purchase_order_payments pop WHERE pop.order_id = po.id) as nf_total,
+             (SELECT GROUP_CONCAT(poi.material_name SEPARATOR ' | ') FROM purchase_order_items poi WHERE poi.order_id = po.id) as items_names
              FROM purchase_orders po
              LEFT JOIN suppliers s ON po.supplier_id = s.id
              ORDER BY {$orderBy}"
