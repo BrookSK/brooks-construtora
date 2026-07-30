@@ -143,6 +143,10 @@ class PurchaseOrderController extends Controller
         $supplierIds = $_POST['supplier_ids'] ?? [];
         $lowestTotal = PHP_FLOAT_MAX;
 
+        // Pré-processar "já comprado" do POST para usar no cálculo de preços
+        $alreadyPurchasedPost = $_POST['already_purchased'] ?? [];
+        $alreadyPurchasedQtysPost = $_POST['already_purchased_qty'] ?? [];
+
         // Se fornecedores foram adicionados na cotação (novo fluxo)
         if (!empty($supplierIds)) {
             foreach ($supplierIds as $sid) {
@@ -180,8 +184,12 @@ class PurchaseOrderController extends Controller
                         $item = PurchaseOrderItem::find((int) $itemId);
                         if ($item && $item['order_id'] == $order['id']) {
                             $qty = (float) $item['quantity'];
-                            // Descontar quantidade já comprada
-                            if (!empty($item['already_purchased']) && !empty($item['already_purchased_qty'])) {
+                            // Descontar quantidade já comprada (do POST, pois ainda não foi salvo no banco)
+                            if (isset($alreadyPurchasedPost[$itemId])) {
+                                $apQty = isset($alreadyPurchasedQtysPost[$itemId]) ? (float) $alreadyPurchasedQtysPost[$itemId] : $qty;
+                                $qty = max(0, $qty - $apQty);
+                            } elseif (!empty($item['already_purchased']) && !empty($item['already_purchased_qty'])) {
+                                // Fallback: se já estava salvo no banco (edição sem alterar o checkbox)
                                 $qty = max(0, $qty - (float) $item['already_purchased_qty']);
                             }
                             // Se quantidade é 0 (comum em serviços/locação), trata como 1
