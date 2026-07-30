@@ -155,7 +155,7 @@ class ConstructionSite extends Model
     public static function getAvailableApprovers(): array
     {
         return Database::fetchAll(
-            "SELECT * FROM pin_users WHERE active = 1 AND role IN ('approver', 'all') ORDER BY name ASC"
+            "SELECT * FROM pin_users WHERE active = 1 AND role IN ('approver', 'all', 'payment') ORDER BY name ASC"
         );
     }
 }
