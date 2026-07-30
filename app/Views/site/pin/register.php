@@ -42,6 +42,12 @@
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label small fw-bold">WhatsApp *</label>
+                        <input type="text" class="form-control" name="phone" inputmode="numeric" required placeholder="5511999999999">
+                        <small class="text-muted">DDD + número (ex: 5511999999999). Usado para receber notificações.</small>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label small fw-bold">PIN de 4 dígitos *</label>
                         <input type="text" class="form-control pin-input" name="pin" maxlength="4" pattern="\d{4}" inputmode="numeric" required placeholder="····">
                         <small class="text-muted">Escolha 4 números que só você saiba. Este será seu login.</small>

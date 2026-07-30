@@ -7,71 +7,69 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
-        .page-header { background: #3a3b4e; color: #fff; padding: 1rem 0; }
-        .account-card { border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 500px; margin: 0 auto; }
-        @media (max-width: 768px) { input, select { font-size: 16px !important; } }
+        body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .account-card { max-width: 440px; width: 100%; }
+        .pin-input { font-size: 2rem; text-align: center; letter-spacing: 12px; font-weight: 700; }
     </style>
 </head>
 <body>
-    <div class="page-header text-center">
-        <div class="container">
-            <h4 class="mb-0">Minha Conta</h4>
-        </div>
-    </div>
-
-    <div class="container py-4">
-        <?php if (!empty($flash)): ?>
-        <div class="alert alert-<?= $flash['type'] === 'error' ? 'danger' : $flash['type'] ?> alert-dismissible fade show" style="max-width:500px; margin:0 auto 1rem;">
-            <?= htmlspecialchars($flash['message']) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <?php endif; ?>
-
-        <div class="card account-card">
+    <div class="account-card">
+        <div class="card border-0 shadow-lg">
             <div class="card-body p-4">
+                <div class="text-center mb-3">
+                    <i class="bi bi-person-circle" style="font-size: 2.5rem; color: #3a3b4e;"></i>
+                    <h5 class="fw-bold mt-2 mb-1">Minha Conta</h5>
+                    <p class="text-muted small mb-0">
+                        <?= ['buyer'=>'Comprador/Entrega','quoter'=>'Cotador','approver'=>'Aprovador','payment'=>'Financeiro','delivery'=>'Entrega','epi'=>'EPI','all'=>'Completo'][$user['role']] ?? $user['role'] ?>
+                        &middot; PIN: <code><?= $user['pin'] ?></code>
+                    </p>
+                </div>
+
+                <?php if (!empty($flash)): ?>
+                <div class="alert alert-<?= $flash['type'] === 'error' ? 'danger' : $flash['type'] ?> small py-2">
+                    <?= htmlspecialchars($flash['message']) ?>
+                </div>
+                <?php endif; ?>
+
                 <form method="POST" action="/pin/minha-conta/salvar">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Nome *</label>
+                        <label class="form-label small fw-bold">Nome completo *</label>
                         <input type="text" class="form-control" name="name" value="<?= htmlspecialchars($user['name']) ?>" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">E-mail</label>
-                        <input type="email" class="form-control" name="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>" placeholder="seu@email.com">
+                        <label class="form-label small fw-bold">E-mail</label>
+                        <input type="email" class="form-control" name="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>" placeholder="seu@email.com (opcional)">
                         <small class="text-muted">Usado para recuperação de PIN.</small>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Telefone / WhatsApp</label>
-                        <input type="text" class="form-control" name="phone" value="<?= htmlspecialchars($user['phone'] ?? '') ?>" placeholder="5511999999999" inputmode="numeric">
-                        <small class="text-muted">Formato: DDD + número (ex: 5511999999999). Usado para notificações via WhatsApp.</small>
+                        <label class="form-label small fw-bold">WhatsApp *</label>
+                        <input type="text" class="form-control" name="phone" value="<?= htmlspecialchars($user['phone'] ?? '') ?>" inputmode="numeric" placeholder="5511999999999" required>
+                        <small class="text-muted">DDD + número. Usado para notificações.</small>
                     </div>
-
-                    <hr>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Alterar PIN</label>
-                        <input type="text" class="form-control" name="new_pin" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="Deixe vazio para manter o atual" style="text-align:center; letter-spacing:8px; font-size:1.3rem; max-width:180px;">
-                        <small class="text-muted">4 dígitos numéricos. Só preencha se quiser trocar.</small>
+                        <label class="form-label small fw-bold">Novo PIN</label>
+                        <input type="text" class="form-control pin-input" name="new_pin" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="····">
+                        <small class="text-muted">Deixe vazio para manter o PIN atual.</small>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center mt-4">
-                        <a href="/pedidos" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
-                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 mt-2">
+                        <i class="bi bi-check-circle"></i> Salvar
+                    </button>
+
+                    <a href="/pedidos" class="btn btn-outline-secondary w-100 mt-2">
+                        <i class="bi bi-arrow-left"></i> Voltar
+                    </a>
                 </form>
             </div>
         </div>
-
-        <div class="text-center mt-3">
-            <small class="text-muted">
-                PIN atual: <code><?= $user['pin'] ?></code> &middot;
-                Permissão: <strong><?= ['buyer'=>'Comprador','quoter'=>'Cotador','approver'=>'Aprovador','payment'=>'Financeiro','delivery'=>'Entrega','epi'=>'EPI','all'=>'Completo'][$user['role']] ?? $user['role'] ?></strong>
-            </small>
-        </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.querySelector('.pin-input').addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '');
+    });
+    </script>
 </body>
 </html>

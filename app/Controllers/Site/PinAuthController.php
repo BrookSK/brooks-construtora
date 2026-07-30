@@ -154,6 +154,7 @@ class PinAuthController extends Controller
 
         $name = trim($this->input('name', ''));
         $email = trim($this->input('email', ''));
+        $phone = preg_replace('/[^0-9]/', '', $this->input('phone', ''));
         $pin = trim($this->input('pin', ''));
         $recovery = trim($this->input('recovery_phrase', ''));
 
@@ -180,6 +181,7 @@ class PinAuthController extends Controller
         $userId = PinUser::create([
             'name' => $name,
             'email' => $email ?: null,
+            'phone' => $phone ?: null,
             'pin' => $pin,
             'role' => $invite['role'],
             'recovery_phrase' => $recovery ?: null,
