@@ -78,7 +78,7 @@
             <div class="card-header bg-info bg-opacity-10 border-0 p-3 p-md-4">
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
                     <div>
-                        <h5 class="mb-1">Pedido <strong><?= htmlspecialchars($order['code']) ?></strong></h5>
+                        <h5 class="mb-1">Pedido <strong><?= htmlspecialchars($order['code']) ?></strong><?php if (!empty($order['construction_site_name'])): ?> - <?= htmlspecialchars($order['construction_site_name']) ?><?php endif; ?></h5>
                         <p class="mb-0 text-muted small">Solicitado por: <?= htmlspecialchars($order['created_by_name']) ?></p>
                         <p class="mb-0 text-muted small">Cotado por: <strong><?= htmlspecialchars($order['quoted_by_name']) ?></strong> em <?= date('d/m/Y H:i', strtotime($order['quoted_at'])) ?></p>
                     </div>
