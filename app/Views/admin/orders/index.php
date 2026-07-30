@@ -105,8 +105,6 @@
                         <option value="not_reviewed">Não conferido</option>
                         <option value="all">Todos (incluir conferidos)</option>
                     </select>
-                        <option value="not_reviewed">Não conferido</option>
-                    </select>
                 </div>
                 <!-- Período -->
                 <div class="col-6 col-md-3">
