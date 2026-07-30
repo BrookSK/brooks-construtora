@@ -162,20 +162,26 @@
                 // Separar itens por origem
                 $stockItems = array_filter($items, fn($i) => !empty($i['source_type']) && $i['source_type'] !== 'purchase');
                 $purchaseItems = array_filter($items, fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase');
+                $alreadyPurchasedItems = array_filter($items, fn($it) => !empty($it['already_purchased']));
+
+                // Separar transferências: do solicitante (criadas junto com o pedido) vs do cotador (criadas na cotação)
+                // Se o pedido tem quoted_at, itens de estoque criados ANTES da cotação são do solicitante
+                $stockBySolicitor = [];
+                $stockByQuoter = [];
+                foreach ($stockItems as $si) {
+                    if (!empty($order['quoted_at']) && !empty($si['created_at']) && $si['created_at'] > $order['quoted_at']) {
+                        $stockByQuoter[] = $si;
+                    } else {
+                        $stockBySolicitor[] = $si;
+                    }
+                }
                 ?>
 
-                <?php if (!empty($stockItems)): ?>
-                <div class="alert alert-success small py-2 mb-3">
-                    <i class="bi bi-box-seam"></i> <strong><?= count($stockItems) ?> item(ns) de estoque/transferência</strong>
-                    <?php if (\App\Models\Setting::get('orders_require_transfer_approval', '1') === '1'): ?>
-                        — precisam de aprovação
-                    <?php else: ?>
-                        — aprovados automaticamente (não precisam de ação)
-                    <?php endif; ?>
-                </div>
-                <div class="mb-3 p-2 rounded" style="background: #e8f5e9;">
-                    <small class="fw-bold text-success d-block mb-1"><i class="bi bi-arrow-left-right"></i> Itens de Estoque/Transferência:</small>
-                    <?php foreach ($stockItems as $si): ?>
+                <!-- Resumo descritivo -->
+                <?php if (!empty($stockBySolicitor)): ?>
+                <div class="mb-2 p-2 rounded" style="background: #e8f5e9;">
+                    <small class="fw-bold text-success d-block mb-1"><i class="bi bi-person"></i> Estoque/Transferência (solicitante do pedido):</small>
+                    <?php foreach ($stockBySolicitor as $si): ?>
                         <div class="d-flex justify-content-between small py-1 border-bottom" style="border-color:#c8e6c9!important;">
                             <span>
                                 <?= htmlspecialchars($si['material_name']) ?>
@@ -189,25 +195,51 @@
                 </div>
                 <?php endif; ?>
 
-                <?php if (!empty($purchaseItems)): ?>
-                <div class="alert alert-warning small py-2 mb-3">
-                    <i class="bi bi-cart"></i> <strong><?= count($purchaseItems) ?> item(ns) de compra</strong> — selecione o fornecedor para cada um:
+                <?php if (!empty($stockByQuoter)): ?>
+                <div class="mb-2 p-2 rounded" style="background: #e0f2f1;">
+                    <small class="fw-bold d-block mb-1" style="color:#00695c;"><i class="bi bi-person-check"></i> Estoque/Transferência (definido pelo cotador):</small>
+                    <?php foreach ($stockByQuoter as $si): ?>
+                        <div class="d-flex justify-content-between small py-1 border-bottom" style="border-color:#b2dfdb!important;">
+                            <span>
+                                <?= htmlspecialchars($si['material_name']) ?>
+                                <span class="badge bg-<?= $si['source_type'] === 'stock_transfer' ? 'primary' : 'success' ?>" style="font-size:0.6rem;">
+                                    <?= $si['source_type'] === 'stock_transfer' ? 'Transferência' : 'Estoque' ?>
+                                </span>
+                            </span>
+                            <span class="fw-bold"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?> <?= $si['unit'] ?? '' ?></span>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
                 <?php endif; ?>
 
-                <?php
-                $alreadyPurchasedItems = array_filter($items, fn($it) => !empty($it['already_purchased']));
-                ?>
                 <?php if (!empty($alreadyPurchasedItems)): ?>
-                <div class="alert alert-info small py-2 mb-3">
-                    <i class="bi bi-bag-check"></i> <strong><?= count($alreadyPurchasedItems) ?> item(ns) já comprado(s)</strong> antes da cotação:
+                <div class="mb-2 p-2 rounded" style="background: #e3f2fd;">
+                    <small class="fw-bold d-block mb-1" style="color:#1565c0;"><i class="bi bi-bag-check"></i> Já comprado(s) antes da cotação:</small>
                     <?php foreach ($alreadyPurchasedItems as $api): ?>
-                    <div class="d-flex justify-content-between small py-1 mt-1 border-top" style="border-color:rgba(0,0,0,0.1)!important;">
-                        <span><?= htmlspecialchars($api['material_name']) ?> (<?= !empty($api['already_purchased_qty']) ? number_format($api['already_purchased_qty'], $api['already_purchased_qty'] == (int)$api['already_purchased_qty'] ? 0 : 2) : number_format($api['quantity'], $api['quantity'] == (int)$api['quantity'] ? 0 : 2) ?> <?= $api['unit'] ?? '' ?>)</span>
+                    <div class="d-flex justify-content-between small py-1 border-bottom" style="border-color:#bbdefb!important;">
+                        <span><?= htmlspecialchars($api['material_name']) ?> — <?= !empty($api['already_purchased_qty']) ? number_format($api['already_purchased_qty'], $api['already_purchased_qty'] == (int)$api['already_purchased_qty'] ? 0 : 2) : number_format($api['quantity'], $api['quantity'] == (int)$api['quantity'] ? 0 : 2) ?> <?= $api['unit'] ?? '' ?></span>
                         <span class="fw-bold"><?= $api['already_purchased_price'] ? 'R$ ' . number_format($api['already_purchased_price'], 2, ',', '.') : '—' ?></span>
                     </div>
                     <?php endforeach; ?>
                 </div>
+                <?php endif; ?>
+
+                <?php if (!empty($purchaseItems)): ?>
+                <?php 
+                $quotableCount = 0;
+                foreach ($purchaseItems as $pi) {
+                    $effQty = (float) $pi['quantity'];
+                    if (!empty($pi['already_purchased']) && !empty($pi['already_purchased_qty'])) {
+                        $effQty = max(0, $effQty - (float) $pi['already_purchased_qty']);
+                    }
+                    if ($effQty > 0) $quotableCount++;
+                }
+                ?>
+                <?php if ($quotableCount > 0): ?>
+                <div class="alert alert-warning small py-2 mb-3">
+                    <i class="bi bi-cart"></i> <strong><?= $quotableCount ?> item(ns) para cotação</strong> — selecione o fornecedor para cada um:
+                </div>
+                <?php endif; ?>
                 <?php endif; ?>
 
                 <p class="text-muted small mb-3"><i class="bi bi-info-circle"></i> Você pode escolher fornecedores diferentes para cada material.</p>
@@ -236,7 +268,13 @@
                             <span class="badge bg-info" style="font-size:0.6rem;"><i class="bi bi-bag-check"></i> Já comprado <?= !empty($item['already_purchased_qty']) ? number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) . ' ' . ($item['unit'] ?? '') : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
                             <?php endif; ?>
                         </div>
-                        <div class="item-qty">Qtd: <?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?><?= $item['unit'] ? ' ' . $item['unit'] : '' ?></div>
+                        <div class="item-qty">Qtd: <?php
+                            $listEffQty = (float) $item['quantity'];
+                            if (!empty($item['already_purchased']) && !empty($item['already_purchased_qty'])) {
+                                $listEffQty = max(0, $listEffQty - (float) $item['already_purchased_qty']);
+                            }
+                            echo number_format($listEffQty, $listEffQty == (int)$listEffQty ? 0 : 2);
+                        ?><?= $item['unit'] ? ' ' . $item['unit'] : '' ?></div>
                     </div>
                     <div class="supplier-options">
                         <?php foreach ($orderSuppliers as $os): ?>
@@ -277,14 +315,20 @@
                         </thead>
                         <tbody>
                             <?php foreach ($itemsToApprove as $item): ?>
+                            <?php 
+                            $effectiveQty = (float) $item['quantity'];
+                            if (!empty($item['already_purchased']) && !empty($item['already_purchased_qty'])) {
+                                $effectiveQty = max(0, $effectiveQty - (float) $item['already_purchased_qty']);
+                            }
+                            ?>
                             <tr>
                                 <td style="position:sticky; left:0; background:#fff; z-index:1;">
                                     <strong style="font-size:0.72rem;"><?= htmlspecialchars($item['material_name']) ?></strong>
                                     <?php if (!empty($item['already_purchased'])): ?>
-                                    <br><span class="badge bg-info" style="font-size:0.55rem;"><i class="bi bi-bag-check"></i> Já comprado<?= $item['already_purchased_price'] ? ' R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
+                                    <br><span class="badge bg-info" style="font-size:0.55rem;"><i class="bi bi-bag-check"></i> Já comprado <?= !empty($item['already_purchased_qty']) ? number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) . ' un' : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="text-center"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
+                                <td class="text-center"><?= number_format($effectiveQty, $effectiveQty == (int)$effectiveQty ? 0 : 2) ?></td>
                                 <?php foreach ($orderSuppliers as $os): ?>
                                 <?php $p = $pricesBySupplier[$os['supplier_id']][$item['id']] ?? null; ?>
                                 <td class="text-center <?= $p ? 'map-cell-selectable' : '' ?>"
