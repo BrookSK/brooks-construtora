@@ -1326,9 +1326,12 @@
     (function() {
         const existingPrices = <?= json_encode($itemPrices ?? []) ?>;
         const pricesBySupplier = {};
+        const totalPricesBySupplier = {};
         existingPrices.forEach(p => {
             if (!pricesBySupplier[p.supplier_id]) pricesBySupplier[p.supplier_id] = {};
+            if (!totalPricesBySupplier[p.supplier_id]) totalPricesBySupplier[p.supplier_id] = {};
             pricesBySupplier[p.supplier_id][p.item_id] = p.unit_price;
+            totalPricesBySupplier[p.supplier_id][p.item_id] = p.total_price;
         });
 
         // Fornecedores da tabela purchase_order_suppliers
@@ -1349,9 +1352,9 @@
                 console.log('  Item', itemId, '-> input found:', !!input, 'value:', prices[itemId]);
                 if (input) {
                     const numVal = parseFloat(prices[itemId]) || 0;
-                    const qty = parseFloat(input.dataset.qty) || 1;
-                    // Se está no modo "total do item", multiplicar unit_price pela quantidade
-                    const displayVal = priceMode === 'total' ? numVal * qty : numVal;
+                    const totalVal = parseFloat((totalPricesBySupplier['<?= $os['supplier_id'] ?>'] || {})[itemId]) || 0;
+                    // No modo "total do item", usar o total_price salvo no banco
+                    const displayVal = priceMode === 'total' ? totalVal : numVal;
                     input.value = displayVal.toFixed(2).replace('.', ',');
                     input.dispatchEvent(new Event('input', {bubbles:true}));
                 }
