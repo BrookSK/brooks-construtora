@@ -210,7 +210,12 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <td><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
-                            <td class="text-center"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
+                            <td class="text-center">
+                                <?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?>
+                                <?php if (!empty($item['already_purchased']) && !empty($item['already_purchased_qty']) && (float)$item['already_purchased_qty'] < (float)$item['quantity']): ?>
+                                <br><small class="text-muted" style="font-size:0.65rem;">Cotado: <?= number_format((float)$item['quantity'] - (float)$item['already_purchased_qty'], ((float)$item['quantity'] - (float)$item['already_purchased_qty']) == (int)((float)$item['quantity'] - (float)$item['already_purchased_qty']) ? 0 : 2) ?></small>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <?php if (!empty($item['source_type']) && $item['source_type'] !== 'purchase'): ?>
                                     <?php if ($item['source_type'] === 'stock_transfer'): ?>
