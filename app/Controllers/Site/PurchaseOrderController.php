@@ -1667,20 +1667,23 @@ class PurchaseOrderController extends Controller
             $siteApprovers = ConstructionSite::getApprovers((int) $order['construction_site_id']);
         }
 
-        // Determinar destinatários de e-mail
-        if (!empty($siteApprovers)) {
-            // Usar aprovadores da obra
-            $approverEmails = array_filter(array_column($siteApprovers, 'email'));
-            $emails = implode(',', $approverEmails);
-        } else {
-            // Fallback: configuração global
-            $emails = Setting::get('orders_approval_emails', '');
-        }
-
+        // Sempre enviar para os e-mails globais
+        $emails = Setting::get('orders_approval_emails', '');
         if (!empty($emails)) {
             $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
             $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
             NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'approval_requested');
+        }
+
+        // Também enviar e-mail para os aprovadores da obra (se tiver)
+        if (!empty($siteApprovers)) {
+            $approverEmails = array_filter(array_column($siteApprovers, 'email'));
+            if (!empty($approverEmails)) {
+                $extraEmails = implode(',', $approverEmails);
+                $subject = "Aprovação Pendente - Pedido {$order['code']} - R$ " . number_format($order['total_estimated'], 2, ',', '.');
+                $body = EmailTemplate::purchaseOrderApproval($order, $items, $approvalUrl, $orderSuppliers);
+                NotificationService::queueEmails($extraEmails, $subject, $body, $order['id'], 'approval_requested');
+            }
         }
 
         // Webhook
@@ -1720,36 +1723,38 @@ class PurchaseOrderController extends Controller
                 . "*Link para aprovar/rejeitar:*\n{$approvalUrl}";
 
             if (!empty($siteApprovers)) {
-                // Enviar para cada aprovador da obra individualmente
+                // Enviar também para os aprovadores da obra
                 $approverPhones = array_filter(array_column($siteApprovers, 'phone'));
                 $approverNames = array_filter(array_column($siteApprovers, 'name'));
-                $this->sendWebhook($webhookUrl, [
-                    'event' => 'approval_requested',
-                    'order_code' => $order['code'],
-                    'suppliers' => $suppliersData,
-                    'total' => $order['total_estimated'],
-                    'items_count' => count($items),
-                    'approval_url' => $approvalUrl,
-                    'quoted_by' => $order['quoted_by_name'],
-                    'phone' => implode(',', $approverPhones),
-                    'phone_name' => implode(',', $approverNames),
-                    'message' => $message,
-                ]);
-            } else {
-                // Fallback: configuração global
-                $this->sendWebhook($webhookUrl, [
-                    'event' => 'approval_requested',
-                    'order_code' => $order['code'],
-                    'suppliers' => $suppliersData,
-                    'total' => $order['total_estimated'],
-                    'items_count' => count($items),
-                    'approval_url' => $approvalUrl,
-                    'quoted_by' => $order['quoted_by_name'],
-                    'phone' => Setting::get('orders_approval_phone', ''),
-                    'phone_name' => Setting::get('orders_approval_phone_name', ''),
-                    'message' => $message,
-                ]);
+                if (!empty($approverPhones)) {
+                    $this->sendWebhook($webhookUrl, [
+                        'event' => 'approval_requested',
+                        'order_code' => $order['code'],
+                        'suppliers' => $suppliersData,
+                        'total' => $order['total_estimated'],
+                        'items_count' => count($items),
+                        'approval_url' => $approvalUrl,
+                        'quoted_by' => $order['quoted_by_name'],
+                        'phone' => implode(',', $approverPhones),
+                        'phone_name' => implode(',', $approverNames),
+                        'message' => $message,
+                    ]);
+                }
             }
+
+            // Sempre enviar para os globais
+            $this->sendWebhook($webhookUrl, [
+                'event' => 'approval_requested',
+                'order_code' => $order['code'],
+                'suppliers' => $suppliersData,
+                'total' => $order['total_estimated'],
+                'items_count' => count($items),
+                'approval_url' => $approvalUrl,
+                'quoted_by' => $order['quoted_by_name'],
+                'phone' => Setting::get('orders_approval_phone', ''),
+                'phone_name' => Setting::get('orders_approval_phone_name', ''),
+                'message' => $message,
+            ]);
         }
     }
 

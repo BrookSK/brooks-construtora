@@ -114,7 +114,7 @@
             <div class="card mb-3">
                 <div class="card-header"><i class="bi bi-person-check"></i> Aprovadores desta Obra</div>
                 <div class="card-body">
-                    <p class="text-muted small mb-2">Selecione quem recebe as notificações de aprovação dos pedidos desta obra. Se nenhum for selecionado, será usado o configurado nas <a href="/admin/orders/settings">configurações globais</a>.</p>
+                    <p class="text-muted small mb-2">Selecione quem também recebe as notificações de aprovação dos pedidos desta obra, além dos configurados nas <a href="/admin/orders/settings">configurações globais</a>.</p>
                     <?php
                     $availableApprovers = \App\Models\ConstructionSite::getAvailableApprovers();
                     $currentApproverIds = \App\Models\ConstructionSite::getApproverIds($site['id']);
