@@ -76,6 +76,35 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Aprovadores -->
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-person-check"></i> Aprovadores desta Obra</div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">Selecione quem recebe as notificações de aprovação dos pedidos desta obra. Se nenhum for selecionado, será usado o configurado nas <a href="/admin/orders/settings">configurações globais</a>.</p>
+                    <?php
+                    $availableApprovers = \App\Models\ConstructionSite::getAvailableApprovers();
+                    ?>
+                    <?php if (empty($availableApprovers)): ?>
+                    <div class="alert alert-light small mb-0">Nenhum usuário com permissão de aprovação cadastrado. <a href="/admin/orders/pin-users">Gerenciar usuários</a></div>
+                    <?php else: ?>
+                    <div class="row">
+                        <?php foreach ($availableApprovers as $ap): ?>
+                        <div class="col-md-6 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="approvers[]" value="<?= $ap['id'] ?>" id="approver-<?= $ap['id'] ?>">
+                                <label class="form-check-label" for="approver-<?= $ap['id'] ?>">
+                                    <strong><?= htmlspecialchars($ap['name']) ?></strong>
+                                    <?php if (!empty($ap['phone'])): ?><br><small class="text-muted"><i class="bi bi-whatsapp"></i> <?= htmlspecialchars($ap['phone']) ?></small><?php endif; ?>
+                                    <?php if (!empty($ap['email'])): ?><br><small class="text-muted"><i class="bi bi-envelope"></i> <?= htmlspecialchars($ap['email']) ?></small><?php endif; ?>
+                                </label>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
 
         <div class="col-lg-4">

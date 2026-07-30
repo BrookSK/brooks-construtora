@@ -149,6 +149,12 @@ class ConstructionSiteController extends Controller
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
+        // Salvar aprovadores
+        $approvers = $_POST['approvers'] ?? [];
+        if (!empty($approvers)) {
+            ConstructionSite::syncApprovers($id, $approvers);
+        }
+
         $this->setFlash('success', "Obra \"{$name}\" ({$code}) cadastrada com sucesso!");
         $this->redirect('/admin/obras');
     }
@@ -227,6 +233,10 @@ class ConstructionSiteController extends Controller
         }
 
         ConstructionSite::updateById($id, $data);
+
+        // Salvar aprovadores
+        $approvers = $_POST['approvers'] ?? [];
+        ConstructionSite::syncApprovers($id, $approvers);
 
         $this->setFlash('success', "Obra \"{$name}\" atualizada com sucesso!");
         $this->redirect('/admin/obras/edit/' . $id);

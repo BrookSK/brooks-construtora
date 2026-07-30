@@ -100,4 +100,62 @@ class ConstructionSite extends Model
         }
         return 'OBR-' . str_pad($number, 6, '0', STR_PAD_LEFT);
     }
+
+    // ============================
+    // APROVADORES POR OBRA
+    // ============================
+
+    /**
+     * Busca aprovadores vinculados a uma obra
+     */
+    public static function getApprovers(int $siteId): array
+    {
+        return Database::fetchAll(
+            "SELECT pu.* FROM pin_users pu
+             INNER JOIN construction_site_approvers csa ON csa.pin_user_id = pu.id
+             WHERE csa.construction_site_id = ? AND pu.active = 1
+             ORDER BY pu.name ASC",
+            [$siteId]
+        );
+    }
+
+    /**
+     * Busca IDs dos aprovadores vinculados a uma obra
+     */
+    public static function getApproverIds(int $siteId): array
+    {
+        $rows = Database::fetchAll(
+            "SELECT pin_user_id FROM construction_site_approvers WHERE construction_site_id = ?",
+            [$siteId]
+        );
+        return array_column($rows, 'pin_user_id');
+    }
+
+    /**
+     * Sincronizar aprovadores de uma obra (remove antigos, adiciona novos)
+     */
+    public static function syncApprovers(int $siteId, array $pinUserIds): void
+    {
+        Database::delete('construction_site_approvers', 'construction_site_id = ?', [$siteId]);
+        foreach ($pinUserIds as $userId) {
+            $userId = (int) $userId;
+            if ($userId > 0) {
+                Database::insert('construction_site_approvers', [
+                    'construction_site_id' => $siteId,
+                    'pin_user_id' => $userId,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Busca todos os pin_users com role de aprovação (approver ou all)
+     */
+    public static function getAvailableApprovers(): array
+    {
+        return Database::fetchAll(
+            "SELECT * FROM pin_users WHERE active = 1 AND role IN ('approver', 'all') ORDER BY name ASC"
+        );
+    }
 }
