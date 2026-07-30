@@ -1497,8 +1497,9 @@ class PurchaseOrderController extends Controller
 
         // Fallback: PIN global (configuração antiga)
         $correctPin = Setting::get('orders_pin_code', '');
+        $pinGlobalActive = Setting::get('orders_pin_global_active', '1') === '1';
 
-        if (empty($correctPin) && !$pinUser) {
+        if (!$pinGlobalActive || empty($correctPin)) {
             $this->setFlash('error', 'PIN não encontrado.');
             $this->redirect('/pedidos/login');
             return;
@@ -1563,7 +1564,8 @@ class PurchaseOrderController extends Controller
         $cookie = $_COOKIE['pin_session'] ?? '';
         if (!empty($cookie)) {
             $correctPin = Setting::get('orders_pin_code', '');
-            if (!empty($correctPin) && $cookie === hash('sha256', $correctPin . 'brooks_pin_salt')) {
+            $pinGlobalActive = Setting::get('orders_pin_global_active', '1') === '1';
+            if ($pinGlobalActive && !empty($correctPin) && $cookie === hash('sha256', $correctPin . 'brooks_pin_salt')) {
                 // Restaurar sessão
                 $_SESSION['user_id'] = 0;
                 $_SESSION['user_name'] = 'Comprador';

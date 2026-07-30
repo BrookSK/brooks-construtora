@@ -21,6 +21,14 @@
                     </p>
                 </div>
             </div>
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" name="orders_pin_global_active" value="1" id="pinGlobalActive" <?= ($settings['orders_pin_global_active'] ?? '1') === '1' ? 'checked' : '' ?>>
+                <label class="form-check-label fw-bold" for="pinGlobalActive">PIN global ativo</label>
+            </div>
+            <p class="text-muted small mt-1 mb-0">
+                <strong>Ativado:</strong> Qualquer pessoa pode entrar usando a senha global acima.<br>
+                <strong>Desativado:</strong> A senha global é ignorada — cada pessoa precisa usar sua conta individual (PIN pessoal). A senha não é apagada, apenas desativada.
+            </p>
             <hr>
             <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" name="orders_require_pin_login" value="1" id="requirePinLogin" <?= ($settings['orders_require_pin_login'] ?? '0') === '1' ? 'checked' : '' ?>>

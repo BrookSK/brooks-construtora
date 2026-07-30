@@ -1002,6 +1002,7 @@ class PurchaseOrderController extends Controller
             'orders_quote_send_phone_name',
             'orders_quote_default_message',
             'orders_pin_code',
+            'orders_pin_global_active',
             'require_pin_login',
             'orders_require_pin_login',
             'orders_require_transfer_approval',
@@ -1021,6 +1022,9 @@ class PurchaseOrderController extends Controller
         }
         if (!isset($_POST['orders_require_transfer_approval'])) {
             $data['orders_require_transfer_approval'] = '0';
+        }
+        if (!isset($_POST['orders_pin_global_active'])) {
+            $data['orders_pin_global_active'] = '0';
         }
 
         Setting::setMultiple($data);
