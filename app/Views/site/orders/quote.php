@@ -492,6 +492,32 @@
             else if (remaining === 0) statusEl.innerHTML = '<span class="text-success">✓ Tudo do estoque (não será cotado)</span>';
             else statusEl.innerHTML = '<span class="text-info">' + (totalFromStock % 1 === 0 ? totalFromStock.toFixed(0) : totalFromStock.toFixed(2)) + ' do estoque + ' + (remaining % 1 === 0 ? remaining.toFixed(0) : remaining.toFixed(2)) + ' para cotação</span>';
         }
+
+        // Atualizar quantidade no quoteOnlyItems e na UI de cotação
+        const item = quoteOnlyItems.find(i => i.id == itemId);
+        if (item) {
+            item.quantity = remaining;
+            // Atualizar na tabela de itens do pedido (coluna Qtd)
+            const row = document.getElementById('item-row-' + itemId);
+            if (row) {
+                const qtyCell = row.querySelectorAll('td')[5]; // 6ª coluna = Qtd
+                if (qtyCell) qtyCell.textContent = remaining % 1 === 0 ? remaining.toFixed(0) : remaining.toFixed(2).replace('.', ',');
+            }
+            // Atualizar nos blocos de fornecedor (lista) - texto da quantidade
+            document.querySelectorAll(`.supplier-item-entry [data-item-qty="${itemId}"]`).forEach(el => {
+                el.textContent = '(x' + (remaining % 1 === 0 ? remaining.toFixed(0) : remaining.toFixed(2)) + ' ' + (item.unit || '') + ')';
+            });
+            // Atualizar data-qty nos inputs de preço (usado no cálculo de totais)
+            document.querySelectorAll(`.price-input[data-item-id="${itemId}"]`).forEach(input => {
+                input.dataset.qty = remaining;
+            });
+            // Re-renderizar mapa se está visível
+            if (!document.getElementById('quotationMap').classList.contains('d-none')) {
+                renderMap();
+            }
+            // Recalcular totais dos fornecedores
+            addedSuppliers.forEach(sid => calculateSupplierTotal(sid));
+        }
     }
 
     // ─── Modo de entrada de preço (unitário vs total) ────────────────────────
@@ -680,7 +706,7 @@
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-1">
                         <div class="item-info">
                             <span class="small">${item.material_name}</span>
-                            <span class="text-muted small">(x${item.quantity} ${item.unit || ''})</span>
+                            <span class="text-muted small" data-item-qty="${item.id}">(x${item.quantity} ${item.unit || ''})</span>
                             ${histHint}
                         </div>
                         <div class="item-price-input">
