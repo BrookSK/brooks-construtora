@@ -199,9 +199,14 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         }
                         ?>
                         <?php foreach ($items as $i => $item): ?>
-                        <tr class="<?= !empty($item['source_type']) && $item['source_type'] !== 'purchase' ? 'table-success' : '' ?>">
+                        <tr class="<?= !empty($item['source_type']) && $item['source_type'] !== 'purchase' ? 'table-success' : (!empty($item['already_purchased']) ? 'table-info' : '') ?>">
                             <td><?= $i + 1 ?></td>
-                            <td><strong><?= htmlspecialchars($item['material_name']) ?></strong></td>
+                            <td>
+                                <strong><?= htmlspecialchars($item['material_name']) ?></strong>
+                                <?php if (!empty($item['already_purchased'])): ?>
+                                <br><span class="badge bg-info" style="font-size:0.6rem;"><i class="bi bi-bag-check"></i> Já comprado <?= !empty($item['already_purchased_qty']) ? number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) . ' ' . ($item['unit'] ?? '') : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
+                                <?php endif; ?>
+                            </td>
                             <td><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>

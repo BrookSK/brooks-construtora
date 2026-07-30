@@ -384,6 +384,12 @@
     <script>
     const items = <?= json_encode($items) ?>;
     const quoteOnlyItems = items.filter(i => !i.source_type || i.source_type === 'purchase');
+    // Ajustar quantidade efetiva para cotação (descontar já comprados)
+    quoteOnlyItems.forEach(item => {
+        if (item.already_purchased && item.already_purchased_qty) {
+            item.quantity = Math.max(0, parseFloat(item.quantity) - parseFloat(item.already_purchased_qty));
+        }
+    });
     const priceHistory = <?= json_encode($priceHistory ?? []) ?>;
     const orderType = '<?= $order['order_type'] ?? 'material' ?>';
     const orderId = <?= (int)$order['id'] ?>;
