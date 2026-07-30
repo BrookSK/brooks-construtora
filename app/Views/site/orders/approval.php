@@ -203,7 +203,7 @@
                     <i class="bi bi-bag-check"></i> <strong><?= count($alreadyPurchasedItems) ?> item(ns) já comprado(s)</strong> antes da cotação:
                     <?php foreach ($alreadyPurchasedItems as $api): ?>
                     <div class="d-flex justify-content-between small py-1 mt-1 border-top" style="border-color:rgba(0,0,0,0.1)!important;">
-                        <span><?= htmlspecialchars($api['material_name']) ?> (<?= number_format($api['quantity'], $api['quantity'] == (int)$api['quantity'] ? 0 : 2) ?> <?= $api['unit'] ?? '' ?>)</span>
+                        <span><?= htmlspecialchars($api['material_name']) ?> (<?= !empty($api['already_purchased_qty']) ? number_format($api['already_purchased_qty'], $api['already_purchased_qty'] == (int)$api['already_purchased_qty'] ? 0 : 2) : number_format($api['quantity'], $api['quantity'] == (int)$api['quantity'] ? 0 : 2) ?> <?= $api['unit'] ?? '' ?>)</span>
                         <span class="fw-bold"><?= $api['already_purchased_price'] ? 'R$ ' . number_format($api['already_purchased_price'], 2, ',', '.') : '—' ?></span>
                     </div>
                     <?php endforeach; ?>
@@ -233,7 +233,7 @@
                         <div class="item-title">
                             <?= htmlspecialchars($item['material_name']) ?>
                             <?php if (!empty($item['already_purchased'])): ?>
-                            <span class="badge bg-info" style="font-size:0.6rem;"><i class="bi bi-bag-check"></i> Já comprado<?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
+                            <span class="badge bg-info" style="font-size:0.6rem;"><i class="bi bi-bag-check"></i> Já comprado <?= !empty($item['already_purchased_qty']) ? number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) . ' ' . ($item['unit'] ?? '') : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
                             <?php endif; ?>
                         </div>
                         <div class="item-qty">Qtd: <?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?><?= $item['unit'] ? ' ' . $item['unit'] : '' ?></div>

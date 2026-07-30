@@ -271,7 +271,7 @@
                         <?php endif; ?>
                         <?php if (!empty($item['already_purchased'])): ?>
                             <br><span style="font-size:0.65rem; color:#0d6efd; font-weight:600;">
-                                ✓ JÁ COMPRADO<?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?>
+                                ✓ JÁ COMPRADO<?= !empty($item['already_purchased_qty']) ? ' (' . number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) . ' ' . ($item['unit'] ?? '') . ')' : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?>
                             </span>
                         <?php endif; ?>
                     </td>

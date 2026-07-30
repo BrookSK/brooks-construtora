@@ -170,10 +170,11 @@
                                         <?php if ($isPurchaseItem): ?>
                                         <div class="d-flex flex-column align-items-center gap-1">
                                             <div class="form-check form-switch mb-0">
-                                                <input class="form-check-input" type="checkbox" name="already_purchased[<?= $item['id'] ?>]" value="1" id="ap-<?= $item['id'] ?>" onchange="togglePurchasedPrice(<?= $item['id'] ?>, this.checked)" <?= !empty($item['already_purchased']) ? 'checked' : '' ?>>
+                                                <input class="form-check-input" type="checkbox" name="already_purchased[<?= $item['id'] ?>]" value="1" id="ap-<?= $item['id'] ?>" onchange="togglePurchasedPrice(<?= $item['id'] ?>, this.checked, <?= (float)$item['quantity'] ?>)" <?= !empty($item['already_purchased']) ? 'checked' : '' ?>>
                                                 <label class="form-check-label small" for="ap-<?= $item['id'] ?>">Sim</label>
                                             </div>
-                                            <div id="ap-price-<?= $item['id'] ?>" style="display:<?= !empty($item['already_purchased']) ? 'block' : 'none' ?>;">
+                                            <div id="ap-fields-<?= $item['id'] ?>" style="display:<?= !empty($item['already_purchased']) ? 'block' : 'none' ?>;">
+                                                <input type="number" class="form-control form-control-sm text-center mb-1" name="already_purchased_qty[<?= $item['id'] ?>]" placeholder="Qtd" style="width:110px; font-size:0.75rem;" min="0.01" max="<?= (float)$item['quantity'] ?>" step="0.01" value="<?= !empty($item['already_purchased_qty']) ? $item['already_purchased_qty'] : $item['quantity'] ?>" oninput="updatePurchasedQty(<?= $item['id'] ?>, this.value, <?= (float)$item['quantity'] ?>)">
                                                 <input type="text" class="form-control form-control-sm text-center" name="already_purchased_price[<?= $item['id'] ?>]" placeholder="R$ 0,00" style="width:110px; font-size:0.75rem;" value="<?= !empty($item['already_purchased_price']) ? number_format($item['already_purchased_price'], 2, ',', '.') : '' ?>">
                                             </div>
                                         </div>
@@ -443,20 +444,65 @@
     // ────────────────────────────────────────────────────────────────────────
 
     // ─── Já comprado (toggle) ────────────────────────────────────────────────
-    function togglePurchasedPrice(itemId, checked) {
-        const priceDiv = document.getElementById('ap-price-' + itemId);
-        if (priceDiv) {
-            priceDiv.style.display = checked ? 'block' : 'none';
-            if (!checked) {
-                priceDiv.querySelector('input').value = '';
-            }
+    function togglePurchasedPrice(itemId, checked, originalQty) {
+        const fieldsDiv = document.getElementById('ap-fields-' + itemId);
+        if (fieldsDiv) {
+            fieldsDiv.style.display = checked ? 'block' : 'none';
         }
         // Highlight da linha
         const row = document.getElementById('item-row-' + itemId);
         if (row) {
             row.classList.toggle('table-info', checked);
         }
+        // Atualizar quantidade para cotação
+        if (checked) {
+            const qtyInput = fieldsDiv ? fieldsDiv.querySelector('[name^="already_purchased_qty"]') : null;
+            const purchasedQty = qtyInput ? (parseFloat(qtyInput.value) || 0) : originalQty;
+            updateItemEffectiveQty(itemId, originalQty - purchasedQty);
+        } else {
+            // Restaurar quantidade original
+            const item = quoteOnlyItems.find(i => i.id == itemId);
+            if (item) {
+                const container = document.querySelector(`.quote-stock-distribution[data-item-id="${itemId}"]`);
+                const originalNeeded = container ? parseFloat(container.dataset.needed) : item.quantity;
+                updateItemEffectiveQty(itemId, originalNeeded);
+            }
+        }
     }
+
+    function updatePurchasedQty(itemId, val, originalQty) {
+        const purchasedQty = parseFloat(val) || 0;
+        const remaining = Math.max(0, originalQty - purchasedQty);
+        updateItemEffectiveQty(itemId, remaining);
+        // Atualizar o badge "Precisa" no bloco de estoque (se existir)
+        const stockContainer = document.querySelector(`.quote-stock-distribution[data-item-id="${itemId}"]`);
+        if (stockContainer) {
+            stockContainer.dataset.needed = remaining;
+            recalcQuoteStock(itemId);
+        }
+    }
+
+    function updateItemEffectiveQty(itemId, newQty) {
+        const item = quoteOnlyItems.find(i => i.id == itemId);
+        if (!item) return;
+        item.quantity = newQty;
+        // Tabela de itens (coluna Qtd) - manter original, mas atualizar o mapa/lista
+        // Atualizar nos blocos de fornecedor (lista)
+        document.querySelectorAll(`.supplier-item-entry [data-item-qty="${itemId}"]`).forEach(el => {
+            el.textContent = '(x' + (newQty % 1 === 0 ? newQty.toFixed(0) : newQty.toFixed(2)) + ' ' + (item.unit || '') + ')';
+        });
+        // Atualizar data-qty nos inputs de preço
+        document.querySelectorAll(`.price-input[data-item-id="${itemId}"]`).forEach(input => {
+            input.dataset.qty = newQty;
+        });
+        // Re-renderizar mapa se visível
+        if (!document.getElementById('quotationMap').classList.contains('d-none')) {
+            renderMap();
+        }
+        // Recalcular totais
+        addedSuppliers.forEach(sid => calculateSupplierTotal(sid));
+    }
+
     // Inicializar linhas já marcadas
     document.querySelectorAll('[id^="ap-"][type="checkbox"]:checked').forEach(cb => {
         const itemId = cb.id.replace('ap-', '');

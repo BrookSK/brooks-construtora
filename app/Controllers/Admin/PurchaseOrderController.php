@@ -1181,7 +1181,9 @@ class PurchaseOrderController extends Controller
 
             $materialLabel = $item['material_name'];
             if (!empty($item['already_purchased'])) {
-                $materialLabel .= ' [JÁ COMPRADO' . ($item['already_purchased_price'] ? ' - R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '') . ']';
+                $apQty = !empty($item['already_purchased_qty']) ? number_format($item['already_purchased_qty'], 2, ',', '.') . ' un' : '';
+                $apPrice = $item['already_purchased_price'] ? 'R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '';
+                $materialLabel .= ' [JÁ COMPRADO' . ($apQty ? ' ' . $apQty : '') . ($apPrice ? ' - ' . $apPrice : '') . ']';
             }
 
             $row = [

@@ -420,13 +420,16 @@ class PurchaseOrderController extends Controller
         // Processar itens marcados como "já comprado"
         $alreadyPurchased = $_POST['already_purchased'] ?? [];
         $alreadyPurchasedPrices = $_POST['already_purchased_price'] ?? [];
+        $alreadyPurchasedQtys = $_POST['already_purchased_qty'] ?? [];
         foreach ($items as $item) {
             $itemId = (int) $item['id'];
             if (isset($alreadyPurchased[$itemId])) {
                 $priceStr = $alreadyPurchasedPrices[$itemId] ?? '0';
                 $price = (float) str_replace(['.', ','], ['', '.'], $priceStr);
+                $qty = isset($alreadyPurchasedQtys[$itemId]) ? (float) $alreadyPurchasedQtys[$itemId] : (float) $item['quantity'];
                 PurchaseOrderItem::updateById($itemId, [
                     'already_purchased' => 1,
+                    'already_purchased_qty' => $qty > 0 ? $qty : null,
                     'already_purchased_price' => $price > 0 ? $price : null,
                 ]);
             } else {
@@ -434,6 +437,7 @@ class PurchaseOrderController extends Controller
                 if (!empty($item['already_purchased'])) {
                     PurchaseOrderItem::updateById($itemId, [
                         'already_purchased' => 0,
+                        'already_purchased_qty' => null,
                         'already_purchased_price' => null,
                     ]);
                 }
