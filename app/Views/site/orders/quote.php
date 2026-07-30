@@ -209,22 +209,22 @@
                                 $otherStocks = $stockAvailability[$mid] ?? [];
                                 $localStock = $stockAvailability['local'][$mid] ?? null;
                                 if (!empty($otherStocks) || $localStock) {
-                                    $totalAvailable = 0;
-                                    $locations = [];
+                                    $allStocks = [];
                                     if ($localStock) {
-                                        $totalAvailable += (float) $localStock['quantity'];
-                                        $locations[] = ($localStock['site_name'] ?? $localStock['location_name'] ?? 'Estoque local') . ': ' . (($localStock['quantity'] == (int)$localStock['quantity']) ? (int)$localStock['quantity'] : number_format($localStock['quantity'], 2, ',', '.'));
+                                        $allStocks[] = array_merge($localStock, ['is_local' => true]);
                                     }
                                     foreach ($otherStocks as $s) {
-                                        $totalAvailable += (float) $s['quantity'];
-                                        $locations[] = ($s['site_name'] ?? $s['location_name'] ?? 'Outro estoque') . ': ' . (($s['quantity'] == (int)$s['quantity']) ? (int)$s['quantity'] : number_format($s['quantity'], 2, ',', '.'));
+                                        $allStocks[] = array_merge($s, ['is_local' => false]);
                                     }
+                                    $totalAvailable = array_sum(array_column($allStocks, 'quantity'));
                                     $itemsWithStock[] = [
+                                        'item_id' => $pItem['id'],
+                                        'material_id' => $pItem['material_id'],
                                         'name' => $pItem['material_name'],
-                                        'qty_needed' => $pItem['quantity'],
+                                        'qty_needed' => (float) $pItem['quantity'],
                                         'qty_available' => $totalAvailable,
-                                        'locations' => $locations,
                                         'unit' => $pItem['unit'] ?? '',
+                                        'stocks' => $allStocks,
                                     ];
                                 }
                             }
@@ -233,22 +233,44 @@
 
                         <?php if (!empty($itemsWithStock)): ?>
                         <div class="alert alert-warning small py-2 mt-2 mb-0">
-                            <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle"></i> Atenção: Itens abaixo foram enviados para cotação, porém há estoque disponível:</div>
+                            <div class="fw-bold mb-2"><i class="bi bi-exclamation-triangle"></i> Itens com estoque disponível — defina quanto usar do estoque:</div>
                             <?php foreach ($itemsWithStock as $iws): ?>
-                            <div class="d-flex flex-wrap align-items-start gap-1 py-1 <?= $iws !== end($itemsWithStock) ? 'border-bottom' : '' ?>" style="border-color: rgba(0,0,0,0.1) !important;">
-                                <div>
+                            <div class="border rounded p-2 mb-2 bg-white">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
                                     <strong><?= htmlspecialchars($iws['name']) ?></strong>
-                                    <span class="text-muted">(precisa <?= $iws['qty_needed'] == (int)$iws['qty_needed'] ? (int)$iws['qty_needed'] : number_format($iws['qty_needed'], 2, ',', '.') ?> <?= $iws['unit'] ?>)</span>
-                                    <br>
-                                    <small class="text-dark">
-                                        <i class="bi bi-box-seam"></i> Encontrado no estoque:
-                                        <?= implode(' | ', array_map('htmlspecialchars', $iws['locations'])) ?>
-                                        — <strong>Total: <?= $iws['qty_available'] == (int)$iws['qty_available'] ? (int)$iws['qty_available'] : number_format($iws['qty_available'], 2, ',', '.') ?> <?= $iws['unit'] ?></strong>
-                                    </small>
+                                    <span class="badge bg-primary">Precisa: <?= $iws['qty_needed'] == (int)$iws['qty_needed'] ? (int)$iws['qty_needed'] : number_format($iws['qty_needed'], 2, ',', '.') ?> <?= $iws['unit'] ?></span>
+                                </div>
+                                <div class="quote-stock-distribution" data-item-id="<?= $iws['item_id'] ?>" data-needed="<?= $iws['qty_needed'] ?>">
+                                    <?php foreach ($iws['stocks'] as $sIdx => $stk): ?>
+                                    <div class="d-flex align-items-center gap-2 mb-1 p-1 bg-light rounded">
+                                        <div class="flex-grow-1">
+                                            <small class="fw-bold"><?= $stk['is_local'] ? '<i class="bi bi-geo-alt text-success"></i>' : '<i class="bi bi-buildings text-primary"></i>' ?> <?= htmlspecialchars($stk['site_name'] ?? $stk['location_name'] ?? 'Estoque') ?></small>
+                                            <br><small class="text-muted">Disponível: <?= $stk['quantity'] == (int)$stk['quantity'] ? (int)$stk['quantity'] : number_format($stk['quantity'], 2, ',', '.') ?></small>
+                                        </div>
+                                        <div style="width:80px;">
+                                            <input type="number" class="form-control form-control-sm text-center quote-stock-qty"
+                                                   name="quote_stock[<?= $iws['item_id'] ?>][<?= $sIdx ?>][qty]" 
+                                                   data-item="<?= $iws['item_id'] ?>" data-max="<?= $stk['quantity'] ?>"
+                                                   min="0" max="<?= $stk['quantity'] ?>" step="0.01" value="0"
+                                                   oninput="recalcQuoteStock(<?= $iws['item_id'] ?>)">
+                                            <input type="hidden" name="quote_stock[<?= $iws['item_id'] ?>][<?= $sIdx ?>][site_id]" value="<?= $stk['construction_site_id'] ?? 0 ?>">
+                                            <input type="hidden" name="quote_stock[<?= $iws['item_id'] ?>][<?= $sIdx ?>][location_id]" value="<?= $stk['stock_location_id'] ?? 0 ?>">
+                                            <input type="hidden" name="quote_stock[<?= $iws['item_id'] ?>][<?= $sIdx ?>][is_local]" value="<?= $stk['is_local'] ? '1' : '0' ?>">
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                    <div class="d-flex align-items-center gap-2 p-1 border rounded border-warning mt-1">
+                                        <div class="flex-grow-1">
+                                            <small class="fw-bold"><i class="bi bi-cart text-warning"></i> Vai para cotação</small>
+                                        </div>
+                                        <div style="width:80px;">
+                                            <input type="text" class="form-control form-control-sm text-center" id="quote-remaining-<?= $iws['item_id'] ?>" value="<?= $iws['qty_needed'] == (int)$iws['qty_needed'] ? (int)$iws['qty_needed'] : number_format($iws['qty_needed'], 2, ',', '.') ?>" readonly style="background:#fff3cd; font-weight:bold;">
+                                        </div>
+                                    </div>
+                                    <small id="quote-stock-status-<?= $iws['item_id'] ?>" class="text-muted mt-1 d-block">Preencha acima para usar do estoque</small>
                                 </div>
                             </div>
                             <?php endforeach; ?>
-                            <div class="mt-1 fst-italic" style="font-size:0.7rem;">O solicitante optou por cotar mesmo assim. Cotação pode ser feita apenas da diferença se preferir.</div>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -441,6 +463,36 @@
         const row = document.getElementById('item-row-' + itemId);
         if (row) row.classList.add('table-info');
     });
+
+    // ─── Distribuição estoque na cotação ─────────────────────────────────────
+    function recalcQuoteStock(itemId) {
+        const container = document.querySelector(`.quote-stock-distribution[data-item-id="${itemId}"]`);
+        if (!container) return;
+        const needed = parseFloat(container.dataset.needed);
+        const inputs = container.querySelectorAll('.quote-stock-qty');
+        let totalFromStock = 0;
+
+        inputs.forEach(input => {
+            let val = parseFloat(input.value) || 0;
+            const max = parseFloat(input.dataset.max) || 0;
+            if (val > max) { val = max; input.value = max; }
+            if (val < 0) { val = 0; input.value = 0; }
+            totalFromStock += val;
+        });
+
+        if (totalFromStock > needed) totalFromStock = needed;
+        const remaining = Math.max(0, needed - totalFromStock);
+
+        const remainingEl = document.getElementById('quote-remaining-' + itemId);
+        const statusEl = document.getElementById('quote-stock-status-' + itemId);
+        if (remainingEl) remainingEl.value = remaining % 1 === 0 ? remaining.toFixed(0) : remaining.toFixed(2).replace('.', ',');
+
+        if (statusEl) {
+            if (totalFromStock === 0) statusEl.innerHTML = '<span class="text-warning">Tudo vai para cotação</span>';
+            else if (remaining === 0) statusEl.innerHTML = '<span class="text-success">✓ Tudo do estoque (não será cotado)</span>';
+            else statusEl.innerHTML = '<span class="text-info">' + (totalFromStock % 1 === 0 ? totalFromStock.toFixed(0) : totalFromStock.toFixed(2)) + ' do estoque + ' + (remaining % 1 === 0 ? remaining.toFixed(0) : remaining.toFixed(2)) + ' para cotação</span>';
+        }
+    }
 
     // ─── Modo de entrada de preço (unitário vs total) ────────────────────────
     let priceMode = 'total'; // 'unit' ou 'total' — padrão: total

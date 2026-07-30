@@ -18,6 +18,8 @@ use App\Models\MaterialPriceHistory;
 use App\Models\Supplier;
 use App\Models\Setting;
 use App\Models\ConstructionSite;
+use App\Models\StockMovement;
+use App\Models\StockLocation;
 use App\Services\MailService;
 use App\Services\EmailTemplate;
 use App\Services\NotificationService;
@@ -326,6 +328,93 @@ class PurchaseOrderController extends Controller
                 }
             }
             $lowestTotal = $totalEstimated;
+        }
+
+        // Processar decisões de estoque na cotação (cotador optou por usar estoque)
+        $quoteStock = $_POST['quote_stock'] ?? [];
+        if (!empty($quoteStock)) {
+            $constructionSiteId = $order['construction_site_id'] ?? null;
+            foreach ($quoteStock as $itemId => $distributions) {
+                $itemId = (int) $itemId;
+                $item = PurchaseOrderItem::find($itemId);
+                if (!$item || $item['order_id'] != $order['id']) continue;
+
+                $totalFromStock = 0;
+                $stockDistributions = [];
+                foreach ($distributions as $dist) {
+                    $qty = (float) ($dist['qty'] ?? 0);
+                    if ($qty <= 0) continue;
+                    $totalFromStock += $qty;
+                    $stockDistributions[] = [
+                        'qty' => $qty,
+                        'site_id' => (int) ($dist['site_id'] ?? 0),
+                        'location_id' => (int) ($dist['location_id'] ?? 0),
+                        'is_local' => !empty($dist['is_local']),
+                    ];
+                }
+
+                if ($totalFromStock <= 0 || empty($stockDistributions)) continue;
+
+                $originalQty = (float) $item['quantity'];
+                $remainingForQuote = max(0, $originalQty - $totalFromStock);
+
+                // Criar itens de estoque (movimentação) para cada distribuição
+                foreach ($stockDistributions as $sd) {
+                    $fromLocationId = $sd['location_id'];
+                    if ($sd['site_id'] && !$fromLocationId) {
+                        $loc = StockLocation::findBySite($sd['site_id']);
+                        if ($loc) $fromLocationId = (int) $loc['id'];
+                    }
+
+                    $sourceType = $sd['is_local'] ? 'stock_use' : 'stock_transfer';
+                    $movType = $sd['is_local'] ? StockMovement::TYPE_EXIT : StockMovement::TYPE_TRANSFER;
+
+                    $movData = [
+                        'material_id' => $item['material_id'],
+                        'from_site_id' => $sd['site_id'] ?: null,
+                        'to_site_id' => $constructionSiteId,
+                        'from_location_id' => $fromLocationId ?: null,
+                        'to_location_id' => null,
+                        'quantity' => $sd['qty'],
+                        'type' => $movType,
+                        'status' => StockMovement::STATUS_PENDING,
+                        'requested_by' => $quotedByName,
+                        'order_id' => $order['id'],
+                    ];
+                    if (!$sd['is_local'] && $constructionSiteId) {
+                        $destLocation = StockLocation::findBySite((int) $constructionSiteId);
+                        if ($destLocation) $movData['to_location_id'] = $destLocation['id'];
+                    }
+
+                    $movId = StockMovement::record($movData);
+
+                    // Criar novo item de pedido para a parte do estoque
+                    PurchaseOrderItem::create([
+                        'order_id' => $order['id'],
+                        'material_id' => $item['material_id'],
+                        'material_name' => $item['material_name'],
+                        'specification' => $item['specification'] ?? '',
+                        'classification' => $item['classification'] ?? '',
+                        'unit' => $item['unit'] ?? '',
+                        'quantity' => $sd['qty'],
+                        'source_type' => $sourceType,
+                        'stock_from_site_id' => $sd['site_id'] ?: null,
+                        'stock_movement_id' => $movId,
+                        'created_at' => date('Y-m-d H:i:s'),
+                    ]);
+                }
+
+                // Atualizar o item original: se sobrou algo para cotar, ajustar quantidade; se não, marcar como estoque
+                if ($remainingForQuote > 0) {
+                    PurchaseOrderItem::updateById($itemId, ['quantity' => $remainingForQuote]);
+                } else {
+                    // Tudo foi pro estoque — remover do item de cotação (deletar o item original)
+                    PurchaseOrderItem::deleteById($itemId);
+                }
+            }
+
+            // Recarregar itens após alterações
+            $items = PurchaseOrderItem::getByOrder($order['id']);
         }
 
         // Processar itens marcados como "já comprado"
