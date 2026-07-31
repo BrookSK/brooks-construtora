@@ -1758,7 +1758,7 @@ class PurchaseOrderController extends Controller
     // MÉTODOS PRIVADOS
     // ============================
 
-    private function sendApprovalNotifications(int $orderId, string $token): void
+    public function sendApprovalNotifications(int $orderId, string $token): void
     {
         $order = PurchaseOrder::findFull($orderId);
         $items = PurchaseOrderItem::getByOrder($orderId);

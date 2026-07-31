@@ -395,6 +395,31 @@ class PurchaseOrderController extends Controller
             return;
         }
 
+        if ($allFromStock && $requireTransferApproval) {
+            // Todos os itens são de estoque/transferência mas precisa de aprovação
+            // Pular cotação → ir direto para aprovação
+            PurchaseOrder::updateById($orderId, [
+                'status' => 'pending_approval',
+                'total_estimated' => 0,
+            ]);
+
+            PurchaseOrderHistory::log(
+                $orderId,
+                'created',
+                $historyDesc . '. Enviado direto para aprovação (sem cotação - apenas transferência)',
+                Auth::user()['name'],
+                Auth::id()
+            );
+
+            // Enviar notificações de aprovação
+            $siteController = new \App\Controllers\Site\PurchaseOrderController();
+            $siteController->sendApprovalNotifications($orderId, $approvalToken);
+
+            $this->setFlash('success', "Pedido {$code} criado! Enviado para aprovação (transferência de estoque).");
+            $this->redirect('/admin/orders');
+            return;
+        }
+
         // Log no histórico (fluxo normal com cotação)
         PurchaseOrderHistory::log(
             $orderId,
