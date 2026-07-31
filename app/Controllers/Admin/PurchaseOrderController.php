@@ -250,6 +250,8 @@ class PurchaseOrderController extends Controller
                             'source_type' => $distIsLocal ? 'stock_use' : 'stock_transfer',
                             'stock_from_site_id' => $distSiteId ?: null,
                             'stock_movement_id' => $movId,
+                            'unit_price' => $this->getStockUnitPrice($materialId, $distLocationId ?: null, $distSiteId ?: null),
+                            'total_price' => $distQty * ($this->getStockUnitPrice($materialId, $distLocationId ?: null, $distSiteId ?: null) ?? 0),
                             'created_at' => date('Y-m-d H:i:s'),
                         ]);
                     }
@@ -309,6 +311,8 @@ class PurchaseOrderController extends Controller
                         'source_type' => $sourceType,
                         'stock_from_site_id' => $stockFromSiteId,
                         'stock_movement_id' => $stockMovementId,
+                        'unit_price' => $this->getStockUnitPrice($materialId, $stockFromLocationId ?: null, $stockFromSiteId),
+                        'total_price' => $fromStockQty * ($this->getStockUnitPrice($materialId, $stockFromLocationId ?: null, $stockFromSiteId) ?? 0),
                         'created_at' => date('Y-m-d H:i:s'),
                     ]);
 
@@ -2126,6 +2130,24 @@ class PurchaseOrderController extends Controller
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'www.brooksconstrutora.com.br';
         return $scheme . '://' . $host;
+    }
+
+    /**
+     * Buscar valor unitário de um material no estoque
+     */
+    private function getStockUnitPrice(?int $materialId, ?int $locationId = null, ?int $siteId = null): ?float
+    {
+        if (!$materialId) return null;
+
+        if ($locationId) {
+            $stockItem = \App\Models\StockItem::findByMaterialAndLocation($materialId, $locationId);
+        } elseif ($siteId) {
+            $stockItem = \App\Models\StockItem::findByMaterialAndSite($materialId, $siteId);
+        } else {
+            return null;
+        }
+
+        return $stockItem && !empty($stockItem['unit_price']) ? (float) $stockItem['unit_price'] : null;
     }
 
     // ============================

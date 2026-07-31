@@ -240,6 +240,27 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <td class="text-end fw-bold text-success">R$ <?= number_format($displayTotal, 2, ',', '.') ?></td>
                         </tr>
                         <?php endif; ?>
+                        <?php
+                        // Calcular total de estoque (itens de transferência com valor)
+                        $totalEstoque = 0;
+                        foreach ($items as $it) {
+                            if (!empty($it['source_type']) && $it['source_type'] !== 'purchase' && !empty($it['total_price'])) {
+                                $totalEstoque += (float) $it['total_price'];
+                            }
+                        }
+                        ?>
+                        <?php if ($totalEstoque > 0): ?>
+                        <tr class="table-light">
+                            <td colspan="8" class="text-end">Total Estoque:</td>
+                            <td class="text-end fw-bold" style="color:#6f42c1;">R$ <?= number_format($totalEstoque, 2, ',', '.') ?></td>
+                        </tr>
+                        <?php if ($displayTotal > 0): ?>
+                        <tr class="table-light">
+                            <td colspan="8" class="text-end fw-bold">TOTAL GERAL:</td>
+                            <td class="text-end fw-bold" style="color:#3a3b4e;">R$ <?= number_format($displayTotal + $totalEstoque, 2, ',', '.') ?></td>
+                        </tr>
+                        <?php endif; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>

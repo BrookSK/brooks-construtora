@@ -29,7 +29,25 @@
         <div class="card stat-card">
             <div class="card-body text-center">
                 <div class="stat-number" style="font-size:1.4rem;">R$ <?= number_format($site['total_approved'] ?? 0, 2, ',', '.') ?></div>
-                <small class="text-muted">Total Aprovado</small>
+                <small class="text-muted">Total Cotação</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <?php
+                $totalEstoqueObra = \App\Core\Database::fetch(
+                    "SELECT COALESCE(SUM(poi.total_price), 0) as total 
+                     FROM purchase_order_items poi 
+                     JOIN purchase_orders po ON poi.order_id = po.id 
+                     WHERE po.construction_site_id = ? AND poi.source_type IN ('stock_use', 'stock_transfer') AND poi.total_price > 0",
+                    [$site['id']]
+                )['total'] ?? 0;
+                $totalGeralObra = ($site['total_approved'] ?? 0) + $totalEstoqueObra;
+                ?>
+                <div class="stat-number" style="font-size:1.4rem; color:#6f42c1;">R$ <?= number_format($totalEstoqueObra, 2, ',', '.') ?></div>
+                <small class="text-muted">Total Estoque</small>
             </div>
         </div>
     </div>

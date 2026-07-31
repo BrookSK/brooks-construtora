@@ -72,6 +72,14 @@ ob_start();
                         </div>
 
                         <div class="col-md-4">
+                            <label class="form-label">Valor Unitário (R$)</label>
+                            <input type="text" name="unit_price" class="form-control" 
+                                   value="<?= $isEdit && !empty($item['unit_price']) ? number_format($item['unit_price'], 2, ',', '.') : '' ?>"
+                                   placeholder="0,00" inputmode="decimal">
+                            <small class="text-muted">Valor unitário do material em estoque</small>
+                        </div>
+
+                        <div class="col-md-4">
                             <label class="form-label">Localização</label>
                             <input type="text" name="location_detail" class="form-control" 
                                    value="<?= htmlspecialchars($isEdit ? ($item['location_detail'] ?? '') : '') ?>"
