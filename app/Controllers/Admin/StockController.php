@@ -202,6 +202,7 @@ class StockController extends Controller
             'stock_location_id' => $locationId,
             'quantity' => $quantity,
             'min_quantity' => $minQuantity,
+            'unit_price' => !empty($this->input('unit_price')) ? (float) str_replace(['.', ','], ['', '.'], $this->input('unit_price')) : null,
             'location_detail' => trim($this->input('location_detail', '')),
             'notes' => trim($this->input('notes', '')),
             'created_at' => date('Y-m-d H:i:s'),
@@ -282,6 +283,7 @@ class StockController extends Controller
         StockItem::updateById($id, [
             'quantity' => $newQuantity,
             'min_quantity' => (float) str_replace(',', '.', $this->input('min_quantity', '0')),
+            'unit_price' => !empty($this->input('unit_price')) ? (float) str_replace(['.', ','], ['', '.'], $this->input('unit_price')) : null,
             'location_detail' => trim($this->input('location_detail', '')),
             'notes' => trim($this->input('notes', '')),
             'updated_at' => date('Y-m-d H:i:s'),

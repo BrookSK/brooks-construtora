@@ -105,6 +105,7 @@ ob_start();
                             <th class="d-none d-md-table-cell">Especificação</th>
                             <th>Estoque</th>
                             <th class="text-center">Qtd</th>
+                            <th class="text-end d-none d-md-table-cell">Valor Unit.</th>
                             <th class="text-center d-none d-sm-table-cell">Mín</th>
                             <th class="text-center">Status</th>
                             <th class="text-end">Ações</th>
@@ -132,6 +133,9 @@ ob_start();
                                     <strong class="<?= $isEmpty ? 'text-danger' : ($isLow ? 'text-warning' : '') ?>">
                                         <?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2, ',', '.') ?>
                                     </strong>
+                                </td>
+                                <td class="text-end d-none d-md-table-cell">
+                                    <?= !empty($item['unit_price']) ? 'R$ ' . number_format($item['unit_price'], 2, ',', '.') : '<span class="text-muted">-</span>' ?>
                                 </td>
                                 <td class="text-center d-none d-sm-table-cell">
                                     <?= $item['min_quantity'] > 0 ? number_format($item['min_quantity'], 0, ',', '.') : '-' ?>
