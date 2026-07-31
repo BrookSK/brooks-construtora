@@ -357,7 +357,30 @@
                 </div>
 
                 <?php else: ?>
-                <!-- Sem fornecedores: exibe tabela de itens com preços -->
+                <!-- Sem fornecedores (pedido 100% estoque/transferência ou fluxo legado) -->
+                <?php
+                $stockItemsNoSup = array_filter($items, fn($i) => !empty($i['source_type']) && $i['source_type'] !== 'purchase');
+                $purchaseItemsNoSup = array_filter($items, fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase');
+                ?>
+
+                <?php if (!empty($stockItemsNoSup)): ?>
+                <div class="mb-3 p-2 rounded" style="background: #e8f5e9;">
+                    <small class="fw-bold text-success d-block mb-1"><i class="bi bi-arrow-left-right"></i> Itens de Estoque/Transferência:</small>
+                    <?php foreach ($stockItemsNoSup as $si): ?>
+                        <div class="d-flex justify-content-between small py-1 border-bottom" style="border-color:#c8e6c9!important;">
+                            <span>
+                                <strong><?= htmlspecialchars($si['material_name']) ?></strong>
+                                <span class="badge bg-<?= $si['source_type'] === 'stock_transfer' ? 'primary' : 'success' ?>" style="font-size:0.6rem;">
+                                    <?= $si['source_type'] === 'stock_transfer' ? 'Transferência' : 'Estoque' ?>
+                                </span>
+                            </span>
+                            <span class="fw-bold"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?> <?= $si['unit'] ?? '' ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+                <?php if (!empty($purchaseItemsNoSup)): ?>
                 <h6 class="mb-3"><i class="bi bi-list-check"></i> Itens Cotados</h6>
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered">
@@ -370,7 +393,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($itemsToApprove as $item): ?>
+                            <?php foreach ($purchaseItemsNoSup as $item): ?>
                             <tr>
                                 <td><?= htmlspecialchars($item['material_name']) ?></td>
                                 <td class="text-center"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
@@ -385,6 +408,7 @@
                         </tbody>
                     </table>
                 </div>
+                <?php endif; ?>
                 <?php endif; ?>
 
                 <hr>
