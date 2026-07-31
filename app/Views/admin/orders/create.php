@@ -608,7 +608,7 @@ function showReview() {
         html += `<div class="alert alert-light py-2 mb-3"><i class="bi bi-buildings"></i> <strong>Obra:</strong> ${siteName}</div>`;
     }
 
-    html += '<table class="table table-sm table-bordered"><thead><tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th class="text-center">Qtd</th></tr></thead><tbody>';
+    html += '<table class="table table-sm table-bordered"><thead><tr><th>#</th><th>' + (document.getElementById('typeService').checked ? 'Serviço' : 'Material') + '</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th class="text-center">Qtd</th></tr></thead><tbody>';
     
     let count = 0;
     rows.forEach(row => {
