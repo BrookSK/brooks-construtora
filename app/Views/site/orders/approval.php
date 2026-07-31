@@ -558,7 +558,7 @@
     // Dados dos preços por item/fornecedor (para cálculo de total)
     const priceData = <?= json_encode($pricesByItem ?? []) ?>;
     const supplierNames = <?= json_encode(array_column($orderSuppliers ?? [], 'supplier_name', 'supplier_id')) ?>;
-    const itemIds = <?= json_encode(array_column($items ?? [], 'id')) ?>;
+    const itemIds = <?= json_encode(array_values(array_map(fn($i) => $i['id'], array_filter($items ?? [], fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase')))) ?>;
     const supplierFinancials = <?= json_encode($supplierFinancialsJs) ?>;
 
     // Estado: qual fornecedor está selecionado para cada item
