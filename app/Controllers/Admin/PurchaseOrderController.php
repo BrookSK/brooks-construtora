@@ -2602,6 +2602,24 @@ class PurchaseOrderController extends Controller
         $this->redirect('/admin/orders/pin-users');
     }
 
+    public function updatePinUserEmail(): void
+    {
+        if (!$this->isPost()) { $this->redirect('/admin/orders/pin-users'); return; }
+        $id = (int) $this->input('id');
+        $email = trim($this->input('email', ''));
+
+        // Valida formato se preenchido
+        if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->setFlash('error', 'E-mail inválido.');
+            $this->redirect('/admin/orders/pin-users');
+            return;
+        }
+
+        Database::update('pin_users', ['email' => $email ?: null], 'id = ?', [$id]);
+        $this->setFlash('success', 'E-mail atualizado.');
+        $this->redirect('/admin/orders/pin-users');
+    }
+
     // ============================
     // REENVIO DE NOTIFICAÇÕES
     // ============================

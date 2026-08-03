@@ -141,6 +141,7 @@ class Router
             'orders/delete-pin-user' => ['PurchaseOrderController', 'deletePinUser'],
             'orders/update-pin-user' => ['PurchaseOrderController', 'updatePinUser'],
             'orders/update-pin-user-phone' => ['PurchaseOrderController', 'updatePinUserPhone'],
+            'orders/update-pin-user-email' => ['PurchaseOrderController', 'updatePinUserEmail'],
             'orders/send-invite-webhook' => ['PurchaseOrderController', 'sendInviteWebhook'],
 
             // Obras

@@ -120,7 +120,18 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
                                 </div>
                             </form>
                         </td>
-                        <td><small><?= htmlspecialchars($u['email'] ?? '-') ?></small></td>
+                        <td>
+                            <form method="POST" action="/admin/orders/update-pin-user-email" class="d-inline">
+                                <input type="hidden" name="id" value="<?= $u['id'] ?>">
+                                <div class="input-group input-group-sm" style="width:210px;">
+                                    <input type="email" class="form-control" name="email" value="<?= htmlspecialchars($u['email'] ?? '') ?>" placeholder="email@exemplo.com" style="font-size:0.7rem;">
+                                    <button class="btn btn-outline-success p-0 px-1" title="Salvar e-mail"><i class="bi bi-check"></i></button>
+                                    <?php if (!empty($u['email'])): ?>
+                                    <button type="submit" class="btn btn-outline-danger p-0 px-1" title="Remover e-mail" onclick="this.form.querySelector('input[name=email]').value=''"><i class="bi bi-x-lg"></i></button>
+                                    <?php endif; ?>
+                                </div>
+                            </form>
+                        </td>
                         <td><small><?= $u['last_login_at'] ? date('d/m/Y H:i', strtotime($u['last_login_at'])) : 'Nunca' ?></small></td>
                         <td>
                             <?php if ($u['active']): ?>
