@@ -130,7 +130,7 @@ $pmLabels = ['pix'=>'PIX','boleto'=>'Boleto','cartao'=>'Cartão','transferencia'
                     <?php endif; ?>
                 </div>
                 <div class="d-flex flex-wrap gap-2 mt-1" style="font-size:0.75rem; color:#6c757d;">
-                    <span><i class="bi bi-hash"></i> <?= number_format($d['quantity'], $d['quantity'] == (int)$d['quantity'] ? 0 : 2) ?> <?= htmlspecialchars($d['unit'] ?? '') ?></span>
+                    <span><i class="bi bi-hash"></i> <?= number_format($d['quantity'], $d['quantity'] == (int)$d['quantity'] ? 0 : 2) ?></span>
                     <?php if ($d['expected_date']): ?><span><i class="bi bi-calendar3"></i> <?= date('d/m', strtotime($d['expected_date'])) ?></span><?php endif; ?>
                     <?php if ($d['delivered_at']): ?><span class="text-primary"><i class="bi bi-box-seam"></i> Chegou <?= date('d/m H:i', strtotime($d['delivered_at'])) ?></span><?php endif; ?>
                     <?php if ($d['checked_by']): ?><span class="text-success"><i class="bi bi-person-check"></i> <?= htmlspecialchars($d['checked_by']) ?></span><?php endif; ?>

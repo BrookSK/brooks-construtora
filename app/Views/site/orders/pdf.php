@@ -251,7 +251,6 @@
                     <th>Material</th>
                     <th>Espec.</th>
                     <th>Class.</th>
-                    <th>Unid.</th>
                     <th style="text-align:center;">Qtd</th>
                     <th style="text-align:right;">Unit.</th>
                     <th style="text-align:right;">Total</th>
@@ -271,13 +270,12 @@
                         <?php endif; ?>
                         <?php if (!empty($item['already_purchased'])): ?>
                             <br><span style="font-size:0.65rem; color:#0d6efd; font-weight:600;">
-                                ✓ JÁ COMPRADO<?= !empty($item['already_purchased_qty']) ? ' (' . number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) . ' ' . ($item['unit'] ?? '') . ')' : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?>
+                                ✓ JÁ COMPRADO<?= !empty($item['already_purchased_qty']) ? ' (' . number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) . ')' : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?>
                             </span>
                         <?php endif; ?>
                     </td>
                     <td><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
                     <td><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
-                    <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
                     <td style="text-align:center;"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
                     <td style="text-align:right;">R$ <?= number_format($item['unit_price'] ?? 0, 2, ',', '.') ?></td>
                     <td style="text-align:right;">R$ <?= number_format($item['total_price'] ?? 0, 2, ',', '.') ?></td>
@@ -292,7 +290,7 @@
                 }
                 ?>
                 <tr class="total-row">
-                    <td colspan="5" style="text-align:right;">
+                    <td colspan="4" style="text-align:right;">
                         <?php if ($subtotalInsumos != $totalReal): ?>
                         <span style="font-size:0.75rem; color:#666; font-weight:normal;">Insumos: R$ <?= number_format($subtotalInsumos, 2, ',', '.') ?></span>
                         <?php endif; ?>
@@ -365,7 +363,7 @@
                     <div class="item-price">R$ <?= number_format($item['total_price'] ?? 0, 2, ',', '.') ?></div>
                 </div>
                 <div class="d-flex justify-content-between mt-1" style="font-size:0.7rem; color:#666;">
-                    <span><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?> <?= htmlspecialchars($item['unit'] ?? '') ?> × R$ <?= number_format($item['unit_price'] ?? 0, 2, ',', '.') ?></span>
+                    <span><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?> × R$ <?= number_format($item['unit_price'] ?? 0, 2, ',', '.') ?></span>
                     <?php if (!empty($item['approved_supplier_id']) && isset($supplierNamesMap[$item['approved_supplier_id']])): ?>
                     <span style="color:#28a745;"><?= htmlspecialchars($supplierNamesMap[$item['approved_supplier_id']]) ?></span>
                     <?php endif; ?>
@@ -458,13 +456,12 @@
                 <?php endif; ?>
                 </p>
                 <table class="items-table-desktop" style="font-size:0.75rem;">
-                    <thead><tr><th>Material</th><th>Unid.</th><th style="text-align:center;">Qtd</th><th style="text-align:right;">Unit.</th><th style="text-align:right;">Total</th></tr></thead>
+                    <thead><tr><th>Material</th><th style="text-align:center;">Qtd</th><th style="text-align:right;">Unit.</th><th style="text-align:right;">Total</th></tr></thead>
                     <tbody>
                     <?php $svcTotal = 0; ?>
                     <?php foreach ($matsBySup[$supId] as $mat): ?>
                     <tr>
                         <td><?= htmlspecialchars($mat['material_name']) ?></td>
-                        <td><?= htmlspecialchars($mat['unit'] ?? '-') ?></td>
                         <td style="text-align:center;"><?= $mat['quantity'] ? number_format($mat['quantity'], $mat['quantity'] == (int)$mat['quantity'] ? 0 : 2) : '-' ?></td>
                         <td style="text-align:right;"><?= $mat['unit_price'] ? 'R$ ' . number_format($mat['unit_price'], 2, ',', '.') : '-' ?></td>
                         <td style="text-align:right;"><?= $mat['total_price'] ? 'R$ ' . number_format($mat['total_price'], 2, ',', '.') : '-' ?></td>
@@ -472,7 +469,7 @@
                     <?php $svcTotal += (float)($mat['total_price'] ?? 0); ?>
                     <?php endforeach; ?>
                     <?php if ($svcTotal > 0): ?>
-                    <tr class="total-row"><td colspan="4" style="text-align:right;">Total Materiais:</td><td style="text-align:right;">R$ <?= number_format($svcTotal, 2, ',', '.') ?></td></tr>
+                    <tr class="total-row"><td colspan="3" style="text-align:right;">Total Materiais:</td><td style="text-align:right;">R$ <?= number_format($svcTotal, 2, ',', '.') ?></td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>

@@ -886,9 +886,9 @@ class PurchaseOrderController extends Controller
         }
 
         if ($hasMultiSupplier) {
-            $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Unid.', 'Qtd', 'Unit.', 'Total', 'Fornecedor', 'Origem'], 'header');
+            $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Qtd', 'Unit.', 'Total', 'Fornecedor', 'Origem'], 'header');
         } else {
-            $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Unid.', 'Qtd', 'Unit.', 'Total', 'Origem'], 'header');
+            $xlsx->addRow(['#', 'Material', 'Espec.', 'Classificação', 'Qtd', 'Unit.', 'Total', 'Origem'], 'header');
         }
 
         // Itens
@@ -923,7 +923,6 @@ class PurchaseOrderController extends Controller
                 $item['material_name'] . (!empty($item['already_purchased']) ? ' [JÁ COMPRADO' . ($item['already_purchased_price'] ? ' - R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '') . ']' : ''),
                 $item['specification'] ?? '',
                 $item['classification'] ?? '',
-                $item['unit'] ?? '',
                 $item['quantity'],
                 $unitPrice,
                 $totalPrice,
@@ -936,11 +935,11 @@ class PurchaseOrderController extends Controller
         }
 
         // Totais
-        $xlsx->addRow(['', '', '', '', '', '', 'Insumos:', $subtotalInsumos], 'total');
+        $xlsx->addRow(['', '', '', '', '', 'Insumos:', $subtotalInsumos], 'total');
         // Usar subtotal_final do fornecedor aprovado
         $xlsxTotal = ($approvedSupplier && $approvedSupplier['subtotal_final'] > 0) ? $approvedSupplier['subtotal_final'] : $order['total_estimated'];
         if ($xlsxTotal != $subtotalInsumos && $xlsxTotal > 0) {
-            $xlsx->addRow(['', '', '', '', '', '', 'TOTAL:', $xlsxTotal], 'total');
+            $xlsx->addRow(['', '', '', '', '', 'TOTAL:', $xlsxTotal], 'total');
         }
 
         // Financeiros
@@ -1260,7 +1259,7 @@ class PurchaseOrderController extends Controller
             foreach ($itemsList as $i => $item) {
                 $prompt .= ($i + 1) . ". {$item['name']}"
                     . ($item['specification'] ? " - {$item['specification']}" : '')
-                    . " - Qtd: {$item['quantity']} {$item['unit']}\n";
+                    . " - Qtd: {$item['quantity']}\n";
             }
 
             $prompt .= "\nMENSAGENS DO FORNECEDOR (orçamento recebido via WhatsApp):\n"

@@ -189,7 +189,7 @@
                                     <?= $si['source_type'] === 'stock_transfer' ? 'Transferência' : 'Estoque' ?>
                                 </span>
                             </span>
-                            <span class="fw-bold"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?> <?= $si['unit'] ?? '' ?></span>
+                            <span class="fw-bold"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?></span>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -206,7 +206,7 @@
                                     <?= $si['source_type'] === 'stock_transfer' ? 'Transferência' : 'Estoque' ?>
                                 </span>
                             </span>
-                            <span class="fw-bold"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?> <?= $si['unit'] ?? '' ?></span>
+                            <span class="fw-bold"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?></span>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -217,7 +217,7 @@
                     <small class="fw-bold d-block mb-1" style="color:#1565c0;"><i class="bi bi-bag-check"></i> Já comprado(s) antes da cotação:</small>
                     <?php foreach ($alreadyPurchasedItems as $api): ?>
                     <div class="d-flex justify-content-between small py-1 border-bottom" style="border-color:#bbdefb!important;">
-                        <span><?= htmlspecialchars($api['material_name']) ?> — <?= !empty($api['already_purchased_qty']) ? number_format($api['already_purchased_qty'], $api['already_purchased_qty'] == (int)$api['already_purchased_qty'] ? 0 : 2) : number_format($api['quantity'], $api['quantity'] == (int)$api['quantity'] ? 0 : 2) ?> <?= $api['unit'] ?? '' ?></span>
+                        <span><?= htmlspecialchars($api['material_name']) ?> — <?= !empty($api['already_purchased_qty']) ? number_format($api['already_purchased_qty'], $api['already_purchased_qty'] == (int)$api['already_purchased_qty'] ? 0 : 2) : number_format($api['quantity'], $api['quantity'] == (int)$api['quantity'] ? 0 : 2) ?></span>
                         <span class="fw-bold"><?= $api['already_purchased_price'] ? 'R$ ' . number_format($api['already_purchased_price'], 2, ',', '.') : '—' ?></span>
                     </div>
                     <?php endforeach; ?>
@@ -265,7 +265,7 @@
                         <div class="item-title">
                             <?= htmlspecialchars($item['material_name']) ?>
                             <?php if (!empty($item['already_purchased'])): ?>
-                            <span class="badge bg-info" style="font-size:0.6rem;"><i class="bi bi-bag-check"></i> Já comprado <?= !empty($item['already_purchased_qty']) ? number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) . ' ' . ($item['unit'] ?? '') : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
+                            <span class="badge bg-info" style="font-size:0.6rem;"><i class="bi bi-bag-check"></i> Já comprado <?= !empty($item['already_purchased_qty']) ? number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
                             <?php endif; ?>
                         </div>
                         <div class="item-qty">Qtd: <?php
@@ -274,7 +274,7 @@
                                 $listEffQty = max(0, $listEffQty - (float) $item['already_purchased_qty']);
                             }
                             echo number_format($listEffQty, $listEffQty == (int)$listEffQty ? 0 : 2);
-                        ?><?= $item['unit'] ? ' ' . $item['unit'] : '' ?></div>
+                        ?></div>
                     </div>
                     <div class="supplier-options">
                         <?php foreach ($orderSuppliers as $os): ?>
@@ -374,7 +374,7 @@
                                     <?= $si['source_type'] === 'stock_transfer' ? 'Transferência' : 'Estoque' ?>
                                 </span>
                             </span>
-                            <span class="fw-bold"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?> <?= $si['unit'] ?? '' ?></span>
+                            <span class="fw-bold"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?></span>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -483,12 +483,11 @@
                         <?php if (!empty($matsBySup[$supId])): ?>
                         <div class="table-responsive">
                             <table class="table table-sm table-bordered mb-0" style="font-size:0.72rem;">
-                                <thead class="table-light"><tr><th>Material</th><th>Unid.</th><th class="text-center">Qtd</th><th class="text-end">Unit.</th><th class="text-end">Total</th></tr></thead>
+                                <thead class="table-light"><tr><th>Material</th><th class="text-center">Qtd</th><th class="text-end">Unit.</th><th class="text-end">Total</th></tr></thead>
                                 <tbody>
                                 <?php foreach ($matsBySup[$supId] as $mat): ?>
                                 <tr>
                                     <td><strong><?= htmlspecialchars($mat['material_name']) ?></strong></td>
-                                    <td><?= htmlspecialchars($mat['unit'] ?? '-') ?></td>
                                     <td class="text-center"><?= $mat['quantity'] ? number_format($mat['quantity'], $mat['quantity'] == (int)$mat['quantity'] ? 0 : 2) : '-' ?></td>
                                     <td class="text-end"><?= $mat['unit_price'] ? 'R$ ' . number_format($mat['unit_price'], 2, ',', '.') : '-' ?></td>
                                     <td class="text-end fw-bold"><?= $mat['total_price'] ? 'R$ ' . number_format($mat['total_price'], 2, ',', '.') : '-' ?></td>

@@ -274,7 +274,6 @@ HTML;
             $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($item['material_name']) . '</td>';
             $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($item['specification'] ?? '-') . '</td>';
             $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($item['classification'] ?? '-') . '</td>';
-            $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px;">' . htmlspecialchars($item['unit'] ?? '-') . '</td>';
             $itemsHtml .= '<td style="padding:8px; border-bottom:1px solid #eee; font-size:13px; text-align:center;">' . number_format($item['quantity'], 0) . '</td>';
             $itemsHtml .= '</tr>';
         }
@@ -307,7 +306,6 @@ HTML;
             . '<th style="padding:8px; font-size:12px; text-align:left;">Material</th>'
             . '<th style="padding:8px; font-size:12px; text-align:left;">Especificação</th>'
             . '<th style="padding:8px; font-size:12px; text-align:left;">Classificação</th>'
-            . '<th style="padding:8px; font-size:12px; text-align:left;">Unid.</th>'
             . '<th style="padding:8px; font-size:12px; text-align:center;">Qtd</th>'
             . '</tr>'
             . $itemsHtml
@@ -345,7 +343,6 @@ HTML;
             $itemsHtml .= '<tr>';
             $itemsHtml .= '<td style="padding:6px 8px; border-bottom:1px solid #eee; font-size:12px;">' . ($i + 1) . '</td>';
             $itemsHtml .= '<td style="padding:6px 8px; border-bottom:1px solid #eee; font-size:12px;">' . htmlspecialchars($item['material_name']) . '</td>';
-            $itemsHtml .= '<td style="padding:6px 8px; border-bottom:1px solid #eee; font-size:12px;">' . htmlspecialchars($item['unit'] ?? '-') . '</td>';
             $itemsHtml .= '<td style="padding:6px 8px; border-bottom:1px solid #eee; font-size:12px; text-align:center;">' . number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) . '</td>';
             $itemsHtml .= '</tr>';
         }
@@ -371,7 +368,6 @@ HTML;
             . '<tr style="background:#f8f9fa;">'
             . '<th style="padding:6px 8px; font-size:11px; text-align:left;">#</th>'
             . '<th style="padding:6px 8px; font-size:11px; text-align:left;">Material</th>'
-            . '<th style="padding:6px 8px; font-size:11px; text-align:left;">Unid.</th>'
             . '<th style="padding:6px 8px; font-size:11px; text-align:center;">Qtd</th>'
             . '</tr>'
             . $itemsHtml

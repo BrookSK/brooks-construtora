@@ -116,7 +116,6 @@ function showMessagePreview(vendorName) {
         itemsList += `${i+1}. ${item.name}`;
         if (item.specification) itemsList += ` - ${item.specification}`;
         if (item.quantity) itemsList += ` - Qtd: ${item.quantity}`;
-        if (item.unit) itemsList += ` ${item.unit}`;
         itemsList += '\n';
     });
 

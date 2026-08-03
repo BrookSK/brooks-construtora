@@ -139,7 +139,7 @@ $paymentLabels = ['pix'=>'PIX','boleto'=>'Boleto','cartao'=>'Cartão','transfere
                     <td><?= date('d/m', strtotime($si['purchased_at'])) ?></td>
                     <td><a href="/admin/orders/show/<?= $si['order_id'] ?>"><?= $si['order_code'] ?></a></td>
                     <td><strong><?= htmlspecialchars($si['description']) ?></strong></td>
-                    <td class="text-center"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?> <?= htmlspecialchars($si['unit'] ?? '') ?></td>
+                    <td class="text-center"><?= number_format($si['quantity'], $si['quantity'] == (int)$si['quantity'] ? 0 : 2) ?></td>
                     <td class="text-end fw-bold">R$ <?= number_format($si['total_price'], 2, ',', '.') ?></td>
                     <td><?= htmlspecialchars($si['supplier_name'] ?? '-') ?></td>
                     <td><?= $si['payment_method'] ? ($paymentLabels[$si['payment_method']] ?? $si['payment_method']) : '-' ?></td>

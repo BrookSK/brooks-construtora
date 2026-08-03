@@ -483,14 +483,13 @@ async function parsePdfFile() {
             if (notFound > 0) {
                 resultHtml += `<div class="card border-warning mb-3"><div class="card-header bg-warning bg-opacity-10 py-2"><strong class="small">Materiais não encontrados no cadastro (${notFound})</strong><br><small class="text-muted">Revise e cadastre os que precisar:</small></div>`;
                 resultHtml += `<div class="card-body p-0"><div class="table-responsive"><table class="table table-sm mb-0" style="font-size:0.8rem;">`;
-                resultHtml += `<thead><tr><th>Nome</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th>Qtd</th><th></th></tr></thead><tbody>`;
+                resultHtml += `<thead><tr><th>Nome</th><th>Espec.</th><th>Class.</th><th>Qtd</th><th></th></tr></thead><tbody>`;
                 
                 notFoundItems.forEach((m, idx) => {
                     resultHtml += `<tr id="nf-row-${idx}">`;
                     resultHtml += `<td><input type="text" class="form-control form-control-sm" value="${m.name}" id="nf-name-${idx}"></td>`;
                     resultHtml += `<td><input type="text" class="form-control form-control-sm" value="${m.specification || ''}" id="nf-spec-${idx}" style="width:100px;"></td>`;
                     resultHtml += `<td><input type="text" class="form-control form-control-sm" value="${m.classification || ''}" id="nf-class-${idx}" style="width:80px;"></td>`;
-                    resultHtml += `<td><input type="text" class="form-control form-control-sm" value="${m.unit || ''}" id="nf-unit-${idx}" style="width:60px;"></td>`;
                     resultHtml += `<td><input type="number" class="form-control form-control-sm" value="${m.quantity || 1}" id="nf-qty-${idx}" style="width:60px;"></td>`;
                     resultHtml += `<td><button type="button" class="btn btn-sm btn-outline-success" onclick="quickRegisterFromPdf(${idx})" title="Cadastrar material"><i class="bi bi-plus-circle"></i></button></td>`;
                     resultHtml += `</tr>`;
@@ -608,7 +607,7 @@ function showReview() {
         html += `<div class="alert alert-light py-2 mb-3"><i class="bi bi-buildings"></i> <strong>Obra:</strong> ${siteName}</div>`;
     }
 
-    html += '<table class="table table-sm table-bordered"><thead><tr><th>#</th><th>' + (document.getElementById('typeService').checked ? 'Serviço' : 'Material') + '</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th class="text-center">Qtd</th></tr></thead><tbody>';
+    html += '<table class="table table-sm table-bordered"><thead><tr><th>#</th><th>' + (document.getElementById('typeService').checked ? 'Serviço' : 'Material') + '</th><th>Espec.</th><th>Class.</th><th class="text-center">Qtd</th></tr></thead><tbody>';
     
     let count = 0;
     rows.forEach(row => {
@@ -616,9 +615,8 @@ function showReview() {
         const name = row.querySelector('[id^="mname-"]')?.value || '-';
         const spec = row.querySelector('[id^="spec-"]')?.value || '-';
         const cls = row.querySelector('[id^="class-"]')?.value || '-';
-        const unit = row.querySelector('[id^="unit-"]')?.value || '-';
         const qty = row.querySelector('[name*="[quantity]"]')?.value || '1';
-        html += `<tr><td>${count}</td><td><strong>${name}</strong></td><td>${spec}</td><td>${cls}</td><td>${unit}</td><td class="text-center">${qty}</td></tr>`;
+        html += `<tr><td>${count}</td><td><strong>${name}</strong></td><td>${spec}</td><td>${cls}</td><td class="text-center">${qty}</td></tr>`;
     });
     html += '</tbody></table>';
 

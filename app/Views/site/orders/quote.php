@@ -141,7 +141,7 @@
                     <div class="table-responsive mb-4">
                         <table class="table table-sm table-bordered">
                             <thead class="table-light">
-                                <tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th>Unid.</th><th class="text-center">Qtd</th><th>Origem</th><th class="text-center" style="min-width:160px;">Já comprado?</th></tr>
+                                <tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th class="text-center">Qtd</th><th>Origem</th><th class="text-center" style="min-width:160px;">Já comprado?</th></tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($items as $i => $item): ?>
@@ -151,7 +151,6 @@
                                     <td><strong><?= htmlspecialchars($item['material_name']) ?></strong></td>
                                     <td class="text-muted small"><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
                                     <td class="text-muted small"><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
-                                    <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
                                     <td class="text-center fw-bold"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?></td>
                                     <td>
                                         <?php if (!empty($item['source_type'])): ?>
@@ -239,7 +238,7 @@
                             <div class="border rounded p-2 mb-2 bg-white">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <strong><?= htmlspecialchars($iws['name']) ?></strong>
-                                    <span class="badge bg-primary">Precisa: <?= $iws['qty_needed'] == (int)$iws['qty_needed'] ? (int)$iws['qty_needed'] : number_format($iws['qty_needed'], 2, ',', '.') ?> <?= $iws['unit'] ?></span>
+                                    <span class="badge bg-primary">Precisa: <?= $iws['qty_needed'] == (int)$iws['qty_needed'] ? (int)$iws['qty_needed'] : number_format($iws['qty_needed'], 2, ',', '.') ?></span>
                                 </div>
                                 <div class="quote-stock-distribution" data-item-id="<?= $iws['item_id'] ?>" data-needed="<?= $iws['qty_needed'] ?>">
                                     <?php foreach ($iws['stocks'] as $sIdx => $stk): ?>
@@ -1827,7 +1826,7 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
     
     // Desktop: Tabela
     html += `<div class="d-none d-md-block"><div class="table-responsive"><table class="table table-sm mb-0" style="font-size:0.75rem;">`;
-    html += `<thead><tr><th style="width:30px;"></th><th>Material</th><th>Unid.</th><th>Qtd</th><th>Unit.</th><th>Total</th><th style="width:60px;"></th></tr></thead><tbody>`;
+    html += `<thead><tr><th style="width:30px;"></th><th>Material</th><th>Qtd</th><th>Unit.</th><th>Total</th><th style="width:60px;"></th></tr></thead><tbody>`;
 
     materials.forEach((m, idx) => {
         const unitPrice = m.unit_price ? parseFloat(m.unit_price).toFixed(2).replace('.', ',') : '-';
@@ -1836,7 +1835,6 @@ function renderServiceMaterials(sid, materials, totals, pdfId) {
         html += `<tr id="svc-mat-${sid}-${idx}">`;
         html += `<td><input type="checkbox" class="svc-mat-check" data-sid="${sid}" data-idx="${idx}" checked></td>`;
         html += `<td><input type="text" class="form-control form-control-sm p-1 bg-white" value="${escHtml(m.name || '')}" id="svc-name-${sid}-${idx}" style="font-size:0.75rem;"></td>`;
-        html += `<td><input type="text" class="form-control form-control-sm p-1 bg-white" value="${escHtml(m.unit || '')}" id="svc-unit-${sid}-${idx}" style="width:50px;font-size:0.75rem;"></td>`;
         html += `<td><input type="number" class="form-control form-control-sm p-1 bg-white" value="${m.quantity || 1}" id="svc-qty-${sid}-${idx}" style="width:55px;font-size:0.75rem;" step="0.001"></td>`;
         html += `<td><input type="text" class="form-control form-control-sm p-1 bg-white" value="${unitPrice}" id="svc-uprice-${sid}-${idx}" style="width:75px;font-size:0.75rem;" inputmode="decimal"></td>`;
         html += `<td><input type="text" class="form-control form-control-sm p-1 bg-white" value="${totalPrice}" id="svc-tprice-${sid}-${idx}" style="width:80px;font-size:0.75rem;" inputmode="decimal"></td>`;

@@ -178,7 +178,6 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <th>Material</th>
                             <th>Espec.</th>
                             <th>Class.</th>
-                            <th>Unid.</th>
                             <th class="text-center">Qtd</th>
                             <th>Origem</th>
                             <?php if ($order['total_estimated'] > 0): ?>
@@ -204,12 +203,11 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <td>
                                 <strong><?= htmlspecialchars($item['material_name']) ?></strong>
                                 <?php if (!empty($item['already_purchased'])): ?>
-                                <br><span class="badge bg-info" style="font-size:0.6rem;"><i class="bi bi-bag-check"></i> Já comprado <?= !empty($item['already_purchased_qty']) ? number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) . ' ' . ($item['unit'] ?? '') : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
+                                <br><span class="badge bg-info" style="font-size:0.6rem;"><i class="bi bi-bag-check"></i> Já comprado <?= !empty($item['already_purchased_qty']) ? number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
                                 <?php endif; ?>
                             </td>
                             <td><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
-                            <td><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
                             <td class="text-center">
                                 <?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?>
                                 <?php if (!empty($item['already_purchased']) && !empty($item['already_purchased_qty']) && (float)$item['already_purchased_qty'] < (float)$item['quantity']): ?>
@@ -236,7 +234,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <?php endforeach; ?>
                         <?php if ($order['total_estimated'] > 0): ?>
                         <tr class="table-light">
-                            <td colspan="8" class="text-end fw-bold">TOTAL:</td>
+                            <td colspan="7" class="text-end fw-bold">TOTAL:</td>
                             <td class="text-end fw-bold text-success">R$ <?= number_format($displayTotal, 2, ',', '.') ?></td>
                         </tr>
                         <?php endif; ?>
@@ -251,12 +249,12 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         ?>
                         <?php if ($totalEstoque > 0): ?>
                         <tr class="table-light">
-                            <td colspan="8" class="text-end">Total Estoque:</td>
+                            <td colspan="7" class="text-end">Total Estoque:</td>
                             <td class="text-end fw-bold" style="color:#6f42c1;">R$ <?= number_format($totalEstoque, 2, ',', '.') ?></td>
                         </tr>
                         <?php if ($displayTotal > 0): ?>
                         <tr class="table-light">
-                            <td colspan="8" class="text-end fw-bold">TOTAL GERAL:</td>
+                            <td colspan="7" class="text-end fw-bold">TOTAL GERAL:</td>
                             <td class="text-end fw-bold" style="color:#3a3b4e;">R$ <?= number_format($displayTotal + $totalEstoque, 2, ',', '.') ?></td>
                         </tr>
                         <?php endif; ?>
@@ -444,7 +442,6 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <thead class="table-light">
                                 <tr>
                                     <th>Material</th>
-                                    <th>Unid.</th>
                                     <th class="text-center">Qtd</th>
                                     <th class="text-end">Unit.</th>
                                     <th class="text-end">Total</th>
@@ -463,7 +460,6 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                                         <small class="text-muted d-block"><?= htmlspecialchars($mat['specification']) ?></small>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?= htmlspecialchars($mat['unit'] ?? '-') ?></td>
                                     <td class="text-center"><?= $mat['quantity'] ? number_format($mat['quantity'], $mat['quantity'] == (int)$mat['quantity'] ? 0 : 3) : '-' ?></td>
                                     <td class="text-end"><?= $mat['unit_price'] ? 'R$ ' . number_format($mat['unit_price'], 2, ',', '.') : '-' ?></td>
                                     <td class="text-end fw-bold"><?= $mat['total_price'] ? 'R$ ' . number_format($mat['total_price'], 2, ',', '.') : '-' ?></td>
@@ -472,7 +468,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                                 <?php endforeach; ?>
                                 <?php if ($subTotal > 0): ?>
                                 <tr class="table-light">
-                                    <td colspan="4" class="text-end fw-bold">Total materiais:</td>
+                                    <td colspan="3" class="text-end fw-bold">Total materiais:</td>
                                     <td class="text-end fw-bold text-success">R$ <?= number_format($subTotal, 2, ',', '.') ?></td>
                                 </tr>
                                 <?php endif; ?>
@@ -659,7 +655,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                                     <strong class="small"><?= htmlspecialchars($d['material_name']) ?></strong>
                                 </div>
                                 <div class="d-flex flex-wrap gap-2" style="font-size:0.7rem; color:#6c757d;">
-                                    <span>Qtd: <?= number_format($d['quantity'], $d['quantity'] == (int)$d['quantity'] ? 0 : 2) ?> <?= htmlspecialchars($d['unit'] ?? '') ?></span>
+                                    <span>Qtd: <?= number_format($d['quantity'], $d['quantity'] == (int)$d['quantity'] ? 0 : 2) ?></span>
                                     <?php if ($d['expected_date']): ?>
                                     <span><i class="bi bi-calendar"></i> Prev: <?= date('d/m/Y', strtotime($d['expected_date'])) ?></span>
                                     <?php endif; ?>

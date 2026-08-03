@@ -121,7 +121,7 @@ $totalItems = array_sum(array_column($trackingData, 'total_count'));
                 <tr class="tracking-row" data-status="<?= $d['status'] ?>" data-late="<?= $d['is_late'] ? '1' : '0' ?>">
                     <td><strong><?= htmlspecialchars($d['material_name']) ?></strong></td>
                     <td><?= htmlspecialchars($d['supplier_name'] ?? '-') ?></td>
-                    <td class="text-center"><?= number_format($d['quantity'], $d['quantity'] == (int)$d['quantity'] ? 0 : 2) ?> <?= htmlspecialchars($d['unit'] ?? '') ?></td>
+                    <td class="text-center"><?= number_format($d['quantity'], $d['quantity'] == (int)$d['quantity'] ? 0 : 2) ?></td>
                     <td>
                         <?php if ($d['expected_date']): ?>
                         <span class="<?= $d['is_late'] ? 'text-danger fw-bold' : '' ?>">
