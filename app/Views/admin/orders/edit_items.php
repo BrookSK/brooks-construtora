@@ -3,6 +3,12 @@
 
 <link rel="stylesheet" href="/assets/css/searchable-select.css">
 
+<style>
+/* Garantir que o dropdown do SearchableSelect não fique cortado pela tabela */
+.table-responsive { overflow: visible !important; }
+.searchable-select-dropdown { z-index: 1050; }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Editar Itens do Pedido <?= htmlspecialchars($order['code']) ?></h5>
     <a href="/admin/orders/show/<?= $order['id'] ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
@@ -28,7 +34,7 @@
                 <i class="bi bi-plus"></i> Adicionar Item
             </button>
         </div>
-        <div class="card-body p-0">
+        <div class="card-body p-0" style="overflow:visible;">
             <div class="table-responsive">
                 <table class="table table-sm mb-0" id="itemsTable">
                     <thead>
