@@ -23,8 +23,8 @@
 
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-list-check"></i> Itens do Pedido <span class="badge bg-primary ms-1" id="itemCountBadge"><?= count($items) ?></span></span>
-            <button type="button" class="btn btn-sm btn-primary" id="addItemBtn" onclick="addItem()">
+            <span><i class="bi bi-list-check"></i> Itens do Pedido <span class="badge bg-primary ms-1" id="itemCountBadge">0</span></span>
+            <button type="button" class="btn btn-sm btn-primary" id="addItemBtn">
                 <i class="bi bi-plus"></i> Adicionar Item
             </button>
         </div>
@@ -42,6 +42,9 @@
                     </thead>
                     <tbody id="itemsBody"></tbody>
                 </table>
+                <div class="p-3 text-center text-muted" id="emptyState">
+                    <i class="bi bi-inbox"></i> Clique em "Adicionar Item" para começar
+                </div>
             </div>
         </div>
     </div>
@@ -56,133 +59,92 @@
     </div>
 </form>
 
+<script src="/assets/js/searchable-select.js"></script>
 <script>
-const materials = <?= json_encode(array_map(function($m) {
-    return [
-        'id' => $m['id'],
-        'name' => $m['name'],
-        'specification' => $m['specification'] ?? $m['category_name'] ?? '',
-        'classification' => $m['classification'] ?? '',
-        'unit_abbr' => $m['unit_abbr'] ?? '',
-        'unit_name' => $m['unit_name'] ?? '',
-    ];
-}, $materials)) ?>;
+const materials = <?= json_encode($materials) ?>;
+let itemCount = 0;
 
-let itemIndex = 0;
+document.getElementById('addItemBtn').addEventListener('click', () => addItem());
+
+function updateItemCount() {
+    const count = document.querySelectorAll('#itemsBody tr').length;
+    document.getElementById('itemCountBadge').textContent = count;
+    document.getElementById('emptyState').style.display = count ? 'none' : '';
+}
 
 function buildMaterialOptions(prefill) {
-    let opts = '<option value="">-- Selecione ou digite --</option>';
+    let opts = '<option value="">-- Selecione --</option>';
     materials.forEach(m => {
         const label = m.name + (m.classification ? ' - ' + m.classification : '') + (m.specification ? ' (' + m.specification + ')' : '');
         const selected = prefill && prefill.id == m.id ? 'selected' : '';
-        opts += `<option value="${m.id}" data-name="${m.name}" data-spec="${m.specification || ''}" data-class="${m.classification || ''}" data-unit="${m.unit_abbr || m.unit_name || ''}" ${selected}>${label}</option>`;
+        opts += `<option value="${m.id}" data-name="${m.name}" data-spec="${m.specification || m.category_name || ''}" data-class="${m.classification || ''}" data-unit="${m.unit_abbr || m.unit_name || ''}" ${selected}>${label}</option>`;
     });
     return opts;
 }
 
-function addItem(data) {
-    const idx = itemIndex++;
-    const name = data ? data.material_name : '';
-    const spec = data ? (data.specification || '') : '';
-    const cls = data ? (data.classification || '') : '';
-    const unit = data ? (data.unit || '') : '';
-    const qty = data ? data.quantity : 1;
-    const matId = data ? (data.material_id || '') : '';
+function addItem(prefill = null) {
+    itemCount++;
+    const idx = itemCount;
+    const opts = buildMaterialOptions(prefill);
 
-    const row = document.createElement('tr');
-    row.id = `item-row-${idx}`;
-    row.innerHTML = `
+    const tr = document.createElement('tr');
+    tr.id = 'item-row-' + idx;
+    tr.innerHTML = `
         <td>
-            <select class="form-select form-select-sm material-select" id="mat-${idx}" onchange="onMaterialChange(${idx})">
-                ${buildMaterialOptions(matId ? {id: matId} : null)}
-            </select>
-            <input type="hidden" name="items[${idx}][material_id]" id="matid-${idx}" value="${matId}">
-            <input type="hidden" name="items[${idx}][material_name]" id="mname-${idx}" value="${name}">
-            <input type="hidden" name="items[${idx}][unit]" id="unit-${idx}" value="${unit}">
+            <select class="material-select-raw" id="mat-select-${idx}" style="display:none;">${opts}</select>
+            <div id="mat-ss-${idx}"></div>
+            <input type="hidden" name="items[${idx}][material_id]" id="mid-${idx}" value="${prefill?.id || ''}">
+            <input type="hidden" name="items[${idx}][material_name]" id="mname-${idx}" value="${prefill?.name || ''}">
+            <input type="hidden" name="items[${idx}][unit]" id="unit-${idx}" value="${prefill?.unit || ''}">
         </td>
-        <td><input type="text" class="form-control form-control-sm" name="items[${idx}][specification]" id="spec-${idx}" value="${spec}"></td>
-        <td><input type="text" class="form-control form-control-sm" name="items[${idx}][classification]" id="class-${idx}" value="${cls}"></td>
-        <td><input type="number" class="form-control form-control-sm" name="items[${idx}][quantity]" value="${qty}" min="0.01" step="0.01" required></td>
+        <td><input type="text" class="form-control form-control-sm" name="items[${idx}][specification]" id="spec-${idx}" value="${prefill?.specification || ''}" readonly></td>
+        <td><input type="text" class="form-control form-control-sm" name="items[${idx}][classification]" id="class-${idx}" value="${prefill?.classification || ''}" readonly></td>
+        <td><input type="number" class="form-control form-control-sm" name="items[${idx}][quantity]" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required></td>
         <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(${idx})"><i class="bi bi-trash"></i></button></td>
     `;
-    document.getElementById('itemsBody').appendChild(row);
-    updateCount();
+    document.getElementById('itemsBody').appendChild(tr);
 
-    // Se não tem material_id, colocar nome manual
-    if (!matId && name) {
-        const select = document.getElementById(`mat-${idx}`);
-        // Tentar encontrar pelo nome
-        let found = false;
-        for (let opt of select.options) {
-            if (opt.dataset.name === name) {
-                opt.selected = true;
-                found = true;
-                break;
-            }
+    // Inicializar SearchableSelect
+    const matSS = new SearchableSelect(document.getElementById('mat-select-' + idx), {
+        placeholder: 'Buscar material...',
+        onSelect: function(value, text, dataset) {
+            document.getElementById('mid-' + idx).value = value;
+            document.getElementById('mname-' + idx).value = dataset.name || '';
+            document.getElementById('spec-' + idx).value = dataset.spec || '';
+            document.getElementById('class-' + idx).value = dataset.class || '';
+            document.getElementById('unit-' + idx).value = dataset.unit || '';
         }
-        if (!found) {
-            // Adicionar como opção custom
-            const opt = document.createElement('option');
-            opt.value = '';
-            opt.textContent = name + ' (não cadastrado)';
-            opt.selected = true;
-            select.appendChild(opt);
-        }
+    });
+
+    // Se tem prefill, setar valor
+    if (prefill?.id) {
+        matSS.setValue(prefill.id);
     }
 
-    // Inicializar searchable select
-    if (typeof initSearchableSelect === 'function') {
-        initSearchableSelect(document.getElementById(`mat-${idx}`));
-    }
+    updateItemCount();
 }
 
 function removeItem(idx) {
-    const row = document.getElementById(`item-row-${idx}`);
+    const row = document.getElementById('item-row-' + idx);
     if (row) row.remove();
-    updateCount();
-}
-
-function onMaterialChange(idx) {
-    const select = document.getElementById(`mat-${idx}`);
-    const opt = select.selectedOptions[0];
-    if (opt && opt.value) {
-        document.getElementById(`matid-${idx}`).value = opt.value;
-        document.getElementById(`mname-${idx}`).value = opt.dataset.name || '';
-        document.getElementById(`spec-${idx}`).value = opt.dataset.spec || '';
-        document.getElementById(`class-${idx}`).value = opt.dataset.class || '';
-        document.getElementById(`unit-${idx}`).value = opt.dataset.unit || '';
-    }
-}
-
-function updateCount() {
-    const count = document.querySelectorAll('#itemsBody tr').length;
-    document.getElementById('itemCountBadge').textContent = count;
+    updateItemCount();
 }
 
 // Carregar itens existentes
 document.addEventListener('DOMContentLoaded', function() {
     const existingItems = <?= json_encode(array_map(function($item) {
         return [
-            'material_id' => $item['material_id'],
-            'material_name' => $item['material_name'],
+            'id' => $item['material_id'],
+            'name' => $item['material_name'],
             'specification' => $item['specification'] ?? '',
             'classification' => $item['classification'] ?? '',
             'unit' => $item['unit'] ?? '',
             'quantity' => (float) $item['quantity'],
-            'source_type' => $item['source_type'] ?? null,
         ];
     }, $items)) ?>;
 
-    // Só carregar itens que são de compra/cotação (ignorar os de estoque puro)
-    existingItems.forEach(item => {
-        // Incluir todos os itens para que o solicitante veja tudo e possa decidir
-        addItem(item);
-    });
+    existingItems.forEach(item => addItem(item));
 });
 </script>
-
-<?php if (file_exists(ROOT_PATH . '/assets/js/searchable-select.js')): ?>
-<script src="/assets/js/searchable-select.js"></script>
-<?php endif; ?>
 
 <?php $content = ob_get_clean(); include ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>
