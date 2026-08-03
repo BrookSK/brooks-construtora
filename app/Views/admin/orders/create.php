@@ -75,7 +75,6 @@
                                     <th style="min-width:250px;">Material</th>
                                     <th style="min-width:120px;">Especificação</th>
                                     <th style="min-width:100px;">Classificação</th>
-                                    <th style="min-width:90px;">Unidade</th>
                                     <th style="width:90px;">Qtd</th>
                                     <th style="width:50px;"></th>
                                 </tr>
@@ -271,7 +270,7 @@ function addItem(prefill = null) {
         </td>
         <td><input type="text" class="form-control form-control-sm" name="items[${idx}][specification]" id="spec-${idx}" value="${prefill?.specification || ''}" readonly></td>
         <td><input type="text" class="form-control form-control-sm" name="items[${idx}][classification]" id="class-${idx}" value="${prefill?.classification || ''}" readonly></td>
-        <td><input type="text" class="form-control form-control-sm" name="items[${idx}][unit]" id="unit-${idx}" value="${prefill?.unit || ''}" readonly></td>
+        <input type="hidden" name="items[${idx}][unit]" id="unit-${idx}" value="${prefill?.unit || ''}">
         <td><input type="number" class="form-control form-control-sm" name="items[${idx}][quantity]" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required></td>
         <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(${idx})"><i class="bi bi-trash"></i></button></td>
     `;
@@ -309,12 +308,11 @@ function addItem(prefill = null) {
             <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="removeItem(${idx})"><i class="bi bi-trash"></i></button>
         </div>
         <div class="item-details" id="details-m-${idx}">
-            ${prefill ? `<span class="badge bg-light text-dark">${prefill.specification||''}</span><span class="badge bg-light text-dark">${prefill.classification||''}</span><span class="badge bg-info text-white">${prefill.unit||''}</span>` : '<span class="text-muted" style="font-size:0.75rem;">Busque um material acima</span>'}
+            ${prefill ? `<span class="badge bg-light text-dark">${prefill.specification||''}</span><span class="badge bg-light text-dark">${prefill.classification||''}</span>` : '<span class="text-muted" style="font-size:0.75rem;">Busque um material acima</span>'}
         </div>
         <div class="d-flex align-items-center gap-2 mt-2">
             <label class="form-label mb-0 small fw-bold">Qtd:</label>
             <input type="number" class="form-control form-control-sm qty-mobile" style="max-width:100px;" data-idx="${idx}" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required>
-            <span class="text-muted small">${prefill?.unit || ''}</span>
         </div>
     `;
     document.getElementById('itemsBodyMobile').appendChild(card);
@@ -368,7 +366,6 @@ function updateMobileDetails(idx, opt) {
         el.innerHTML = '';
         if (ds.spec) el.innerHTML += `<span class="badge bg-light text-dark">${ds.spec}</span>`;
         if (ds.class) el.innerHTML += `<span class="badge bg-light text-dark">${ds.class}</span>`;
-        if (ds.unit) el.innerHTML += `<span class="badge bg-info text-white">${ds.unit}</span>`;
     } else {
         el.innerHTML = '<span class="text-muted" style="font-size:0.75rem;">Busque um material acima</span>';
     }
