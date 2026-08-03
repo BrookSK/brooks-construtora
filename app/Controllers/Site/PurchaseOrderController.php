@@ -1769,7 +1769,7 @@ class PurchaseOrderController extends Controller
         // Verificar se a obra tem aprovadores específicos vinculados
         $siteApprovers = [];
         if (!empty($order['construction_site_id'])) {
-            $siteApprovers = ConstructionSite::getApprovers((int) $order['construction_site_id']);
+            $siteApprovers = ConstructionSite::getApprovers((int) $order['construction_site_id'], 'approval');
         }
 
         // Modo de notificação: both (padrão), site_only, global_only
@@ -1897,10 +1897,20 @@ class PurchaseOrderController extends Controller
         }
 
         $emails = Setting::get('orders_completed_emails', '');
-        if (!empty($emails)) {
+        $recipients = $this->resolveNotifyRecipients($order['construction_site_id'] ?? null, 'completed');
+
+        if ($recipients['send_global'] && !empty($emails)) {
             $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($realTotal, 2, ',', '.');
             $body = EmailTemplate::purchaseOrderCompleted($order, $items, $pdfUrl, $xlsxUrl, $approvedSuppliers);
             NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'order_approved');
+        }
+        if ($recipients['send_site']) {
+            $siteEmails = implode(',', array_filter(array_column($recipients['site_users'], 'email')));
+            if (!empty($siteEmails)) {
+                $subject = "Pedido Aprovado - {$order['code']} - R$ " . number_format($realTotal, 2, ',', '.');
+                $body = EmailTemplate::purchaseOrderCompleted($order, $items, $pdfUrl, $xlsxUrl, $approvedSuppliers);
+                NotificationService::queueEmails($siteEmails, $subject, $body, $order['id'], 'order_approved');
+            }
         }
 
         $webhookUrl = Setting::get('orders_completed_webhook', '');
@@ -1945,6 +1955,25 @@ class PurchaseOrderController extends Controller
                 'phone_name' => Setting::get('orders_completed_phone_name', ''),
                 'message' => $message,
             ]);
+
+            if ($recipients['send_site']) {
+                $sitePhones = implode(',', array_filter(array_column($recipients['site_users'], 'phone')));
+                $siteNames = implode(',', array_filter(array_column($recipients['site_users'], 'name')));
+                if (!empty($sitePhones)) {
+                    $this->sendWebhook($webhookUrl, [
+                        'event' => 'order_approved',
+                        'order_code' => $order['code'],
+                        'suppliers' => $supplierNames,
+                        'total' => $realTotal,
+                        'approved_by' => $order['approved_by_name'],
+                        'pdf_url' => $pdfUrl,
+                        'xlsx_url' => $xlsxUrl,
+                        'phone' => $sitePhones,
+                        'phone_name' => $siteNames,
+                        'message' => $message,
+                    ]);
+                }
+            }
         }
     }
 
@@ -1961,10 +1990,20 @@ class PurchaseOrderController extends Controller
         $totalFmt = 'R$ ' . number_format((float)$order['total_estimated'], 2, ',', '.');
 
         $emails = Setting::get('orders_payment_emails', '');
-        if (!empty($emails)) {
+        $recipients = $this->resolveNotifyRecipients($order['construction_site_id'] ?? null, 'payment');
+
+        if ($recipients['send_global'] && !empty($emails)) {
             $subject = "NF/Boleto Pendente - Pedido {$order['code']} - {$totalFmt}";
             $body = EmailTemplate::purchaseOrderPaymentPending($order, $panelUrl);
             NotificationService::queueEmails($emails, $subject, $body, $orderId, 'payment_pending');
+        }
+        if ($recipients['send_site']) {
+            $siteEmails = implode(',', array_filter(array_column($recipients['site_users'], 'email')));
+            if (!empty($siteEmails)) {
+                $subject = "NF/Boleto Pendente - Pedido {$order['code']} - {$totalFmt}";
+                $body = EmailTemplate::purchaseOrderPaymentPending($order, $panelUrl);
+                NotificationService::queueEmails($siteEmails, $subject, $body, $orderId, 'payment_pending');
+            }
         }
 
         $webhookUrl = Setting::get('orders_payment_webhook', '');
@@ -2081,6 +2120,31 @@ class PurchaseOrderController extends Controller
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'www.brooksconstrutora.com.br';
         return $scheme . '://' . $host;
+    }
+
+    /**
+     * Helper: resolve destinatários de notificação com base no modo (both/site_only/global_only)
+     * Retorna ['send_global' => bool, 'send_site' => bool, 'site_users' => array]
+     */
+    private function resolveNotifyRecipients(?int $constructionSiteId, string $phase): array
+    {
+        $modeSetting = "orders_{$phase}_notify_mode";
+        $notifyMode = Setting::get($modeSetting, 'both');
+
+        $siteUsers = [];
+        if (!empty($constructionSiteId)) {
+            $siteUsers = ConstructionSite::getApprovers((int) $constructionSiteId, $phase);
+        }
+
+        $sendGlobal = in_array($notifyMode, ['both', 'global_only']);
+        $sendSite = in_array($notifyMode, ['both', 'site_only']) && !empty($siteUsers);
+
+        // Fallback: se modo é site_only mas não tem usuários na obra, usa global
+        if ($notifyMode === 'site_only' && empty($siteUsers)) {
+            $sendGlobal = true;
+        }
+
+        return ['send_global' => $sendGlobal, 'send_site' => $sendSite, 'site_users' => $siteUsers];
     }
 
     // ============================

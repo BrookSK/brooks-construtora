@@ -149,10 +149,14 @@ class ConstructionSiteController extends Controller
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        // Salvar aprovadores
-        $approvers = $_POST['approvers'] ?? [];
-        if (!empty($approvers)) {
-            ConstructionSite::syncApprovers($id, $approvers);
+        // Salvar responsáveis por fase
+        $notifiers = $_POST['notifiers'] ?? [];
+        $allPhases = ['quote', 'approval', 'completed', 'payment', 'delivery', 'spare', 'transport'];
+        foreach ($allPhases as $phase) {
+            $phaseUsers = $notifiers[$phase] ?? [];
+            if (!empty($phaseUsers)) {
+                ConstructionSite::syncApprovers($id, $phaseUsers, $phase);
+            }
         }
 
         $this->setFlash('success', "Obra \"{$name}\" ({$code}) cadastrada com sucesso!");
@@ -234,9 +238,13 @@ class ConstructionSiteController extends Controller
 
         ConstructionSite::updateById($id, $data);
 
-        // Salvar aprovadores
-        $approvers = $_POST['approvers'] ?? [];
-        ConstructionSite::syncApprovers($id, $approvers);
+        // Salvar responsáveis por fase
+        $notifiers = $_POST['notifiers'] ?? [];
+        $allPhases = ['quote', 'approval', 'completed', 'payment', 'delivery', 'spare', 'transport'];
+        foreach ($allPhases as $phase) {
+            $phaseUsers = $notifiers[$phase] ?? [];
+            ConstructionSite::syncApprovers($id, $phaseUsers, $phase);
+        }
 
         $this->setFlash('success', "Obra \"{$name}\" atualizada com sucesso!");
         $this->redirect('/admin/obras/edit/' . $id);

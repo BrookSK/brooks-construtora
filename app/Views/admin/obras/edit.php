@@ -128,28 +128,55 @@
                 </div>
             </div>
 
-            <!-- Aprovadores -->
+            <!-- Responsáveis por Fase -->
             <div class="card mb-3">
-                <div class="card-header"><i class="bi bi-person-check"></i> Aprovadores desta Obra</div>
+                <div class="card-header"><i class="bi bi-person-check"></i> Responsáveis por Notificação</div>
                 <div class="card-body">
-                    <p class="text-muted small mb-2">Selecione quem também recebe as notificações de aprovação dos pedidos desta obra, além dos configurados nas <a href="/admin/orders/settings">configurações globais</a>.</p>
+                    <p class="text-muted small mb-3">Selecione quem recebe as notificações de cada fase dos pedidos desta obra, além dos configurados nas <a href="/admin/orders/settings">configurações globais</a>.</p>
                     <?php
-                    $availableApprovers = \App\Models\ConstructionSite::getAvailableApprovers();
-                    $currentApproverIds = \App\Models\ConstructionSite::getApproverIds($site['id']);
+                    $availableNotifiers = \App\Models\ConstructionSite::getAvailableNotifiers();
+                    $phases = [
+                        'quote' => ['label' => 'Cotação', 'icon' => 'bi-1-circle text-warning', 'desc' => 'Quem recebe para informar preços'],
+                        'approval' => ['label' => 'Aprovação', 'icon' => 'bi-2-circle text-info', 'desc' => 'Quem recebe para aprovar/rejeitar'],
+                        'completed' => ['label' => 'Conclusão', 'icon' => 'bi-3-circle text-success', 'desc' => 'Quem recebe quando aprovado'],
+                        'payment' => ['label' => 'Pagamento', 'icon' => 'bi-4-circle text-primary', 'desc' => 'Quem recebe para NF/Boleto'],
+                        'delivery' => ['label' => 'Entrega', 'icon' => 'bi-5-circle text-dark', 'desc' => 'Quem recebe o checklist'],
+                        'spare' => ['label' => 'Sobressalentes', 'icon' => 'bi-6-circle text-warning', 'desc' => 'Quem recebe itens avulsos'],
+                        'transport' => ['label' => 'Transporte', 'icon' => 'bi-truck text-primary', 'desc' => 'Quem recebe transferências'],
+                    ];
                     ?>
-                    <?php if (empty($availableApprovers)): ?>
-                    <div class="alert alert-light small mb-0">Nenhum usuário com permissão de aprovação cadastrado. <a href="/admin/orders/pin-users">Gerenciar usuários</a></div>
+                    <?php if (empty($availableNotifiers)): ?>
+                    <div class="alert alert-light small mb-0">Nenhum usuário cadastrado. <a href="/admin/orders/pin-users">Gerenciar usuários</a></div>
                     <?php else: ?>
-                    <div class="row">
-                        <?php foreach ($availableApprovers as $ap): ?>
-                        <div class="col-md-6 mb-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="approvers[]" value="<?= $ap['id'] ?>" id="approver-<?= $ap['id'] ?>" <?= in_array($ap['id'], $currentApproverIds) ? 'checked' : '' ?>>
-                                <label class="form-check-label" for="approver-<?= $ap['id'] ?>">
-                                    <strong><?= htmlspecialchars($ap['name']) ?></strong>
-                                    <?php if (!empty($ap['phone'])): ?><br><small class="text-muted"><i class="bi bi-whatsapp"></i> <?= htmlspecialchars($ap['phone']) ?></small><?php endif; ?>
-                                    <?php if (!empty($ap['email'])): ?><br><small class="text-muted"><i class="bi bi-envelope"></i> <?= htmlspecialchars($ap['email']) ?></small><?php endif; ?>
-                                </label>
+                    <div class="accordion" id="phaseAccordion">
+                        <?php foreach ($phases as $phaseKey => $phaseInfo): ?>
+                        <?php $currentIds = \App\Models\ConstructionSite::getApproverIds($site['id'], $phaseKey); ?>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#phase-<?= $phaseKey ?>" style="font-size:0.85rem;">
+                                    <i class="bi <?= $phaseInfo['icon'] ?> me-2"></i> <strong><?= $phaseInfo['label'] ?></strong>
+                                    <?php if (!empty($currentIds)): ?>
+                                    <span class="badge bg-primary ms-2"><?= count($currentIds) ?></span>
+                                    <?php endif; ?>
+                                    <small class="text-muted ms-2">— <?= $phaseInfo['desc'] ?></small>
+                                </button>
+                            </h2>
+                            <div id="phase-<?= $phaseKey ?>" class="accordion-collapse collapse">
+                                <div class="accordion-body py-2">
+                                    <div class="row">
+                                        <?php foreach ($availableNotifiers as $ap): ?>
+                                        <div class="col-md-6 mb-1">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="notifiers[<?= $phaseKey ?>][]" value="<?= $ap['id'] ?>" id="nf-<?= $phaseKey ?>-<?= $ap['id'] ?>" <?= in_array($ap['id'], $currentIds) ? 'checked' : '' ?>>
+                                                <label class="form-check-label small" for="nf-<?= $phaseKey ?>-<?= $ap['id'] ?>">
+                                                    <strong><?= htmlspecialchars($ap['name']) ?></strong>
+                                                    <?php if (!empty($ap['phone'])): ?><span class="text-muted ms-1"><i class="bi bi-whatsapp"></i> <?= htmlspecialchars($ap['phone']) ?></span><?php endif; ?>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <?php endforeach; ?>

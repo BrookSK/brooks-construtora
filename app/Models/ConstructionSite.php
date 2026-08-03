@@ -106,43 +106,44 @@ class ConstructionSite extends Model
     // ============================
 
     /**
-     * Busca aprovadores vinculados a uma obra
+     * Busca responsáveis vinculados a uma obra por fase
      */
-    public static function getApprovers(int $siteId): array
+    public static function getApprovers(int $siteId, string $phase = 'approval'): array
     {
         return Database::fetchAll(
             "SELECT pu.* FROM pin_users pu
              INNER JOIN construction_site_approvers csa ON csa.pin_user_id = pu.id
-             WHERE csa.construction_site_id = ? AND pu.active = 1
+             WHERE csa.construction_site_id = ? AND csa.phase = ? AND pu.active = 1
              ORDER BY pu.name ASC",
-            [$siteId]
+            [$siteId, $phase]
         );
     }
 
     /**
-     * Busca IDs dos aprovadores vinculados a uma obra
+     * Busca IDs dos responsáveis vinculados a uma obra por fase
      */
-    public static function getApproverIds(int $siteId): array
+    public static function getApproverIds(int $siteId, string $phase = 'approval'): array
     {
         $rows = Database::fetchAll(
-            "SELECT pin_user_id FROM construction_site_approvers WHERE construction_site_id = ?",
-            [$siteId]
+            "SELECT pin_user_id FROM construction_site_approvers WHERE construction_site_id = ? AND phase = ?",
+            [$siteId, $phase]
         );
         return array_column($rows, 'pin_user_id');
     }
 
     /**
-     * Sincronizar aprovadores de uma obra (remove antigos, adiciona novos)
+     * Sincronizar responsáveis de uma obra por fase
      */
-    public static function syncApprovers(int $siteId, array $pinUserIds): void
+    public static function syncApprovers(int $siteId, array $pinUserIds, string $phase = 'approval'): void
     {
-        Database::delete('construction_site_approvers', 'construction_site_id = ?', [$siteId]);
+        Database::query("DELETE FROM construction_site_approvers WHERE construction_site_id = ? AND phase = ?", [$siteId, $phase]);
         foreach ($pinUserIds as $userId) {
             $userId = (int) $userId;
             if ($userId > 0) {
                 Database::insert('construction_site_approvers', [
                     'construction_site_id' => $siteId,
                     'pin_user_id' => $userId,
+                    'phase' => $phase,
                     'created_at' => date('Y-m-d H:i:s'),
                 ]);
             }
@@ -150,12 +151,22 @@ class ConstructionSite extends Model
     }
 
     /**
-     * Busca todos os pin_users com role de aprovação (approver ou all)
+     * Busca todos os pin_users que podem receber notificações
      */
     public static function getAvailableApprovers(): array
     {
         return Database::fetchAll(
             "SELECT * FROM pin_users WHERE active = 1 AND role IN ('approver', 'all', 'payment') ORDER BY name ASC"
+        );
+    }
+
+    /**
+     * Busca todos os pin_users ativos (para fases como cotação, entrega, etc)
+     */
+    public static function getAvailableNotifiers(): array
+    {
+        return Database::fetchAll(
+            "SELECT * FROM pin_users WHERE active = 1 ORDER BY name ASC"
         );
     }
 }

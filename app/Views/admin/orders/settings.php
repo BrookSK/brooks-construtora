@@ -132,6 +132,14 @@
                             <button type="button" class="btn btn-outline-warning" onclick="testWebhook('quote')" title="Testar"><i class="bi bi-lightning"></i></button>
                         </div>
                     </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Modo</label>
+                        <select class="form-select form-select-sm" name="orders_quote_notify_mode" style="font-size:0.7rem;">
+                            <option value="both" <?= ($settings['orders_quote_notify_mode'] ?? 'both') === 'both' ? 'selected' : '' ?>>Obra + Global</option>
+                            <option value="site_only" <?= ($settings['orders_quote_notify_mode'] ?? '') === 'site_only' ? 'selected' : '' ?>>Só obra</option>
+                            <option value="global_only" <?= ($settings['orders_quote_notify_mode'] ?? '') === 'global_only' ? 'selected' : '' ?>>Só global</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -207,6 +215,14 @@
                             <button type="button" class="btn btn-outline-success" onclick="testWebhook('completed')" title="Testar"><i class="bi bi-lightning"></i></button>
                         </div>
                     </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Modo</label>
+                        <select class="form-select form-select-sm" name="orders_completed_notify_mode" style="font-size:0.7rem;">
+                            <option value="both" <?= ($settings['orders_completed_notify_mode'] ?? 'both') === 'both' ? 'selected' : '' ?>>Obra + Global</option>
+                            <option value="site_only" <?= ($settings['orders_completed_notify_mode'] ?? '') === 'site_only' ? 'selected' : '' ?>>Só obra</option>
+                            <option value="global_only" <?= ($settings['orders_completed_notify_mode'] ?? '') === 'global_only' ? 'selected' : '' ?>>Só global</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -237,6 +253,14 @@
                             <input type="url" class="form-control" name="orders_payment_webhook" id="webhook_payment" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_payment_webhook'] ?? '') ?>">
                             <button type="button" class="btn btn-outline-primary" onclick="testWebhook('payment')" title="Testar"><i class="bi bi-lightning"></i></button>
                         </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Modo</label>
+                        <select class="form-select form-select-sm" name="orders_payment_notify_mode" style="font-size:0.7rem;">
+                            <option value="both" <?= ($settings['orders_payment_notify_mode'] ?? 'both') === 'both' ? 'selected' : '' ?>>Obra + Global</option>
+                            <option value="site_only" <?= ($settings['orders_payment_notify_mode'] ?? '') === 'site_only' ? 'selected' : '' ?>>Só obra</option>
+                            <option value="global_only" <?= ($settings['orders_payment_notify_mode'] ?? '') === 'global_only' ? 'selected' : '' ?>>Só global</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -269,6 +293,14 @@
                             <button type="button" class="btn btn-outline-dark" onclick="testWebhook('delivery')" title="Testar"><i class="bi bi-lightning"></i></button>
                         </div>
                     </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Modo</label>
+                        <select class="form-select form-select-sm" name="orders_delivery_notify_mode" style="font-size:0.7rem;">
+                            <option value="both" <?= ($settings['orders_delivery_notify_mode'] ?? 'both') === 'both' ? 'selected' : '' ?>>Obra + Global</option>
+                            <option value="site_only" <?= ($settings['orders_delivery_notify_mode'] ?? '') === 'site_only' ? 'selected' : '' ?>>Só obra</option>
+                            <option value="global_only" <?= ($settings['orders_delivery_notify_mode'] ?? '') === 'global_only' ? 'selected' : '' ?>>Só global</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -300,6 +332,14 @@
                             <button type="button" class="btn btn-outline-warning" onclick="testWebhook('spare')" title="Testar"><i class="bi bi-lightning"></i></button>
                         </div>
                     </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Modo</label>
+                        <select class="form-select form-select-sm" name="orders_spare_notify_mode" style="font-size:0.7rem;">
+                            <option value="both" <?= ($settings['orders_spare_notify_mode'] ?? 'both') === 'both' ? 'selected' : '' ?>>Obra + Global</option>
+                            <option value="site_only" <?= ($settings['orders_spare_notify_mode'] ?? '') === 'site_only' ? 'selected' : '' ?>>Só obra</option>
+                            <option value="global_only" <?= ($settings['orders_spare_notify_mode'] ?? '') === 'global_only' ? 'selected' : '' ?>>Só global</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -330,6 +370,14 @@
                             <input type="url" class="form-control" name="orders_transport_webhook" id="webhook_transport" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_transport_webhook'] ?? '') ?>">
                             <button type="button" class="btn btn-outline-primary" onclick="testWebhook('transport')" title="Testar"><i class="bi bi-lightning"></i></button>
                         </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Modo</label>
+                        <select class="form-select form-select-sm" name="orders_transport_notify_mode" style="font-size:0.7rem;">
+                            <option value="both" <?= ($settings['orders_transport_notify_mode'] ?? 'both') === 'both' ? 'selected' : '' ?>>Obra + Global</option>
+                            <option value="site_only" <?= ($settings['orders_transport_notify_mode'] ?? '') === 'site_only' ? 'selected' : '' ?>>Só obra</option>
+                            <option value="global_only" <?= ($settings['orders_transport_notify_mode'] ?? '') === 'global_only' ? 'selected' : '' ?>>Só global</option>
+                        </select>
                     </div>
                     <div class="alert alert-light small py-2 mb-0">
                         <i class="bi bi-info-circle"></i> Notificado quando há transferência ou saída de estoque.
