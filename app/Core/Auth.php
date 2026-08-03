@@ -127,7 +127,7 @@ class Auth
             'comprador' => ['dashboard', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials', 'obras', 'stock'],
             'cotador' => ['dashboard', 'orders', 'orders.quote', 'suppliers', 'materials', 'obras'],
             'aprovador' => ['dashboard', 'orders', 'orders.approve', 'obras'],
-            'financeiro' => ['dashboard', 'orders', 'orders.payment', 'obras'],
+            'financeiro' => ['dashboard', 'orders', 'orders.create', 'orders.quote', 'orders.payment', 'suppliers', 'materials', 'obras', 'stock'],
             'epi' => ['dashboard', 'epi', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials', 'obras'],
             'entrega' => ['dashboard', 'orders', 'orders.create', 'suppliers', 'materials', 'obras'],
             'transporte' => ['dashboard', 'orders', 'transport', 'obras'],
