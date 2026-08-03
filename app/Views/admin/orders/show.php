@@ -1013,6 +1013,53 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
             </div>
         </div>
 
+        <!-- Histórico de Edições -->
+        <?php
+        $edits = \App\Core\Database::fetchAll("SELECT * FROM purchase_order_edits WHERE order_id = ? ORDER BY created_at DESC", [$order['id']]);
+        ?>
+        <?php if (!empty($edits)): ?>
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center" role="button" data-bs-toggle="collapse" data-bs-target="#editsCollapse">
+                <span><i class="bi bi-pencil-square"></i> Edições do Pedido</span>
+                <span class="badge bg-warning text-dark"><?= count($edits) ?> edição(ões)</span>
+            </div>
+            <div class="collapse" id="editsCollapse">
+                <div class="card-body p-0">
+                    <?php foreach ($edits as $edit): ?>
+                    <?php $ch = json_decode($edit['changes'], true) ?: []; ?>
+                    <div class="list-group-item px-3 py-2 border-bottom">
+                        <div class="d-flex justify-content-between">
+                            <strong class="small"><?= htmlspecialchars($edit['edited_by_name']) ?></strong>
+                            <small class="text-muted"><?= date('d/m/Y H:i', strtotime($edit['created_at'])) ?></small>
+                        </div>
+                        <?php if (!empty($ch['added'])): ?>
+                        <div class="small text-success mt-1">
+                            <?php foreach ($ch['added'] as $a): ?>
+                            <div>+ <?= htmlspecialchars($a['material_name']) ?> (Qtd: <?= $a['quantity'] ?>)</div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (!empty($ch['removed'])): ?>
+                        <div class="small text-danger mt-1">
+                            <?php foreach ($ch['removed'] as $r): ?>
+                            <div>- <?= htmlspecialchars($r['material_name']) ?> (Qtd: <?= $r['quantity'] ?>)</div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (!empty($ch['changed'])): ?>
+                        <div class="small text-primary mt-1">
+                            <?php foreach ($ch['changed'] as $c): ?>
+                            <div>• <?= htmlspecialchars($c['material_name']) ?>: Qtd <?= $c['old_quantity'] ?> → <?= $c['new_quantity'] ?></div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Histórico -->
         <div class="card mb-3">
             <div class="card-header"><i class="bi bi-clock-history"></i> Histórico</div>
@@ -1042,6 +1089,16 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
             <div class="card-header">Ações</div>
             <div class="card-body d-grid gap-2">
                 <?php if ($order['status'] === 'pending_quote'): ?>
+                <?php if (empty($order['quote_started_at'])): ?>
+                <a href="/admin/orders/edit-items/<?= $order['id'] ?>" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-pencil-square"></i> Editar Itens do Pedido
+                </a>
+                <?php else: ?>
+                <div class="alert alert-info py-2 px-3 small mb-2">
+                    <i class="bi bi-lock"></i> Cotação iniciada por <strong><?= htmlspecialchars($order['quote_started_by'] ?? '') ?></strong>
+                    <br><small class="text-muted"><?= date('d/m/Y H:i', strtotime($order['quote_started_at'])) ?></small>
+                </div>
+                <?php endif; ?>
                 <form method="POST" action="/admin/orders/resend-quote">
                     <input type="hidden" name="id" value="<?= $order['id'] ?>">
                     <button type="submit" class="btn btn-outline-warning w-100">

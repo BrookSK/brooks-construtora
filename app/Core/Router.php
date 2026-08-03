@@ -143,6 +143,8 @@ class Router
             'orders/update-pin-user-phone' => ['PurchaseOrderController', 'updatePinUserPhone'],
             'orders/update-pin-user-email' => ['PurchaseOrderController', 'updatePinUserEmail'],
             'orders/send-invite-webhook' => ['PurchaseOrderController', 'sendInviteWebhook'],
+            'orders/edit-items' => ['PurchaseOrderController', 'editItems'],
+            'orders/update-items' => ['PurchaseOrderController', 'updateItems'],
 
             // Obras
             'obras' => ['ConstructionSiteController', 'index'],
@@ -338,6 +340,7 @@ class Router
             // Pedidos - Links públicos
             'pedido/cotacao' => ['PurchaseOrderController', 'quote'],
             'pedido/cotacao/enviar' => ['PurchaseOrderController', 'submitQuote'],
+            'pedido/cotacao/iniciar' => ['PurchaseOrderController', 'startQuote'],
             'pedido/cotacao/novo-fornecedor' => ['PurchaseOrderController', 'quickStoreSupplier'],
             'pedido/cotacao/parse-service-pdf' => ['PurchaseOrderController', 'parseServicePdfPublic'],
             'pedido/cotacao/save-service-materials' => ['PurchaseOrderController', 'saveServiceMaterialsPublic'],

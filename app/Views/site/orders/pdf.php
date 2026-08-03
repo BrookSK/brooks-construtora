@@ -499,6 +499,26 @@
             <?php endif; ?>
         </div>
 
+        <!-- Edições -->
+        <?php
+        $pdfEdits = \App\Core\Database::fetchAll("SELECT * FROM purchase_order_edits WHERE order_id = ? ORDER BY created_at ASC", [$order['id']]);
+        ?>
+        <?php if (!empty($pdfEdits)): ?>
+        <div class="history-section">
+            <h6 style="font-size:0.8rem;"><i class="bi bi-pencil-square"></i> Edições do Pedido</h6>
+            <?php foreach ($pdfEdits as $edit): ?>
+            <?php $ch = json_decode($edit['changes'], true) ?: []; ?>
+            <div class="timeline-item">
+                <strong><?= htmlspecialchars($edit['edited_by_name']) ?></strong>
+                <span class="text-muted ms-1"><?= date('d/m/Y H:i', strtotime($edit['created_at'])) ?></span><br>
+                <?php if (!empty($ch['added'])): ?><small class="text-success"><?php foreach ($ch['added'] as $a): ?>+ <?= htmlspecialchars($a['material_name']) ?> (Qtd: <?= $a['quantity'] ?>) <?php endforeach; ?></small><br><?php endif; ?>
+                <?php if (!empty($ch['removed'])): ?><small class="text-danger"><?php foreach ($ch['removed'] as $r): ?>- <?= htmlspecialchars($r['material_name']) ?> (Qtd: <?= $r['quantity'] ?>) <?php endforeach; ?></small><br><?php endif; ?>
+                <?php if (!empty($ch['changed'])): ?><small class="text-primary"><?php foreach ($ch['changed'] as $c): ?>• <?= htmlspecialchars($c['material_name']) ?>: <?= $c['old_quantity'] ?> → <?= $c['new_quantity'] ?> <?php endforeach; ?></small><?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
         <!-- Histórico -->
         <div class="history-section">
             <h6 style="font-size:0.8rem;"><i class="bi bi-clock-history"></i> Histórico</h6>

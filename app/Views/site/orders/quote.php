@@ -100,6 +100,57 @@
                 <?php endif; ?>
             </div>
 
+            <?php if (empty($order['quote_started_at'])): ?>
+            <!-- Botão para iniciar cotação (trava edição de itens) -->
+            <div class="card-body py-3 border-bottom">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div class="small text-muted">
+                        <i class="bi bi-info-circle"></i> O solicitante ainda pode editar os itens deste pedido. Clique abaixo para iniciar a cotação e travar a edição.
+                    </div>
+                    <form method="POST" action="/pedido/cotacao/iniciar/<?= $token ?>">
+                        <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Ao iniciar a cotação, o solicitante não poderá mais editar os itens deste pedido. Deseja continuar?')">
+                            <i class="bi bi-play-fill"></i> Iniciar Cotação
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <?php else: ?>
+            <div class="card-body py-2 border-bottom bg-light">
+                <small class="text-muted"><i class="bi bi-lock"></i> Cotação iniciada por <strong><?= htmlspecialchars($order['quote_started_by'] ?? '') ?></strong> em <?= date('d/m/Y H:i', strtotime($order['quote_started_at'])) ?></small>
+            </div>
+            <?php endif; ?>
+
+            <?php
+            $orderEdits = \App\Core\Database::fetchAll("SELECT * FROM purchase_order_edits WHERE order_id = ? ORDER BY created_at DESC", [$order['id']]);
+            ?>
+            <?php if (!empty($orderEdits)): ?>
+            <div class="card-body py-2 border-bottom">
+                <details>
+                    <summary class="small fw-bold" style="cursor:pointer; color:#856404;">
+                        <i class="bi bi-exclamation-triangle"></i> Este pedido foi editado <?= count($orderEdits) ?> vez(es)
+                    </summary>
+                    <div class="mt-2" style="font-size:0.75rem;">
+                        <?php foreach ($orderEdits as $edit): ?>
+                        <?php $ch = json_decode($edit['changes'], true) ?: []; ?>
+                        <div class="mb-2 p-2 bg-warning bg-opacity-10 rounded">
+                            <strong><?= htmlspecialchars($edit['edited_by_name']) ?></strong>
+                            <span class="text-muted">— <?= date('d/m/Y H:i', strtotime($edit['created_at'])) ?></span>
+                            <?php if (!empty($ch['added'])): ?>
+                            <div class="text-success"><?php foreach ($ch['added'] as $a): ?>+ <?= htmlspecialchars($a['material_name']) ?> (Qtd: <?= $a['quantity'] ?>)<br><?php endforeach; ?></div>
+                            <?php endif; ?>
+                            <?php if (!empty($ch['removed'])): ?>
+                            <div class="text-danger"><?php foreach ($ch['removed'] as $r): ?>- <?= htmlspecialchars($r['material_name']) ?> (Qtd: <?= $r['quantity'] ?>)<br><?php endforeach; ?></div>
+                            <?php endif; ?>
+                            <?php if (!empty($ch['changed'])): ?>
+                            <div class="text-primary"><?php foreach ($ch['changed'] as $c): ?>• <?= htmlspecialchars($c['material_name']) ?>: <?= $c['old_quantity'] ?> → <?= $c['new_quantity'] ?><br><?php endforeach; ?></div>
+                            <?php endif; ?>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </details>
+            </div>
+            <?php endif; ?>
+
             <?php if (!empty($comments)): ?>
             <!-- Conversas (fora do quoteForm) -->
             <div class="card-body py-3 border-bottom bg-warning bg-opacity-10">

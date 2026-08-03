@@ -722,4 +722,74 @@ HTML;
 
         return self::wrap("{$typeLabel} Enviado - {$order['code']}", $body);
     }
+
+    public static function purchaseOrderEdited(array $order, array $items, string $quoteUrl, array $changes): string
+    {
+        // Resumo das alterações
+        $changesHtml = '';
+        if (!empty($changes['added'])) {
+            $changesHtml .= '<div style="margin-bottom:10px;"><strong style="color:#28a745;">Itens adicionados:</strong><ul style="margin:5px 0; padding-left:20px;">';
+            foreach ($changes['added'] as $a) {
+                $changesHtml .= '<li style="font-size:13px;">' . htmlspecialchars($a['material_name']) . ' — Qtd: ' . $a['quantity'] . '</li>';
+            }
+            $changesHtml .= '</ul></div>';
+        }
+        if (!empty($changes['removed'])) {
+            $changesHtml .= '<div style="margin-bottom:10px;"><strong style="color:#dc3545;">Itens removidos:</strong><ul style="margin:5px 0; padding-left:20px;">';
+            foreach ($changes['removed'] as $r) {
+                $changesHtml .= '<li style="font-size:13px;">' . htmlspecialchars($r['material_name']) . ' — Qtd: ' . $r['quantity'] . '</li>';
+            }
+            $changesHtml .= '</ul></div>';
+        }
+        if (!empty($changes['changed'])) {
+            $changesHtml .= '<div style="margin-bottom:10px;"><strong style="color:#0d6efd;">Itens alterados:</strong><ul style="margin:5px 0; padding-left:20px;">';
+            foreach ($changes['changed'] as $c) {
+                $changesHtml .= '<li style="font-size:13px;">' . htmlspecialchars($c['material_name']) . ' — Qtd: ' . $c['old_quantity'] . ' → ' . $c['new_quantity'] . '</li>';
+            }
+            $changesHtml .= '</ul></div>';
+        }
+
+        // Lista atual de itens
+        $itemsHtml = '';
+        foreach ($items as $i => $item) {
+            $itemsHtml .= '<tr>';
+            $itemsHtml .= '<td style="padding:6px 8px; border-bottom:1px solid #eee; font-size:12px;">' . ($i + 1) . '</td>';
+            $itemsHtml .= '<td style="padding:6px 8px; border-bottom:1px solid #eee; font-size:12px;">' . htmlspecialchars($item['material_name']) . '</td>';
+            $itemsHtml .= '<td style="padding:6px 8px; border-bottom:1px solid #eee; font-size:12px; text-align:center;">' . number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) . '</td>';
+            $itemsHtml .= '</tr>';
+        }
+
+        // Obra
+        $obraHtml = '';
+        if (!empty($order['construction_site_name'])) {
+            $obraHtml = '<p style="margin:8px 0 0; font-size:13px; color:#666;">Obra: <strong>' . htmlspecialchars(($order['construction_site_code'] ?? '') . ' - ' . $order['construction_site_name']) . '</strong></p>';
+        }
+
+        $body = '<p style="margin-bottom:15px;">O pedido abaixo foi <strong style="color:#856404;">editado</strong> após a criação. Confira as alterações e a nova lista de itens.</p>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff3cd; border-radius:6px; margin-bottom:20px; border:1px solid #ffc107;">'
+            . '<tr><td style="padding: 18px 20px;">'
+            . '<p style="margin:0 0 5px; font-size:13px; color:#856404; text-transform:uppercase;">⚠️ Pedido Editado</p>'
+            . '<p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">' . htmlspecialchars($order['code']) . '</p>'
+            . '<p style="margin:8px 0 0; font-size:13px; color:#666;">Solicitado por: <strong>' . htmlspecialchars($order['created_by_name'] ?? '') . '</strong></p>'
+            . $obraHtml
+            . '</td></tr></table>'
+            . '<p style="margin-bottom:10px;"><strong>O que foi alterado:</strong></p>'
+            . $changesHtml
+            . '<p style="margin-bottom:10px; margin-top:20px;"><strong>Nova lista de itens:</strong></p>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">'
+            . '<tr style="background:#f8f9fa;">'
+            . '<th style="padding:6px 8px; font-size:11px; text-align:left;">#</th>'
+            . '<th style="padding:6px 8px; font-size:11px; text-align:left;">Material</th>'
+            . '<th style="padding:6px 8px; font-size:11px; text-align:center;">Qtd</th>'
+            . '</tr>'
+            . $itemsHtml
+            . '</table>';
+
+        $body .= '<p style="text-align:center; margin: 25px 0 10px;">'
+            . '<a href="' . $quoteUrl . '" style="display:inline-block; background-color:#856404; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Ver Cotação Atualizada</a>'
+            . '</p>'
+            . '<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">O link de cotação continua o mesmo. Revise os novos itens antes de informar os preços.</p>';
+
+        return self::wrap("⚠️ Pedido Editado - " . htmlspecialchars($order['code']), $body);
+    }
 }

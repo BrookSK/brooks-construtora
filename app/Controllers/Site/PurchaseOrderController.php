@@ -110,6 +110,50 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Marcar cotação como iniciada (trava edição de itens)
+     */
+    public function startQuote(string $token = ''): void
+    {
+        if (!$this->isPost() || empty($token)) {
+            $this->redirect('/');
+            return;
+        }
+
+        $order = \App\Models\PurchaseOrder::findByQuoteToken($token);
+        if (!$order || $order['status'] !== 'pending_quote') {
+            $this->setFlash('error', 'Pedido não encontrado ou status inválido.');
+            $this->redirect('/pedido/cotacao/' . $token);
+            return;
+        }
+
+        // Já iniciada?
+        if (!empty($order['quote_started_at'])) {
+            $this->redirect('/pedido/cotacao/' . $token);
+            return;
+        }
+
+        // Identificar quem está iniciando
+        $pinUser = PinAuthController::getLoggedUser();
+        $startedBy = $pinUser ? $pinUser['name'] : 'Cotador';
+
+        \App\Core\Database::update('purchase_orders', [
+            'quote_started_at' => date('Y-m-d H:i:s'),
+            'quote_started_by' => $startedBy,
+        ], 'id = ?', [$order['id']]);
+
+        \App\Models\PurchaseOrderHistory::log(
+            $order['id'],
+            'quote_started',
+            'Cotação iniciada por ' . $startedBy . '. Edição de itens travada.',
+            $startedBy,
+            $pinUser ? $pinUser['id'] : null
+        );
+
+        $this->setFlash('success', 'Cotação marcada como iniciada. O pedido não poderá mais ser editado.');
+        $this->redirect('/pedido/cotacao/' . $token);
+    }
+
+    /**
      * Processar cotação (POST)
      */
     public function submitQuote(string $token = ''): void

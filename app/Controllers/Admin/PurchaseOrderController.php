@@ -810,6 +810,313 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Tela de edição de itens do pedido
+     */
+    public function editItems(string $id = ''): void
+    {
+        $id = (int) ($id ?: $this->input('id'));
+        $order = PurchaseOrder::findFull($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        // Só permite editar se status pending_quote e cotação não foi iniciada
+        if ($order['status'] !== 'pending_quote') {
+            $this->setFlash('error', 'Este pedido não pode ser editado (status: ' . $order['status'] . ').');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        if (!empty($order['quote_started_at'])) {
+            $this->setFlash('error', 'A cotação já foi iniciada. Não é possível editar os itens.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        $items = PurchaseOrderItem::getByOrder($id);
+        $materials = Material::allActive();
+        $categories = MaterialCategory::all('name ASC');
+        $units = MeasurementUnit::all('name ASC');
+
+        $this->view('admin.orders.edit_items', [
+            'order' => $order,
+            'items' => $items,
+            'materials' => $materials,
+            'categories' => $categories,
+            'units' => $units,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
+    }
+
+    /**
+     * Salvar edição de itens do pedido
+     */
+    public function updateItems(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id');
+        $order = PurchaseOrder::findFull($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if ($order['status'] !== 'pending_quote') {
+            $this->setFlash('error', 'Este pedido não pode ser editado.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        if (!empty($order['quote_started_at'])) {
+            $this->setFlash('error', 'A cotação já foi iniciada. Não é possível editar os itens.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        $newItems = $_POST['items'] ?? [];
+        if (empty($newItems)) {
+            $this->setFlash('error', 'Adicione pelo menos um item ao pedido.');
+            $this->redirect('/admin/orders/edit-items/' . $id);
+            return;
+        }
+
+        // Validar quantidades
+        foreach ($newItems as $item) {
+            if (empty($item['material_name'])) continue;
+            $qty = (float) ($item['quantity'] ?? 0);
+            if ($qty < 0.01) {
+                $this->setFlash('error', 'A quantidade de "' . ($item['material_name'] ?? 'item') . '" deve ser no mínimo 0,01.');
+                $this->redirect('/admin/orders/edit-items/' . $id);
+                return;
+            }
+        }
+
+        // Capturar itens antigos para comparação
+        $oldItems = PurchaseOrderItem::getByOrder($id);
+        $oldItemsData = array_map(function($item) {
+            return [
+                'material_name' => $item['material_name'],
+                'specification' => $item['specification'] ?? '',
+                'classification' => $item['classification'] ?? '',
+                'quantity' => (float) $item['quantity'],
+                'source_type' => $item['source_type'] ?? null,
+            ];
+        }, $oldItems);
+
+        // Reverter movimentações de estoque antigas
+        foreach ($oldItems as $oldItem) {
+            if (!empty($oldItem['stock_movement_id'])) {
+                // Cancelar a movimentação de estoque
+                Database::update('stock_movements', ['status' => 'cancelled'], 'id = ?', [$oldItem['stock_movement_id']]);
+            }
+        }
+
+        // Deletar itens antigos
+        PurchaseOrderItem::deleteByOrder($id);
+
+        // Recriar itens (sem decisões de estoque — edição simplificada)
+        $newItemsData = [];
+        $hasQuoteItems = false;
+
+        foreach ($newItems as $item) {
+            if (empty($item['material_name'])) continue;
+
+            $materialId = !empty($item['material_id']) ? (int) $item['material_id'] : null;
+            $quantity = (float) ($item['quantity'] ?? 1);
+            $hasQuoteItems = true;
+
+            PurchaseOrderItem::create([
+                'order_id' => $id,
+                'material_id' => $materialId,
+                'material_name' => $item['material_name'],
+                'specification' => $item['specification'] ?? '',
+                'classification' => $item['classification'] ?? '',
+                'unit' => $item['unit'] ?? '',
+                'quantity' => $quantity,
+                'source_type' => null,
+                'stock_from_site_id' => null,
+                'stock_movement_id' => null,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            $newItemsData[] = [
+                'material_name' => $item['material_name'],
+                'specification' => $item['specification'] ?? '',
+                'classification' => $item['classification'] ?? '',
+                'quantity' => $quantity,
+                'source_type' => null,
+            ];
+        }
+
+        // Calcular diferenças para registro
+        $changes = $this->calculateItemChanges($oldItemsData, $newItemsData);
+
+        // Registrar edição na tabela de edições
+        Database::insert('purchase_order_edits', [
+            'order_id' => $id,
+            'edited_by_name' => Auth::user()['name'],
+            'edited_by_user_id' => Auth::id(),
+            'changes' => json_encode($changes, JSON_UNESCAPED_UNICODE),
+            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        // Registrar no histórico
+        $changesSummary = [];
+        if (!empty($changes['added'])) $changesSummary[] = count($changes['added']) . ' item(ns) adicionado(s)';
+        if (!empty($changes['removed'])) $changesSummary[] = count($changes['removed']) . ' item(ns) removido(s)';
+        if (!empty($changes['changed'])) $changesSummary[] = count($changes['changed']) . ' item(ns) alterado(s)';
+
+        PurchaseOrderHistory::log(
+            $id,
+            'items_edited',
+            'Itens do pedido editados: ' . implode(', ', $changesSummary),
+            Auth::user()['name'],
+            Auth::id()
+        );
+
+        // Enviar notificações de edição
+        $this->sendEditNotifications($id, $changes);
+
+        $this->setFlash('success', 'Itens do pedido atualizados! Notificações reenviadas.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
+     * Calcula diferenças entre itens antigos e novos
+     */
+    private function calculateItemChanges(array $oldItems, array $newItems): array
+    {
+        $changes = ['added' => [], 'removed' => [], 'changed' => []];
+
+        // Indexar por nome + spec + class para comparação
+        $oldByKey = [];
+        foreach ($oldItems as $item) {
+            // Ignorar itens de estoque (source_type != null e != purchase)
+            if (!empty($item['source_type']) && $item['source_type'] !== 'purchase') continue;
+            $key = $item['material_name'] . '|' . ($item['specification'] ?? '') . '|' . ($item['classification'] ?? '');
+            $oldByKey[$key] = $item;
+        }
+
+        $newByKey = [];
+        foreach ($newItems as $item) {
+            $key = $item['material_name'] . '|' . ($item['specification'] ?? '') . '|' . ($item['classification'] ?? '');
+            $newByKey[$key] = $item;
+        }
+
+        // Removidos (estava no antigo, não está no novo)
+        foreach ($oldByKey as $key => $item) {
+            if (!isset($newByKey[$key])) {
+                $changes['removed'][] = $item;
+            }
+        }
+
+        // Adicionados (está no novo, não estava no antigo)
+        foreach ($newByKey as $key => $item) {
+            if (!isset($oldByKey[$key])) {
+                $changes['added'][] = $item;
+            }
+        }
+
+        // Alterados (existe nos dois mas com quantidade diferente)
+        foreach ($newByKey as $key => $item) {
+            if (isset($oldByKey[$key]) && (float) $oldByKey[$key]['quantity'] !== (float) $item['quantity']) {
+                $changes['changed'][] = [
+                    'material_name' => $item['material_name'],
+                    'specification' => $item['specification'] ?? '',
+                    'old_quantity' => (float) $oldByKey[$key]['quantity'],
+                    'new_quantity' => (float) $item['quantity'],
+                ];
+            }
+        }
+
+        return $changes;
+    }
+
+    /**
+     * Enviar notificações de edição de pedido (email + webhook)
+     */
+    private function sendEditNotifications(int $orderId, array $changes): void
+    {
+        $order = PurchaseOrder::findFull($orderId);
+        $items = PurchaseOrderItem::getByOrder($orderId);
+        $baseUrl = $this->getBaseUrl();
+        $quoteUrl = "{$baseUrl}/pedido/cotacao/{$order['quote_token']}";
+
+        // Montar resumo de alterações para webhook
+        $changesText = '';
+        if (!empty($changes['added'])) {
+            $changesText .= "*Itens adicionados:*\n";
+            foreach ($changes['added'] as $item) {
+                $changesText .= "  + {$item['material_name']} - Qtd: {$item['quantity']}\n";
+            }
+        }
+        if (!empty($changes['removed'])) {
+            $changesText .= "*Itens removidos:*\n";
+            foreach ($changes['removed'] as $item) {
+                $changesText .= "  - {$item['material_name']} - Qtd: {$item['quantity']}\n";
+            }
+        }
+        if (!empty($changes['changed'])) {
+            $changesText .= "*Itens alterados:*\n";
+            foreach ($changes['changed'] as $item) {
+                $changesText .= "  • {$item['material_name']}: Qtd {$item['old_quantity']} → {$item['new_quantity']}\n";
+            }
+        }
+
+        // Obra info
+        $obraInfo = '';
+        if (!empty($order['construction_site_name'])) {
+            $obraInfo = "*Obra:* {$order['construction_site_code']} - {$order['construction_site_name']}\n";
+        }
+
+        // E-mail
+        $emails = Setting::get('orders_quote_emails', '');
+        if (!empty($emails)) {
+            $subject = "⚠️ Pedido EDITADO - {$order['code']}";
+            if (!empty($order['construction_site_name'])) {
+                $subject .= " - Obra: {$order['construction_site_name']}";
+            }
+            $body = EmailTemplate::purchaseOrderEdited($order, $items, $quoteUrl, $changes);
+            NotificationService::queueEmails($emails, $subject, $body, $orderId, 'order_edited');
+        }
+
+        // Webhook
+        $webhookUrl = Setting::get('orders_quote_webhook', '');
+        if (!empty($webhookUrl)) {
+            $message = "*⚠️ PEDIDO EDITADO*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . $obraInfo
+                . "*Editado por:* " . Auth::user()['name'] . "\n"
+                . "*Data:* " . date('d/m/Y H:i') . "\n\n"
+                . $changesText . "\n"
+                . "*Link para cotação:*\n{$quoteUrl}";
+
+            $this->sendWebhook($webhookUrl, [
+                'event' => 'order_edited',
+                'order_code' => $order['code'],
+                'edited_by' => Auth::user()['name'],
+                'changes' => $changes,
+                'items_count' => count($items),
+                'quote_url' => $quoteUrl,
+                'phone' => Setting::get('orders_quote_phone', ''),
+                'phone_name' => Setting::get('orders_quote_phone_name', ''),
+                'message' => $message,
+            ], $orderId, 'order_edited');
+        }
+    }
+
+    /**
      * Cancelar pedido
      */
     public function cancel(): void
