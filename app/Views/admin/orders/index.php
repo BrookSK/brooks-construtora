@@ -211,6 +211,9 @@
                         </td>
                         <td><?= htmlspecialchars($order['supplier_name'] ?? 'N/A') ?></td>
                         <td><span class="badge bg-<?= $label[1] ?>"><?= $label[0] ?></span>
+                            <?php if (!empty($order['quote_started_at'])): ?>
+                            <span class="badge ms-1 bg-success" style="font-size:0.6rem;" title="Cotação iniciada por <?= htmlspecialchars($order['quote_started_by'] ?? '') ?> em <?= date('d/m/Y H:i', strtotime($order['quote_started_at'])) ?>"><i class="bi bi-play-fill"></i> Cotação Iniciada</span>
+                            <?php endif; ?>
                             <?php if ($showFinancialReview && !empty($order['financial_reviewed_at'])): ?>
                             <span class="badge ms-1" style="font-size:0.6rem; background-color:#8b5cf6;" title="Revisado por <?= htmlspecialchars($order['financial_reviewed_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['financial_reviewed_at'])) ?>"><i class="bi bi-check2"></i> Financeiro</span>
                             <?php endif; ?>
@@ -268,6 +271,9 @@
                     <strong class="text-dark"><?= htmlspecialchars($order['code']) ?></strong>
                     <div>
                         <span class="badge bg-<?= $label[1] ?>" style="font-size:0.7rem;"><?= $label[0] ?></span>
+                        <?php if (!empty($order['quote_started_at'])): ?>
+                        <span class="badge bg-success" style="font-size:0.6rem;" title="Cotação iniciada por <?= htmlspecialchars($order['quote_started_by'] ?? '') ?>"><i class="bi bi-play-fill"></i></span>
+                        <?php endif; ?>
                         <?php if ((\App\Core\Auth::isSuperAdmin() || \App\Core\Auth::hasPermission('orders.payment')) && !empty($order['financial_reviewed_at'])): ?>
                         <span class="badge" style="font-size:0.6rem; background-color:#8b5cf6;"><i class="bi bi-check2"></i></span>
                         <?php endif; ?>
