@@ -469,13 +469,13 @@
                 s = s.replace(/,/g, '');
             }
         } else if (hasComma) {
-            // Só vírgula: pode ser decimal ("4997,85") ou milhar ("4,997")
+            // Só vírgula: pode ser decimal ("4997,85" ou "0,299900") ou milhar ("4,997")
             const parts = s.split(',');
-            if (parts.length === 2 && parts[1].length <= 2) {
-                // Decimal: "4997,85" → "4997.85"
+            if (parts.length === 2 && (parts[1].length <= 2 || parts[1].length > 3)) {
+                // Decimal: "4997,85" (2 casas) ou "0,299900" (>3 casas, não pode ser milhar)
                 s = s.replace(',', '.');
             } else {
-                // Milhar: "4,997" → "4997"
+                // Milhar: "4,997" (exatamente 3 casas) → "4997"
                 s = s.replace(/,/g, '');
             }
         }
@@ -1593,12 +1593,15 @@ function showReviewModal() {
 
 function confirmSubmit() {
     // Se está no modo "total", converter todos os preços para unitário antes de enviar
+    // Usa ponto como separador decimal e 6 casas para preservar precisão
+    // (ex: R$299,90 / 1000 = 0.299900 — evita arredondamento)
     if (priceMode === 'total') {
         document.querySelectorAll('.price-input').forEach(input => {
             const val = parseBRL(input.value) || 0;
             const qty = parseFloat(input.dataset.qty) || 1;
             const unitPrice = qty > 0 ? val / qty : val;
-            input.value = formatBRL(unitPrice);
+            // Enviar com ponto decimal e 6 casas (backend usa str_replace(',','.'))
+            input.value = unitPrice.toFixed(6).replace('.', ',');
         });
     }
     

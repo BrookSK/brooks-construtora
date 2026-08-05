@@ -239,6 +239,9 @@ class PurchaseOrderController extends Controller
                             // Se quantidade é 0 (comum em serviços/locação), trata como 1
                             // para que o preço unitário informado seja o total
                             $totalPrice = $qty > 0 ? $unitPrice * $qty : $unitPrice;
+                            // Arredondar total para 2 casas (valor monetário) para evitar
+                            // erros de precisão de ponto flutuante (ex: 0.2999 * 1000 = 299.90)
+                            $totalPrice = round($totalPrice, 2);
                             $supplierTotal += $totalPrice;
                             PurchaseOrderItemPrice::create([
                                 'order_id' => $order['id'],
@@ -276,6 +279,7 @@ class PurchaseOrderController extends Controller
                 $finalTotal += $supplierTotal * ($ipiPercent / 100);
                 $finalTotal += $supplierTotal * ($icmsPercent / 100);
                 $finalTotal += $freight;
+                $finalTotal = round($finalTotal, 2);
 
                 // Atualizar fornecedor com totais e financeiros
                 $vendor = $supplierVendor[$sid] ?? [];
@@ -379,6 +383,7 @@ class PurchaseOrderController extends Controller
                 if ($item && $item['order_id'] == $order['id']) {
                     $qty = (float) $item['quantity'];
                     $totalPrice = $qty > 0 ? $unitPrice * $qty : $unitPrice;
+                    $totalPrice = round($totalPrice, 2);
                     PurchaseOrderItem::updateById((int) $itemId, ['unit_price' => $unitPrice, 'total_price' => $totalPrice]);
                     $totalEstimated += $totalPrice;
                 }
