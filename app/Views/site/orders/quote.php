@@ -108,7 +108,7 @@
                         <i class="bi bi-info-circle"></i> O solicitante ainda pode editar os itens deste pedido. Clique abaixo para iniciar a cotação e travar a edição.
                     </div>
                     <form method="POST" action="/pedido/cotacao/iniciar/<?= $token ?>">
-                        <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Ao iniciar a cotação, o solicitante não poderá mais editar os itens deste pedido. Deseja continuar?')">
+                        <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Ao iniciar a cotação, a edição dos itens será travada. Se precisar, você pode pausar a cotação e editar o pedido a qualquer momento.')">
                             <i class="bi bi-play-fill"></i> Iniciar Cotação
                         </button>
                     </form>
