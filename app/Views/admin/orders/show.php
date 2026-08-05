@@ -156,12 +156,17 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 </div>
                 <?php if (!empty($order['description'])): ?>
                 <hr>
-                <small class="text-muted d-block">Observações</small>
+                <small class="text-muted d-block"><i class="bi bi-chat-text"></i> Observações do Pedido</small>
                 <p class="mb-0"><?= nl2br(htmlspecialchars($order['description'])) ?></p>
+                <?php endif; ?>
+                <?php if (!empty($order['quote_notes'])): ?>
+                <hr>
+                <small class="text-muted d-block"><i class="bi bi-pencil-square"></i> Observações da Cotação</small>
+                <p class="mb-0"><?= nl2br(htmlspecialchars($order['quote_notes'])) ?></p>
                 <?php endif; ?>
                 <?php if (!empty($order['approval_notes'])): ?>
                 <hr>
-                <small class="text-muted d-block">Notas da Aprovação/Rejeição</small>
+                <small class="text-muted d-block"><i class="bi bi-check-circle"></i> Observações da Aprovação</small>
                 <p class="mb-0"><?= nl2br(htmlspecialchars($order['approval_notes'])) ?></p>
                 <?php endif; ?>
             </div>
