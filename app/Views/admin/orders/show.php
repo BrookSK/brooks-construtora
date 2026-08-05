@@ -170,6 +170,11 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
         <!-- Itens -->
         <div class="card mb-3">
             <div class="card-header">Itens do Pedido</div>
+            <?php
+            // Só exibir colunas de preço se algum item realmente tem unit_price preenchido
+            $hasItemPrices = !empty(array_filter($items, fn($it) => !empty($it['unit_price'])));
+            $showPriceColumns = $order['total_estimated'] > 0 && $hasItemPrices;
+            ?>
             <div class="table-responsive">
                 <table class="table table-sm mb-0">
                     <thead>
@@ -180,7 +185,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <th>Class.</th>
                             <th class="text-center">Qtd</th>
                             <th>Origem</th>
-                            <?php if ($order['total_estimated'] > 0): ?>
+                            <?php if ($showPriceColumns): ?>
                             <th class="text-end">Unit.</th>
                             <th class="text-end">Total</th>
                             <th>Fornecedor</th>
@@ -225,14 +230,14 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                                     <span class="badge bg-warning text-dark" style="font-size:0.65rem;"><i class="bi bi-cart"></i> Compra</span>
                                 <?php endif; ?>
                             </td>
-                            <?php if ($order['total_estimated'] > 0): ?>
+                            <?php if ($showPriceColumns): ?>
                             <td class="text-end"><?= $item['unit_price'] ? 'R$ ' . number_format($item['unit_price'], 2, ',', '.') : '-' ?></td>
                             <td class="text-end fw-bold"><?= $item['total_price'] ? 'R$ ' . number_format($item['total_price'], 2, ',', '.') : '-' ?></td>
                             <td><small class="text-muted"><?= htmlspecialchars($supplierNamesMap[$item['approved_supplier_id'] ?? 0] ?? '-') ?></small></td>
                             <?php endif; ?>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if ($order['total_estimated'] > 0): ?>
+                        <?php if ($showPriceColumns): ?>
                         <tr class="table-light">
                             <td colspan="7" class="text-end fw-bold">TOTAL:</td>
                             <td class="text-end fw-bold text-success">R$ <?= number_format($displayTotal, 2, ',', '.') ?></td>

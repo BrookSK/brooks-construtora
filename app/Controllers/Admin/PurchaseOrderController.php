@@ -672,23 +672,36 @@ class PurchaseOrderController extends Controller
         $previousSupplier = $order['supplier_name'] ?? 'N/A';
         $previousTotal = $order['total_estimated'];
 
-        // Resetar aprovação — volta para pending_approval
+        // Restaurar total_estimated com o menor subtotal_final dos fornecedores cotados
+        // (reflete a última cotação editada, não o valor da aprovação que pode ter financeiros diferentes)
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($id);
+        $lowestQuotedTotal = PHP_FLOAT_MAX;
+        foreach ($orderSuppliers as $os) {
+            $osTotal = (float)($os['subtotal_final'] ?? $os['total'] ?? 0);
+            if ($osTotal > 0 && $osTotal < $lowestQuotedTotal) {
+                $lowestQuotedTotal = $osTotal;
+            }
+        }
+        $restoredTotal = $lowestQuotedTotal != PHP_FLOAT_MAX ? $lowestQuotedTotal : 0;
+
+        // Resetar aprovação — volta para pending_approval com total da última cotação
         PurchaseOrder::updateById($id, [
             'status' => 'pending_approval',
             'supplier_id' => null,
             'approved_by_name' => null,
             'approved_at' => null,
             'approval_notes' => null,
+            'total_estimated' => $restoredTotal,
         ]);
 
         // Resetar fornecedores — remove flags de aprovado/rejeitado
-        $orderSuppliers = PurchaseOrderSupplier::getByOrder($id);
         foreach ($orderSuppliers as $os) {
             PurchaseOrderSupplier::updateById($os['id'], ['approved' => 0, 'status' => 'quoted']);
         }
 
-        // Resetar approved_supplier_id dos itens
-        Database::query("UPDATE purchase_order_items SET approved_supplier_id = NULL WHERE order_id = ?", [$id]);
+        // Resetar preços dos itens (unit_price/total_price são preenchidos na aprovação,
+        // não devem refletir valores antigos quando o pedido volta para reaprovação)
+        Database::query("UPDATE purchase_order_items SET approved_supplier_id = NULL, unit_price = NULL, total_price = NULL WHERE order_id = ?", [$id]);
 
         // Histórico detalhado
         $historyDesc = "REABERTO PARA REAPROVAÇÃO por {$userName}. Fornecedor anterior: {$previousSupplier} (R$ " . number_format($previousTotal, 2, ',', '.') . ")";
