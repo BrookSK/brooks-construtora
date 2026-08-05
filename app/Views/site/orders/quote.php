@@ -118,8 +118,8 @@
             <div class="card-body py-2 border-bottom bg-light d-flex justify-content-between align-items-center">
                 <small class="text-muted"><i class="bi bi-lock"></i> Cotação iniciada por <strong><?= htmlspecialchars($order['quote_started_by'] ?? '') ?></strong> em <?= date('d/m/Y H:i', strtotime($order['quote_started_at'])) ?></small>
                 <form method="POST" action="/pedido/cotacao/cancelar/<?= $token ?>">
-                    <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Ao cancelar a cotação, o solicitante poderá editar os itens novamente. Deseja continuar?')">
-                        <i class="bi bi-unlock"></i> Destravar Edição
+                    <button type="submit" class="btn btn-sm btn-warning text-dark fw-bold" onclick="return confirm('Ao destravar, o solicitante poderá editar os itens novamente. Deseja continuar?')">
+                        <i class="bi bi-unlock-fill"></i> Destravar Edição
                     </button>
                 </form>
             </div>
