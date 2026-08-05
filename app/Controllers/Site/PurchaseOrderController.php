@@ -154,6 +154,50 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Cancelar/destravar cotação iniciada (permite edição dos itens novamente)
+     */
+    public function cancelQuote(string $token = ''): void
+    {
+        if (!$this->isPost() || empty($token)) {
+            $this->redirect('/');
+            return;
+        }
+
+        $order = PurchaseOrder::findByQuoteToken($token);
+        if (!$order || $order['status'] !== 'pending_quote') {
+            $this->setFlash('error', 'Pedido não encontrado ou status inválido.');
+            $this->redirect('/pedido/cotacao/' . $token);
+            return;
+        }
+
+        // Só cancelar se realmente foi iniciada
+        if (empty($order['quote_started_at'])) {
+            $this->redirect('/pedido/cotacao/' . $token);
+            return;
+        }
+
+        // Identificar quem está cancelando
+        $pinUser = PinAuthController::getLoggedUser();
+        $cancelledBy = $pinUser ? $pinUser['name'] : 'Cotador';
+
+        \App\Core\Database::update('purchase_orders', [
+            'quote_started_at' => null,
+            'quote_started_by' => null,
+        ], 'id = ?', [$order['id']]);
+
+        \App\Models\PurchaseOrderHistory::log(
+            $order['id'],
+            'quote_cancelled',
+            'Cotação destravada por ' . $cancelledBy . '. Edição de itens liberada.',
+            $cancelledBy,
+            $pinUser ? $pinUser['id'] : null
+        );
+
+        $this->setFlash('success', 'Cotação destravada. O solicitante pode editar os itens novamente.');
+        $this->redirect('/pedido/cotacao/' . $token);
+    }
+
+    /**
      * Processar cotação (POST)
      */
     public function submitQuote(string $token = ''): void
