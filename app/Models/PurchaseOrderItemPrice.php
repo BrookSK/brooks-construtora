@@ -12,7 +12,7 @@ class PurchaseOrderItemPrice extends Model
     public static function getByOrderAndSupplier(int $orderId, int $supplierId): array
     {
         return Database::fetchAll(
-            "SELECT * FROM purchase_order_item_prices WHERE order_id = ? AND supplier_id = ?",
+            "SELECT * FROM purchase_order_item_prices WHERE order_id = ? AND supplier_id = ? ORDER BY id DESC",
             [$orderId, $supplierId]
         );
     }

@@ -219,7 +219,8 @@ class PurchaseOrderController extends Controller
                     ]);
                 }
 
-                // Salvar preços por item
+                // Salvar preços por item (limpar preços antigos deste fornecedor para evitar duplicatas em edições)
+                Database::query("DELETE FROM purchase_order_item_prices WHERE order_id = ? AND supplier_id = ?", [$order['id'], $sid]);
                 $supplierTotal = 0;
                 $pricesForHistory = [];
                 if (isset($supplierPrices[$sid])) {
