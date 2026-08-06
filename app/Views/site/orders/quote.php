@@ -15,12 +15,12 @@
         .supplier-block h6 { color: #3a3b4e; }
         .history-hint { font-size: 0.7rem; color: #888; margin-top: 2px; display: block; }
         .history-hint strong { color: #28a745; }
-        .price-warning { border-color: #ffc107 !important; box-shadow: 0 0 0 0.2rem rgba(255,193,7,.25) !important; }
-        .price-danger { border-color: #dc3545 !important; box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25) !important; }
+        .price-warning { border-color: transparent !important; box-shadow: none !important; }
+        .price-danger { border-color: #f1a9a9 !important; box-shadow: 0 0 0 0.15rem rgba(241,169,169,.3) !important; }
         .price-alert { font-size: 0.65rem; margin-top: 3px; padding: 2px 6px; border-radius: 4px; display: none; }
         .price-alert.show { display: block; }
-        .price-alert-warning { background: #fff3cd; color: #856404; }
-        .price-alert-danger { background: #f8d7da; color: #842029; }
+        .price-alert-warning { display: none !important; }
+        .price-alert-danger { background: #fdeaea; color: #9b4d4d; }
         .supplier-item-entry .item-info { flex: 1; min-width: 0; font-size: 0.8rem; }
         .supplier-item-entry .item-price-input { width: 130px; flex-shrink: 0; }
         #quotationMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 0.75rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -1755,12 +1755,8 @@ function showReviewModal() {
             let alertIcon = '';
             let rowClass = '';
             if (validation.level === 'danger') {
-                alertIcon = '<span class="badge bg-danger" title="' + escHtml(validation.message) + '">⚠️</span>';
-                rowClass = ' class="table-danger"';
-                hasWarnings = true;
-            } else if (validation.level === 'warning') {
-                alertIcon = '<span class="badge bg-warning text-dark" title="' + escHtml(validation.message) + '">⚡</span>';
-                rowClass = ' class="table-warning"';
+                alertIcon = '<span class="badge" style="background-color:#f1a9a9;color:#5c1a1a;" title="' + escHtml(validation.message) + '">⚠️</span>';
+                rowClass = ' style="background-color: rgba(241,169,169,0.15);"';
                 hasWarnings = true;
             }
             
@@ -1769,10 +1765,10 @@ function showReviewModal() {
             html += '<td class="text-end fw-bold">R$ ' + formatBRL(totalPrice) + '</td>';
             html += '<td class="text-center">' + alertIcon + '</td></tr>';
 
-            // Se tem alerta, mostrar detalhes abaixo
-            if (validation.level !== 'ok') {
-                html += '<tr' + rowClass + '><td colspan="4" style="font-size:0.65rem; padding-top:0;">';
-                html += '<i class="bi bi-exclamation-triangle"></i> ' + escHtml(validation.message);
+            // Se tem alerta danger, mostrar detalhes abaixo
+            if (validation.level === 'danger') {
+                html += '<tr' + rowClass + '><td colspan="4" style="font-size:0.65rem; padding-top:0; color:#9b4d4d;">';
+                html += '<i class="bi bi-info-circle"></i> ' + escHtml(validation.message);
                 html += '</td></tr>';
             }
         });
@@ -1782,11 +1778,6 @@ function showReviewModal() {
         const totalVal = parseBRL((totalEl ? totalEl.textContent : '0').replace('R$', '').trim()) || 0;
         if (totalVal > 0) {
             html += '<div class="small text-muted mt-1 fst-italic"><i class="bi bi-chat-quote"></i> ' + valorPorExtenso(totalVal) + '</div>';
-        }
-
-        // Se teve warnings, mostrar alerta resumo
-        if (hasWarnings) {
-            html += '<div class="alert alert-warning small mt-2 mb-0 py-1 px-2"><i class="bi bi-exclamation-triangle-fill"></i> Há preços com diferença significativa do histórico. Verifique antes de confirmar.</div>';
         }
         
         // Financeiros
@@ -1840,16 +1831,8 @@ function confirmSubmit() {
         });
     });
 
-    if (priceAlerts.length > 0 && !window._priceAlertsConfirmed) {
-        let alertMsg = '⚠️ ATENÇÃO: Os seguintes preços possuem discrepância significativa com o histórico:\n\n';
-        priceAlerts.forEach(a => {
-            alertMsg += `• ${a.material} (${a.supplier}): ${a.message}\n`;
-        });
-        alertMsg += '\nDeseja enviar mesmo assim? Clique OK para confirmar ou Cancelar para revisar.';
-        
-        if (!confirm(alertMsg)) {
-            return; // Não enviar
-        }
+    if (priceAlerts.length > 0) {
+        // Alertas são mostrados apenas no modal de revisão (sem popup)
         window._priceAlertsConfirmed = true;
     }
 
