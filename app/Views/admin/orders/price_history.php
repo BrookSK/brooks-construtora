@@ -1,6 +1,31 @@
 <?php $pageTitle = 'Histórico de Preços'; $currentPage = 'price_history'; ?>
 <?php ob_start(); ?>
 
+<style>
+.pagination .page-link {
+    background-color: var(--color-primary);
+    border-color: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.75);
+    font-weight: 500;
+}
+.pagination .page-link:hover {
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-accent);
+    color: #fff;
+}
+.pagination .page-item.active .page-link {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+    font-weight: 700;
+}
+.pagination .page-item.disabled .page-link {
+    background-color: #2c2d3f;
+    border-color: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.3);
+}
+</style>
+
 <!-- Filtros -->
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <span class="badge bg-secondary" style="font-size:0.75rem;"><?= $totalRecords ?> registros</span>
