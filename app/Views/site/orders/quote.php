@@ -1755,19 +1755,22 @@ function showReviewModal() {
             let alertIcon = '';
             let rowClass = '';
             if (validation.level === 'danger') {
-                alertIcon = '<span class="badge" style="background-color:#e57373;color:#fff;" title="' + escHtml(validation.message) + '">⚠️</span>';
-                rowClass = ' style="background-color: #ffcdd2;"';
+                alertIcon = '<span class="badge" style="background-color:#e57373;color:#fff;">⚠️</span>';
                 hasWarnings = true;
             }
             
-            html += '<tr' + rowClass + '><td>' + escHtml(matName) + ' <small class="text-muted">(x' + qty + ')</small></td>';
-            html += '<td class="text-end">R$ ' + formatBRL(unitPrice) + '</td>';
-            html += '<td class="text-end fw-bold">R$ ' + formatBRL(totalPrice) + '</td>';
-            html += '<td class="text-center">' + alertIcon + '</td></tr>';
+            // Aplicar fundo vermelho claro em cada td individualmente (garante que não é sobrescrito)
+            const bgStyle = validation.level === 'danger' ? ' style="background-color:#ffcdd2;"' : '';
+            
+            html += '<tr>';
+            html += '<td' + bgStyle + '>' + escHtml(matName) + ' <small class="text-muted">(x' + qty + ')</small></td>';
+            html += '<td class="text-end"' + bgStyle + '>R$ ' + formatBRL(unitPrice) + '</td>';
+            html += '<td class="text-end fw-bold"' + bgStyle + '>R$ ' + formatBRL(totalPrice) + '</td>';
+            html += '<td class="text-center"' + bgStyle + '>' + alertIcon + '</td></tr>';
 
-            // Se tem alerta danger, mostrar detalhes abaixo
+            // Se tem alerta danger, mostrar detalhes abaixo com mesma faixa
             if (validation.level === 'danger') {
-                html += '<tr style="background-color: #ffcdd2;"><td colspan="4" style="font-size:0.65rem; padding-top:0; color:#c62828;">';
+                html += '<tr><td colspan="4" style="background-color:#ffcdd2; font-size:0.65rem; padding-top:0; color:#c62828;">';
                 html += '<i class="bi bi-info-circle"></i> ' + escHtml(validation.message);
                 html += '</td></tr>';
             }
