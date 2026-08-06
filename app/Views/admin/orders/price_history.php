@@ -51,12 +51,32 @@
 </div>
 <?php else: ?>
 
+<?php
+// Montar query string para paginação (mantém filtros ativos)
+$paginationParams = [];
+if ($filterMaterial) $paginationParams['material_id'] = $filterMaterial;
+if ($filterSupplier) $paginationParams['supplier_id'] = $filterSupplier;
+$paginationBase = '/admin/orders/price-history?' . http_build_query($paginationParams);
+$paginationBase .= empty($paginationParams) ? 'page=' : '&page=';
+?>
+
+<!-- Info de paginação -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <small class="text-muted">
+        Mostrando <?= $offset + 1 ?> a <?= min($offset + $perPage, $totalRecords) ?> de <?= $totalRecords ?> registros
+    </small>
+    <?php if ($totalPages > 1): ?>
+    <small class="text-muted">Página <?= $currentPage ?> de <?= $totalPages ?></small>
+    <?php endif; ?>
+</div>
+
 <!-- Desktop -->
 <div class="card d-none d-md-block">
     <div class="table-responsive">
         <table class="table table-sm table-hover mb-0">
             <thead>
                 <tr>
+                    <th class="text-center" style="width:40px;">#</th>
                     <th>Material</th>
                     <th>Fornecedor</th>
                     <th class="text-end">Valor Unit.</th>
@@ -67,8 +87,9 @@
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($records as $r): ?>
+                <?php foreach ($records as $i => $r): ?>
                 <tr class="<?= $r['was_approved'] ? 'table-success' : '' ?>">
+                    <td class="text-center text-muted"><strong><?= $i + 1 ?></strong></td>
                     <td><strong><?= htmlspecialchars($r['material_name']) ?></strong></td>
                     <td><?= htmlspecialchars($r['supplier_name']) ?></td>
                     <td class="text-end">R$ <?= number_format($r['unit_price'], 2, ',', '.') ?></td>
@@ -83,31 +104,102 @@
             </tbody>
         </table>
     </div>
+
+    <?php if ($totalPages > 1): ?>
+    <!-- Paginação Desktop -->
+    <div class="card-footer d-flex justify-content-center py-2">
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <!-- Anterior -->
+                <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
+                    <a class="page-link" href="<?= $paginationBase . ($currentPage - 1) ?>"><i class="bi bi-chevron-left"></i></a>
+                </li>
+                
+                <?php
+                // Mostrar no máximo 7 páginas com reticências
+                $startPage = max(1, $currentPage - 3);
+                $endPage = min($totalPages, $currentPage + 3);
+                if ($startPage > 1): ?>
+                <li class="page-item"><a class="page-link" href="<?= $paginationBase ?>1">1</a></li>
+                <?php if ($startPage > 2): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
+                <?php endif; ?>
+                
+                <?php for ($p = $startPage; $p <= $endPage; $p++): ?>
+                <li class="page-item <?= $p == $currentPage ? 'active' : '' ?>">
+                    <a class="page-link" href="<?= $paginationBase . $p ?>"><?= $p ?></a>
+                </li>
+                <?php endfor; ?>
+                
+                <?php if ($endPage < $totalPages): ?>
+                <?php if ($endPage < $totalPages - 1): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
+                <li class="page-item"><a class="page-link" href="<?= $paginationBase . $totalPages ?>"><?= $totalPages ?></a></li>
+                <?php endif; ?>
+                
+                <!-- Próximo -->
+                <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
+                    <a class="page-link" href="<?= $paginationBase . ($currentPage + 1) ?>"><i class="bi bi-chevron-right"></i></a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    <?php endif; ?>
 </div>
 
 <!-- Mobile -->
 <div class="d-md-none">
-    <?php 
-    $currentMaterial = '';
-    foreach ($records as $r): 
-        if ($r['material_name'] !== $currentMaterial):
-            $currentMaterial = $r['material_name'];
-    ?>
-    <h6 class="mt-3 mb-2 text-muted small text-uppercase"><?= htmlspecialchars($currentMaterial) ?></h6>
-    <?php endif; ?>
+    <?php foreach ($records as $i => $r): ?>
     <div class="card mb-2 <?= $r['was_approved'] ? 'border-success' : '' ?>">
         <div class="card-body py-2 px-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-bold small"><?= htmlspecialchars($r['supplier_name']) ?></span>
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="badge bg-light text-dark me-1"><?= $i + 1 ?></span>
+                    <strong class="small"><?= htmlspecialchars($r['material_name']) ?></strong>
+                </div>
                 <strong class="text-<?= $r['was_approved'] ? 'success' : 'dark' ?>">R$ <?= number_format($r['unit_price'], 2, ',', '.') ?></strong>
             </div>
             <div class="d-flex justify-content-between mt-1" style="font-size:0.7rem; color:#888;">
-                <span><?= htmlspecialchars($r['order_code']) ?> · <?= date('d/m/Y', strtotime($r['created_at'])) ?></span>
+                <span><?= htmlspecialchars($r['supplier_name']) ?> · <?= htmlspecialchars($r['order_code']) ?> · <?= date('d/m/Y', strtotime($r['created_at'])) ?></span>
                 <?= $r['was_approved'] ? '<span class="text-success fw-bold">Aprovado</span>' : '' ?>
             </div>
         </div>
     </div>
     <?php endforeach; ?>
+
+    <?php if ($totalPages > 1): ?>
+    <!-- Paginação Mobile -->
+    <div class="d-flex justify-content-center mt-3 mb-3">
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
+                    <a class="page-link" href="<?= $paginationBase . ($currentPage - 1) ?>"><i class="bi bi-chevron-left"></i></a>
+                </li>
+                
+                <?php
+                $startPage = max(1, $currentPage - 2);
+                $endPage = min($totalPages, $currentPage + 2);
+                if ($startPage > 1): ?>
+                <li class="page-item"><a class="page-link" href="<?= $paginationBase ?>1">1</a></li>
+                <?php if ($startPage > 2): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
+                <?php endif; ?>
+                
+                <?php for ($p = $startPage; $p <= $endPage; $p++): ?>
+                <li class="page-item <?= $p == $currentPage ? 'active' : '' ?>">
+                    <a class="page-link" href="<?= $paginationBase . $p ?>"><?= $p ?></a>
+                </li>
+                <?php endfor; ?>
+                
+                <?php if ($endPage < $totalPages): ?>
+                <?php if ($endPage < $totalPages - 1): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
+                <li class="page-item"><a class="page-link" href="<?= $paginationBase . $totalPages ?>"><?= $totalPages ?></a></li>
+                <?php endif; ?>
+                
+                <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
+                    <a class="page-link" href="<?= $paginationBase . ($currentPage + 1) ?>"><i class="bi bi-chevron-right"></i></a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    <?php endif; ?>
 </div>
 
 <?php endif; ?>

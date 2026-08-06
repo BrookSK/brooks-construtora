@@ -2129,24 +2129,37 @@ class PurchaseOrderController extends Controller
     {
         $materialId = (int) $this->input('material_id', 0);
         $supplierId = (int) $this->input('supplier_id', 0);
+        $page = max(1, (int) $this->input('page', 1));
+        $perPage = 25;
 
         if ($materialId) {
             $records = MaterialPriceHistory::getByMaterial($materialId);
         } elseif ($supplierId) {
             $records = MaterialPriceHistory::getBySupplier($supplierId);
         } else {
-            $records = MaterialPriceHistory::getAllGroupedByMaterial(500);
+            $records = MaterialPriceHistory::getAllGroupedByMaterial(10000);
         }
+
+        $totalRecords = count($records);
+        $totalPages = max(1, ceil($totalRecords / $perPage));
+        $page = min($page, $totalPages);
+        $offset = ($page - 1) * $perPage;
+        $paginatedRecords = array_slice($records, $offset, $perPage);
 
         $materials = Material::allActive();
         $suppliers = Supplier::allActive();
 
         $this->view('admin.orders.price_history', [
-            'records' => $records,
+            'records' => $paginatedRecords,
             'materials' => $materials,
             'suppliers' => $suppliers,
             'filterMaterial' => $materialId,
             'filterSupplier' => $supplierId,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'totalRecords' => $totalRecords,
+            'perPage' => $perPage,
+            'offset' => $offset,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);
