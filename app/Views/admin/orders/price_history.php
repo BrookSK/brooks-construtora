@@ -70,7 +70,7 @@ $paginationBase = '/admin/orders/price-history?' . ($paginationQuery ? $paginati
         Mostrando <strong><?= $offset + 1 ?></strong> a <strong><?= min($offset + $perPage, $totalRecords) ?></strong> de <strong><?= $totalRecords ?></strong> registros
     </small>
     <?php if ($totalPages > 1): ?>
-    <small class="text-muted">Página <strong><?= $currentPage ?></strong> de <strong><?= $totalPages ?></strong></small>
+    <small class="text-muted">Página <strong><?= $paginaAtual ?></strong> de <strong><?= $totalPages ?></strong></small>
     <?php endif; ?>
 </div>
 
@@ -118,20 +118,20 @@ $paginationBase = '/admin/orders/price-history?' . ($paginationQuery ? $paginati
     <div class="card-footer d-flex justify-content-center py-2">
         <nav>
             <ul class="pagination pagination-sm mb-0">
-                <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
-                    <a class="page-link" href="<?= $paginationBase . ($currentPage - 1) ?>" title="Anterior">
+                <li class="page-item <?= $paginaAtual <= 1 ? 'disabled' : '' ?>">
+                    <a class="page-link" href="<?= $paginationBase . ($paginaAtual - 1) ?>" title="Anterior">
                         <i class="bi bi-chevron-left"></i>
                     </a>
                 </li>
                 <?php
-                $startPage = max(1, $currentPage - 3);
-                $endPage = min($totalPages, $currentPage + 3);
+                $startPage = max(1, $paginaAtual - 3);
+                $endPage = min($totalPages, $paginaAtual + 3);
                 if ($startPage > 1): ?>
                     <li class="page-item"><a class="page-link" href="<?= $paginationBase ?>1">1</a></li>
                     <?php if ($startPage > 2): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
                 <?php endif; ?>
                 <?php for ($p = $startPage; $p <= $endPage; $p++): ?>
-                    <li class="page-item <?= $p == $currentPage ? 'active' : '' ?>">
+                    <li class="page-item <?= $p == $paginaAtual ? 'active' : '' ?>">
                         <a class="page-link" href="<?= $paginationBase . $p ?>"><?= $p ?></a>
                     </li>
                 <?php endfor; ?>
@@ -139,8 +139,8 @@ $paginationBase = '/admin/orders/price-history?' . ($paginationQuery ? $paginati
                     <?php if ($endPage < $totalPages - 1): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
                     <li class="page-item"><a class="page-link" href="<?= $paginationBase . $totalPages ?>"><?= $totalPages ?></a></li>
                 <?php endif; ?>
-                <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
-                    <a class="page-link" href="<?= $paginationBase . ($currentPage + 1) ?>" title="Próxima">
+                <li class="page-item <?= $paginaAtual >= $totalPages ? 'disabled' : '' ?>">
+                    <a class="page-link" href="<?= $paginationBase . ($paginaAtual + 1) ?>" title="Próxima">
                         <i class="bi bi-chevron-right"></i>
                     </a>
                 </li>
@@ -175,18 +175,18 @@ $paginationBase = '/admin/orders/price-history?' . ($paginationQuery ? $paginati
     <div class="d-flex justify-content-center mt-3 mb-3">
         <nav>
             <ul class="pagination pagination-sm mb-0">
-                <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
-                    <a class="page-link" href="<?= $paginationBase . ($currentPage - 1) ?>"><i class="bi bi-chevron-left"></i></a>
+                <li class="page-item <?= $paginaAtual <= 1 ? 'disabled' : '' ?>">
+                    <a class="page-link" href="<?= $paginationBase . ($paginaAtual - 1) ?>"><i class="bi bi-chevron-left"></i></a>
                 </li>
                 <?php
-                $startPage = max(1, $currentPage - 2);
-                $endPage = min($totalPages, $currentPage + 2);
+                $startPage = max(1, $paginaAtual - 2);
+                $endPage = min($totalPages, $paginaAtual + 2);
                 if ($startPage > 1): ?>
                     <li class="page-item"><a class="page-link" href="<?= $paginationBase ?>1">1</a></li>
                     <?php if ($startPage > 2): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
                 <?php endif; ?>
                 <?php for ($p = $startPage; $p <= $endPage; $p++): ?>
-                    <li class="page-item <?= $p == $currentPage ? 'active' : '' ?>">
+                    <li class="page-item <?= $p == $paginaAtual ? 'active' : '' ?>">
                         <a class="page-link" href="<?= $paginationBase . $p ?>"><?= $p ?></a>
                     </li>
                 <?php endfor; ?>
@@ -194,8 +194,8 @@ $paginationBase = '/admin/orders/price-history?' . ($paginationQuery ? $paginati
                     <?php if ($endPage < $totalPages - 1): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
                     <li class="page-item"><a class="page-link" href="<?= $paginationBase . $totalPages ?>"><?= $totalPages ?></a></li>
                 <?php endif; ?>
-                <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
-                    <a class="page-link" href="<?= $paginationBase . ($currentPage + 1) ?>"><i class="bi bi-chevron-right"></i></a>
+                <li class="page-item <?= $paginaAtual >= $totalPages ? 'disabled' : '' ?>">
+                    <a class="page-link" href="<?= $paginationBase . ($paginaAtual + 1) ?>"><i class="bi bi-chevron-right"></i></a>
                 </li>
             </ul>
         </nav>

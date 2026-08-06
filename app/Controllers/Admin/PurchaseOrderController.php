@@ -2155,7 +2155,7 @@ class PurchaseOrderController extends Controller
             'suppliers' => $suppliers,
             'filterMaterial' => $materialId,
             'filterSupplier' => $supplierId,
-            'currentPage' => $page,
+            'paginaAtual' => $page,
             'totalPages' => $totalPages,
             'totalRecords' => $totalRecords,
             'perPage' => $perPage,
