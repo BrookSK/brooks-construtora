@@ -16,11 +16,11 @@
         .history-hint { font-size: 0.7rem; color: #888; margin-top: 2px; display: block; }
         .history-hint strong { color: #28a745; }
         .price-warning { border-color: transparent !important; box-shadow: none !important; }
-        .price-danger { border-color: #f1a9a9 !important; box-shadow: 0 0 0 0.15rem rgba(241,169,169,.3) !important; }
+        .price-danger { border-color: #e8a0a0 !important; box-shadow: 0 0 0 0.15rem rgba(220,80,80,.15) !important; }
         .price-alert { font-size: 0.65rem; margin-top: 3px; padding: 2px 6px; border-radius: 4px; display: none; }
         .price-alert.show { display: block; }
         .price-alert-warning { display: none !important; }
-        .price-alert-danger { background: #fdeaea; color: #9b4d4d; }
+        .price-alert-danger { background: rgba(220,80,80,0.08); color: #c25555; }
         .supplier-item-entry .item-info { flex: 1; min-width: 0; font-size: 0.8rem; }
         .supplier-item-entry .item-price-input { width: 130px; flex-shrink: 0; }
         #quotationMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 0.75rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -1755,8 +1755,8 @@ function showReviewModal() {
             let alertIcon = '';
             let rowClass = '';
             if (validation.level === 'danger') {
-                alertIcon = '<span class="badge" style="background-color:#f1a9a9;color:#5c1a1a;" title="' + escHtml(validation.message) + '">⚠️</span>';
-                rowClass = ' style="background-color: rgba(241,169,169,0.15);"';
+                alertIcon = '<span class="badge" style="background-color:#e8a0a0;color:#fff;" title="' + escHtml(validation.message) + '">⚠️</span>';
+                rowClass = ' style="background-color: rgba(220,80,80,0.08);"';
                 hasWarnings = true;
             }
             
@@ -1767,7 +1767,7 @@ function showReviewModal() {
 
             // Se tem alerta danger, mostrar detalhes abaixo
             if (validation.level === 'danger') {
-                html += '<tr' + rowClass + '><td colspan="4" style="font-size:0.65rem; padding-top:0; color:#9b4d4d;">';
+                html += '<tr' + rowClass + '><td colspan="4" style="font-size:0.65rem; padding-top:0; color:#c25555;">';
                 html += '<i class="bi bi-info-circle"></i> ' + escHtml(validation.message);
                 html += '</td></tr>';
             }
