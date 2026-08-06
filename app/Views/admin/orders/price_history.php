@@ -3,26 +3,26 @@
 
 <style>
 .pagination .page-link {
-    background-color: var(--color-primary);
-    border-color: rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.75);
-    font-weight: 500;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.65rem;
 }
 .pagination .page-link:hover {
-    background-color: var(--color-primary-hover);
-    border-color: var(--color-accent);
-    color: #fff;
+    background-color: #f8f9fa;
+    border-color: #adb5bd;
+    color: #3a3b4e;
 }
 .pagination .page-item.active .page-link {
-    background-color: var(--color-accent);
-    border-color: var(--color-accent);
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
     color: #fff;
-    font-weight: 700;
 }
 .pagination .page-item.disabled .page-link {
-    background-color: #2c2d3f;
-    border-color: rgba(255,255,255,0.05);
-    color: rgba(255,255,255,0.3);
+    background-color: #f8f9fa;
+    border-color: #e9ecef;
+    color: #ced4da;
 }
 </style>
 
