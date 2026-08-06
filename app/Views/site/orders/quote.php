@@ -15,6 +15,12 @@
         .supplier-block h6 { color: #3a3b4e; }
         .history-hint { font-size: 0.7rem; color: #888; margin-top: 2px; display: block; }
         .history-hint strong { color: #28a745; }
+        .price-warning { border-color: #ffc107 !important; box-shadow: 0 0 0 0.2rem rgba(255,193,7,.25) !important; }
+        .price-danger { border-color: #dc3545 !important; box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25) !important; }
+        .price-alert { font-size: 0.65rem; margin-top: 3px; padding: 2px 6px; border-radius: 4px; display: none; }
+        .price-alert.show { display: block; }
+        .price-alert-warning { background: #fff3cd; color: #856404; }
+        .price-alert-danger { background: #f8d7da; color: #842029; }
         .supplier-item-entry .item-info { flex: 1; min-width: 0; font-size: 0.8rem; }
         .supplier-item-entry .item-price-input { width: 130px; flex-shrink: 0; }
         #quotationMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 0.75rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -501,6 +507,178 @@
 
     function formatBRL(num) {
         return num.toFixed(2).replace('.', ',');
+    }
+
+    /**
+     * Formata número por extenso em reais (para confirmação visual)
+     */
+    function valorPorExtenso(valor) {
+        if (valor === 0) return 'zero reais';
+        const unidades = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+        const especiais = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+        const dezenas = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+        const centenas = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+
+        function grupoExtenso(n) {
+            if (n === 0) return '';
+            if (n === 100) return 'cem';
+            let partes = [];
+            if (n >= 100) { partes.push(centenas[Math.floor(n / 100)]); n %= 100; }
+            if (n >= 20) { partes.push(dezenas[Math.floor(n / 10)]); n %= 10; }
+            else if (n >= 10) { partes.push(especiais[n - 10]); n = 0; }
+            if (n > 0) partes.push(unidades[n]);
+            return partes.join(' e ');
+        }
+
+        const inteiro = Math.floor(valor);
+        const centavos = Math.round((valor - inteiro) * 100);
+        let resultado = '';
+
+        if (inteiro >= 1000000) {
+            const milhoes = Math.floor(inteiro / 1000000);
+            resultado += grupoExtenso(milhoes) + (milhoes === 1 ? ' milhão' : ' milhões');
+            const resto = inteiro % 1000000;
+            if (resto > 0) resultado += (resto < 100 ? ' e ' : ', ') + valorInteiroPorExtenso(resto);
+        } else {
+            resultado = valorInteiroPorExtenso(inteiro);
+        }
+
+        function valorInteiroPorExtenso(n) {
+            if (n === 0) return '';
+            let partes = [];
+            if (n >= 1000) {
+                const milhares = Math.floor(n / 1000);
+                partes.push((milhares === 1 ? 'mil' : grupoExtenso(milhares) + ' mil'));
+                n %= 1000;
+            }
+            if (n > 0) {
+                if (partes.length > 0 && n < 100) partes.push('e');
+                else if (partes.length > 0) partes.push('');
+                partes.push(grupoExtenso(n));
+            }
+            return partes.join(' ').replace(/\s+/g, ' ').trim();
+        }
+
+        resultado += inteiro === 1 ? ' real' : ' reais';
+        if (centavos > 0) {
+            resultado += ' e ' + grupoExtenso(centavos) + (centavos === 1 ? ' centavo' : ' centavos');
+        }
+        return resultado;
+    }
+
+    /**
+     * Valida preço vs histórico e retorna objeto de alerta
+     * Retorna: { level: 'ok'|'warning'|'danger', message: string, percent: number }
+     */
+    function validatePriceVsHistory(itemId, sid, inputValue) {
+        const val = parseBRL(inputValue) || 0;
+        if (val === 0) return { level: 'ok', message: '', percent: 0 };
+
+        const item = quoteOnlyItems.find(i => String(i.id) === String(itemId));
+        if (!item || !item.material_id) return { level: 'ok', message: '', percent: 0 };
+
+        const qty = parseFloat(item.quantity) || 1;
+
+        // Calcular preço unitário baseado no modo atual
+        let unitPrice;
+        if (priceMode === 'total') {
+            unitPrice = qty > 0 ? val / qty : val;
+        } else {
+            unitPrice = val;
+        }
+
+        // Buscar histórico deste material (com qualquer fornecedor)
+        const allHist = priceHistory.filter(h => h.material_id == item.material_id);
+        // Histórico específico deste fornecedor
+        const supplierHist = allHist.filter(h => h.supplier_id == sid);
+        
+        // Usar referência: preferir último preço do mesmo fornecedor, senão média geral
+        let referencePrice = null;
+        let referenceLabel = '';
+        
+        if (supplierHist.length > 0) {
+            referencePrice = parseFloat(supplierHist[0].unit_price);
+            referenceLabel = 'último preço deste fornecedor';
+        } else if (allHist.length > 0) {
+            // Média dos últimos 5 preços
+            const recent = allHist.slice(0, 5);
+            referencePrice = recent.reduce((sum, h) => sum + parseFloat(h.unit_price), 0) / recent.length;
+            referenceLabel = 'média de preços anteriores';
+        }
+
+        if (!referencePrice || referencePrice === 0) return { level: 'ok', message: '', percent: 0 };
+
+        const diff = ((unitPrice - referencePrice) / referencePrice) * 100;
+        const absDiff = Math.abs(diff);
+
+        // Verificação de preço muito baixo (possível erro de digitação)
+        if (diff < -50) {
+            return {
+                level: 'danger',
+                message: `⚠️ Preço ${absDiff.toFixed(0)}% MENOR que ${referenceLabel} (R$ ${formatBRL(referencePrice)}/un). Verifique se digitou corretamente!`,
+                percent: diff
+            };
+        }
+        if (diff < -30) {
+            return {
+                level: 'warning',
+                message: `Preço ${absDiff.toFixed(0)}% menor que ${referenceLabel} (R$ ${formatBRL(referencePrice)}/un)`,
+                percent: diff
+            };
+        }
+        // Preço muito alto também pode indicar erro
+        if (diff > 100) {
+            return {
+                level: 'danger',
+                message: `⚠️ Preço ${absDiff.toFixed(0)}% MAIOR que ${referenceLabel} (R$ ${formatBRL(referencePrice)}/un). Verifique!`,
+                percent: diff
+            };
+        }
+        if (diff > 50) {
+            return {
+                level: 'warning',
+                message: `Preço ${absDiff.toFixed(0)}% maior que ${referenceLabel} (R$ ${formatBRL(referencePrice)}/un)`,
+                percent: diff
+            };
+        }
+
+        return { level: 'ok', message: '', percent: diff };
+    }
+
+    /**
+     * Aplica visual de alerta no input de preço
+     */
+    function applyPriceAlert(input) {
+        const sid = input.dataset.sid;
+        const itemId = input.dataset.itemId;
+        if (!sid || !itemId) return;
+
+        const result = validatePriceVsHistory(itemId, sid, input.value);
+        
+        // Limpar classes anteriores
+        input.classList.remove('price-warning', 'price-danger');
+        
+        // Buscar ou criar elemento de alerta
+        let alertEl = input.closest('.item-price-input, td')?.querySelector('.price-alert');
+        if (!alertEl) {
+            alertEl = document.createElement('div');
+            alertEl.className = 'price-alert';
+            const container = input.closest('.item-price-input') || input.closest('td') || input.parentElement;
+            container.appendChild(alertEl);
+        }
+
+        if (result.level === 'danger') {
+            input.classList.add('price-danger');
+            alertEl.className = 'price-alert price-alert-danger show';
+            alertEl.textContent = result.message;
+        } else if (result.level === 'warning') {
+            input.classList.add('price-warning');
+            alertEl.className = 'price-alert price-alert-warning show';
+            alertEl.textContent = result.message;
+        } else {
+            alertEl.className = 'price-alert';
+            alertEl.textContent = '';
+        }
     }
     // ────────────────────────────────────────────────────────────────────────
 
@@ -994,6 +1172,10 @@
                 if (parsed !== null) this.value = formatBRL(parsed);
                 // Validar limite de % para desconto/acréscimo
                 validatePercentLimit(this);
+                // Validar preço vs histórico (só para price-input, não financials)
+                if (this.classList.contains('price-input')) {
+                    applyPriceAlert(this);
+                }
                 calculateSupplierTotal(sid);
             });
         });
@@ -1139,6 +1321,8 @@
                     const listInput = document.querySelector(`#supplier-block-${sid} [name="supplier_prices[${sid}][${itemId}]"]`);
                     if (listInput) {
                         listInput.value = this.value;
+                        // Validar preço vs histórico no input da lista
+                        applyPriceAlert(listInput);
                         calculateSupplierTotal(sid);
                     }
                 }
@@ -1498,6 +1682,9 @@
 
 <script>
 function showReviewModal() {
+    // Resetar flag de confirmação de preços ao reabrir o modal
+    window._priceAlertsConfirmed = false;
+    
     const form = document.getElementById('quoteForm');
     const quotedBy = form.querySelector('[name="quoted_by_name"]')?.value || '-';
     const quoteNotes = form.querySelector('[name="quote_notes"]')?.value || '';
@@ -1543,8 +1730,9 @@ function showReviewModal() {
         if (infoItems.length) html += '<div class="small text-muted mb-1">' + infoItems.join(' · ') + '</div>';
 
         // Preços dos itens
-        html += '<table class="table table-sm mb-0" style="font-size:0.75rem;"><thead><tr><th>Material</th><th class="text-end">Unit.</th><th class="text-end">Total</th></tr></thead><tbody>';
+        html += '<table class="table table-sm mb-0" style="font-size:0.75rem;"><thead><tr><th>Material</th><th class="text-end">Unit.</th><th class="text-end">Total</th><th></th></tr></thead><tbody>';
         const priceInputs = block.querySelectorAll('.price-input');
+        let hasWarnings = false;
         priceInputs.forEach(input => {
             const val = parseBRL(input.value) || 0;
             if (val === 0) return;
@@ -1561,12 +1749,45 @@ function showReviewModal() {
                 unitPrice = val;
                 totalPrice = val * qty;
             }
+
+            // Validar contra histórico
+            const validation = validatePriceVsHistory(itemId, sid, input.value);
+            let alertIcon = '';
+            let rowClass = '';
+            if (validation.level === 'danger') {
+                alertIcon = '<span class="badge bg-danger" title="' + escHtml(validation.message) + '">⚠️</span>';
+                rowClass = ' class="table-danger"';
+                hasWarnings = true;
+            } else if (validation.level === 'warning') {
+                alertIcon = '<span class="badge bg-warning text-dark" title="' + escHtml(validation.message) + '">⚡</span>';
+                rowClass = ' class="table-warning"';
+                hasWarnings = true;
+            }
             
-            html += '<tr><td>' + escHtml(matName) + ' <small class="text-muted">(x' + qty + ')</small></td>';
+            html += '<tr' + rowClass + '><td>' + escHtml(matName) + ' <small class="text-muted">(x' + qty + ')</small></td>';
             html += '<td class="text-end">R$ ' + formatBRL(unitPrice) + '</td>';
-            html += '<td class="text-end fw-bold">R$ ' + formatBRL(totalPrice) + '</td></tr>';
+            html += '<td class="text-end fw-bold">R$ ' + formatBRL(totalPrice) + '</td>';
+            html += '<td class="text-center">' + alertIcon + '</td></tr>';
+
+            // Se tem alerta, mostrar detalhes abaixo
+            if (validation.level !== 'ok') {
+                html += '<tr' + rowClass + '><td colspan="4" style="font-size:0.65rem; padding-top:0;">';
+                html += '<i class="bi bi-exclamation-triangle"></i> ' + escHtml(validation.message);
+                html += '</td></tr>';
+            }
         });
         html += '</tbody></table>';
+
+        // Mostrar total por extenso
+        const totalVal = parseBRL((totalEl ? totalEl.textContent : '0').replace('R$', '').trim()) || 0;
+        if (totalVal > 0) {
+            html += '<div class="small text-muted mt-1 fst-italic"><i class="bi bi-chat-quote"></i> ' + valorPorExtenso(totalVal) + '</div>';
+        }
+
+        // Se teve warnings, mostrar alerta resumo
+        if (hasWarnings) {
+            html += '<div class="alert alert-warning small mt-2 mb-0 py-1 px-2"><i class="bi bi-exclamation-triangle-fill"></i> Há preços com diferença significativa do histórico. Verifique antes de confirmar.</div>';
+        }
         
         // Financeiros
         const getFinVal = (field) => parseBRL(block.querySelector(`[name="supplier_financials[${sid}][${field}]"]`)?.value) || 0;
@@ -1597,6 +1818,41 @@ function showReviewModal() {
 }
 
 function confirmSubmit() {
+    // Verificar se há alertas de discrepância de preço
+    let priceAlerts = [];
+    addedSuppliers.forEach(sid => {
+        const block = document.getElementById('supplier-block-' + sid);
+        if (!block) return;
+        const priceInputs = block.querySelectorAll('.price-input');
+        priceInputs.forEach(input => {
+            const val = parseBRL(input.value) || 0;
+            if (val === 0) return;
+            const itemId = input.dataset.itemId || '';
+            const validation = validatePriceVsHistory(itemId, sid, input.value);
+            if (validation.level === 'danger') {
+                const item = quoteOnlyItems.find(i => String(i.id) === String(itemId));
+                priceAlerts.push({
+                    material: item ? item.material_name : 'Material',
+                    supplier: supplierNames[sid] || 'Fornecedor',
+                    message: validation.message
+                });
+            }
+        });
+    });
+
+    if (priceAlerts.length > 0 && !window._priceAlertsConfirmed) {
+        let alertMsg = '⚠️ ATENÇÃO: Os seguintes preços possuem discrepância significativa com o histórico:\n\n';
+        priceAlerts.forEach(a => {
+            alertMsg += `• ${a.material} (${a.supplier}): ${a.message}\n`;
+        });
+        alertMsg += '\nDeseja enviar mesmo assim? Clique OK para confirmar ou Cancelar para revisar.';
+        
+        if (!confirm(alertMsg)) {
+            return; // Não enviar
+        }
+        window._priceAlertsConfirmed = true;
+    }
+
     // Se está no modo "total", converter todos os preços para unitário antes de enviar
     // Usa ponto como separador decimal e 6 casas para preservar precisão
     // (ex: R$299,90 / 1000 = 0.299900 — evita arredondamento)
