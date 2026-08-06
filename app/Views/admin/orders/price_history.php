@@ -1,6 +1,62 @@
 <?php $pageTitle = 'Histórico de Preços'; $currentPage = 'price_history'; ?>
 <?php ob_start(); ?>
 
+<style>
+    .brooks-pagination .page-link {
+        background-color: var(--color-primary);
+        border-color: rgba(255,255,255,0.15);
+        color: rgba(255,255,255,0.7);
+        font-weight: 500;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.7rem;
+        transition: all 0.2s;
+    }
+    .brooks-pagination .page-link:hover {
+        background-color: var(--color-primary-hover);
+        border-color: var(--color-accent);
+        color: #fff;
+    }
+    .brooks-pagination .page-item.active .page-link {
+        background-color: var(--color-accent);
+        border-color: var(--color-accent);
+        color: #fff;
+        font-weight: 700;
+    }
+    .brooks-pagination .page-item.disabled .page-link {
+        background-color: #2a2b3d;
+        border-color: rgba(255,255,255,0.05);
+        color: rgba(255,255,255,0.25);
+    }
+    .price-history-row:hover {
+        background-color: rgba(58, 59, 78, 0.04) !important;
+    }
+    .price-history-row td {
+        vertical-align: middle;
+    }
+    .row-number {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-primary);
+        color: #fff;
+        border-radius: 50%;
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+    .pagination-info {
+        background: var(--color-primary);
+        color: rgba(255,255,255,0.8);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+    }
+    .pagination-info strong {
+        color: #fff;
+    }
+</style>
+
 <!-- Filtros -->
 <div class="card mb-3">
     <div class="card-body">
@@ -65,22 +121,24 @@ $paginationBase = '/admin/orders/price-history?' . ($paginationQuery ? $paginati
 ?>
 
 <!-- Info de paginação -->
-<div class="d-flex justify-content-between align-items-center mb-2">
-    <small class="text-muted">
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="pagination-info">
         Mostrando <strong><?= $offset + 1 ?></strong> a <strong><?= min($offset + $perPage, $totalRecords) ?></strong> de <strong><?= $totalRecords ?></strong> registros
-    </small>
+    </div>
     <?php if ($totalPages > 1): ?>
-    <small class="text-muted">Página <strong><?= $paginaAtual ?></strong> de <strong><?= $totalPages ?></strong></small>
+    <div class="pagination-info">
+        Página <strong><?= $paginaAtual ?></strong> de <strong><?= $totalPages ?></strong>
+    </div>
     <?php endif; ?>
 </div>
 
 <!-- Tabela Desktop -->
 <div class="card d-none d-md-block">
     <div class="table-responsive">
-        <table class="table table-sm table-hover mb-0">
-            <thead class="table-dark">
-                <tr>
-                    <th class="text-center" style="width:45px;">#</th>
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr style="background: var(--color-primary); color: #fff;">
+                    <th class="text-center" style="width:50px;">#</th>
                     <th>Material</th>
                     <th>Fornecedor</th>
                     <th class="text-end">Valor Unit.</th>
@@ -92,20 +150,22 @@ $paginationBase = '/admin/orders/price-history?' . ($paginationQuery ? $paginati
             </thead>
             <tbody>
                 <?php foreach ($records as $i => $r): ?>
-                <tr class="<?= $r['was_approved'] ? 'table-success' : '' ?>">
-                    <td class="text-center text-muted fw-bold"><?= $i + 1 ?></td>
+                <tr class="price-history-row <?= $r['was_approved'] ? 'table-success' : '' ?>">
+                    <td class="text-center">
+                        <span class="row-number"><?= $i + 1 ?></span>
+                    </td>
                     <td><strong><?= htmlspecialchars($r['material_name']) ?></strong></td>
                     <td><?= htmlspecialchars($r['supplier_name']) ?></td>
-                    <td class="text-end">R$ <?= number_format($r['unit_price'], 2, ',', '.') ?></td>
+                    <td class="text-end fw-bold">R$ <?= number_format($r['unit_price'], 2, ',', '.') ?></td>
                     <td class="text-center"><?= number_format($r['quantity'], $r['quantity'] == (int)$r['quantity'] ? 0 : 2) ?></td>
                     <td>
                         <a href="/admin/orders/show/<?= $r['order_id'] ?>" class="text-decoration-none">
-                            <span class="badge bg-primary"><?= htmlspecialchars($r['order_code']) ?></span>
+                            <span class="badge" style="background-color: var(--color-accent);"><?= htmlspecialchars($r['order_code']) ?></span>
                         </a>
                     </td>
                     <td><small class="text-muted"><?= date('d/m/Y', strtotime($r['created_at'])) ?></small></td>
                     <td class="text-center">
-                        <?= $r['was_approved'] ? '<span class="badge bg-success">Sim</span>' : '<span class="badge bg-secondary">Não</span>' ?>
+                        <?= $r['was_approved'] ? '<span class="badge bg-success"><i class="bi bi-check-lg"></i> Sim</span>' : '<span class="badge bg-secondary">Não</span>' ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -114,13 +174,12 @@ $paginationBase = '/admin/orders/price-history?' . ($paginationQuery ? $paginati
     </div>
 
     <?php if ($totalPages > 1): ?>
-    <!-- Paginação -->
-    <div class="card-footer d-flex justify-content-center py-2">
+    <div class="card-footer d-flex justify-content-center py-3" style="background: rgba(58,59,78,0.03);">
         <nav>
-            <ul class="pagination pagination-sm mb-0">
+            <ul class="pagination brooks-pagination mb-0">
                 <li class="page-item <?= $paginaAtual <= 1 ? 'disabled' : '' ?>">
                     <a class="page-link" href="<?= $paginationBase . ($paginaAtual - 1) ?>" title="Anterior">
-                        <i class="bi bi-chevron-left"></i>
+                        <i class="bi bi-chevron-double-left"></i>
                     </a>
                 </li>
                 <?php
@@ -128,7 +187,7 @@ $paginationBase = '/admin/orders/price-history?' . ($paginationQuery ? $paginati
                 $endPage = min($totalPages, $paginaAtual + 3);
                 if ($startPage > 1): ?>
                     <li class="page-item"><a class="page-link" href="<?= $paginationBase ?>1">1</a></li>
-                    <?php if ($startPage > 2): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
+                    <?php if ($startPage > 2): ?><li class="page-item disabled"><span class="page-link">···</span></li><?php endif; ?>
                 <?php endif; ?>
                 <?php for ($p = $startPage; $p <= $endPage; $p++): ?>
                     <li class="page-item <?= $p == $paginaAtual ? 'active' : '' ?>">
@@ -136,12 +195,12 @@ $paginationBase = '/admin/orders/price-history?' . ($paginationQuery ? $paginati
                     </li>
                 <?php endfor; ?>
                 <?php if ($endPage < $totalPages): ?>
-                    <?php if ($endPage < $totalPages - 1): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
+                    <?php if ($endPage < $totalPages - 1): ?><li class="page-item disabled"><span class="page-link">···</span></li><?php endif; ?>
                     <li class="page-item"><a class="page-link" href="<?= $paginationBase . $totalPages ?>"><?= $totalPages ?></a></li>
                 <?php endif; ?>
                 <li class="page-item <?= $paginaAtual >= $totalPages ? 'disabled' : '' ?>">
                     <a class="page-link" href="<?= $paginationBase . ($paginaAtual + 1) ?>" title="Próxima">
-                        <i class="bi bi-chevron-right"></i>
+                        <i class="bi bi-chevron-double-right"></i>
                     </a>
                 </li>
             </ul>
@@ -156,34 +215,33 @@ $paginationBase = '/admin/orders/price-history?' . ($paginationQuery ? $paginati
     <div class="card mb-2 <?= $r['was_approved'] ? 'border-success' : '' ?>">
         <div class="card-body py-2 px-3">
             <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <span class="badge bg-light text-dark me-1"><?= $i + 1 ?></span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="row-number" style="width:26px;height:26px;font-size:0.6rem;"><?= $i + 1 ?></span>
                     <strong class="small"><?= htmlspecialchars($r['material_name']) ?></strong>
                 </div>
                 <strong class="text-<?= $r['was_approved'] ? 'success' : 'dark' ?>">R$ <?= number_format($r['unit_price'], 2, ',', '.') ?></strong>
             </div>
             <div class="d-flex justify-content-between mt-1" style="font-size:0.7rem; color:#888;">
-                <span><?= htmlspecialchars($r['supplier_name']) ?> · <a href="/admin/orders/show/<?= $r['order_id'] ?>" class="text-decoration-none"><?= htmlspecialchars($r['order_code']) ?></a> · <?= date('d/m/Y', strtotime($r['created_at'])) ?></span>
-                <?= $r['was_approved'] ? '<span class="text-success fw-bold">Aprovado</span>' : '' ?>
+                <span><?= htmlspecialchars($r['supplier_name']) ?> · <a href="/admin/orders/show/<?= $r['order_id'] ?>" class="text-decoration-none"><span style="color:var(--color-accent);"><?= htmlspecialchars($r['order_code']) ?></span></a> · <?= date('d/m/Y', strtotime($r['created_at'])) ?></span>
+                <?= $r['was_approved'] ? '<span class="text-success fw-bold"><i class="bi bi-check-lg"></i> Aprovado</span>' : '' ?>
             </div>
         </div>
     </div>
     <?php endforeach; ?>
 
     <?php if ($totalPages > 1): ?>
-    <!-- Paginação Mobile -->
     <div class="d-flex justify-content-center mt-3 mb-3">
         <nav>
-            <ul class="pagination pagination-sm mb-0">
+            <ul class="pagination brooks-pagination mb-0">
                 <li class="page-item <?= $paginaAtual <= 1 ? 'disabled' : '' ?>">
-                    <a class="page-link" href="<?= $paginationBase . ($paginaAtual - 1) ?>"><i class="bi bi-chevron-left"></i></a>
+                    <a class="page-link" href="<?= $paginationBase . ($paginaAtual - 1) ?>"><i class="bi bi-chevron-double-left"></i></a>
                 </li>
                 <?php
                 $startPage = max(1, $paginaAtual - 2);
                 $endPage = min($totalPages, $paginaAtual + 2);
                 if ($startPage > 1): ?>
                     <li class="page-item"><a class="page-link" href="<?= $paginationBase ?>1">1</a></li>
-                    <?php if ($startPage > 2): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
+                    <?php if ($startPage > 2): ?><li class="page-item disabled"><span class="page-link">···</span></li><?php endif; ?>
                 <?php endif; ?>
                 <?php for ($p = $startPage; $p <= $endPage; $p++): ?>
                     <li class="page-item <?= $p == $paginaAtual ? 'active' : '' ?>">
@@ -191,11 +249,11 @@ $paginationBase = '/admin/orders/price-history?' . ($paginationQuery ? $paginati
                     </li>
                 <?php endfor; ?>
                 <?php if ($endPage < $totalPages): ?>
-                    <?php if ($endPage < $totalPages - 1): ?><li class="page-item disabled"><span class="page-link">...</span></li><?php endif; ?>
+                    <?php if ($endPage < $totalPages - 1): ?><li class="page-item disabled"><span class="page-link">···</span></li><?php endif; ?>
                     <li class="page-item"><a class="page-link" href="<?= $paginationBase . $totalPages ?>"><?= $totalPages ?></a></li>
                 <?php endif; ?>
                 <li class="page-item <?= $paginaAtual >= $totalPages ? 'disabled' : '' ?>">
-                    <a class="page-link" href="<?= $paginationBase . ($paginaAtual + 1) ?>"><i class="bi bi-chevron-right"></i></a>
+                    <a class="page-link" href="<?= $paginationBase . ($paginaAtual + 1) ?>"><i class="bi bi-chevron-double-right"></i></a>
                 </li>
             </ul>
         </nav>
