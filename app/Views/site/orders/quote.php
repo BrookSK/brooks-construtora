@@ -1756,7 +1756,7 @@ function showReviewModal() {
             let rowClass = '';
             if (validation.level === 'danger') {
                 alertIcon = '<span class="badge" style="background-color:#e8a0a0;color:#fff;" title="' + escHtml(validation.message) + '">⚠️</span>';
-                rowClass = ' style="background-color: rgba(220,80,80,0.08);"';
+                rowClass = ' style="background-color: #fce4e4;"';
                 hasWarnings = true;
             }
             
@@ -1767,7 +1767,7 @@ function showReviewModal() {
 
             // Se tem alerta danger, mostrar detalhes abaixo
             if (validation.level === 'danger') {
-                html += '<tr' + rowClass + '><td colspan="4" style="font-size:0.65rem; padding-top:0; color:#c25555;">';
+                html += '<tr style="background-color: #fce4e4;"><td colspan="4" style="font-size:0.65rem; padding-top:0; color:#c25555;">';
                 html += '<i class="bi bi-info-circle"></i> ' + escHtml(validation.message);
                 html += '</td></tr>';
             }
