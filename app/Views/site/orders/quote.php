@@ -482,11 +482,11 @@
         } else if (hasComma) {
             // Só vírgula: pode ser decimal ("4997,85" ou "0,299900") ou milhar ("4,997")
             const parts = s.split(',');
-            if (parts.length === 2 && (parts[1].length <= 2 || parts[1].length > 3)) {
-                // Decimal: "4997,85" (2 casas) ou "0,299900" (>3 casas, não pode ser milhar)
+            if (parts.length === 2 && (parts[1].length <= 2 || parts[1].length > 3 || parts[0] === '0' || parts[0] === '')) {
+                // Decimal: "4997,85" (2 casas) ou "0,299900" (>3 casas) ou "0,999" (parte inteira é 0)
                 s = s.replace(',', '.');
             } else {
-                // Milhar: "4,997" (exatamente 3 casas) → "4997"
+                // Milhar: "4,997" (exatamente 3 casas, parte inteira > 0) → "4997"
                 s = s.replace(/,/g, '');
             }
         }
@@ -1812,6 +1812,18 @@ function showReviewModal() {
 }
 
 function confirmSubmit() {
+    // Sincronizar valores do mapa para a lista antes do envio (proteção contra dessincronização)
+    if (currentView === 'map') {
+        document.querySelectorAll('.map-price-input').forEach(input => {
+            const sid = input.dataset.sid;
+            const itemId = input.dataset.item;
+            const listInput = document.querySelector(`#supplier-block-${sid} [name="supplier_prices[${sid}][${itemId}]"]`);
+            if (listInput && input.value) {
+                listInput.value = input.value;
+            }
+        });
+    }
+
     // Verificar se há alertas de discrepância de preço
     let priceAlerts = [];
     addedSuppliers.forEach(sid => {
@@ -1845,8 +1857,14 @@ function confirmSubmit() {
     if (priceMode === 'total') {
         document.querySelectorAll('.price-input').forEach(input => {
             const val = parseBRL(input.value) || 0;
+            if (val === 0) return; // Não converter campos vazios/zerados
             const qty = parseFloat(input.dataset.qty) || 1;
             const unitPrice = qty > 0 ? val / qty : val;
+            // Proteção contra NaN/Infinity
+            if (!isFinite(unitPrice)) {
+                input.value = '0';
+                return;
+            }
             // Enviar com ponto decimal e 6 casas (backend usa str_replace(',','.'))
             input.value = unitPrice.toFixed(6).replace('.', ',');
         });

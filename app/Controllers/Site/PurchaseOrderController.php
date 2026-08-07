@@ -235,6 +235,23 @@ class PurchaseOrderController extends Controller
         $alreadyPurchasedPost = $_POST['already_purchased'] ?? [];
         $alreadyPurchasedQtysPost = $_POST['already_purchased_qty'] ?? [];
 
+        // Pré-processar distribuição de estoque para descontar da quantidade na hora de calcular preços
+        // O frontend já desconta do data-qty (divide total pelo remaining), então o backend precisa fazer o mesmo
+        $quoteStockPost = $_POST['quote_stock'] ?? [];
+        $stockDeductionByItem = [];
+        if (!empty($quoteStockPost)) {
+            foreach ($quoteStockPost as $stockItemId => $distributions) {
+                $totalFromStock = 0;
+                foreach ($distributions as $dist) {
+                    $distQty = (float) ($dist['qty'] ?? 0);
+                    if ($distQty > 0) $totalFromStock += $distQty;
+                }
+                if ($totalFromStock > 0) {
+                    $stockDeductionByItem[(int) $stockItemId] = $totalFromStock;
+                }
+            }
+        }
+
         // Se fornecedores foram adicionados na cotação (novo fluxo)
         if (!empty($supplierIds)) {
             foreach ($supplierIds as $sid) {
@@ -273,6 +290,10 @@ class PurchaseOrderController extends Controller
                         $item = PurchaseOrderItem::find((int) $itemId);
                         if ($item && $item['order_id'] == $order['id']) {
                             $qty = (float) $item['quantity'];
+                            // Descontar quantidade distribuída do estoque (o frontend já descontou do data-qty)
+                            if (isset($stockDeductionByItem[(int) $itemId])) {
+                                $qty = max(0, $qty - $stockDeductionByItem[(int) $itemId]);
+                            }
                             // Descontar quantidade já comprada (do POST, pois ainda não foi salvo no banco)
                             if (isset($alreadyPurchasedPost[$itemId])) {
                                 $apQty = isset($alreadyPurchasedQtysPost[$itemId]) ? (float) $alreadyPurchasedQtysPost[$itemId] : $qty;

@@ -219,7 +219,13 @@ function applyAIParse() {
         if (matchedItemId) {
             const priceInput = document.querySelector(`input[name="supplier_prices[${supplierId}][${matchedItemId}]"]`);
             if (priceInput) {
-                priceInput.value = formatPrice(parsedItem.unit_price);
+                // Se priceMode é 'total', converter unitário para total (unitário × quantidade)
+                let valueToFill = parsedItem.unit_price;
+                if (typeof priceMode !== 'undefined' && priceMode === 'total') {
+                    const qty = parseFloat(priceInput.dataset.qty) || 1;
+                    valueToFill = parseFloat(parsedItem.unit_price) * qty;
+                }
+                priceInput.value = formatPrice(valueToFill);
                 priceInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
         } else if (idx < orderItems.length) {
@@ -228,7 +234,13 @@ function applyAIParse() {
             if (itemId) {
                 const priceInput = document.querySelector(`input[name="supplier_prices[${supplierId}][${itemId}]"]`);
                 if (priceInput) {
-                    priceInput.value = formatPrice(parsedItem.unit_price);
+                    // Se priceMode é 'total', converter unitário para total (unitário × quantidade)
+                    let valueToFill = parsedItem.unit_price;
+                    if (typeof priceMode !== 'undefined' && priceMode === 'total') {
+                        const qty = parseFloat(priceInput.dataset.qty) || 1;
+                        valueToFill = parseFloat(parsedItem.unit_price) * qty;
+                    }
+                    priceInput.value = formatPrice(valueToFill);
                     priceInput.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             }
