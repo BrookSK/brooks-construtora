@@ -430,23 +430,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (newH + mH > MAX_CONTENT) {
                     var innerC = Array.from(remaining[m].children);
                     if (innerC.length > 1) {
+                        var childHeights = [];
+                        for (var ci = 0; ci < innerC.length; ci++) {
+                            childHeights.push(innerC[ci].offsetHeight + 14);
+                        }
                         newPage.removeChild(remaining[m]);
                         var fitClone = remaining[m].cloneNode(false);
                         var restClone = remaining[m].cloneNode(false);
                         var innerFitH = newH;
+                        var addedSome = false;
                         for (var n = 0; n < innerC.length; n++) {
-                            var nH = innerC[n].offsetHeight + 14;
-                            if (innerFitH + nH > MAX_CONTENT && fitClone.children.length > 0) {
+                            if (innerFitH + childHeights[n] > MAX_CONTENT && addedSome) {
                                 for (var o = n; o < innerC.length; o++) {
                                     restClone.appendChild(innerC[o].cloneNode(true));
                                 }
                                 break;
                             }
-                            innerFitH += nH;
+                            innerFitH += childHeights[n];
                             fitClone.appendChild(innerC[n].cloneNode(true));
+                            addedSome = true;
                         }
                         if (fitClone.children.length > 0) newPage.appendChild(fitClone);
-                        remaining = [restClone].concat(remaining.slice(m + 1));
+                        if (restClone.children.length > 0) {
+                            remaining = [restClone].concat(remaining.slice(m + 1));
+                        } else {
+                            remaining = remaining.slice(m + 1);
+                        }
                     } else if (fitted > 0) {
                         newPage.removeChild(remaining[m]);
                         remaining = remaining.slice(m);
