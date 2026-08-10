@@ -251,9 +251,9 @@
                         <?php
                         $charLimits = [
                             'cover' => 100, 'subcover' => 100, 'backcover' => 200,
-                            'internal_01' => 800, 'internal_02' => 800, 'internal_03' => 2500,
-                            'internal_04' => 1200, 'internal_05' => 2000, 'internal_06' => 800,
-                            'internal_07' => 1000, 'guest_column' => 2000,
+                            'internal_01' => 500, 'internal_02' => 600, 'internal_03' => 1800,
+                            'internal_04' => 900, 'internal_05' => 1500, 'internal_06' => 600,
+                            'internal_07' => 800, 'guest_column' => 2000,
                         ];
                         $maxChars = $charLimits[$page['layout_type']] ?? 1500;
                         $currentChars = mb_strlen($page['content'] ?? '');
