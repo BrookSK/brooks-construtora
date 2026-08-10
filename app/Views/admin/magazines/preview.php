@@ -45,7 +45,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-cover .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8)}
 
         /* ===== PÁGINA INTERNA BASE ===== */
-        .pg-int{padding:30px 35px;min-height:842px;overflow:visible}
+        .pg-int{padding:30px 35px;height:842px;min-height:842px;overflow:visible}
         .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
         .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
         .pg-int .logo-sm .ck{color:#2e7d32}
@@ -261,17 +261,18 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </div>
 
 <?php elseif ($layout === 'internal_06'): ?>
-<!-- PÁG INTERNA 06: Grid 2 imagens topo + 1 imagem esquerda + texto direita -->
+<!-- PÁG INTERNA 06: Grid 2 imagens topo + 1 imagem esquerda + texto embaixo -->
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
-        <?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:280px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:280px">IMAGEM 1</div><?php endif; ?>
-        <?php if($img2): ?><img src="<?= $img2 ?>" style="width:50%;height:280px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:280px">IMAGEM 2</div><?php endif; ?>
+        <?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:240px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:240px">IMAGEM 1</div><?php endif; ?>
+        <?php if($img2): ?><img src="<?= $img2 ?>" style="width:50%;height:240px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:240px">IMAGEM 2</div><?php endif; ?>
     </div>
-    <div style="display:flex;gap:8px">
-        <?php $img3 = $page['image_url_3'] ?? ''; if($img3): ?><img src="<?= $img3 ?>" style="width:50%;height:280px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:280px">IMAGEM 3</div><?php endif; ?>
-        <div style="width:50%;padding:15px 10px"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+        <?php $img3 = $page['image_url_3'] ?? ''; if($img3): ?><img src="<?= $img3 ?>" style="width:50%;height:240px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:240px">IMAGEM 3</div><?php endif; ?>
+        <div style="width:50%;height:240px"></div>
     </div>
+    <div class="column-content"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
 </div>
 
 <?php elseif ($layout === 'internal_07'): ?>
@@ -379,22 +380,171 @@ function generatePDF() {
     })();
 }
 
-// Auto-ajuste de font-size quando conteúdo não cabe na página
+// Paginação automática: quando conteúdo excede a altura da página, cria páginas de continuação
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.preview .page').forEach(function(page) {
-        var maxH = page.offsetHeight;
-        var attempts = 0;
-        while (page.scrollHeight > maxH + 2 && attempts < 8) {
-            var currentSize = parseFloat(window.getComputedStyle(page).fontSize) || 14;
-            page.style.fontSize = (currentSize - 0.5) + 'px';
-            attempts++;
+    var PAGE_HEIGHT = 842;
+    var PADDING_TOP = 30;
+    var PADDING_BOTTOM = 30;
+    var MAX_CONTENT_HEIGHT = PAGE_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
+
+    function paginateOverflowingPages() {
+        var pages = document.querySelectorAll('.preview .page');
+        var pagesToProcess = [];
+        
+        pages.forEach(function(page) {
+            if (page.scrollHeight > PAGE_HEIGHT + 5) {
+                pagesToProcess.push(page);
+            }
+        });
+
+        pagesToProcess.forEach(function(page) {
+            var header = page.querySelector('.hdr');
+            var headerHTML = header ? header.outerHTML : '';
+            var pagePadding = window.getComputedStyle(page).padding || '30px 35px';
+            
+            // Coleta todos os elementos filhos que são conteúdo (exceto header)
+            var children = Array.from(page.children);
+            var contentElements = [];
+            children.forEach(function(child) {
+                if (!child.classList.contains('hdr')) {
+                    contentElements.push(child);
+                }
+            });
+
+            // Determina quais elementos cabem na primeira página
+            var currentHeight = header ? header.offsetHeight + 20 : 0;
+            var firstPageElements = [];
+            var overflowElements = [];
+            var overflowed = false;
+
+            contentElements.forEach(function(el) {
+                if (overflowed) {
+                    overflowElements.push(el);
+                    return;
+                }
+                var elHeight = el.offsetHeight + parseInt(window.getComputedStyle(el).marginBottom || 0) + parseInt(window.getComputedStyle(el).marginTop || 0);
+                if (currentHeight + elHeight > MAX_CONTENT_HEIGHT) {
+                    // Tenta dividir se é um container com parágrafos
+                    var paragraphs = el.querySelectorAll('p');
+                    if (paragraphs.length > 1 || el.classList.contains('column-content') || el.classList.contains('two-col')) {
+                        var innerChildren = el.children.length > 0 ? Array.from(el.children) : [];
+                        if (innerChildren.length > 1) {
+                            var cloneBefore = el.cloneNode(false);
+                            var cloneAfter = el.cloneNode(false);
+                            var innerOverflowed = false;
+                            var innerHeight = currentHeight;
+
+                            innerChildren.forEach(function(innerEl) {
+                                if (innerOverflowed) {
+                                    cloneAfter.appendChild(innerEl.cloneNode(true));
+                                } else {
+                                    var iH = innerEl.offsetHeight + 14;
+                                    if (innerHeight + iH > MAX_CONTENT_HEIGHT) {
+                                        innerOverflowed = true;
+                                        cloneAfter.appendChild(innerEl.cloneNode(true));
+                                    } else {
+                                        innerHeight += iH;
+                                        cloneBefore.appendChild(innerEl.cloneNode(true));
+                                    }
+                                }
+                            });
+
+                            if (cloneBefore.children.length > 0) {
+                                firstPageElements.push(cloneBefore);
+                            }
+                            if (cloneAfter.children.length > 0) {
+                                overflowElements.push(cloneAfter);
+                            }
+                            overflowed = true;
+                        } else {
+                            overflowElements.push(el);
+                            overflowed = true;
+                        }
+                    } else {
+                        overflowElements.push(el);
+                        overflowed = true;
+                    }
+                } else {
+                    currentHeight += elHeight;
+                    firstPageElements.push(el);
+                }
+            });
+
+            if (overflowElements.length === 0) return;
+
+            // Limpa a página original e reinsere apenas o que cabe
+            while (page.firstChild) page.removeChild(page.firstChild);
+            if (header) page.appendChild(header);
+            firstPageElements.forEach(function(el) {
+                page.appendChild(el.cloneNode ? el : el);
+            });
+            page.style.height = PAGE_HEIGHT + 'px';
+            page.style.minHeight = PAGE_HEIGHT + 'px';
+            page.style.overflow = 'hidden';
+
+            // Cria página(s) de continuação
+            var remainingElements = overflowElements;
+            while (remainingElements.length > 0) {
+                var newPage = document.createElement('div');
+                newPage.className = page.className;
+                newPage.style.cssText = 'padding:' + pagePadding + ';height:' + PAGE_HEIGHT + 'px;min-height:' + PAGE_HEIGHT + 'px;overflow:hidden;';
+                newPage.innerHTML = headerHTML;
+
+                page.parentNode.insertBefore(newPage, page.nextSibling);
+
+                var newPageHeight = header ? 50 : 0;
+                var nextRemaining = [];
+                var addedAny = false;
+
+                remainingElements.forEach(function(el) {
+                    if (nextRemaining.length > 0) {
+                        nextRemaining.push(el);
+                        return;
+                    }
+                    newPage.appendChild(el.cloneNode ? el.cloneNode(true) : el);
+                    var elActualHeight = newPage.lastChild.offsetHeight + 14;
+                    if (newPageHeight + elActualHeight > MAX_CONTENT_HEIGHT && addedAny) {
+                        nextRemaining.push(el);
+                        newPage.removeChild(newPage.lastChild);
+                    } else {
+                        newPageHeight += elActualHeight;
+                        addedAny = true;
+                    }
+                });
+
+                remainingElements = nextRemaining;
+                page = newPage;
+            }
+        });
+    }
+
+    // Aguarda imagens carregarem antes de paginar
+    var images = document.querySelectorAll('.preview img');
+    var loadedCount = 0;
+    var totalImages = images.length;
+
+    function checkAllLoaded() {
+        loadedCount++;
+        if (loadedCount >= totalImages) {
+            paginateOverflowingPages();
         }
-    });
+    }
+
+    if (totalImages === 0) {
+        paginateOverflowingPages();
+    } else {
+        images.forEach(function(img) {
+            if (img.complete) {
+                checkAllLoaded();
+            } else {
+                img.addEventListener('load', checkAllLoaded);
+                img.addEventListener('error', checkAllLoaded);
+            }
+        });
+        setTimeout(paginateOverflowingPages, 3000);
+    }
 });
-</script>
 </script>
 
 </body>
 </html>
-
-

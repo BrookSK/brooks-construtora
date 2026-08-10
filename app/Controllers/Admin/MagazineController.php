@@ -595,12 +595,18 @@ class MagazineController extends Controller
                     $subtitle = $left . ($right ? ' — ' . $right : '');
                 }
 
+                // Para guest_column e layouts sem checkbox, manter show_images = '1'
+                $currentPage = Database::fetch("SELECT layout_type FROM magazine_pages WHERE id = ?", [(int) $pageId]);
+                $layoutType = $currentPage['layout_type'] ?? '';
+                $keepImagesVisible = in_array($layoutType, ['guest_column', 'cover', 'subcover', 'backcover']);
+                $showImagesValue = $keepImagesVisible ? '1' : (isset($pageData['show_images']) ? '1' : '0');
+
                 Magazine::updatePage((int) $pageId, [
                     'title' => $pageData['title'] ?? '',
                     'subtitle' => $subtitle,
                     'content' => $pageData['content'] ?? '',
                     'caption' => $pageData['caption'] ?? '',
-                    'show_images' => isset($pageData['show_images']) ? '1' : '0',
+                    'show_images' => $showImagesValue,
                 ]);
 
                 // Processa uploads de imagens da página

@@ -141,8 +141,17 @@
                     </div>
                     <div class="mb-2">
                         <label class="form-label small">Texto da Coluna</label>
-                        <textarea class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][content]" rows="8" placeholder="Texto escrito pelo convidado..."><?= htmlspecialchars($page['content'] ?? '') ?></textarea>
+                        <?php
+                        $guestMaxChars = 3000;
+                        $guestCurrentChars = mb_strlen($page['content'] ?? '');
+                        ?>
+                        <textarea class="form-control form-control-sm content-textarea" name="pages[<?= $page['id'] ?>][content]" rows="8" maxlength="<?= $guestMaxChars ?>" data-max="<?= $guestMaxChars ?>" oninput="updateCharCount(this)" placeholder="Texto escrito pelo convidado..."><?= htmlspecialchars($page['content'] ?? '') ?></textarea>
+                        <small class="text-muted d-flex justify-content-between mt-1">
+                            <span>Máx: <?= $guestMaxChars ?> caracteres</span>
+                            <span class="char-counter <?= $guestCurrentChars > $guestMaxChars ? 'text-danger' : '' ?>"><?= $guestCurrentChars ?>/<?= $guestMaxChars ?></span>
+                        </small>
                     </div>
+                    <input type="hidden" name="pages[<?= $page['id'] ?>][show_images]" value="1">
                     <?php else: ?>
                     <!-- Campos genéricos para outros layouts -->
                     <?php if (in_array($page['layout_type'], ['cover', 'subcover'])): ?>
