@@ -823,6 +823,76 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Marcar pedido como comprado
+     */
+    public function markPurchased(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if ($order['status'] !== 'approved') {
+            $this->setFlash('error', 'Somente pedidos aprovados podem ser marcados como comprados.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Usuário';
+
+        PurchaseOrder::updateById($id, [
+            'purchased_at' => date('Y-m-d H:i:s'),
+            'purchased_by' => $userName,
+        ]);
+
+        PurchaseOrderHistory::log($id, 'marked_purchased', "Marcado como comprado por: {$userName}", $userName, Auth::id());
+
+        $this->setFlash('success', 'Pedido marcado como comprado.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
+     * Desmarcar pedido como comprado
+     */
+    public function unmarkPurchased(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Usuário';
+
+        PurchaseOrder::updateById($id, [
+            'purchased_at' => null,
+            'purchased_by' => null,
+        ]);
+
+        PurchaseOrderHistory::log($id, 'unmarked_purchased', "Desmarcado como comprado por: {$userName}", $userName, Auth::id());
+
+        $this->setFlash('success', 'Marcação de comprado removida.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
      * Tela de edição financeira (quantidade e preço) de itens após aprovação
      */
     public function financialEdit(string $id = ''): void

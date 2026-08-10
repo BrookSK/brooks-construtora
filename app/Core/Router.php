@@ -115,6 +115,8 @@ class Router
             'orders/delete' => ['PurchaseOrderController', 'delete'],
             'orders/financial-review' => ['PurchaseOrderController', 'financialReview'],
             'orders/financial-unreview' => ['PurchaseOrderController', 'financialUnreview'],
+            'orders/mark-purchased' => ['PurchaseOrderController', 'markPurchased'],
+            'orders/unmark-purchased' => ['PurchaseOrderController', 'unmarkPurchased'],
             'orders/financial-edit' => ['PurchaseOrderController', 'financialEdit'],
             'orders/financial-update' => ['PurchaseOrderController', 'financialUpdate'],
             'orders/clear-price-history' => ['PurchaseOrderController', 'clearPriceHistory'],

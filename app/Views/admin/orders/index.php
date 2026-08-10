@@ -106,6 +106,14 @@
                         <option value="all">Todos (incluir conferidos)</option>
                     </select>
                 </div>
+                <!-- Comprado -->
+                <div class="col-6 col-md-2">
+                    <select id="filterPurchased" class="form-select form-select-sm">
+                        <option value="">Comprado</option>
+                        <option value="purchased">Comprado</option>
+                        <option value="not_purchased">Não comprado</option>
+                    </select>
+                </div>
                 <!-- Período -->
                 <div class="col-6 col-md-3">
                     <input type="date" id="filterDateFrom" class="form-control form-control-sm" title="Data inicial">
@@ -190,6 +198,7 @@
                         data-site="<?= htmlspecialchars($siteName) ?>"
                         data-type="<?= htmlspecialchars($order['order_type'] ?? 'material') ?>"
                         data-financial="<?= !empty($order['financial_reviewed_at']) ? 'reviewed' : 'not_reviewed' ?>"
+                        data-purchased="<?= !empty($order['purchased_at']) ? 'purchased' : 'not_purchased' ?>"
                         data-date="<?= date('Y-m-d', strtotime($order['created_at'])) ?>"
                         data-requester="<?= htmlspecialchars($order['created_by_name'] ?? '') ?>"
                         data-items="<?= htmlspecialchars(strtolower($order['items_names'] ?? '')) ?>"
@@ -216,6 +225,9 @@
                             <?php endif; ?>
                             <?php if ($showFinancialReview && !empty($order['financial_reviewed_at'])): ?>
                             <span class="badge ms-1" style="font-size:0.6rem; background-color:#8b5cf6;" title="Revisado por <?= htmlspecialchars($order['financial_reviewed_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['financial_reviewed_at'])) ?>"><i class="bi bi-check2"></i> Financeiro</span>
+                            <?php endif; ?>
+                            <?php if (!empty($order['purchased_at'])): ?>
+                            <span class="badge ms-1" style="font-size:0.6rem; background-color:#e67e22;" title="Comprado por <?= htmlspecialchars($order['purchased_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['purchased_at'])) ?>"><i class="bi bi-bag-check"></i> Comprado</span>
                             <?php endif; ?>
                         </td>
                         <td>
@@ -261,6 +273,7 @@
        data-site="<?= htmlspecialchars($siteName) ?>"
        data-type="<?= htmlspecialchars($order['order_type'] ?? 'material') ?>"
        data-financial="<?= !empty($order['financial_reviewed_at']) ? 'reviewed' : 'not_reviewed' ?>"
+       data-purchased="<?= !empty($order['purchased_at']) ? 'purchased' : 'not_purchased' ?>"
        data-date="<?= date('Y-m-d', strtotime($order['created_at'])) ?>"
        data-requester="<?= htmlspecialchars($order['created_by_name'] ?? '') ?>"
        data-items="<?= htmlspecialchars(strtolower($order['items_names'] ?? '')) ?>"
@@ -276,6 +289,9 @@
                         <?php endif; ?>
                         <?php if ((\App\Core\Auth::isSuperAdmin() || \App\Core\Auth::hasPermission('orders.payment')) && !empty($order['financial_reviewed_at'])): ?>
                         <span class="badge" style="font-size:0.6rem; background-color:#8b5cf6;"><i class="bi bi-check2"></i></span>
+                        <?php endif; ?>
+                        <?php if (!empty($order['purchased_at'])): ?>
+                        <span class="badge" style="font-size:0.6rem; background-color:#e67e22;"><i class="bi bi-bag-check"></i></span>
                         <?php endif; ?>
                         <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
                         <span class="badge bg-dark" style="font-size:0.6rem;"><i class="bi bi-wrench"></i></span>
@@ -323,6 +339,7 @@
     const siteSelect = document.getElementById('filterSite');
     const typeSelect = document.getElementById('filterType');
     const financialSelect = document.getElementById('filterFinancial');
+    const purchasedSelect = document.getElementById('filterPurchased');
     const dateFrom = document.getElementById('filterDateFrom');
     const dateTo = document.getElementById('filterDateTo');
     const requesterSelect = document.getElementById('filterRequester');
@@ -346,6 +363,7 @@
                 site: params.get('site') || '',
                 type: params.get('type') || '',
                 financial: params.get('financial') || '',
+                purchased: params.get('purchased') || '',
                 from: params.get('from') || '',
                 to: params.get('to') || '',
                 requester: params.get('requester') || ''
@@ -372,12 +390,13 @@
         if (data.site && siteSelect) siteSelect.value = data.site;
         if (data.type && typeSelect) typeSelect.value = data.type;
         if (data.financial && financialSelect) financialSelect.value = data.financial;
+        if (data.purchased && purchasedSelect) purchasedSelect.value = data.purchased;
         if (data.from && dateFrom) dateFrom.value = data.from;
         if (data.to && dateTo) dateTo.value = data.to;
         if (data.requester && requesterSelect) requesterSelect.value = data.requester;
 
         // Abrir painel se algum filtro avançado estiver ativo
-        if (data.q || data.material || data.supplier || data.site || data.type || data.financial || data.from || data.to || data.requester) {
+        if (data.q || data.material || data.supplier || data.site || data.type || data.financial || data.purchased || data.from || data.to || data.requester) {
             const panel = document.getElementById('advancedFilters');
             if (panel && typeof bootstrap !== 'undefined') {
                 new bootstrap.Collapse(panel, { show: true });
@@ -397,6 +416,7 @@
             site: siteSelect ? siteSelect.value : '',
             type: typeSelect ? typeSelect.value : '',
             financial: financialSelect ? financialSelect.value : '',
+            purchased: purchasedSelect ? purchasedSelect.value : '',
             from: dateFrom ? dateFrom.value : '',
             to: dateTo ? dateTo.value : '',
             requester: requesterSelect ? requesterSelect.value : ''
@@ -414,6 +434,7 @@
         if (data.site) params.set('site', data.site);
         if (data.type) params.set('type', data.type);
         if (data.financial) params.set('financial', data.financial);
+        if (data.purchased) params.set('purchased', data.purchased);
         if (data.from) params.set('from', data.from);
         if (data.to) params.set('to', data.to);
         if (data.requester) params.set('requester', data.requester);
@@ -430,6 +451,7 @@
         const site = siteSelect ? siteSelect.value : '';
         const type = typeSelect ? typeSelect.value : '';
         const financial = financialSelect ? financialSelect.value : '';
+        const purchased = purchasedSelect ? purchasedSelect.value : '';
         const from = dateFrom ? dateFrom.value : '';
         const to = dateTo ? dateTo.value : '';
         const requester = requesterSelect ? requesterSelect.value : '';
@@ -447,6 +469,7 @@
             if (show && type && row.dataset.type !== type) show = false;
             if (show && financial && financial !== 'all' && row.dataset.financial !== financial) show = false;
             if (show && !financial && row.dataset.financial === 'reviewed') show = false;
+            if (show && purchased && row.dataset.purchased !== purchased) show = false;
             if (show && activeStatus === 'all' && row.dataset.status === 'cancelled') show = false;
             if (show && from && row.dataset.date < from) show = false;
             if (show && to && row.dataset.date > to) show = false;
@@ -478,6 +501,7 @@
     if (siteSelect) siteSelect.addEventListener('change', applyFilters);
     if (typeSelect) typeSelect.addEventListener('change', applyFilters);
     if (financialSelect) financialSelect.addEventListener('change', applyFilters);
+    if (purchasedSelect) purchasedSelect.addEventListener('change', applyFilters);
     if (dateFrom) dateFrom.addEventListener('change', applyFilters);
     if (dateTo) dateTo.addEventListener('change', applyFilters);
     if (requesterSelect) requesterSelect.addEventListener('change', applyFilters);
@@ -491,6 +515,7 @@
             if (siteSelect) siteSelect.value = '';
             if (typeSelect) typeSelect.value = '';
             if (financialSelect) financialSelect.value = '';
+            if (purchasedSelect) purchasedSelect.value = '';
             if (dateFrom) dateFrom.value = '';
             if (dateTo) dateTo.value = '';
             if (requesterSelect) requesterSelect.value = '';

@@ -1173,6 +1173,30 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 </form>
                 <?php endif; ?>
                 <?php endif; ?>
+
+                <?php if ($order['status'] === 'approved'): ?>
+                <!-- Comprado -->
+                <?php if (empty($order['purchased_at'])): ?>
+                <form method="POST" action="/admin/orders/mark-purchased" class="mt-2">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn w-100" style="border-color:#e67e22; color:#e67e22;" onmouseover="this.style.backgroundColor='#e67e22';this.style.color='#fff'" onmouseout="this.style.backgroundColor='transparent';this.style.color='#e67e22'" onclick="return confirm('Marcar este pedido como comprado?')">
+                        <i class="bi bi-bag-check"></i> Marcar como Comprado
+                    </button>
+                </form>
+                <?php else: ?>
+                <div class="alert py-2 px-3 small mb-2 mt-2" style="background-color: rgba(230, 126, 34, 0.1); border-color: #e67e22; color: #d35400;">
+                    <i class="bi bi-bag-check-fill"></i> Comprado por <strong><?= htmlspecialchars($order['purchased_by'] ?? '') ?></strong>
+                    <br><small class="text-muted"><?= date('d/m/Y H:i', strtotime($order['purchased_at'])) ?></small>
+                </div>
+                <form method="POST" action="/admin/orders/unmark-purchased">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100" onclick="return confirm('Desmarcar como comprado?')">
+                        <i class="bi bi-arrow-counterclockwise"></i> Desmarcar Comprado
+                    </button>
+                </form>
+                <?php endif; ?>
+                <?php endif; ?>
+
                 <hr>
                 <form method="POST" action="/admin/orders/cancel" onsubmit="return confirm('Tem certeza que deseja cancelar este pedido?')">
                     <input type="hidden" name="id" value="<?= $order['id'] ?>">
