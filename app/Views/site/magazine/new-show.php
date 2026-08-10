@@ -213,12 +213,15 @@ foreach ($pages as $page):
     <?php if($page['title']??''): ?><div class="title-big" style="font-size:1.6rem;margin-top:8px"><?= htmlspecialchars($page['title']) ?></div><?php endif; ?>
     <?php
     $img3 = $page['image_url_3'] ?? '';
-    $cols = explode('|||', $page['content']??'');
-    if(count($cols) < 2) { $lines = explode("\n", $cols[0] ?? ''); $mid = (int)ceil(count($lines)/2); $cols = [implode("\n", array_slice($lines, 0, $mid)), implode("\n", array_slice($lines, $mid))]; }
+    $allLines = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
+    $totalLines = count($allLines);
+    $splitAt = max(1, (int)floor($totalLines / 3));
+    $colLeft = array_slice($allLines, 0, $splitAt);
+    $colRight = array_slice($allLines, $splitAt);
     ?>
-    <div style="display:flex;gap:12px;margin-top:10px">
-        <div style="flex:1"><?php if($img3): ?><img src="<?= $img3 ?>" style="width:100%;height:220px;object-fit:cover;margin-bottom:8px" alt=""><?php endif; ?><?php foreach(explode("\n",$cols[0]??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
-        <div style="flex:1"><?php foreach(explode("\n",$cols[1]??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
+    <div style="display:flex;gap:12px;margin-top:10px;align-items:flex-start">
+        <div style="flex:1"><?php if($img3): ?><img src="<?= $img3 ?>" style="width:100%;height:220px;object-fit:cover;margin-bottom:8px" alt=""><?php endif; ?><?php foreach($colLeft as $p): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div>
+        <div style="flex:1"><?php foreach($colRight as $p): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div>
     </div>
 </div>
 
