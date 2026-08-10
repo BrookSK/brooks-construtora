@@ -23,10 +23,43 @@ class SupplierController extends Controller
 
     public function index(): void
     {
-        $suppliers = Supplier::all('name ASC');
+        $page = max(1, (int) $this->input('page', 1));
+        $perPage = 50;
+        $search = trim($this->input('q', ''));
+        $status = $this->input('status', '');
+
+        $where = '1=1';
+        $params = [];
+
+        // Filtro por status
+        if ($status === 'active') {
+            $where .= ' AND active = 1';
+        } elseif ($status === 'inactive') {
+            $where .= ' AND active = 0';
+        }
+
+        // Filtro por busca (nome, CNPJ, e-mail, telefone, contato)
+        if (!empty($search)) {
+            $where .= ' AND (name LIKE ? OR cnpj LIKE ? OR email LIKE ? OR phone LIKE ? OR contact_person LIKE ?)';
+            $params = array_merge($params, ["%{$search}%", "%{$search}%", "%{$search}%", "%{$search}%", "%{$search}%"]);
+        }
+
+        $total = (int) \App\Core\Database::fetch("SELECT COUNT(*) as total FROM suppliers WHERE {$where}", $params)['total'];
+        $offset = ($page - 1) * $perPage;
+        $totalPages = max(1, ceil($total / $perPage));
+
+        $suppliers = \App\Core\Database::fetchAll(
+            "SELECT * FROM suppliers WHERE {$where} ORDER BY name ASC LIMIT {$perPage} OFFSET {$offset}",
+            $params
+        );
 
         $this->view('admin.suppliers.index', [
             'suppliers' => $suppliers,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'total' => $total,
+            'search' => $search,
+            'status' => $status,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);
