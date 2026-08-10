@@ -45,7 +45,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .pg-cover .logo{margin:auto;max-width:220px;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7))}
 .mag-preview .pg-cover .topic{font-size:1.4rem;font-weight:800;color:#fff;font-style:italic;text-align:left;padding:15px 30px;margin-top:auto;margin-bottom:70px;text-shadow:0 2px 10px rgba(0,0,0,0.8)}
 .mag-preview .pg-cover .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8)}
-.mag-preview .pg-int{padding:30px 35px;height:auto;min-height:842px;overflow:visible}
+.mag-preview .pg-int{padding:30px 35px;height:842px;min-height:842px;overflow:hidden}
 .mag-preview .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
 .mag-preview .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
 .mag-preview .pg-int .logo-sm .ck{color:#2e7d32}
@@ -333,7 +333,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            paginatePage(page);
+            // Só pagina guest_column e construction_stories — demais apenas cortam
+            var shouldPaginate = page.classList.contains('pg-guest') || page.classList.contains('pg-stories');
+            if (shouldPaginate) {
+                paginatePage(page);
+            } else {
+                page.style.height = PAGE_HEIGHT + 'px';
+                page.style.overflow = 'hidden';
+            }
         });
 
         renumberPages();

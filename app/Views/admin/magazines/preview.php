@@ -45,7 +45,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-cover .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8)}
 
         /* ===== PÁGINA INTERNA BASE ===== */
-        .pg-int{padding:30px 35px;height:auto;min-height:842px;overflow:visible}
+        .pg-int{padding:30px 35px;height:842px;min-height:842px;overflow:hidden}
         .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
         .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
         .pg-int .logo-sm .ck{color:#2e7d32}
@@ -443,8 +443,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Página com overflow — paginar
-            paginatePage(page);
+            // Só pagina guest_column e construction_stories — demais apenas cortam
+            var shouldPaginate = page.classList.contains('pg-guest') || page.classList.contains('pg-stories');
+            if (shouldPaginate) {
+                paginatePage(page);
+            } else {
+                page.style.height = PAGE_HEIGHT + 'px';
+                page.style.overflow = 'hidden';
+            }
         });
 
         // Após paginação, renumera todas as páginas internas
