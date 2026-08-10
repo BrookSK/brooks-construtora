@@ -279,8 +279,9 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <!-- PÁG INTERNA 06: Grid 2 imagens topo + 1 imagem esquerda com texto ao lado + texto embaixo -->
 <?php
     $allLines06 = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
-    // Divide: primeiros parágrafos ao lado da imagem 3, restante embaixo em 2 colunas
+    // Texto ao lado da img3 (coluna direita superior)
     $sideLines = array_slice($allLines06, 0, min(3, count($allLines06)));
+    // Texto embaixo: coluna esquerda continua, coluna direita tem o final
     $bottomLines = array_slice($allLines06, count($sideLines));
     $bottomMid = (int)ceil(count($bottomLines) / 2);
 ?>
