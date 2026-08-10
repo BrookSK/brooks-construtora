@@ -796,7 +796,7 @@ HTML;
     /**
      * Template de e-mail para notificação de edição financeira
      */
-    public static function purchaseOrderFinancialEdit(array $order, array $changes, string $editedBy, float $oldTotal, float $newTotal): string
+    public static function purchaseOrderFinancialEdit(array $order, array $changes, array $financialChanges, bool $obraChanged, string $oldObraName, string $newObraName, string $editedBy, float $oldTotal, float $newTotal): string
     {
         $date = date('d/m/Y \à\s H:i');
         $oldTotalFmt = number_format($oldTotal, 2, ',', '.');
@@ -812,79 +812,114 @@ HTML;
             $obraHtml = '<p style="margin:8px 0 0; font-size:13px; color:#555;">Obra: <strong>' . $obraLabel . '</strong></p>';
         }
 
-        // Tabela de alterações
-        $changesHtml = '';
-        foreach ($changes as $i => $change) {
-            $materialName = htmlspecialchars($change['material_name']);
-            $spec = !empty($change['specification']) ? ' (' . htmlspecialchars($change['specification']) . ')' : '';
-
-            $changesHtml .= '<tr>';
-            $changesHtml .= '<td style="padding:8px 10px; border-bottom:1px solid #eee; font-size:12px; vertical-align:top;">' . ($i + 1) . '</td>';
-            $changesHtml .= '<td style="padding:8px 10px; border-bottom:1px solid #eee; font-size:12px; vertical-align:top;"><strong>' . $materialName . '</strong>' . $spec . '</td>';
-
-            // Quantidade
-            $qtyHtml = '';
-            if ($change['qty_changed']) {
-                $oldQtyFmt = number_format($change['old_quantity'], $change['old_quantity'] == (int)$change['old_quantity'] ? 0 : 2, ',', '.');
-                $newQtyFmt = number_format($change['new_quantity'], $change['new_quantity'] == (int)$change['new_quantity'] ? 0 : 2, ',', '.');
-                $qtyHtml = '<span style="color:#999; text-decoration:line-through;">' . $oldQtyFmt . '</span> → <strong style="color:#0d6efd;">' . $newQtyFmt . '</strong>';
-            } else {
-                $qtyHtml = number_format($change['old_quantity'], $change['old_quantity'] == (int)$change['old_quantity'] ? 0 : 2, ',', '.');
-            }
-            $changesHtml .= '<td style="padding:8px 10px; border-bottom:1px solid #eee; font-size:12px; text-align:center; vertical-align:top;">' . $qtyHtml . '</td>';
-
-            // Preço unitário
-            $priceHtml = '';
-            if ($change['price_changed']) {
-                $oldPriceFmt = 'R$ ' . number_format($change['old_unit_price'], 2, ',', '.');
-                $newPriceFmt = 'R$ ' . number_format($change['new_unit_price'], 2, ',', '.');
-                $priceHtml = '<span style="color:#999; text-decoration:line-through;">' . $oldPriceFmt . '</span> → <strong style="color:#0d6efd;">' . $newPriceFmt . '</strong>';
-            } else {
-                $priceHtml = 'R$ ' . number_format($change['old_unit_price'], 2, ',', '.');
-            }
-            $changesHtml .= '<td style="padding:8px 10px; border-bottom:1px solid #eee; font-size:12px; text-align:right; vertical-align:top;">' . $priceHtml . '</td>';
-
-            // Total do item
-            $oldItemTotalFmt = 'R$ ' . number_format($change['old_total_price'], 2, ',', '.');
-            $newItemTotalFmt = 'R$ ' . number_format($change['new_total_price'], 2, ',', '.');
-            $changesHtml .= '<td style="padding:8px 10px; border-bottom:1px solid #eee; font-size:12px; text-align:right; vertical-align:top;">'
-                . '<span style="color:#999; text-decoration:line-through;">' . $oldItemTotalFmt . '</span><br><strong style="color:#198754;">' . $newItemTotalFmt . '</strong>'
-                . '</td>';
-            $changesHtml .= '</tr>';
+        // Seção de alteração de obra
+        $obraChangeHtml = '';
+        if ($obraChanged) {
+            $oldObraDisplay = !empty($oldObraName) ? htmlspecialchars($oldObraName) : '(nenhuma)';
+            $newObraDisplay = htmlspecialchars($newObraName);
+            $obraChangeHtml = '<div style="background:#fff3cd; border:1px solid #ffc107; border-radius:6px; padding:12px 16px; margin-bottom:15px;">'
+                . '<p style="margin:0; font-size:13px; color:#856404;"><strong>Obra alterada:</strong> '
+                . '<span style="text-decoration:line-through;">' . $oldObraDisplay . '</span> → <strong>' . $newObraDisplay . '</strong></p>'
+                . '</div>';
         }
 
-        // Replace changesCount in the body
+        // Seção de alterações financeiras
+        $financialHtml = '';
+        if (!empty($financialChanges)) {
+            $financialHtml = '<p style="margin-bottom:8px;"><strong>Alterações financeiras:</strong></p>'
+                . '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:15px;">'
+                . '<tr style="background:#f8f9fa;"><th style="padding:6px 10px; font-size:11px; text-align:left;">Campo</th><th style="padding:6px 10px; font-size:11px; text-align:left;">Fornecedor</th><th style="padding:6px 10px; font-size:11px; text-align:center;">Anterior</th><th style="padding:6px 10px; font-size:11px; text-align:center;">Novo</th></tr>';
+            foreach ($financialChanges as $fc) {
+                $oldVal = $fc['old_value'];
+                $newVal = $fc['new_value'];
+                if (isset($fc['is_percent']) && $fc['is_percent']) {
+                    $oldVal = $oldVal . '%';
+                    $newVal = $newVal . '%';
+                } elseif (isset($fc['is_money']) && $fc['is_money']) {
+                    $oldVal = 'R$ ' . number_format((float)$oldVal, 2, ',', '.');
+                    $newVal = 'R$ ' . number_format((float)$newVal, 2, ',', '.');
+                }
+                $financialHtml .= '<tr>'
+                    . '<td style="padding:6px 10px; border-bottom:1px solid #eee; font-size:12px;">' . htmlspecialchars($fc['label']) . '</td>'
+                    . '<td style="padding:6px 10px; border-bottom:1px solid #eee; font-size:12px;">' . htmlspecialchars($fc['supplier_name']) . '</td>'
+                    . '<td style="padding:6px 10px; border-bottom:1px solid #eee; font-size:12px; text-align:center;"><span style="color:#999; text-decoration:line-through;">' . $oldVal . '</span></td>'
+                    . '<td style="padding:6px 10px; border-bottom:1px solid #eee; font-size:12px; text-align:center;"><strong style="color:#0d6efd;">' . $newVal . '</strong></td>'
+                    . '</tr>';
+            }
+            $financialHtml .= '</table>';
+        }
+
+        // Tabela de alterações de itens
+        $changesHtml = '';
         $changesCount = count($changes);
+        if (!empty($changes)) {
+            foreach ($changes as $i => $change) {
+                $materialName = htmlspecialchars($change['material_name']);
+                $spec = !empty($change['specification']) ? ' (' . htmlspecialchars($change['specification']) . ')' : '';
+                $changesHtml .= '<tr>';
+                $changesHtml .= '<td style="padding:8px 10px; border-bottom:1px solid #eee; font-size:12px; vertical-align:top;">' . ($i + 1) . '</td>';
+                $changesHtml .= '<td style="padding:8px 10px; border-bottom:1px solid #eee; font-size:12px; vertical-align:top;"><strong>' . $materialName . '</strong>' . $spec . '</td>';
 
-        $body = <<<HTML
-<p style="margin-bottom:15px;">O pedido de materiais foi <strong style="color:#8b5cf6;">EDITADO PELO FINANCEIRO</strong> após a aprovação.</p>
+                $qtyHtml = '';
+                if ($change['qty_changed']) {
+                    $oldQtyFmt = number_format($change['old_quantity'], $change['old_quantity'] == (int)$change['old_quantity'] ? 0 : 2, ',', '.');
+                    $newQtyFmt = number_format($change['new_quantity'], $change['new_quantity'] == (int)$change['new_quantity'] ? 0 : 2, ',', '.');
+                    $qtyHtml = '<span style="color:#999; text-decoration:line-through;">' . $oldQtyFmt . '</span> → <strong style="color:#0d6efd;">' . $newQtyFmt . '</strong>';
+                } else {
+                    $qtyHtml = number_format($change['old_quantity'], $change['old_quantity'] == (int)$change['old_quantity'] ? 0 : 2, ',', '.');
+                }
+                $changesHtml .= '<td style="padding:8px 10px; border-bottom:1px solid #eee; font-size:12px; text-align:center; vertical-align:top;">' . $qtyHtml . '</td>';
 
-<table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(139, 92, 246, 0.08); border-radius:6px; margin-bottom:20px; border:1px solid rgba(139, 92, 246, 0.3);">
-<tr><td style="padding: 18px 20px;">
-    <p style="margin:0 0 5px; font-size:13px; color:#6d28d9; text-transform:uppercase; font-weight:600;">⚠️ Edição Financeira</p>
-    <p style="margin:0; font-size:17px; color:#6d28d9; font-weight:600;">{$order['code']}</p>
-    {$obraHtml}
-    <p style="margin:8px 0 0; font-size:13px; color:#555;">Editado por: <strong>{$editedBy}</strong></p>
-    <p style="margin:4px 0 0; font-size:13px; color:#555;">Data: {$date}</p>
-    <p style="margin:8px 0 0; font-size:13px; color:#555;">Total anterior: <span style="text-decoration:line-through;">R$ {$oldTotalFmt}</span></p>
-    <p style="margin:4px 0 0; font-size:15px; color:#555;">Novo total: <strong style="color:#198754;">R$ {$newTotalFmt}</strong> <small style="color:{$diffColor};">({$diffTotalFmt})</small></p>
-</td></tr>
-</table>
+                $priceHtml = '';
+                if ($change['price_changed']) {
+                    $oldPriceFmt = 'R$ ' . number_format($change['old_unit_price'], 2, ',', '.');
+                    $newPriceFmt = 'R$ ' . number_format($change['new_unit_price'], 2, ',', '.');
+                    $priceHtml = '<span style="color:#999; text-decoration:line-through;">' . $oldPriceFmt . '</span> → <strong style="color:#0d6efd;">' . $newPriceFmt . '</strong>';
+                } else {
+                    $priceHtml = 'R$ ' . number_format($change['old_unit_price'], 2, ',', '.');
+                }
+                $changesHtml .= '<td style="padding:8px 10px; border-bottom:1px solid #eee; font-size:12px; text-align:right; vertical-align:top;">' . $priceHtml . '</td>';
 
-<p style="margin-bottom:10px;"><strong>Itens alterados ({$changesCount}):</strong></p>
-<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">
-<tr style="background:#f8f9fa;">
-    <th style="padding:8px 10px; font-size:11px; text-align:left;">#</th>
-    <th style="padding:8px 10px; font-size:11px; text-align:left;">Material</th>
-    <th style="padding:8px 10px; font-size:11px; text-align:center;">Quantidade</th>
-    <th style="padding:8px 10px; font-size:11px; text-align:right;">Unit&aacute;rio</th>
-    <th style="padding:8px 10px; font-size:11px; text-align:right;">Total</th>
-</tr>
-{$changesHtml}
-</table>
+                $oldItemTotalFmt = 'R$ ' . number_format($change['old_total_price'], 2, ',', '.');
+                $newItemTotalFmt = 'R$ ' . number_format($change['new_total_price'], 2, ',', '.');
+                $changesHtml .= '<td style="padding:8px 10px; border-bottom:1px solid #eee; font-size:12px; text-align:right; vertical-align:top;">'
+                    . '<span style="color:#999; text-decoration:line-through;">' . $oldItemTotalFmt . '</span><br><strong style="color:#198754;">' . $newItemTotalFmt . '</strong>'
+                    . '</td>';
+                $changesHtml .= '</tr>';
+            }
+        }
 
-<p style="text-align:center; font-size:12px; color:#999; margin-top:20px;">Esta edição foi realizada pelo setor financeiro. O histórico completo está registrado no sistema.</p>
-HTML;
+        // Montar tabela de itens apenas se houver alterações
+        $itemsTableHtml = '';
+        if (!empty($changes)) {
+            $itemsTableHtml = '<p style="margin-bottom:10px;"><strong>Itens alterados (' . $changesCount . '):</strong></p>'
+                . '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">'
+                . '<tr style="background:#f8f9fa;">'
+                . '<th style="padding:8px 10px; font-size:11px; text-align:left;">#</th>'
+                . '<th style="padding:8px 10px; font-size:11px; text-align:left;">Material</th>'
+                . '<th style="padding:8px 10px; font-size:11px; text-align:center;">Quantidade</th>'
+                . '<th style="padding:8px 10px; font-size:11px; text-align:right;">Unit&aacute;rio</th>'
+                . '<th style="padding:8px 10px; font-size:11px; text-align:right;">Total</th>'
+                . '</tr>'
+                . $changesHtml
+                . '</table>';
+        }
+
+        $body = '<p style="margin-bottom:15px;">O pedido de materiais foi <strong style="color:#8b5cf6;">EDITADO PELO FINANCEIRO</strong> após a aprovação.</p>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(139, 92, 246, 0.08); border-radius:6px; margin-bottom:20px; border:1px solid rgba(139, 92, 246, 0.3);">'
+            . '<tr><td style="padding: 18px 20px;">'
+            . '<p style="margin:0 0 5px; font-size:13px; color:#6d28d9; text-transform:uppercase; font-weight:600;">⚠️ Edição Financeira</p>'
+            . '<p style="margin:0; font-size:17px; color:#6d28d9; font-weight:600;">' . htmlspecialchars($order['code']) . '</p>'
+            . $obraHtml
+            . '<p style="margin:8px 0 0; font-size:13px; color:#555;">Editado por: <strong>' . htmlspecialchars($editedBy) . '</strong></p>'
+            . '<p style="margin:4px 0 0; font-size:13px; color:#555;">Data: ' . $date . '</p>'
+            . '<p style="margin:8px 0 0; font-size:13px; color:#555;">Total anterior: <span style="text-decoration:line-through;">R$ ' . $oldTotalFmt . '</span></p>'
+            . '<p style="margin:4px 0 0; font-size:15px; color:#555;">Novo total: <strong style="color:#198754;">R$ ' . $newTotalFmt . '</strong> <small style="color:' . $diffColor . ';">(' . $diffTotalFmt . ')</small></p>'
+            . '</td></tr></table>'
+            . $obraChangeHtml
+            . $financialHtml
+            . $itemsTableHtml
+            . '<p style="text-align:center; font-size:12px; color:#999; margin-top:20px;">Esta edição foi realizada pelo setor financeiro. O histórico completo está registrado no sistema.</p>';
 
         return self::wrap("⚠️ Edição Financeira - " . htmlspecialchars($order['code']), $body);
     }

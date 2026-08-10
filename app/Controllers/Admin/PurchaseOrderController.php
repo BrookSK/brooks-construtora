@@ -851,17 +851,24 @@ class PurchaseOrderController extends Controller
         $items = PurchaseOrderItem::getByOrder($id);
         $orderSuppliers = PurchaseOrderSupplier::getByOrder($id);
 
+        // Buscar obras ativas para o dropdown
+        $constructionSites = [];
+        try {
+            $constructionSites = \App\Models\ConstructionSite::allActive();
+        } catch (\Exception $e) {}
+
         $this->view('admin.orders.financial_edit', [
             'order' => $order,
             'items' => $items,
             'orderSuppliers' => $orderSuppliers,
+            'constructionSites' => $constructionSites,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);
     }
 
     /**
-     * Processar edição financeira de itens (quantidade e preço)
+     * Processar edição financeira de itens (quantidade, preço, financeiros, obra)
      */
     public function financialUpdate(): void
     {
@@ -894,12 +901,9 @@ class PurchaseOrderController extends Controller
         $userName = Auth::user()['name'] ?? 'Financeiro';
         $userId = Auth::id();
         $editedItems = $_POST['items'] ?? [];
-
-        if (empty($editedItems)) {
-            $this->setFlash('error', 'Nenhum item para atualizar.');
-            $this->redirect('/admin/orders/financial-edit/' . $id);
-            return;
-        }
+        $editedSuppliers = $_POST['suppliers'] ?? [];
+        $priceMode = $this->input('price_mode', 'unit');
+        $newConstructionSiteId = $this->input('construction_site_id', '');
 
         // Capturar estado anterior dos itens para histórico detalhado
         $oldItems = PurchaseOrderItem::getByOrder($id);
@@ -908,18 +912,37 @@ class PurchaseOrderController extends Controller
             $oldItemsMap[$item['id']] = $item;
         }
 
+        // Capturar fornecedores antigos
+        $oldSuppliers = PurchaseOrderSupplier::getAllApproved($id);
+        $oldSuppliersMap = [];
+        foreach ($oldSuppliers as $os) {
+            $oldSuppliersMap[$os['id']] = $os;
+        }
+
         $changes = [];
-        $newTotal = 0;
+        $financialChanges = [];
+        $obraChanged = false;
+        $oldObraName = $order['construction_site_name'] ?? '';
+        $newObraName = '';
+        $subtotalItems = 0;
         $oldTotal = (float) ($order['total_estimated'] ?? 0);
 
+        // ====== PROCESSAR ITENS ======
         foreach ($editedItems as $itemId => $data) {
             $itemId = (int) $itemId;
             if (!isset($oldItemsMap[$itemId])) continue;
 
             $oldItem = $oldItemsMap[$itemId];
             $newQty = (float) ($data['quantity'] ?? $oldItem['quantity']);
-            $newUnitPrice = (float) ($data['unit_price'] ?? $oldItem['unit_price']);
-            $newTotalPrice = $newQty * $newUnitPrice;
+
+            // Determinar preço com base no modo
+            if ($priceMode === 'total') {
+                $newTotalPrice = (float) ($data['total_price'] ?? 0);
+                $newUnitPrice = $newQty > 0 ? $newTotalPrice / $newQty : 0;
+            } else {
+                $newUnitPrice = (float) ($data['unit_price'] ?? $oldItem['unit_price']);
+                $newTotalPrice = $newQty * $newUnitPrice;
+            }
 
             $oldQty = (float) $oldItem['quantity'];
             $oldUnitPrice = (float) ($oldItem['unit_price'] ?? 0);
@@ -928,8 +951,9 @@ class PurchaseOrderController extends Controller
             // Detectar se houve mudança
             $qtyChanged = abs($newQty - $oldQty) > 0.001;
             $priceChanged = abs($newUnitPrice - $oldUnitPrice) > 0.001;
+            $totalChanged = abs($newTotalPrice - $oldTotalPrice) > 0.001;
 
-            if ($qtyChanged || $priceChanged) {
+            if ($qtyChanged || $priceChanged || $totalChanged) {
                 $change = [
                     'item_id' => $itemId,
                     'material_name' => $oldItem['material_name'],
@@ -953,77 +977,177 @@ class PurchaseOrderController extends Controller
                 'total_price' => $newTotalPrice,
             ]);
 
-            $newTotal += $newTotalPrice;
+            $subtotalItems += $newTotalPrice;
         }
 
-        // Se não houve nenhuma mudança real
-        if (empty($changes)) {
-            $this->setFlash('info', 'Nenhuma alteração detectada nos itens.');
+        // ====== PROCESSAR FINANCEIROS (por fornecedor) ======
+        $newTotal = $subtotalItems;
+
+        foreach ($editedSuppliers as $supData) {
+            $supplierOrderId = (int) ($supData['supplier_order_id'] ?? 0);
+            $discountValue = (float) ($supData['discount_value'] ?? 0);
+            $discountType = $supData['discount_type'] ?? 'percent';
+            $surchargeValue = (float) ($supData['surcharge_value'] ?? 0);
+            $surchargeType = $supData['surcharge_type'] ?? 'percent';
+            $ipiPercent = (float) ($supData['ipi_percent'] ?? 0);
+            $icmsPercent = (float) ($supData['icms_percent'] ?? 0);
+            $freight = (float) ($supData['freight'] ?? 0);
+
+            // Calcular ajustes no total
+            if ($discountValue > 0) {
+                $newTotal -= ($discountType === 'percent') ? $subtotalItems * ($discountValue / 100) : $discountValue;
+            }
+            if ($surchargeValue > 0) {
+                $newTotal += ($surchargeType === 'percent') ? $subtotalItems * ($surchargeValue / 100) : $surchargeValue;
+            }
+            if ($ipiPercent > 0) $newTotal += $subtotalItems * ($ipiPercent / 100);
+            if ($icmsPercent > 0) $newTotal += $subtotalItems * ($icmsPercent / 100);
+            if ($freight > 0) $newTotal += $freight;
+
+            // Atualizar fornecedor se existir no banco
+            if ($supplierOrderId > 0) {
+                $oldSup = $oldSuppliersMap[$supplierOrderId] ?? null;
+                if ($oldSup) {
+                    $finFields = [
+                        'discount_value' => ['label' => 'Desconto', 'old' => (float)($oldSup['discount_value'] ?? 0), 'new' => $discountValue],
+                        'discount_type' => ['label' => 'Tipo desconto', 'old' => $oldSup['discount_type'] ?? 'percent', 'new' => $discountType],
+                        'surcharge_value' => ['label' => 'Acréscimo', 'old' => (float)($oldSup['surcharge_value'] ?? 0), 'new' => $surchargeValue],
+                        'surcharge_type' => ['label' => 'Tipo acréscimo', 'old' => $oldSup['surcharge_type'] ?? 'percent', 'new' => $surchargeType],
+                        'ipi_percent' => ['label' => 'IPI', 'old' => (float)($oldSup['ipi_percent'] ?? 0), 'new' => $ipiPercent],
+                        'icms_percent' => ['label' => 'ICMS', 'old' => (float)($oldSup['icms_percent'] ?? 0), 'new' => $icmsPercent],
+                        'freight' => ['label' => 'Frete', 'old' => (float)($oldSup['freight'] ?? 0), 'new' => $freight],
+                    ];
+                    foreach ($finFields as $field => $info) {
+                        if ($field === 'discount_type' || $field === 'surcharge_type') {
+                            if ($info['old'] !== $info['new']) {
+                                $financialChanges[] = ['field' => $field, 'label' => $info['label'], 'supplier_name' => $oldSup['supplier_name'] ?? 'Geral', 'old_value' => $info['old'] === 'percent' ? '%' : 'R$', 'new_value' => $info['new'] === 'percent' ? '%' : 'R$'];
+                            }
+                        } else {
+                            if (abs($info['old'] - $info['new']) > 0.001) {
+                                $financialChanges[] = ['field' => $field, 'label' => $info['label'], 'supplier_name' => $oldSup['supplier_name'] ?? 'Geral', 'old_value' => $info['old'], 'new_value' => $info['new'], 'is_percent' => in_array($field, ['ipi_percent', 'icms_percent']), 'is_money' => $field === 'freight'];
+                            }
+                        }
+                    }
+                }
+                PurchaseOrderSupplier::updateById($supplierOrderId, [
+                    'discount_value' => $discountValue, 'discount_type' => $discountType,
+                    'surcharge_value' => $surchargeValue, 'surcharge_type' => $surchargeType,
+                    'ipi_percent' => $ipiPercent, 'icms_percent' => $icmsPercent,
+                    'freight' => $freight, 'subtotal_items' => $subtotalItems, 'subtotal_final' => $newTotal,
+                ]);
+            }
+        }
+
+        // ====== PROCESSAR OBRA ======
+        $oldConstructionSiteId = (int) ($order['construction_site_id'] ?? 0);
+        $newConstructionSiteIdInt = $newConstructionSiteId !== '' ? (int) $newConstructionSiteId : 0;
+        if ($oldConstructionSiteId !== $newConstructionSiteIdInt) {
+            $obraChanged = true;
+            PurchaseOrder::updateById($id, ['construction_site_id' => $newConstructionSiteIdInt > 0 ? $newConstructionSiteIdInt : null]);
+            if ($newConstructionSiteIdInt > 0) {
+                $newSite = \App\Models\ConstructionSite::find($newConstructionSiteIdInt);
+                $newObraName = $newSite ? (($newSite['code'] ?? '') . ' - ' . $newSite['name']) : 'ID ' . $newConstructionSiteIdInt;
+            } else {
+                $newObraName = '(nenhuma)';
+            }
+        }
+
+        // ====== VERIFICAR SE HOUVE ALGUMA MUDANÇA ======
+        if (empty($changes) && empty($financialChanges) && !$obraChanged) {
+            $this->setFlash('info', 'Nenhuma alteração detectada.');
             $this->redirect('/admin/orders/show/' . $id);
             return;
         }
 
         // Atualizar total do pedido
-        PurchaseOrder::updateById($id, [
-            'total_estimated' => $newTotal,
-        ]);
+        PurchaseOrder::updateById($id, ['total_estimated' => $newTotal]);
 
-        // Montar descrição detalhada para o histórico
+        // ====== MONTAR HISTÓRICO DETALHADO ======
         $historyDescription = "Edição financeira realizada por {$userName}.\n";
-        $historyDescription .= "Total anterior: R$ " . number_format($oldTotal, 2, ',', '.') . " → Novo total: R$ " . number_format($newTotal, 2, ',', '.') . "\n\n";
-        $historyDescription .= "Alterações:\n";
-
-        foreach ($changes as $change) {
-            $historyDescription .= "• {$change['material_name']}";
-            if (!empty($change['specification'])) {
-                $historyDescription .= " ({$change['specification']})";
+        $historyDescription .= "Total anterior: R$ " . number_format($oldTotal, 2, ',', '.') . " → Novo total: R$ " . number_format($newTotal, 2, ',', '.') . "\n";
+        if ($obraChanged) {
+            $oldObraDisplay = !empty($oldObraName) ? $oldObraName : '(nenhuma)';
+            $historyDescription .= "Obra: {$oldObraDisplay} → {$newObraName}\n";
+        }
+        if (!empty($financialChanges)) {
+            $historyDescription .= "\nAlterações financeiras:\n";
+            foreach ($financialChanges as $fc) {
+                if (isset($fc['is_percent']) && $fc['is_percent']) {
+                    $historyDescription .= "• {$fc['label']} ({$fc['supplier_name']}): {$fc['old_value']}% → {$fc['new_value']}%\n";
+                } elseif (isset($fc['is_money']) && $fc['is_money']) {
+                    $historyDescription .= "• {$fc['label']} ({$fc['supplier_name']}): R$ " . number_format($fc['old_value'], 2, ',', '.') . " → R$ " . number_format($fc['new_value'], 2, ',', '.') . "\n";
+                } else {
+                    $historyDescription .= "• {$fc['label']} ({$fc['supplier_name']}): {$fc['old_value']} → {$fc['new_value']}\n";
+                }
             }
-            $historyDescription .= ":\n";
-            if ($change['qty_changed']) {
-                $oldQtyFmt = number_format($change['old_quantity'], $change['old_quantity'] == (int)$change['old_quantity'] ? 0 : 2, ',', '.');
-                $newQtyFmt = number_format($change['new_quantity'], $change['new_quantity'] == (int)$change['new_quantity'] ? 0 : 2, ',', '.');
-                $historyDescription .= "  Quantidade: {$oldQtyFmt} → {$newQtyFmt}\n";
+        }
+        if (!empty($changes)) {
+            $historyDescription .= "\nAlterações nos itens:\n";
+            foreach ($changes as $change) {
+                $historyDescription .= "• {$change['material_name']}";
+                if (!empty($change['specification'])) $historyDescription .= " ({$change['specification']})";
+                $historyDescription .= ":\n";
+                if ($change['qty_changed']) {
+                    $oldQtyFmt = number_format($change['old_quantity'], $change['old_quantity'] == (int)$change['old_quantity'] ? 0 : 2, ',', '.');
+                    $newQtyFmt = number_format($change['new_quantity'], $change['new_quantity'] == (int)$change['new_quantity'] ? 0 : 2, ',', '.');
+                    $historyDescription .= "  Quantidade: {$oldQtyFmt} → {$newQtyFmt}\n";
+                }
+                if ($change['price_changed']) {
+                    $historyDescription .= "  Preço unitário: R$ " . number_format($change['old_unit_price'], 2, ',', '.') . " → R$ " . number_format($change['new_unit_price'], 2, ',', '.') . "\n";
+                }
+                $historyDescription .= "  Total item: R$ " . number_format($change['old_total_price'], 2, ',', '.') . " → R$ " . number_format($change['new_total_price'], 2, ',', '.') . "\n";
             }
-            if ($change['price_changed']) {
-                $historyDescription .= "  Preço unitário: R$ " . number_format($change['old_unit_price'], 2, ',', '.') . " → R$ " . number_format($change['new_unit_price'], 2, ',', '.') . "\n";
-            }
-            $historyDescription .= "  Total item: R$ " . number_format($change['old_total_price'], 2, ',', '.') . " → R$ " . number_format($change['new_total_price'], 2, ',', '.') . "\n";
         }
 
         PurchaseOrderHistory::log($id, 'financial_edit', $historyDescription, $userName, $userId);
 
-        // Enviar notificações (e-mail e webhook) para cotador e aprovador
-        $this->sendFinancialEditNotifications($id, $order, $changes, $userName, $oldTotal, $newTotal);
+        // Enviar notificações
+        $this->sendFinancialEditNotifications($id, $order, $changes, $financialChanges, $obraChanged, $oldObraName, $newObraName, $userName, $oldTotal, $newTotal);
 
-        $this->setFlash('success', 'Itens do pedido atualizados pelo financeiro com sucesso!');
+        $this->setFlash('success', 'Pedido atualizado pelo financeiro com sucesso! Notificações enviadas.');
         $this->redirect('/admin/orders/show/' . $id);
     }
 
     /**
      * Envia notificações de edição financeira (email + webhook) para cotador e aprovador
      */
-    private function sendFinancialEditNotifications(int $orderId, array $order, array $changes, string $editedBy, float $oldTotal, float $newTotal): void
+    private function sendFinancialEditNotifications(int $orderId, array $order, array $changes, array $financialChanges, bool $obraChanged, string $oldObraName, string $newObraName, string $editedBy, float $oldTotal, float $newTotal): void
     {
-        $baseUrl = $this->getBaseUrl();
-        $viewUrl = "{$baseUrl}/admin/orders/show/{$orderId}";
-
         // Montar mensagem de mudanças para webhook
         $changesText = "";
-        foreach ($changes as $change) {
-            $changesText .= "• *{$change['material_name']}*";
-            if (!empty($change['specification'])) {
-                $changesText .= " ({$change['specification']})";
+        if ($obraChanged) {
+            $oldObraDisplay = !empty($oldObraName) ? $oldObraName : '(nenhuma)';
+            $changesText .= "*Obra:* {$oldObraDisplay} → {$newObraName}\n\n";
+        }
+        if (!empty($financialChanges)) {
+            $changesText .= "*Financeiros:*\n";
+            foreach ($financialChanges as $fc) {
+                if (isset($fc['is_percent']) && $fc['is_percent']) {
+                    $changesText .= "• {$fc['label']}: {$fc['old_value']}% → {$fc['new_value']}%\n";
+                } elseif (isset($fc['is_money']) && $fc['is_money']) {
+                    $changesText .= "• {$fc['label']}: R$ " . number_format($fc['old_value'], 2, ',', '.') . " → R$ " . number_format($fc['new_value'], 2, ',', '.') . "\n";
+                } else {
+                    $changesText .= "• {$fc['label']}: {$fc['old_value']} → {$fc['new_value']}\n";
+                }
             }
             $changesText .= "\n";
-            if ($change['qty_changed']) {
-                $oldQtyFmt = number_format($change['old_quantity'], $change['old_quantity'] == (int)$change['old_quantity'] ? 0 : 2, ',', '.');
-                $newQtyFmt = number_format($change['new_quantity'], $change['new_quantity'] == (int)$change['new_quantity'] ? 0 : 2, ',', '.');
-                $changesText .= "  Qtd: {$oldQtyFmt} → {$newQtyFmt}\n";
+        }
+        if (!empty($changes)) {
+            $changesText .= "*Itens alterados:*\n";
+            foreach ($changes as $change) {
+                $changesText .= "• *{$change['material_name']}*";
+                if (!empty($change['specification'])) $changesText .= " ({$change['specification']})";
+                $changesText .= "\n";
+                if ($change['qty_changed']) {
+                    $oldQtyFmt = number_format($change['old_quantity'], $change['old_quantity'] == (int)$change['old_quantity'] ? 0 : 2, ',', '.');
+                    $newQtyFmt = number_format($change['new_quantity'], $change['new_quantity'] == (int)$change['new_quantity'] ? 0 : 2, ',', '.');
+                    $changesText .= "  Qtd: {$oldQtyFmt} → {$newQtyFmt}\n";
+                }
+                if ($change['price_changed']) {
+                    $changesText .= "  Unit.: R$ " . number_format($change['old_unit_price'], 2, ',', '.') . " → R$ " . number_format($change['new_unit_price'], 2, ',', '.') . "\n";
+                }
+                $changesText .= "  Total: R$ " . number_format($change['old_total_price'], 2, ',', '.') . " → R$ " . number_format($change['new_total_price'], 2, ',', '.') . "\n";
             }
-            if ($change['price_changed']) {
-                $changesText .= "  Unit.: R$ " . number_format($change['old_unit_price'], 2, ',', '.') . " → R$ " . number_format($change['new_unit_price'], 2, ',', '.') . "\n";
-            }
-            $changesText .= "  Total: R$ " . number_format($change['old_total_price'], 2, ',', '.') . " → R$ " . number_format($change['new_total_price'], 2, ',', '.') . "\n";
         }
 
         $obraInfo = '';
@@ -1038,7 +1162,6 @@ class PurchaseOrderController extends Controller
             . "*Data/Hora:* " . date('d/m/Y H:i') . "\n"
             . "*Total anterior:* R$ " . number_format($oldTotal, 2, ',', '.') . "\n"
             . "*Novo total:* R$ " . number_format($newTotal, 2, ',', '.') . "\n\n"
-            . "*Alterações:*\n"
             . $changesText;
 
         // Webhook para cotador (orders_quote_webhook)
@@ -1051,6 +1174,8 @@ class PurchaseOrderController extends Controller
                 'old_total' => $oldTotal,
                 'new_total' => $newTotal,
                 'changes' => $changes,
+                'financial_changes' => $financialChanges,
+                'obra_changed' => $obraChanged,
                 'phone' => Setting::get('orders_quote_phone', ''),
                 'phone_name' => Setting::get('orders_quote_phone_name', ''),
                 'message' => $message,
@@ -1067,6 +1192,8 @@ class PurchaseOrderController extends Controller
                 'old_total' => $oldTotal,
                 'new_total' => $newTotal,
                 'changes' => $changes,
+                'financial_changes' => $financialChanges,
+                'obra_changed' => $obraChanged,
                 'phone' => Setting::get('orders_approval_phone', ''),
                 'phone_name' => Setting::get('orders_approval_phone_name', ''),
                 'message' => $message,
@@ -1083,6 +1210,8 @@ class PurchaseOrderController extends Controller
                 'old_total' => $oldTotal,
                 'new_total' => $newTotal,
                 'changes' => $changes,
+                'financial_changes' => $financialChanges,
+                'obra_changed' => $obraChanged,
                 'phone' => Setting::get('orders_completed_phone', ''),
                 'phone_name' => Setting::get('orders_completed_phone_name', ''),
                 'message' => $message,
@@ -1094,7 +1223,6 @@ class PurchaseOrderController extends Controller
         $approvalEmails = Setting::get('orders_approval_emails', '');
         $completedEmails = Setting::get('orders_completed_emails', '');
 
-        // Unir todos os emails (cotador + aprovador), sem duplicar
         $allEmails = array_unique(array_filter(array_map('trim', array_merge(
             explode(',', $quoteEmails),
             explode(',', $approvalEmails),
@@ -1103,7 +1231,7 @@ class PurchaseOrderController extends Controller
 
         if (!empty($allEmails)) {
             $subject = "⚠️ Pedido Editado pelo Financeiro - {$order['code']}";
-            $body = EmailTemplate::purchaseOrderFinancialEdit($order, $changes, $editedBy, $oldTotal, $newTotal);
+            $body = EmailTemplate::purchaseOrderFinancialEdit($order, $changes, $financialChanges, $obraChanged, $oldObraName, $newObraName, $editedBy, $oldTotal, $newTotal);
             NotificationService::queueEmails(implode(',', $allEmails), $subject, $body, $orderId, 'financial_edit');
         }
     }
