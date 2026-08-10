@@ -1404,12 +1404,18 @@ class PurchaseOrderController extends Controller
         $categories = MaterialCategory::all('name ASC');
         $units = MeasurementUnit::all('name ASC');
 
+        $constructionSites = [];
+        try {
+            $constructionSites = \App\Models\ConstructionSite::allActive();
+        } catch (\Exception $e) {}
+
         $this->view('admin.orders.edit_items', [
             'order' => $order,
             'items' => $items,
             'materials' => $materials,
             'categories' => $categories,
             'units' => $units,
+            'constructionSites' => $constructionSites,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);
@@ -1689,6 +1695,21 @@ class PurchaseOrderController extends Controller
         if (!empty($changes['added'])) $changesSummary[] = count($changes['added']) . ' item(ns) adicionado(s)';
         if (!empty($changes['removed'])) $changesSummary[] = count($changes['removed']) . ' item(ns) removido(s)';
         if (!empty($changes['changed'])) $changesSummary[] = count($changes['changed']) . ' item(ns) alterado(s)';
+
+        // Atualizar obra se foi alterada
+        $newConstructionSiteId = $this->input('construction_site_id', '');
+        $oldConstructionSiteId = (int) ($order['construction_site_id'] ?? 0);
+        $newConstructionSiteIdInt = $newConstructionSiteId !== '' ? (int) $newConstructionSiteId : 0;
+        if ($oldConstructionSiteId !== $newConstructionSiteIdInt) {
+            PurchaseOrder::updateById($id, ['construction_site_id' => $newConstructionSiteIdInt > 0 ? $newConstructionSiteIdInt : null]);
+            $newSiteName = '';
+            if ($newConstructionSiteIdInt > 0) {
+                $newSite = \App\Models\ConstructionSite::find($newConstructionSiteIdInt);
+                $newSiteName = $newSite ? (($newSite['code'] ?? '') . ' - ' . $newSite['name']) : 'ID ' . $newConstructionSiteIdInt;
+            }
+            $oldSiteName = !empty($order['construction_site_name']) ? (($order['construction_site_code'] ?? '') . ' - ' . $order['construction_site_name']) : '(nenhuma)';
+            $changesSummary[] = "obra alterada: {$oldSiteName} → " . ($newSiteName ?: '(nenhuma)');
+        }
 
         PurchaseOrderHistory::log(
             $id,

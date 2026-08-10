@@ -14,7 +14,30 @@
     <a href="/admin/orders/show/<?= $order['id'] ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
 </div>
 
-<?php if (!empty($order['construction_site_name'])): ?>
+<?php if (!empty($constructionSites)): ?>
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold mb-1"><i class="bi bi-buildings"></i> Obra</label>
+                <select name="construction_site_id" class="form-select form-select-sm">
+                    <option value="">-- Sem obra vinculada --</option>
+                    <?php foreach ($constructionSites as $site): ?>
+                    <option value="<?= $site['id'] ?>" <?= ((int)($order['construction_site_id'] ?? 0)) === (int)$site['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars(($site['code'] ?? '') . ' - ' . $site['name']) ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <?php if (!empty($order['construction_site_name'])): ?>
+                <small class="text-muted"><i class="bi bi-buildings"></i> Atual: <?= htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']) ?></small>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php elseif (!empty($order['construction_site_name'])): ?>
 <div class="alert alert-light py-2 mb-3">
     <i class="bi bi-buildings"></i> <strong>Obra:</strong> <?= htmlspecialchars($order['construction_site_code'] . ' - ' . $order['construction_site_name']) ?>
 </div>
