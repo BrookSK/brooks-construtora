@@ -37,6 +37,16 @@
                         <button type="submit" class="btn btn-outline-secondary w-100" onclick="return confirm('Adicionar página de Coluna do Convidado?')"><i class="bi bi-person-plus"></i> Adicionar Coluna do Convidado</button>
                     </form>
                     <?php endif; ?>
+                    <?php
+                    $hasStories = false;
+                    foreach ($pages as $p) { if ($p['layout_type'] === 'construction_stories') { $hasStories = true; break; } }
+                    if (!$hasStories):
+                    ?>
+                    <form method="POST" action="/admin/magazines/add-construction-stories" class="mt-2">
+                        <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
+                        <button type="submit" class="btn btn-outline-warning w-100" onclick="return confirm('Adicionar página de Causos de Obra?')"><i class="bi bi-chat-quote"></i> Adicionar Causos de Obra</button>
+                    </form>
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
             </div>
@@ -104,7 +114,7 @@
             <?php foreach ($pages as $page): ?>
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
-                    <h6 class="mb-0 small">Página <?= $page['page_number'] ?> — <span class="text-muted"><?= $page['layout_type'] === 'guest_column' ? 'Coluna do Convidado' : $page['layout_type'] ?></span></h6>
+                    <h6 class="mb-0 small">Página <?= $page['page_number'] ?> — <span class="text-muted"><?= $page['layout_type'] === 'guest_column' ? 'Coluna do Convidado' : ($page['layout_type'] === 'construction_stories' ? 'Causos de Obra' : $page['layout_type']) ?></span></h6>
                 </div>
                 <div class="card-body">
                     <?php if ($page['layout_type'] === 'guest_column'): ?>
@@ -151,6 +161,51 @@
                             <span class="char-counter <?= $guestCurrentChars > $guestMaxChars ? 'text-danger' : '' ?>"><?= $guestCurrentChars ?>/<?= $guestMaxChars ?></span>
                         </small>
                     </div>
+                    <input type="hidden" name="pages[<?= $page['id'] ?>][show_images]" value="1">
+                    <?php elseif ($page['layout_type'] === 'construction_stories'): ?>
+                    <!-- Campos específicos: Causos de Obra -->
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label small">Label</label>
+                            <input type="text" class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][caption]" value="<?= htmlspecialchars($page['caption'] ?? 'Histórias da Obra') ?>" placeholder="Ex: Histórias da Obra">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Título da Página</label>
+                            <input type="text" class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][title]" value="<?= htmlspecialchars($page['title'] ?? 'Causos de Obra') ?>" placeholder="Ex: Causos de Obra">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Subtítulo</label>
+                            <input type="text" class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][subtitle]" value="<?= htmlspecialchars($page['subtitle'] ?? '') ?>" placeholder="Ex: Histórias reais dos bastidores">
+                        </div>
+                    </div>
+                    <hr class="my-2">
+                    <label class="form-label small fw-bold"><i class="bi bi-chat-quote"></i> Causos (máx. 4)</label>
+                    <small class="text-muted d-block mb-2">Cada causo pode ter um título curto e um texto de até 400 caracteres.</small>
+                    <?php
+                    $existingStories = array_filter(explode('|||', $page['content'] ?? ''));
+                    $maxStories = 4;
+                    $maxStoryChars = 400;
+                    // Garante pelo menos 1 causo vazio para edição
+                    while (count($existingStories) < 1) { $existingStories[] = ''; }
+                    foreach ($existingStories as $si => $storyRaw):
+                        if ($si >= $maxStories) break;
+                        $storyLines = explode("\n", trim($storyRaw), 2);
+                        $sTitle = trim($storyLines[0] ?? '');
+                        $sText = trim($storyLines[1] ?? '');
+                    ?>
+                    <div class="card card-body p-2 mb-2 story-entry" data-index="<?= $si ?>">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge bg-success bg-opacity-25 text-success">Causo <?= $si + 1 ?></span>
+                            <?php if ($si > 0): ?><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-story-btn" style="font-size:0.65rem;" onclick="this.closest('.story-entry').remove()"><i class="bi bi-x"></i></button><?php endif; ?>
+                        </div>
+                        <input type="text" class="form-control form-control-sm mb-1" name="stories_title_<?= $page['id'] ?>[]" value="<?= htmlspecialchars($sTitle) ?>" placeholder="Título do causo (ex: O dia que o cimento sumiu)" maxlength="80">
+                        <textarea class="form-control form-control-sm story-textarea" name="stories_text_<?= $page['id'] ?>[]" rows="3" maxlength="<?= $maxStoryChars ?>" data-max="<?= $maxStoryChars ?>" oninput="updateStoryCharCount(this)" placeholder="Conte o causo aqui..."><?= htmlspecialchars($sText) ?></textarea>
+                        <small class="text-muted text-end mt-1 story-char-counter"><?= mb_strlen($sText) ?>/<?= $maxStoryChars ?></small>
+                    </div>
+                    <?php endforeach; ?>
+                    <?php if (count($existingStories) < $maxStories): ?>
+                    <button type="button" class="btn btn-sm btn-outline-success mt-1" id="add-story-btn-<?= $page['id'] ?>" onclick="addStoryEntry(<?= $page['id'] ?>, <?= $maxStories ?>, <?= $maxStoryChars ?>)"><i class="bi bi-plus-circle"></i> Adicionar Causo</button>
+                    <?php endif; ?>
                     <input type="hidden" name="pages[<?= $page['id'] ?>][show_images]" value="1">
                     <?php else: ?>
                     <!-- Campos genéricos para outros layouts -->
@@ -347,6 +402,44 @@ function updateCharCount(textarea) {
     if (counter) {
         counter.textContent = current + '/' + max;
         counter.className = 'char-counter ' + (current > max ? 'text-danger fw-bold' : current > max * 0.9 ? 'text-warning' : '');
+    }
+}
+
+// Contador de caracteres para causos
+function updateStoryCharCount(textarea) {
+    const max = parseInt(textarea.dataset.max) || 400;
+    const current = textarea.value.length;
+    const counter = textarea.closest('.story-entry')?.querySelector('.story-char-counter');
+    if (counter) {
+        counter.textContent = current + '/' + max;
+        counter.className = 'text-muted text-end mt-1 story-char-counter ' + (current > max ? 'text-danger fw-bold' : current > max * 0.9 ? 'text-warning' : '');
+    }
+}
+
+// Adicionar novo causo
+function addStoryEntry(pageId, maxStories, maxChars) {
+    const container = document.querySelector('#add-story-btn-' + pageId)?.parentElement;
+    if (!container) return;
+    const entries = container.querySelectorAll('.story-entry');
+    const idx = entries.length;
+    if (idx >= maxStories) {
+        alert('Máximo de ' + maxStories + ' causos por página.');
+        return;
+    }
+    const div = document.createElement('div');
+    div.className = 'card card-body p-2 mb-2 story-entry';
+    div.dataset.index = idx;
+    div.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-1">' +
+        '<span class="badge bg-success bg-opacity-25 text-success">Causo ' + (idx + 1) + '</span>' +
+        '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:0.65rem;" onclick="this.closest(\'.story-entry\').remove()"><i class="bi bi-x"></i></button>' +
+        '</div>' +
+        '<input type="text" class="form-control form-control-sm mb-1" name="stories_title_' + pageId + '[]" value="" placeholder="Título do causo (ex: O dia que o cimento sumiu)" maxlength="80">' +
+        '<textarea class="form-control form-control-sm story-textarea" name="stories_text_' + pageId + '[]" rows="3" maxlength="' + maxChars + '" data-max="' + maxChars + '" oninput="updateStoryCharCount(this)" placeholder="Conte o causo aqui..."></textarea>' +
+        '<small class="text-muted text-end mt-1 story-char-counter">0/' + maxChars + '</small>';
+    const btn = document.querySelector('#add-story-btn-' + pageId);
+    container.insertBefore(div, btn);
+    if (container.querySelectorAll('.story-entry').length >= maxStories) {
+        btn.style.display = 'none';
     }
 }
 // Inicializar contadores

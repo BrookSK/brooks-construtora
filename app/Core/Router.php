@@ -98,6 +98,7 @@ class Router
             'magazines/schedule' => ['MagazineController', 'schedule'],
             'magazines/schedule/update' => ['MagazineController', 'updateSchedule'],
             'magazines/add-guest-column' => ['MagazineController', 'addGuestColumn'],
+            'magazines/add-construction-stories' => ['MagazineController', 'addConstructionStories'],
 
             // Pedidos de materiais
             'orders' => ['PurchaseOrderController', 'index'],

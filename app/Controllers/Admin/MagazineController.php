@@ -420,7 +420,7 @@ class MagazineController extends Controller
         $pending = [];
 
         foreach ($pages as $page) {
-            if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover', 'guest_column'])) {
+            if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover', 'guest_column', 'construction_stories'])) {
                 continue;
             }
 
@@ -598,13 +598,28 @@ class MagazineController extends Controller
                 // Para guest_column e layouts sem checkbox, manter show_images = '1'
                 $currentPage = Database::fetch("SELECT layout_type FROM magazine_pages WHERE id = ?", [(int) $pageId]);
                 $layoutType = $currentPage['layout_type'] ?? '';
-                $keepImagesVisible = in_array($layoutType, ['guest_column', 'cover', 'subcover', 'backcover']);
+                $keepImagesVisible = in_array($layoutType, ['guest_column', 'cover', 'subcover', 'backcover', 'construction_stories']);
                 $showImagesValue = $keepImagesVisible ? '1' : (isset($pageData['show_images']) ? '1' : '0');
+
+                // Monta content dos causos a partir dos campos individuais
+                $contentToSave = $pageData['content'] ?? '';
+                if ($layoutType === 'construction_stories') {
+                    $storyTitles = $_POST['stories_title_' . $pageId] ?? [];
+                    $storyTexts = $_POST['stories_text_' . $pageId] ?? [];
+                    $stories = [];
+                    for ($si = 0; $si < count($storyTitles); $si++) {
+                        $sTitle = trim($storyTitles[$si] ?? '');
+                        $sText = trim($storyTexts[$si] ?? '');
+                        if (empty($sTitle) && empty($sText)) continue;
+                        $stories[] = $sTitle . "\n" . $sText;
+                    }
+                    $contentToSave = implode('|||', $stories);
+                }
 
                 Magazine::updatePage((int) $pageId, [
                     'title' => $pageData['title'] ?? '',
                     'subtitle' => $subtitle,
-                    'content' => $pageData['content'] ?? '',
+                    'content' => $contentToSave,
                     'caption' => $pageData['caption'] ?? '',
                     'show_images' => $showImagesValue,
                 ]);
@@ -1114,6 +1129,72 @@ class MagazineController extends Controller
     }
 
     /**
+     * Adiciona página de Causos de Obra antes da contracapa
+     */
+    public function addConstructionStories(): void
+    {
+        if (!$this->isPost() || !Auth::hasPermission('magazines.edit')) {
+            $this->redirect('/admin/magazines');
+            return;
+        }
+
+        $id = (int) $this->input('magazine_id');
+        $magazine = Magazine::find($id);
+
+        if (!$magazine) {
+            $this->setFlash('error', 'Revista não encontrada.');
+            $this->redirect('/admin/magazines');
+            return;
+        }
+
+        $pages = Magazine::getPages($id);
+
+        // Verifica se já tem construction_stories
+        foreach ($pages as $page) {
+            if ($page['layout_type'] === 'construction_stories') {
+                $this->setFlash('error', 'Esta revista já possui uma página de Causos de Obra.');
+                $this->redirect('/admin/magazines/edit/' . $id);
+                return;
+            }
+        }
+
+        // Encontra a posição da backcover para inserir antes dela
+        $backcoverPos = null;
+        foreach ($pages as $page) {
+            if ($page['layout_type'] === 'backcover') {
+                $backcoverPos = (int) $page['page_number'];
+                break;
+            }
+        }
+
+        if ($backcoverPos === null) {
+            // Se não tem backcover, insere como última página
+            $backcoverPos = count($pages) + 1;
+        }
+
+        // Desloca page_number de todas as páginas a partir da posição da backcover
+        Database::query(
+            "UPDATE magazine_pages SET page_number = page_number + 1 WHERE magazine_id = ? AND page_number >= ? ORDER BY page_number DESC",
+            [$id, $backcoverPos]
+        );
+
+        // Insere a página construction_stories antes da backcover
+        Magazine::addPage($id, [
+            'page_number' => $backcoverPos,
+            'title' => 'Causos de Obra',
+            'subtitle' => 'Histórias reais (ou quase) dos bastidores da construção',
+            'content' => '',
+            'caption' => 'Histórias da Obra',
+            'layout_type' => 'construction_stories',
+            'show_images' => '1',
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->setFlash('success', 'Página de Causos de Obra adicionada com sucesso!');
+        $this->redirect('/admin/magazines/edit/' . $id);
+    }
+
+    /**
      * Executa a geração completa da revista em background (após já ter respondido ao navegador)
      */
     private function executeBackgroundGeneration(int $jobId, int $topicId, int $userId): void
@@ -1231,7 +1312,7 @@ class MagazineController extends Controller
         $imagesToGenerate = [];
 
         foreach ($pages as $page) {
-            if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover', 'guest_column'])) {
+            if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover', 'guest_column', 'construction_stories'])) {
                 continue;
             }
 

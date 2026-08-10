@@ -98,6 +98,20 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
         .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
         .pg-guest .column-content p{font-size:0.82rem;line-height:1.9;color:#333;margin-bottom:14px;text-align:justify}
+
+        /* ===== CAUSOS DE OBRA ===== */
+        .pg-stories{padding:35px 40px;height:842px;min-height:842px;overflow:visible}
+        .pg-stories .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+        .pg-stories .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
+        .pg-stories .logo-sm .ck{color:#2e7d32}
+        .pg-stories .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
+        .pg-stories .pn{font-size:1rem;font-weight:300;color:#333}
+        .pg-stories .stories-label{font-size:0.6rem;text-transform:uppercase;letter-spacing:3px;color:#2e7d32;font-weight:600;margin-bottom:6px}
+        .pg-stories .stories-title{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:8px}
+        .pg-stories .stories-subtitle{font-size:0.75rem;color:#666;font-style:italic;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #2e7d32}
+        .pg-stories .story-item{margin-bottom:18px;padding-left:15px;border-left:3px solid #2e7d32}
+        .pg-stories .story-item .story-title{font-weight:700;font-size:0.82rem;color:#111;margin-bottom:4px}
+        .pg-stories .story-item .story-text{font-size:0.75rem;line-height:1.7;color:#444;text-align:justify}
     </style>
 </head>
 <body>
@@ -284,6 +298,30 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         <div class="col"><?php if($img1): ?><img src="<?= $img1 ?>" style="width:100%;height:420px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:420px">IMAGEM</div><?php endif; ?></div>
         <div class="col"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
     </div>
+</div>
+
+<?php elseif ($layout === 'construction_stories'): ?>
+<!-- CAUSOS DE OBRA -->
+<div class="page pg-stories">
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
+    <div class="stories-label"><?= htmlspecialchars($page['caption'] ?? 'Histórias da Obra') ?></div>
+    <div class="stories-title"><?= htmlspecialchars($page['title'] ?? 'Causos de Obra') ?></div>
+    <div class="stories-subtitle"><?= htmlspecialchars($page['subtitle'] ?? 'Histórias reais (ou quase) dos bastidores da construção') ?></div>
+    <?php
+    // Causos são armazenados no content separados por "|||" (separador entre causos)
+    // Cada causo tem formato: "TITULO_DO_CAUSO\nTexto do causo"
+    $stories = array_filter(explode('|||', $page['content'] ?? ''));
+    foreach ($stories as $story):
+        $storyLines = explode("\n", trim($story), 2);
+        $storyTitle = trim($storyLines[0] ?? '');
+        $storyText = trim($storyLines[1] ?? '');
+        if (empty($storyTitle) && empty($storyText)) continue;
+    ?>
+    <div class="story-item">
+        <?php if ($storyTitle): ?><div class="story-title"><?= htmlspecialchars($storyTitle) ?></div><?php endif; ?>
+        <?php if ($storyText): ?><div class="story-text"><?= htmlspecialchars($storyText) ?></div><?php endif; ?>
+    </div>
+    <?php endforeach; ?>
 </div>
 
 <?php elseif ($layout === 'backcover'): ?>
