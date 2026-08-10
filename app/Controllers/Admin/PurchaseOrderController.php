@@ -823,6 +823,292 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Tela de edição financeira (quantidade e preço) de itens após aprovação
+     */
+    public function financialEdit(string $id = ''): void
+    {
+        $id = (int) ($id ?: $this->input('id'));
+        $order = PurchaseOrder::findFull($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if (!Auth::hasPermission('orders.payment')) {
+            $this->setFlash('error', 'Sem permissão para edição financeira.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        if ($order['status'] !== 'approved') {
+            $this->setFlash('error', 'Somente pedidos aprovados podem ser editados pelo financeiro.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        $items = PurchaseOrderItem::getByOrder($id);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($id);
+
+        $this->view('admin.orders.financial_edit', [
+            'order' => $order,
+            'items' => $items,
+            'orderSuppliers' => $orderSuppliers,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
+    }
+
+    /**
+     * Processar edição financeira de itens (quantidade e preço)
+     */
+    public function financialUpdate(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if (!Auth::hasPermission('orders.payment')) {
+            $this->setFlash('error', 'Sem permissão para edição financeira.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id');
+        $order = PurchaseOrder::findFull($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if ($order['status'] !== 'approved') {
+            $this->setFlash('error', 'Somente pedidos aprovados podem ser editados pelo financeiro.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Financeiro';
+        $userId = Auth::id();
+        $editedItems = $_POST['items'] ?? [];
+
+        if (empty($editedItems)) {
+            $this->setFlash('error', 'Nenhum item para atualizar.');
+            $this->redirect('/admin/orders/financial-edit/' . $id);
+            return;
+        }
+
+        // Capturar estado anterior dos itens para histórico detalhado
+        $oldItems = PurchaseOrderItem::getByOrder($id);
+        $oldItemsMap = [];
+        foreach ($oldItems as $item) {
+            $oldItemsMap[$item['id']] = $item;
+        }
+
+        $changes = [];
+        $newTotal = 0;
+        $oldTotal = (float) ($order['total_estimated'] ?? 0);
+
+        foreach ($editedItems as $itemId => $data) {
+            $itemId = (int) $itemId;
+            if (!isset($oldItemsMap[$itemId])) continue;
+
+            $oldItem = $oldItemsMap[$itemId];
+            $newQty = (float) ($data['quantity'] ?? $oldItem['quantity']);
+            $newUnitPrice = (float) ($data['unit_price'] ?? $oldItem['unit_price']);
+            $newTotalPrice = $newQty * $newUnitPrice;
+
+            $oldQty = (float) $oldItem['quantity'];
+            $oldUnitPrice = (float) ($oldItem['unit_price'] ?? 0);
+            $oldTotalPrice = (float) ($oldItem['total_price'] ?? 0);
+
+            // Detectar se houve mudança
+            $qtyChanged = abs($newQty - $oldQty) > 0.001;
+            $priceChanged = abs($newUnitPrice - $oldUnitPrice) > 0.001;
+
+            if ($qtyChanged || $priceChanged) {
+                $change = [
+                    'item_id' => $itemId,
+                    'material_name' => $oldItem['material_name'],
+                    'specification' => $oldItem['specification'] ?? '',
+                    'old_quantity' => $oldQty,
+                    'new_quantity' => $newQty,
+                    'old_unit_price' => $oldUnitPrice,
+                    'new_unit_price' => $newUnitPrice,
+                    'old_total_price' => $oldTotalPrice,
+                    'new_total_price' => $newTotalPrice,
+                    'qty_changed' => $qtyChanged,
+                    'price_changed' => $priceChanged,
+                ];
+                $changes[] = $change;
+            }
+
+            // Atualizar o item
+            PurchaseOrderItem::updateById($itemId, [
+                'quantity' => $newQty,
+                'unit_price' => $newUnitPrice,
+                'total_price' => $newTotalPrice,
+            ]);
+
+            $newTotal += $newTotalPrice;
+        }
+
+        // Se não houve nenhuma mudança real
+        if (empty($changes)) {
+            $this->setFlash('info', 'Nenhuma alteração detectada nos itens.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        // Atualizar total do pedido
+        PurchaseOrder::updateById($id, [
+            'total_estimated' => $newTotal,
+        ]);
+
+        // Montar descrição detalhada para o histórico
+        $historyDescription = "Edição financeira realizada por {$userName}.\n";
+        $historyDescription .= "Total anterior: R$ " . number_format($oldTotal, 2, ',', '.') . " → Novo total: R$ " . number_format($newTotal, 2, ',', '.') . "\n\n";
+        $historyDescription .= "Alterações:\n";
+
+        foreach ($changes as $change) {
+            $historyDescription .= "• {$change['material_name']}";
+            if (!empty($change['specification'])) {
+                $historyDescription .= " ({$change['specification']})";
+            }
+            $historyDescription .= ":\n";
+            if ($change['qty_changed']) {
+                $oldQtyFmt = number_format($change['old_quantity'], $change['old_quantity'] == (int)$change['old_quantity'] ? 0 : 2, ',', '.');
+                $newQtyFmt = number_format($change['new_quantity'], $change['new_quantity'] == (int)$change['new_quantity'] ? 0 : 2, ',', '.');
+                $historyDescription .= "  Quantidade: {$oldQtyFmt} → {$newQtyFmt}\n";
+            }
+            if ($change['price_changed']) {
+                $historyDescription .= "  Preço unitário: R$ " . number_format($change['old_unit_price'], 2, ',', '.') . " → R$ " . number_format($change['new_unit_price'], 2, ',', '.') . "\n";
+            }
+            $historyDescription .= "  Total item: R$ " . number_format($change['old_total_price'], 2, ',', '.') . " → R$ " . number_format($change['new_total_price'], 2, ',', '.') . "\n";
+        }
+
+        PurchaseOrderHistory::log($id, 'financial_edit', $historyDescription, $userName, $userId);
+
+        // Enviar notificações (e-mail e webhook) para cotador e aprovador
+        $this->sendFinancialEditNotifications($id, $order, $changes, $userName, $oldTotal, $newTotal);
+
+        $this->setFlash('success', 'Itens do pedido atualizados pelo financeiro com sucesso!');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
+     * Envia notificações de edição financeira (email + webhook) para cotador e aprovador
+     */
+    private function sendFinancialEditNotifications(int $orderId, array $order, array $changes, string $editedBy, float $oldTotal, float $newTotal): void
+    {
+        $baseUrl = $this->getBaseUrl();
+        $viewUrl = "{$baseUrl}/admin/orders/show/{$orderId}";
+
+        // Montar mensagem de mudanças para webhook
+        $changesText = "";
+        foreach ($changes as $change) {
+            $changesText .= "• *{$change['material_name']}*";
+            if (!empty($change['specification'])) {
+                $changesText .= " ({$change['specification']})";
+            }
+            $changesText .= "\n";
+            if ($change['qty_changed']) {
+                $oldQtyFmt = number_format($change['old_quantity'], $change['old_quantity'] == (int)$change['old_quantity'] ? 0 : 2, ',', '.');
+                $newQtyFmt = number_format($change['new_quantity'], $change['new_quantity'] == (int)$change['new_quantity'] ? 0 : 2, ',', '.');
+                $changesText .= "  Qtd: {$oldQtyFmt} → {$newQtyFmt}\n";
+            }
+            if ($change['price_changed']) {
+                $changesText .= "  Unit.: R$ " . number_format($change['old_unit_price'], 2, ',', '.') . " → R$ " . number_format($change['new_unit_price'], 2, ',', '.') . "\n";
+            }
+            $changesText .= "  Total: R$ " . number_format($change['old_total_price'], 2, ',', '.') . " → R$ " . number_format($change['new_total_price'], 2, ',', '.') . "\n";
+        }
+
+        $obraInfo = '';
+        if (!empty($order['construction_site_name'])) {
+            $obraInfo = "*Obra:* {$order['construction_site_code']} - {$order['construction_site_name']}\n";
+        }
+
+        $message = "*⚠️ PEDIDO EDITADO PELO FINANCEIRO*\n\n"
+            . "*Pedido:* {$order['code']}\n"
+            . $obraInfo
+            . "*Editado por:* {$editedBy}\n"
+            . "*Data/Hora:* " . date('d/m/Y H:i') . "\n"
+            . "*Total anterior:* R$ " . number_format($oldTotal, 2, ',', '.') . "\n"
+            . "*Novo total:* R$ " . number_format($newTotal, 2, ',', '.') . "\n\n"
+            . "*Alterações:*\n"
+            . $changesText;
+
+        // Webhook para cotador (orders_quote_webhook)
+        $quoteWebhook = Setting::get('orders_quote_webhook', '');
+        if (!empty(trim($quoteWebhook))) {
+            $this->sendWebhook($quoteWebhook, [
+                'event' => 'financial_edit',
+                'order_code' => $order['code'],
+                'edited_by' => $editedBy,
+                'old_total' => $oldTotal,
+                'new_total' => $newTotal,
+                'changes' => $changes,
+                'phone' => Setting::get('orders_quote_phone', ''),
+                'phone_name' => Setting::get('orders_quote_phone_name', ''),
+                'message' => $message,
+            ], $orderId, 'financial_edit');
+        }
+
+        // Webhook para aprovador (orders_approval_webhook)
+        $approvalWebhook = Setting::get('orders_approval_webhook', '');
+        if (!empty(trim($approvalWebhook)) && $approvalWebhook !== $quoteWebhook) {
+            $this->sendWebhook($approvalWebhook, [
+                'event' => 'financial_edit',
+                'order_code' => $order['code'],
+                'edited_by' => $editedBy,
+                'old_total' => $oldTotal,
+                'new_total' => $newTotal,
+                'changes' => $changes,
+                'phone' => Setting::get('orders_approval_phone', ''),
+                'phone_name' => Setting::get('orders_approval_phone_name', ''),
+                'message' => $message,
+            ], $orderId, 'financial_edit');
+        }
+
+        // Webhook para conclusão/financeiro (orders_completed_webhook)
+        $completedWebhook = Setting::get('orders_completed_webhook', '');
+        if (!empty(trim($completedWebhook)) && $completedWebhook !== $quoteWebhook && $completedWebhook !== $approvalWebhook) {
+            $this->sendWebhook($completedWebhook, [
+                'event' => 'financial_edit',
+                'order_code' => $order['code'],
+                'edited_by' => $editedBy,
+                'old_total' => $oldTotal,
+                'new_total' => $newTotal,
+                'changes' => $changes,
+                'phone' => Setting::get('orders_completed_phone', ''),
+                'phone_name' => Setting::get('orders_completed_phone_name', ''),
+                'message' => $message,
+            ], $orderId, 'financial_edit');
+        }
+
+        // E-mail para cotador e aprovador
+        $quoteEmails = Setting::get('orders_quote_emails', '');
+        $approvalEmails = Setting::get('orders_approval_emails', '');
+        $completedEmails = Setting::get('orders_completed_emails', '');
+
+        // Unir todos os emails (cotador + aprovador), sem duplicar
+        $allEmails = array_unique(array_filter(array_map('trim', array_merge(
+            explode(',', $quoteEmails),
+            explode(',', $approvalEmails),
+            explode(',', $completedEmails)
+        ))));
+
+        if (!empty($allEmails)) {
+            $subject = "⚠️ Pedido Editado pelo Financeiro - {$order['code']}";
+            $body = EmailTemplate::purchaseOrderFinancialEdit($order, $changes, $editedBy, $oldTotal, $newTotal);
+            NotificationService::queueEmails(implode(',', $allEmails), $subject, $body, $orderId, 'financial_edit');
+        }
+    }
+
+    /**
      * Tela de edição de itens do pedido
      */
     public function editItems(string $id = ''): void

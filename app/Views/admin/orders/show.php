@@ -1149,6 +1149,9 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <?php if (!in_array($order['status'], ['cancelled'])): ?>
                 <hr>
                 <?php if ($order['status'] === 'approved' && \App\Core\Auth::hasPermission('orders.payment')): ?>
+                <a href="/admin/orders/financial-edit/<?= $order['id'] ?>" class="btn w-100 mb-2" style="border-color:#8b5cf6; color:#8b5cf6; background-color: rgba(139, 92, 246, 0.05);" onmouseover="this.style.backgroundColor='#8b5cf6';this.style.color='#fff'" onmouseout="this.style.backgroundColor='rgba(139, 92, 246, 0.05)';this.style.color='#8b5cf6'">
+                    <i class="bi bi-pencil-square"></i> Editar Itens (Financeiro)
+                </a>
                 <?php if (empty($order['financial_reviewed_at'])): ?>
                 <form method="POST" action="/admin/orders/financial-review">
                     <input type="hidden" name="id" value="<?= $order['id'] ?>">
