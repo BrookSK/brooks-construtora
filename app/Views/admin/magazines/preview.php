@@ -276,12 +276,12 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </div>
 
 <?php elseif ($layout === 'internal_06'): ?>
-<!-- PÁG INTERNA 06: Grid 2 imagens topo + 1 imagem esquerda com texto ao lado + texto embaixo -->
+<!-- PÁG INTERNA 06 v2: img3 esquerda + texto direita, depois 2 colunas -->
 <?php
     $allLines06 = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
     // Texto ao lado da img3 (coluna direita superior)
     $sideLines = array_slice($allLines06, 0, min(3, count($allLines06)));
-    // Texto embaixo em 2 colunas
+    // Texto embaixo em 2 colunas: esq continua, dir finaliza
     $bottomLines = array_slice($allLines06, count($sideLines));
     $bottomMid = (int)ceil(count($bottomLines) / 2);
 ?>
@@ -296,7 +296,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         <div style="width:50%"><?php foreach($sideLines as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div>
     </div>
     <?php if (count($bottomLines) > 0): ?>
-    <div class="two-col"><div class="col"><?php foreach(array_slice($bottomLines, 0, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div><div class="col"><?php foreach(array_slice($bottomLines, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div></div>
+    <div class="two-col"><div class="col"><?php foreach(array_slice($bottomLines, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div><div class="col"><?php foreach(array_slice($bottomLines, 0, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div></div>
     <?php endif; ?>
 </div>
 
