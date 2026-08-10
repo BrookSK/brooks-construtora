@@ -237,7 +237,7 @@
                                value="<?= (float)($supplier['discount_value'] ?? 0) ?>"
                                data-original="<?= (float)($supplier['discount_value'] ?? 0) ?>"
                                data-field="discount">
-                        <select class="form-select" style="max-width:60px;"
+                        <select class="form-select" style="max-width:70px; min-width:70px;"
                                 name="suppliers[<?= $idx ?>][discount_type]"
                                 data-original="<?= $supplier['discount_type'] ?? 'percent' ?>">
                             <option value="percent" <?= ($supplier['discount_type'] ?? 'percent') === 'percent' ? 'selected' : '' ?>>%</option>
@@ -253,7 +253,7 @@
                                value="<?= (float)($supplier['surcharge_value'] ?? 0) ?>"
                                data-original="<?= (float)($supplier['surcharge_value'] ?? 0) ?>"
                                data-field="surcharge">
-                        <select class="form-select" style="max-width:60px;"
+                        <select class="form-select" style="max-width:70px; min-width:70px;"
                                 name="suppliers[<?= $idx ?>][surcharge_type]"
                                 data-original="<?= $supplier['surcharge_type'] ?? 'percent' ?>">
                             <option value="percent" <?= ($supplier['surcharge_type'] ?? 'percent') === 'percent' ? 'selected' : '' ?>>%</option>
