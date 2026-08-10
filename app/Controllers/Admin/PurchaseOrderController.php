@@ -4395,4 +4395,58 @@ class PurchaseOrderController extends Controller
 
         return ['success' => true, 'materials' => $parsed, 'totals' => null];
     }
+
+    /**
+     * Visualizar logs de debug das cotações
+     */
+    public function quoteLogs(): void
+    {
+        $orderId = (int) $this->input('order_id', 0);
+
+        if ($orderId > 0) {
+            $result = \App\Services\QuoteLogger::getLogByOrder($orderId);
+            $logs = $result;
+            $total = count($result);
+        } else {
+            $result = \App\Services\QuoteLogger::listLogs(50);
+            $logs = $result['logs'] ?? [];
+            $total = $result['total'] ?? 0;
+        }
+
+        $this->view('admin.orders.quote_logs', [
+            'logs' => $logs,
+            'total' => $total,
+            'filterOrderId' => $orderId,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
+    }
+
+    /**
+     * Visualizar um log específico de cotação (JSON completo)
+     */
+    public function quoteLogView(): void
+    {
+        $filename = $this->input('file', '');
+
+        if (empty($filename)) {
+            $this->redirect('/admin/orders/quote-logs');
+            return;
+        }
+
+        $log = \App\Services\QuoteLogger::getLog($filename);
+
+        if (!$log) {
+            $this->setFlash('error', 'Log não encontrado.');
+            $this->redirect('/admin/orders/quote-logs');
+            return;
+        }
+
+        $this->view('admin.orders.quote_log_detail', [
+            'log' => $log,
+            'filename' => $filename,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
+    }
 }

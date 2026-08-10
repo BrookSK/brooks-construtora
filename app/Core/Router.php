@@ -147,6 +147,8 @@ class Router
             'orders/send-invite-webhook' => ['PurchaseOrderController', 'sendInviteWebhook'],
             'orders/edit-items' => ['PurchaseOrderController', 'editItems'],
             'orders/update-items' => ['PurchaseOrderController', 'updateItems'],
+            'orders/quote-logs' => ['PurchaseOrderController', 'quoteLogs'],
+            'orders/quote-logs/view' => ['PurchaseOrderController', 'quoteLogView'],
 
             // Obras
             'obras' => ['ConstructionSiteController', 'index'],
@@ -359,6 +361,7 @@ class Router
             'pedido/cotacao/send-to-supplier' => ['PurchaseOrderController', 'sendToSupplier'],
             'pedido/cotacao/parse-ai-quote' => ['PurchaseOrderController', 'parseAiQuote'],
             'pedido/cotacao/get-contacts' => ['PurchaseOrderController', 'getSupplierContacts'],
+            'pedido/cotacao/log' => ['PurchaseOrderController', 'logQuoteFrontend'],
 
             // PIN Auth
             'pin/login' => ['PinAuthController', 'login'],

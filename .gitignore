@@ -19,3 +19,7 @@ Brooks-Novo-Sistema-Com-Revista-DOCUMENTACAO.md
 # Videos (muito grandes para Git - subir direto no servidor)
 *.mov
 *.mp4
+
+# Quote debug logs (mantém a estrutura, ignora arquivos de log)
+/storage/logs/quotes/*
+!/storage/logs/quotes/.gitkeep

@@ -247,6 +247,11 @@
                     <i class="bi bi-receipt"></i> NF / Boletos
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'quote_logs' ? 'active' : '' ?>" href="/admin/orders/quote-logs">
+                    <i class="bi bi-bug"></i> Logs Cotação
+                </a>
+            </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('orders') || \App\Core\Auth::hasPermission('epi')): ?>
             <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">

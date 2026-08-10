@@ -24,6 +24,7 @@ use App\Services\MailService;
 use App\Services\EmailTemplate;
 use App\Services\NotificationService;
 use App\Services\XlsxService;
+use App\Services\QuoteLogger;
 
 class PurchaseOrderController extends Controller
 {
@@ -231,6 +232,31 @@ class PurchaseOrderController extends Controller
         $supplierIds = $_POST['supplier_ids'] ?? [];
         $lowestTotal = PHP_FLOAT_MAX;
 
+        // ─── LOG: Dados brutos recebidos do POST ────────────────────────────
+        $quoteLogData = [
+            'order_code' => $order['code'] ?? "#{$order['id']}",
+            'order_status_before' => $order['status'],
+            'quoted_by' => $quotedByName,
+            'raw_post' => [
+                'supplier_ids' => $supplierIds,
+                'supplier_prices' => $supplierPrices,
+                'supplier_financials' => $supplierFinancials,
+                'already_purchased' => $_POST['already_purchased'] ?? [],
+                'already_purchased_qty' => $_POST['already_purchased_qty'] ?? [],
+                'quote_stock' => $_POST['quote_stock'] ?? [],
+            ],
+            'items_from_db' => array_map(function ($i) {
+                return [
+                    'id' => $i['id'],
+                    'material_name' => $i['material_name'],
+                    'quantity' => $i['quantity'],
+                    'already_purchased' => $i['already_purchased'] ?? 0,
+                    'already_purchased_qty' => $i['already_purchased_qty'] ?? null,
+                ];
+            }, $items),
+            'suppliers_processing' => [],
+        ];
+
         // Pré-processar "já comprado" do POST para usar no cálculo de preços
         $alreadyPurchasedPost = $_POST['already_purchased'] ?? [];
         $alreadyPurchasedQtysPost = $_POST['already_purchased_qty'] ?? [];
@@ -284,23 +310,30 @@ class PurchaseOrderController extends Controller
                 Database::query("DELETE FROM purchase_order_item_prices WHERE order_id = ? AND supplier_id = ?", [$order['id'], $sid]);
                 $supplierTotal = 0;
                 $pricesForHistory = [];
+                $supplierItemsLog = []; // LOG: detalhes por item
                 if (isset($supplierPrices[$sid])) {
                     foreach ($supplierPrices[$sid] as $itemId => $priceStr) {
                         $unitPrice = (float) str_replace(['.', ','], ['', '.'], $priceStr);
                         $item = PurchaseOrderItem::find((int) $itemId);
                         if ($item && $item['order_id'] == $order['id']) {
-                            $qty = (float) $item['quantity'];
+                            $qtyOriginal = (float) $item['quantity'];
+                            $qty = $qtyOriginal;
+                            $stockDeducted = 0;
+                            $purchasedDeducted = 0;
                             // Descontar quantidade distribuída do estoque (o frontend já descontou do data-qty)
                             if (isset($stockDeductionByItem[(int) $itemId])) {
-                                $qty = max(0, $qty - $stockDeductionByItem[(int) $itemId]);
+                                $stockDeducted = $stockDeductionByItem[(int) $itemId];
+                                $qty = max(0, $qty - $stockDeducted);
                             }
                             // Descontar quantidade já comprada (do POST, pois ainda não foi salvo no banco)
                             if (isset($alreadyPurchasedPost[$itemId])) {
                                 $apQty = isset($alreadyPurchasedQtysPost[$itemId]) ? (float) $alreadyPurchasedQtysPost[$itemId] : $qty;
+                                $purchasedDeducted = $apQty;
                                 $qty = max(0, $qty - $apQty);
                             } elseif (!empty($item['already_purchased']) && !empty($item['already_purchased_qty'])) {
                                 // Fallback: se já estava salvo no banco (edição sem alterar o checkbox)
-                                $qty = max(0, $qty - (float) $item['already_purchased_qty']);
+                                $purchasedDeducted = (float) $item['already_purchased_qty'];
+                                $qty = max(0, $qty - $purchasedDeducted);
                             }
                             // Se quantidade é 0 (comum em serviços/locação), trata como 1
                             // para que o preço unitário informado seja o total
@@ -318,6 +351,20 @@ class PurchaseOrderController extends Controller
                                 'created_at' => date('Y-m-d H:i:s'),
                             ]);
                             $pricesForHistory[$item['id']] = $unitPrice;
+
+                            // LOG: registrar detalhes deste item
+                            $supplierItemsLog[] = [
+                                'item_id' => (int) $itemId,
+                                'material_name' => $item['material_name'] ?? '',
+                                'price_str_raw' => $priceStr,
+                                'unit_price_parsed' => $unitPrice,
+                                'qty_original_db' => $qtyOriginal,
+                                'stock_deducted' => $stockDeducted,
+                                'purchased_deducted' => $purchasedDeducted,
+                                'qty_final' => $qty,
+                                'total_price_calculated' => $totalPrice,
+                                'formula' => $qty > 0 ? "{$unitPrice} * {$qty} = {$totalPrice}" : "{$unitPrice} (qty=0, usado como total)",
+                            ];
                         }
                     }
                 }
@@ -438,6 +485,25 @@ class PurchaseOrderController extends Controller
                 }
 
                 if ($finalTotal < $lowestTotal) $lowestTotal = $finalTotal;
+
+                // LOG: registrar dados deste fornecedor
+                $quoteLogData['suppliers_processing'][] = [
+                    'supplier_id' => $sid,
+                    'items' => $supplierItemsLog,
+                    'subtotal_items' => $supplierTotal,
+                    'financials' => [
+                        'discount_type' => $discountType,
+                        'discount_value' => $discountValue,
+                        'surcharge_type' => $surchargeType,
+                        'surcharge_value' => $surchargeValue,
+                        'ipi_percent' => $ipiPercent,
+                        'icms_percent' => $icmsPercent,
+                        'freight' => $freight,
+                        'freight_raw' => $fin['freight'] ?? '0',
+                    ],
+                    'final_total' => $finalTotal,
+                    'formula_final' => "subtotal({$supplierTotal}) - desc + acresc + ipi + icms + frete({$freight}) = {$finalTotal}",
+                ];
             }
         } else {
             // Fluxo legado (sem fornecedores)
@@ -605,6 +671,17 @@ class PurchaseOrderController extends Controller
 
         // Enviar notificações de aprovação
         $this->sendApprovalNotifications($order['id'], $order['approval_token']);
+
+        // ─── LOG: Registrar log completo da cotação ─────────────────────────
+        $quoteLogData['stock_deductions'] = $stockDeductionByItem;
+        $quoteLogData['lowest_total'] = $lowestTotal != PHP_FLOAT_MAX ? $lowestTotal : 0;
+        $quoteLogData['total_saved_to_order'] = $lowestTotal != PHP_FLOAT_MAX ? $lowestTotal : 0;
+        try {
+            QuoteLogger::logBackend($order['id'], $token, $quoteLogData);
+        } catch (\Throwable $e) {
+            // Log não deve impedir o funcionamento normal
+            error_log("QuoteLogger error: " . $e->getMessage());
+        }
 
         $this->view('site.orders.quote_success', [
             'order' => $order,
@@ -1272,6 +1349,30 @@ class PurchaseOrderController extends Controller
         }
 
         $this->json(['success' => true, 'http_code' => $httpCode]);
+    }
+
+    /**
+     * Receber log do frontend para diagnóstico de cotação (chamado via AJAX antes do submit)
+     */
+    public function logQuoteFrontend(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $rawBody = file_get_contents('php://input');
+        $data = json_decode($rawBody, true);
+
+        if (!$data || empty($data['token'])) {
+            $this->json(['error' => 'Dados incompletos.'], 400);
+            return;
+        }
+
+        $token = $data['token'];
+        $logId = QuoteLogger::logFrontend($token, $data);
+
+        $this->json(['success' => true, 'log_id' => $logId]);
     }
 
     /**

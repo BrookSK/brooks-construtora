@@ -454,6 +454,7 @@
     const priceHistory = <?= json_encode($priceHistory ?? []) ?>;
     const orderType = '<?= $order['order_type'] ?? 'material' ?>';
     const orderId = <?= (int)$order['id'] ?>;
+    const quoteToken = '<?= htmlspecialchars($token) ?>';
     const allMaterials = <?= json_encode($allMaterials ?? []) ?>;
     let supplierCount = 0;
 
@@ -1851,6 +1852,19 @@ function confirmSubmit() {
         window._priceAlertsConfirmed = true;
     }
 
+    // ─── LOG: Capturar valores ANTES da conversão ─────────────────────────
+    const _logBeforeConversion = [];
+    document.querySelectorAll('.price-input').forEach(input => {
+        _logBeforeConversion.push({
+            name: input.name,
+            value_before: input.value,
+            parsed_value: parseBRL(input.value),
+            data_qty: input.dataset.qty,
+            item_id: input.dataset.itemId || '',
+        });
+    });
+    window._quoteLogBeforeConversion = _logBeforeConversion;
+
     // Se está no modo "total", converter todos os preços para unitário antes de enviar
     // Usa ponto como separador decimal e 6 casas para preservar precisão
     // (ex: R$299,90 / 1000 = 0.299900 — evita arredondamento)
@@ -1936,6 +1950,65 @@ function confirmSubmit() {
     }
     
     bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+
+    // ─── LOG: Registrar snapshot completo antes do submit ─────────────────
+    const logData = {
+        token: quoteToken,
+        order_id: orderId,
+        timestamp: new Date().toISOString(),
+        price_mode: priceMode,
+        current_view: currentView,
+        user_agent: navigator.userAgent,
+        screen: { width: screen.width, height: screen.height },
+        values_before_conversion: window._quoteLogBeforeConversion || [],
+        suppliers: []
+    };
+
+    addedSuppliers.forEach(sid => {
+        const block = document.getElementById('supplier-block-' + sid);
+        if (!block) return;
+        const supplierLog = {
+            supplier_id: sid,
+            supplier_name: supplierNames[sid] || '',
+            items: [],
+            financials: {},
+        };
+
+        // Capturar valores dos inputs APÓS conversão (o que será enviado no POST)
+        block.querySelectorAll('.price-input').forEach(input => {
+            supplierLog.items.push({
+                item_id: input.dataset.itemId || '',
+                name: input.name,
+                value_in_input: input.value,
+                data_qty: input.dataset.qty,
+                data_sid: input.dataset.sid,
+            });
+        });
+
+        // Financeiros
+        ['discount_value', 'discount_type', 'surcharge_value', 'surcharge_type', 'ipi_percent', 'icms_percent', 'freight'].forEach(field => {
+            const el = block.querySelector(`[name="supplier_financials[${sid}][${field}]"]`);
+            if (el) supplierLog.financials[field] = el.value;
+        });
+
+        logData.suppliers.push(supplierLog);
+    });
+
+    // Enviar log via beacon (não bloqueia o submit)
+    try {
+        navigator.sendBeacon('/pedido/cotacao/log', JSON.stringify(logData));
+    } catch (e) {
+        // Fallback: fetch fire-and-forget
+        try {
+            fetch('/pedido/cotacao/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(logData),
+                keepalive: true
+            });
+        } catch (e2) {}
+    }
+
     document.getElementById('quoteForm').submit();
 }
 
