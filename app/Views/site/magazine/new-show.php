@@ -217,7 +217,7 @@ foreach ($pages as $page):
 <?php elseif ($layout === 'internal_06'): ?>
 <?php
     $allLines06 = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
-    $sideLines = array_slice($allLines06, 0, min(3, count($allLines06)));
+    $sideLines = array_slice($allLines06, 0, min(5, count($allLines06)));
     $bottomLines = array_slice($allLines06, count($sideLines));
     $bottomMid = (int)ceil(count($bottomLines) / 2);
 ?>

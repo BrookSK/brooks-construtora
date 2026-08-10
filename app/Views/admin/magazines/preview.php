@@ -280,7 +280,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php
     $allLines06 = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
     // Texto ao lado da img3 (coluna direita superior)
-    $sideLines = array_slice($allLines06, 0, min(3, count($allLines06)));
+    $sideLines = array_slice($allLines06, 0, min(5, count($allLines06)));
     // Texto embaixo em 2 colunas: esq continua, dir finaliza
     $bottomLines = array_slice($allLines06, count($sideLines));
     $bottomMid = (int)ceil(count($bottomLines) / 2);
