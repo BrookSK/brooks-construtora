@@ -1813,6 +1813,9 @@ function showReviewModal() {
 }
 
 function confirmSubmit() {
+    // Marcar que o submit está em andamento — impedir que o beforeunload salve draft com valores convertidos
+    window._quoteSubmitting = true;
+
     // Sincronizar valores do mapa para a lista antes do envio (proteção contra dessincronização)
     if (currentView === 'map') {
         document.querySelectorAll('.map-price-input').forEach(input => {
@@ -2733,7 +2736,7 @@ function removeServiceMaterial(sid, idx) {
 
     // ─── Salvar draft no localStorage ──────────────────────────────────────
     function saveDraft() {
-        if (!draftDirty) return;
+        if (!draftDirty || window._quoteSubmitting) return;
         try {
             const data = collectDraftData();
             // Só salvar se tem algum dado útil (pelo menos um fornecedor ou nome preenchido)
@@ -2900,12 +2903,12 @@ function removeServiceMaterial(sid, idx) {
 
     // 5) Salvar ao sair da página (beforeunload)
     window.addEventListener('beforeunload', () => {
-        if (draftDirty) saveDraft();
+        if (draftDirty && !window._quoteSubmitting) saveDraft();
     });
 
     // 6) Salvar quando a página perde visibilidade (troca de aba, minimizar)
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden && draftDirty) saveDraft();
+        if (document.hidden && draftDirty && !window._quoteSubmitting) saveDraft();
     });
 
     // 7) Limpar draft ao submeter formulário com sucesso
