@@ -45,7 +45,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-cover .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8)}
 
         /* ===== PÁGINA INTERNA BASE ===== */
-        .pg-int{padding:30px 35px;height:842px;min-height:842px;overflow:visible}
+        .pg-int{padding:30px 35px;height:842px;min-height:842px;overflow:hidden}
         .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
         .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
         .pg-int .logo-sm .ck{color:#2e7d32}
@@ -84,7 +84,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .img-placeholder{background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;color:#2e7d32;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
 
         /* ===== COLUNA DO CONVIDADO ===== */
-        .pg-guest{padding:40px 40px;min-height:842px}
+        .pg-guest{padding:40px 40px;height:842px;min-height:842px;overflow:visible}
         .pg-guest .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:25px}
         .pg-guest .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
         .pg-guest .logo-sm .ck{color:#2e7d32}
@@ -120,9 +120,10 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
     $img1 = $page['image_url'] ?? '';
     $img2 = $page['image_url_2'] ?? '';
     $showImages = ($page['show_images'] ?? '1') !== '0';
-    if (!$showImages) { $img1 = ''; $img2 = ''; }
-    $hideImagesClass = !$showImages ? ' style="display:none"' : '';
     $layout = $page['layout_type'] ?? 'internal_01';
+    // guest_column e construction_stories sempre mostram imagens (foto do autor, etc.)
+    if (!$showImages && !in_array($layout, ['guest_column', 'construction_stories'])) { $img1 = ''; $img2 = ''; }
+    $hideImagesClass = !$showImages ? ' style="display:none"' : '';
     // Numeração começa em 01 a partir das páginas internas (ignora cover e subcover)
     static $internalPageNum = 0;
     if (!in_array($layout, ['cover', 'subcover', 'backcover'])) {
@@ -418,168 +419,163 @@ function generatePDF() {
     })();
 }
 
-// Paginação automática: quando conteúdo excede a altura da página, cria páginas de continuação
+// Ajuste de páginas: paginação para guest_column/construction_stories, redução de fonte para demais
 document.addEventListener('DOMContentLoaded', function() {
     var PAGE_HEIGHT = 842;
-    var PADDING_TOP = 30;
-    var PADDING_BOTTOM = 30;
-    var MAX_CONTENT_HEIGHT = PAGE_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
 
-    function paginateOverflowingPages() {
+    function processPages() {
         var pages = document.querySelectorAll('.preview .page');
-        var pagesToProcess = [];
-        
+
         pages.forEach(function(page) {
-            if (page.scrollHeight > PAGE_HEIGHT + 5) {
-                pagesToProcess.push(page);
-            }
-        });
+            var shouldPaginate = page.classList.contains('pg-guest') || page.classList.contains('pg-stories');
 
-        pagesToProcess.forEach(function(page) {
-            var header = page.querySelector('.hdr');
-            var headerHTML = header ? header.outerHTML : '';
-            var pagePadding = window.getComputedStyle(page).padding || '30px 35px';
-            
-            // Coleta todos os elementos filhos que são conteúdo (exceto header)
-            var children = Array.from(page.children);
-            var contentElements = [];
-            children.forEach(function(child) {
-                if (!child.classList.contains('hdr')) {
-                    contentElements.push(child);
-                }
-            });
+            if (page.scrollHeight <= PAGE_HEIGHT + 5) return;
 
-            // Determina quais elementos cabem na primeira página
-            var currentHeight = header ? header.offsetHeight + 20 : 0;
-            var firstPageElements = [];
-            var overflowElements = [];
-            var overflowed = false;
-
-            contentElements.forEach(function(el) {
-                if (overflowed) {
-                    overflowElements.push(el);
-                    return;
-                }
-                var elHeight = el.offsetHeight + parseInt(window.getComputedStyle(el).marginBottom || 0) + parseInt(window.getComputedStyle(el).marginTop || 0);
-                if (currentHeight + elHeight > MAX_CONTENT_HEIGHT) {
-                    // Tenta dividir se é um container com parágrafos
-                    var paragraphs = el.querySelectorAll('p');
-                    if (paragraphs.length > 1 || el.classList.contains('column-content') || el.classList.contains('two-col')) {
-                        var innerChildren = el.children.length > 0 ? Array.from(el.children) : [];
-                        if (innerChildren.length > 1) {
-                            var cloneBefore = el.cloneNode(false);
-                            var cloneAfter = el.cloneNode(false);
-                            var innerOverflowed = false;
-                            var innerHeight = currentHeight;
-
-                            innerChildren.forEach(function(innerEl) {
-                                if (innerOverflowed) {
-                                    cloneAfter.appendChild(innerEl.cloneNode(true));
-                                } else {
-                                    var iH = innerEl.offsetHeight + 14;
-                                    if (innerHeight + iH > MAX_CONTENT_HEIGHT) {
-                                        innerOverflowed = true;
-                                        cloneAfter.appendChild(innerEl.cloneNode(true));
-                                    } else {
-                                        innerHeight += iH;
-                                        cloneBefore.appendChild(innerEl.cloneNode(true));
-                                    }
-                                }
-                            });
-
-                            if (cloneBefore.children.length > 0) {
-                                firstPageElements.push(cloneBefore);
-                            }
-                            if (cloneAfter.children.length > 0) {
-                                overflowElements.push(cloneAfter);
-                            }
-                            overflowed = true;
-                        } else {
-                            overflowElements.push(el);
-                            overflowed = true;
-                        }
-                    } else {
-                        overflowElements.push(el);
-                        overflowed = true;
-                    }
-                } else {
-                    currentHeight += elHeight;
-                    firstPageElements.push(el);
-                }
-            });
-
-            if (overflowElements.length === 0) return;
-
-            // Limpa a página original e reinsere apenas o que cabe
-            while (page.firstChild) page.removeChild(page.firstChild);
-            if (header) page.appendChild(header);
-            firstPageElements.forEach(function(el) {
-                page.appendChild(el.cloneNode ? el : el);
-            });
-            page.style.height = PAGE_HEIGHT + 'px';
-            page.style.minHeight = PAGE_HEIGHT + 'px';
-            page.style.overflow = 'hidden';
-
-            // Cria página(s) de continuação
-            var remainingElements = overflowElements;
-            while (remainingElements.length > 0) {
-                var newPage = document.createElement('div');
-                newPage.className = page.className;
-                newPage.style.cssText = 'padding:' + pagePadding + ';height:' + PAGE_HEIGHT + 'px;min-height:' + PAGE_HEIGHT + 'px;overflow:hidden;';
-                newPage.innerHTML = headerHTML;
-
-                page.parentNode.insertBefore(newPage, page.nextSibling);
-
-                var newPageHeight = header ? 50 : 0;
-                var nextRemaining = [];
-                var addedAny = false;
-
-                remainingElements.forEach(function(el) {
-                    if (nextRemaining.length > 0) {
-                        nextRemaining.push(el);
-                        return;
-                    }
-                    newPage.appendChild(el.cloneNode ? el.cloneNode(true) : el);
-                    var elActualHeight = newPage.lastChild.offsetHeight + 14;
-                    if (newPageHeight + elActualHeight > MAX_CONTENT_HEIGHT && addedAny) {
-                        nextRemaining.push(el);
-                        newPage.removeChild(newPage.lastChild);
-                    } else {
-                        newPageHeight += elActualHeight;
-                        addedAny = true;
-                    }
-                });
-
-                remainingElements = nextRemaining;
-                page = newPage;
+            if (shouldPaginate) {
+                paginatePage(page);
+            } else {
+                shrinkPage(page);
             }
         });
     }
 
-    // Aguarda imagens carregarem antes de paginar
+    function shrinkPage(page) {
+        var attempts = 0;
+        while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 4) {
+            var currentSize = parseFloat(window.getComputedStyle(page).fontSize) || 14;
+            page.style.fontSize = (currentSize - 0.5) + 'px';
+            attempts++;
+        }
+        page.style.overflow = 'hidden';
+    }
+
+    function paginatePage(page) {
+        var MAX_CONTENT_HEIGHT = PAGE_HEIGHT - 60;
+        var header = page.querySelector('.hdr');
+        var headerHTML = header ? header.outerHTML : '';
+        var pageClass = page.className;
+
+        var children = Array.from(page.children);
+        var contentElements = [];
+        children.forEach(function(child) {
+            if (!child.classList.contains('hdr')) contentElements.push(child);
+        });
+
+        var currentHeight = header ? header.offsetHeight + 20 : 0;
+        var firstPageElements = [];
+        var overflowElements = [];
+        var overflowed = false;
+
+        contentElements.forEach(function(el) {
+            if (overflowed) {
+                overflowElements.push(el.cloneNode(true));
+                return;
+            }
+            var style = window.getComputedStyle(el);
+            var elHeight = el.offsetHeight + parseInt(style.marginBottom || 0) + parseInt(style.marginTop || 0);
+
+            if (currentHeight + elHeight > MAX_CONTENT_HEIGHT) {
+                var innerChildren = Array.from(el.children);
+                if (innerChildren.length > 1) {
+                    var cloneBefore = el.cloneNode(false);
+                    var cloneAfter = el.cloneNode(false);
+                    var innerOverflowed = false;
+                    var innerHeight = currentHeight;
+
+                    innerChildren.forEach(function(innerEl) {
+                        if (innerOverflowed) {
+                            cloneAfter.appendChild(innerEl.cloneNode(true));
+                        } else {
+                            var iH = innerEl.offsetHeight + 14;
+                            if (innerHeight + iH > MAX_CONTENT_HEIGHT) {
+                                innerOverflowed = true;
+                                cloneAfter.appendChild(innerEl.cloneNode(true));
+                            } else {
+                                innerHeight += iH;
+                                cloneBefore.appendChild(innerEl.cloneNode(true));
+                            }
+                        }
+                    });
+
+                    if (cloneBefore.children.length > 0) firstPageElements.push(cloneBefore);
+                    if (cloneAfter.children.length > 0) overflowElements.push(cloneAfter);
+                    overflowed = true;
+                } else {
+                    overflowElements.push(el.cloneNode(true));
+                    overflowed = true;
+                }
+            } else {
+                currentHeight += elHeight;
+                firstPageElements.push(el);
+            }
+        });
+
+        if (overflowElements.length === 0) {
+            page.style.overflow = 'hidden';
+            return;
+        }
+
+        while (page.firstChild) page.removeChild(page.firstChild);
+        if (header) page.appendChild(header);
+        firstPageElements.forEach(function(el) { page.appendChild(el); });
+        page.style.height = PAGE_HEIGHT + 'px';
+        page.style.overflow = 'hidden';
+
+        var remainingElements = overflowElements;
+        var prevPage = page;
+        while (remainingElements.length > 0) {
+            var newPage = document.createElement('div');
+            newPage.className = pageClass;
+            newPage.style.height = PAGE_HEIGHT + 'px';
+            newPage.style.minHeight = PAGE_HEIGHT + 'px';
+            newPage.style.overflow = 'hidden';
+            newPage.innerHTML = headerHTML;
+
+            prevPage.parentNode.insertBefore(newPage, prevPage.nextSibling);
+
+            var newPageHeight = 50;
+            var nextRemaining = [];
+            var addedAny = false;
+
+            for (var i = 0; i < remainingElements.length; i++) {
+                var el = remainingElements[i];
+                newPage.appendChild(el);
+                var elActualHeight = el.offsetHeight + 14;
+                if (newPageHeight + elActualHeight > MAX_CONTENT_HEIGHT && addedAny) {
+                    newPage.removeChild(el);
+                    nextRemaining = remainingElements.slice(i);
+                    break;
+                }
+                newPageHeight += elActualHeight;
+                addedAny = true;
+            }
+
+            remainingElements = nextRemaining;
+            prevPage = newPage;
+        }
+    }
+
+    // Aguarda imagens carregarem
     var images = document.querySelectorAll('.preview img');
     var loadedCount = 0;
     var totalImages = images.length;
 
     function checkAllLoaded() {
         loadedCount++;
-        if (loadedCount >= totalImages) {
-            paginateOverflowingPages();
-        }
+        if (loadedCount >= totalImages) processPages();
     }
 
     if (totalImages === 0) {
-        paginateOverflowingPages();
+        processPages();
     } else {
         images.forEach(function(img) {
-            if (img.complete) {
-                checkAllLoaded();
-            } else {
+            if (img.complete) checkAllLoaded();
+            else {
                 img.addEventListener('load', checkAllLoaded);
                 img.addEventListener('error', checkAllLoaded);
             }
         });
-        setTimeout(paginateOverflowingPages, 3000);
+        setTimeout(processPages, 3000);
     }
 });
 </script>

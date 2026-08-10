@@ -45,7 +45,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .pg-cover .logo{margin:auto;max-width:220px;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7))}
 .mag-preview .pg-cover .topic{font-size:1.4rem;font-weight:800;color:#fff;font-style:italic;text-align:left;padding:15px 30px;margin-top:auto;margin-bottom:70px;text-shadow:0 2px 10px rgba(0,0,0,0.8)}
 .mag-preview .pg-cover .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8)}
-.mag-preview .pg-int{padding:30px 35px;height:842px;min-height:842px;overflow:visible}
+.mag-preview .pg-int{padding:30px 35px;height:842px;min-height:842px;overflow:hidden}
 .mag-preview .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
 .mag-preview .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
 .mag-preview .pg-int .logo-sm .ck{color:#2e7d32}
@@ -83,6 +83,12 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .pg-stories .story-item{margin-bottom:18px;padding-left:15px;border-left:3px solid #2e7d32}
 .mag-preview .pg-stories .story-item .story-title{font-weight:700;font-size:0.82rem;color:#111;margin-bottom:4px}
 .mag-preview .pg-stories .story-item .story-text{font-size:0.75rem;line-height:1.7;color:#444;text-align:justify}
+.mag-preview .pg-guest{padding:40px 40px;height:842px;min-height:842px;overflow:visible}
+.mag-preview .pg-guest .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+.mag-preview .pg-guest .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
+.mag-preview .pg-guest .logo-sm .ck{color:#2e7d32}
+.mag-preview .pg-guest .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
+.mag-preview .pg-guest .pn{font-size:1rem;font-weight:300;color:#333}
 #pdf-loading{display:none;text-align:center;margin:30px 0 50px;}
 #pdf-loading .spinner{display:inline-block;width:24px;height:24px;border:3px solid #ddd;border-top-color:var(--brooks-navy);border-radius:50%;animation:pdfspin 0.8s linear infinite;margin-bottom:10px;}
 @keyframes pdfspin{to{transform:rotate(360deg)}}
@@ -117,8 +123,9 @@ foreach ($pages as $page):
     $img1 = $page['image_url'] ?? '';
     $img2 = $page['image_url_2'] ?? '';
     $showImages = ($page['show_images'] ?? '1') !== '0';
-    if (!$showImages) { $img1 = ''; $img2 = ''; }
     $layout = $page['layout_type'] ?? 'internal_01';
+    // guest_column e construction_stories sempre mostram imagens
+    if (!$showImages && !in_array($layout, ['guest_column', 'construction_stories'])) { $img1 = ''; $img2 = ''; }
     if (!in_array($layout, ['cover','subcover','backcover'])) $intNum++;
     $displayPageNum = str_pad($intNum, 2, '0', STR_PAD_LEFT);
 ?>
@@ -148,7 +155,7 @@ foreach ($pages as $page):
 </div>
 
 <?php elseif ($layout === 'guest_column'): ?>
-<div class="page pg-int" style="padding:40px 40px;">
+<div class="page pg-guest">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:#2e7d32;font-weight:600;margin-bottom:8px;"><?= htmlspecialchars($page['caption'] ?? 'Coluna do Convidado') ?></div>
     <div style="display:flex;align-items:center;gap:15px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #2e7d32;">
@@ -304,173 +311,172 @@ function generatePDF() {
     })();
 }
 
-// Paginação automática: quando conteúdo excede a altura da página, cria páginas de continuação
+// Ajuste de páginas: paginação para guest_column/construction_stories, redução de fonte para demais
 document.addEventListener('DOMContentLoaded', function() {
     var PAGE_HEIGHT = 842;
-    var PADDING_TOP = 30;
-    var PADDING_BOTTOM = 30;
-    var MAX_CONTENT_HEIGHT = PAGE_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
 
-    function paginateOverflowingPages() {
+    function processPages() {
         var pages = document.querySelectorAll('.mag-preview .page');
-        var pagesToProcess = [];
-        
+
         pages.forEach(function(page) {
-            if (page.scrollHeight > PAGE_HEIGHT + 5) {
-                pagesToProcess.push(page);
-            }
-        });
+            // Identifica se é uma página que deve paginar (quebrar) ou apenas reduzir fonte
+            var shouldPaginate = page.classList.contains('pg-guest') || page.classList.contains('pg-stories');
 
-        pagesToProcess.forEach(function(page) {
-            var header = page.querySelector('.hdr');
-            var headerHTML = header ? header.outerHTML : '';
-            var isGuest = page.classList.contains('pg-int') || page.style.padding;
-            var pagePadding = page.style.padding || '30px 35px';
-            
-            // Coleta todos os elementos filhos que são conteúdo (exceto header)
-            var children = Array.from(page.children);
-            var contentElements = [];
-            children.forEach(function(child) {
-                if (!child.classList.contains('hdr')) {
-                    contentElements.push(child);
-                }
-            });
+            if (page.scrollHeight <= PAGE_HEIGHT + 5) return; // Não tem overflow
 
-            // Determina quais elementos cabem na primeira página
-            var currentHeight = header ? header.offsetHeight + 20 : 0;
-            var firstPageElements = [];
-            var overflowElements = [];
-            var overflowed = false;
-
-            contentElements.forEach(function(el) {
-                if (overflowed) {
-                    overflowElements.push(el);
-                    return;
-                }
-                var elHeight = el.offsetHeight + parseInt(window.getComputedStyle(el).marginBottom || 0) + parseInt(window.getComputedStyle(el).marginTop || 0);
-                if (currentHeight + elHeight > MAX_CONTENT_HEIGHT) {
-                    // Tenta dividir se é um container com parágrafos
-                    var paragraphs = el.querySelectorAll('p');
-                    if (paragraphs.length > 1 || el.classList.contains('column-content') || el.classList.contains('two-col')) {
-                        var innerChildren = el.children.length > 0 ? Array.from(el.children) : [];
-                        if (innerChildren.length > 1) {
-                            // Divide o container interno
-                            var cloneBefore = el.cloneNode(false);
-                            var cloneAfter = el.cloneNode(false);
-                            var innerOverflowed = false;
-                            var innerHeight = currentHeight;
-
-                            innerChildren.forEach(function(innerEl) {
-                                if (innerOverflowed) {
-                                    cloneAfter.appendChild(innerEl.cloneNode(true));
-                                } else {
-                                    var iH = innerEl.offsetHeight + 14;
-                                    if (innerHeight + iH > MAX_CONTENT_HEIGHT) {
-                                        innerOverflowed = true;
-                                        cloneAfter.appendChild(innerEl.cloneNode(true));
-                                    } else {
-                                        innerHeight += iH;
-                                        cloneBefore.appendChild(innerEl.cloneNode(true));
-                                    }
-                                }
-                            });
-
-                            if (cloneBefore.children.length > 0) {
-                                firstPageElements.push(cloneBefore);
-                            }
-                            if (cloneAfter.children.length > 0) {
-                                overflowElements.push(cloneAfter);
-                            }
-                            overflowed = true;
-                        } else {
-                            overflowElements.push(el);
-                            overflowed = true;
-                        }
-                    } else {
-                        overflowElements.push(el);
-                        overflowed = true;
-                    }
-                } else {
-                    currentHeight += elHeight;
-                    firstPageElements.push(el);
-                }
-            });
-
-            if (overflowElements.length === 0) return;
-
-            // Limpa a página original e reinsere apenas o que cabe
-            while (page.firstChild) page.removeChild(page.firstChild);
-            if (header) page.appendChild(header);
-            firstPageElements.forEach(function(el) {
-                page.appendChild(el.cloneNode ? el : el);
-            });
-            page.style.height = PAGE_HEIGHT + 'px';
-            page.style.overflow = 'hidden';
-
-            // Cria página(s) de continuação
-            var remainingElements = overflowElements;
-            while (remainingElements.length > 0) {
-                var newPage = document.createElement('div');
-                newPage.className = page.className;
-                newPage.style.cssText = 'padding:' + pagePadding + ';height:' + PAGE_HEIGHT + 'px;min-height:' + PAGE_HEIGHT + 'px;overflow:hidden;';
-                newPage.innerHTML = headerHTML;
-
-                // Insere a nova página após a página atual
-                page.parentNode.insertBefore(newPage, page.nextSibling);
-
-                // Adiciona elementos à nova página até encher
-                var newPageHeight = header ? 50 : 0;
-                var nextRemaining = [];
-                var addedAny = false;
-
-                remainingElements.forEach(function(el) {
-                    if (nextRemaining.length > 0) {
-                        nextRemaining.push(el);
-                        return;
-                    }
-                    newPage.appendChild(el.cloneNode ? el.cloneNode(true) : el);
-                    var elActualHeight = newPage.lastChild.offsetHeight + 14;
-                    if (newPageHeight + elActualHeight > MAX_CONTENT_HEIGHT && addedAny) {
-                        // Não cabe, remove e coloca no próximo
-                        nextRemaining.push(el);
-                        newPage.removeChild(newPage.lastChild);
-                    } else {
-                        newPageHeight += elActualHeight;
-                        addedAny = true;
-                    }
-                });
-
-                remainingElements = nextRemaining;
-                page = newPage; // Próxima continuação vem depois desta
+            if (shouldPaginate) {
+                paginatePage(page);
+            } else {
+                // Para páginas normais: reduz font-size suavemente (máx 2px)
+                shrinkPage(page);
             }
         });
     }
 
-    // Aguarda imagens carregarem antes de paginar
+    function shrinkPage(page) {
+        var attempts = 0;
+        while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 4) {
+            var currentSize = parseFloat(window.getComputedStyle(page).fontSize) || 14;
+            page.style.fontSize = (currentSize - 0.5) + 'px';
+            attempts++;
+        }
+        page.style.overflow = 'hidden';
+    }
+
+    function paginatePage(page) {
+        var MAX_CONTENT_HEIGHT = PAGE_HEIGHT - 60; // padding top + bottom
+        var header = page.querySelector('.hdr');
+        var headerHTML = header ? header.outerHTML : '';
+        var pageClass = page.className;
+
+        // Coleta todos os elementos filhos que são conteúdo (exceto header)
+        var children = Array.from(page.children);
+        var contentElements = [];
+        children.forEach(function(child) {
+            if (!child.classList.contains('hdr')) {
+                contentElements.push(child);
+            }
+        });
+
+        // Determina quais elementos cabem na primeira página
+        var currentHeight = header ? header.offsetHeight + 20 : 0;
+        var firstPageElements = [];
+        var overflowElements = [];
+        var overflowed = false;
+
+        contentElements.forEach(function(el) {
+            if (overflowed) {
+                overflowElements.push(el.cloneNode(true));
+                return;
+            }
+            var style = window.getComputedStyle(el);
+            var elHeight = el.offsetHeight + parseInt(style.marginBottom || 0) + parseInt(style.marginTop || 0);
+
+            if (currentHeight + elHeight > MAX_CONTENT_HEIGHT) {
+                // Tenta dividir se tem sub-elementos (parágrafos)
+                var innerChildren = Array.from(el.children);
+                if (innerChildren.length > 1) {
+                    var cloneBefore = el.cloneNode(false);
+                    var cloneAfter = el.cloneNode(false);
+                    var innerOverflowed = false;
+                    var innerHeight = currentHeight;
+
+                    innerChildren.forEach(function(innerEl) {
+                        if (innerOverflowed) {
+                            cloneAfter.appendChild(innerEl.cloneNode(true));
+                        } else {
+                            var iH = innerEl.offsetHeight + 14;
+                            if (innerHeight + iH > MAX_CONTENT_HEIGHT) {
+                                innerOverflowed = true;
+                                cloneAfter.appendChild(innerEl.cloneNode(true));
+                            } else {
+                                innerHeight += iH;
+                                cloneBefore.appendChild(innerEl.cloneNode(true));
+                            }
+                        }
+                    });
+
+                    if (cloneBefore.children.length > 0) firstPageElements.push(cloneBefore);
+                    if (cloneAfter.children.length > 0) overflowElements.push(cloneAfter);
+                    overflowed = true;
+                } else {
+                    overflowElements.push(el.cloneNode(true));
+                    overflowed = true;
+                }
+            } else {
+                currentHeight += elHeight;
+                firstPageElements.push(el);
+            }
+        });
+
+        if (overflowElements.length === 0) {
+            page.style.overflow = 'hidden';
+            return;
+        }
+
+        // Reconstrói a página original com só o que cabe
+        while (page.firstChild) page.removeChild(page.firstChild);
+        if (header) page.appendChild(header);
+        firstPageElements.forEach(function(el) { page.appendChild(el); });
+        page.style.height = PAGE_HEIGHT + 'px';
+        page.style.overflow = 'hidden';
+
+        // Cria página(s) de continuação
+        var remainingElements = overflowElements;
+        var prevPage = page;
+        while (remainingElements.length > 0) {
+            var newPage = document.createElement('div');
+            newPage.className = pageClass;
+            newPage.style.height = PAGE_HEIGHT + 'px';
+            newPage.style.minHeight = PAGE_HEIGHT + 'px';
+            newPage.style.overflow = 'hidden';
+            newPage.innerHTML = headerHTML;
+
+            prevPage.parentNode.insertBefore(newPage, prevPage.nextSibling);
+
+            var newPageHeight = 50;
+            var nextRemaining = [];
+            var addedAny = false;
+
+            for (var i = 0; i < remainingElements.length; i++) {
+                var el = remainingElements[i];
+                newPage.appendChild(el);
+                var elActualHeight = el.offsetHeight + 14;
+                if (newPageHeight + elActualHeight > MAX_CONTENT_HEIGHT && addedAny) {
+                    newPage.removeChild(el);
+                    nextRemaining = remainingElements.slice(i);
+                    break;
+                }
+                newPageHeight += elActualHeight;
+                addedAny = true;
+            }
+
+            remainingElements = nextRemaining;
+            prevPage = newPage;
+        }
+    }
+
+    // Aguarda imagens carregarem antes de processar
     var images = document.querySelectorAll('.mag-preview img');
     var loadedCount = 0;
     var totalImages = images.length;
 
     function checkAllLoaded() {
         loadedCount++;
-        if (loadedCount >= totalImages) {
-            paginateOverflowingPages();
-        }
+        if (loadedCount >= totalImages) processPages();
     }
 
     if (totalImages === 0) {
-        paginateOverflowingPages();
+        processPages();
     } else {
         images.forEach(function(img) {
-            if (img.complete) {
-                checkAllLoaded();
-            } else {
+            if (img.complete) checkAllLoaded();
+            else {
                 img.addEventListener('load', checkAllLoaded);
                 img.addEventListener('error', checkAllLoaded);
             }
         });
-        // Fallback: paginar após 3s mesmo se imagens não carregaram
-        setTimeout(paginateOverflowingPages, 3000);
+        setTimeout(processPages, 3000);
     }
 });
 </script>
