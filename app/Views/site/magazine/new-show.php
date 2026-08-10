@@ -422,10 +422,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             var newH = headerHTML ? 50 : 0;
             var fitted = 0;
+            var didBreak = false;
             for (var m = 0; m < remaining.length; m++) {
                 newPage.appendChild(remaining[m]);
                 var mH = remaining[m].offsetHeight + 14;
-                if (newH + mH > MAX_CONTENT && fitted > 0) {
+
+                if (newH + mH > MAX_CONTENT) {
                     var innerC = Array.from(remaining[m].children);
                     if (innerC.length > 1) {
                         newPage.removeChild(remaining[m]);
@@ -434,7 +436,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         var innerFitH = newH;
                         for (var n = 0; n < innerC.length; n++) {
                             var nH = innerC[n].offsetHeight + 14;
-                            if (innerFitH + nH > MAX_CONTENT) {
+                            if (innerFitH + nH > MAX_CONTENT && fitClone.children.length > 0) {
                                 for (var o = n; o < innerC.length; o++) {
                                     restClone.appendChild(innerC[o].cloneNode(true));
                                 }
@@ -445,17 +447,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         if (fitClone.children.length > 0) newPage.appendChild(fitClone);
                         remaining = [restClone].concat(remaining.slice(m + 1));
-                    } else {
+                    } else if (fitted > 0) {
                         newPage.removeChild(remaining[m]);
                         remaining = remaining.slice(m);
+                    } else {
+                        remaining = remaining.slice(m + 1);
                     }
+                    didBreak = true;
                     break;
                 }
                 newH += mH;
                 fitted++;
-                if (m === remaining.length - 1) {
-                    remaining = [];
-                }
+            }
+            if (!didBreak) {
+                remaining = [];
             }
 
             newPage.style.height = PAGE_HEIGHT + 'px';
