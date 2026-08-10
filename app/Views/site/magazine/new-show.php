@@ -208,21 +208,10 @@ foreach ($pages as $page):
 <?php elseif ($layout === 'internal_05'): ?>
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <div style="display:flex;gap:10px;margin-bottom:10px"><?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:220px" alt=""><?php endif; ?><?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:220px" alt=""><?php endif; ?></div>
+    <div style="display:flex;gap:10px;margin-bottom:10px"><?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php endif; ?><?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php endif; ?></div>
     <?php if($page['caption']??''): ?><div class="caption"><?= htmlspecialchars($page['caption']) ?></div><?php endif; ?>
-    <?php if($page['title']??''): ?><div class="title-big" style="font-size:1.6rem;margin-top:8px"><?= htmlspecialchars($page['title']) ?></div><?php endif; ?>
-    <?php
-    $img3 = $page['image_url_3'] ?? '';
-    $allLines = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
-    $totalLines = count($allLines);
-    $splitAt = max(1, (int)floor($totalLines / 3));
-    $colLeft = array_slice($allLines, 0, $splitAt);
-    $colRight = array_slice($allLines, $splitAt);
-    ?>
-    <div style="display:flex;gap:12px;margin-top:10px;align-items:flex-start">
-        <div style="flex:1"><?php if($img3): ?><img src="<?= $img3 ?>" style="width:100%;height:220px;object-fit:cover;margin-bottom:8px" alt=""><?php endif; ?><?php foreach($colLeft as $p): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div>
-        <div style="flex:1"><?php foreach($colRight as $p): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div>
-    </div>
+    <div style="margin-top:15px"><div class="title-big" style="font-size:1.8rem"><?= htmlspecialchars($page['title'] ?? '') ?></div></div>
+    <div class="two-col"><?php $cols = explode('|||', $page['content']??''); if(count($cols) < 2) { $lines = explode("\n", $cols[0] ?? ''); $mid = (int)ceil(count($lines)/2); $cols = [implode("\n", array_slice($lines, 0, $mid)), implode("\n", array_slice($lines, $mid))]; } ?><div class="col"><?php foreach(explode("\n",$cols[0]??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div><div class="col"><?php foreach(explode("\n",$cols[1]??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div></div>
 </div>
 
 <?php elseif ($layout === 'internal_06'): ?>
