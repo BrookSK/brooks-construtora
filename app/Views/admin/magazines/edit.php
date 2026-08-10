@@ -195,7 +195,7 @@
                     ?>
                     <div class="card card-body p-2 mb-2 story-entry" data-index="<?= $si ?>">
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="badge bg-success bg-opacity-25 text-success">Causo <?= $si + 1 ?></span>
+                            <span class="badge bg-success text-white">Causo <?= $si + 1 ?></span>
                             <?php if ($si > 0): ?><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-story-btn" style="font-size:0.65rem;" onclick="this.closest('.story-entry').remove()"><i class="bi bi-x"></i></button><?php endif; ?>
                         </div>
                         <input type="text" class="form-control form-control-sm mb-1" name="stories_title_<?= $page['id'] ?>[]" value="<?= htmlspecialchars($sTitle) ?>" placeholder="Título do causo (ex: O dia que o cimento sumiu)" maxlength="80">
@@ -430,7 +430,7 @@ function addStoryEntry(pageId, maxStories, maxChars) {
     div.className = 'card card-body p-2 mb-2 story-entry';
     div.dataset.index = idx;
     div.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-1">' +
-        '<span class="badge bg-success bg-opacity-25 text-success">Causo ' + (idx + 1) + '</span>' +
+        '<span class="badge bg-success text-white">Causo ' + (idx + 1) + '</span>' +
         '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:0.65rem;" onclick="this.closest(\'.story-entry\').remove()"><i class="bi bi-x"></i></button>' +
         '</div>' +
         '<input type="text" class="form-control form-control-sm mb-1" name="stories_title_' + pageId + '[]" value="" placeholder="Título do causo (ex: O dia que o cimento sumiu)" maxlength="80">' +
