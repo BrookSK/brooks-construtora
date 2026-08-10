@@ -45,7 +45,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-cover .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8)}
 
         /* ===== PÁGINA INTERNA BASE ===== */
-        .pg-int{padding:30px 35px;height:842px;min-height:842px;overflow:hidden}
+        .pg-int{padding:30px 35px;height:auto;min-height:842px;overflow:visible}
         .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
         .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
         .pg-int .logo-sm .ck{color:#2e7d32}
@@ -84,7 +84,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .img-placeholder{background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;color:#2e7d32;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
 
         /* ===== COLUNA DO CONVIDADO ===== */
-        .pg-guest{padding:40px 40px;height:842px;min-height:842px;overflow:visible}
+        .pg-guest{padding:40px 40px;height:auto;min-height:842px;overflow:visible}
         .pg-guest .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:25px}
         .pg-guest .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
         .pg-guest .logo-sm .ck{color:#2e7d32}
@@ -100,7 +100,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-guest .column-content p{font-size:0.82rem;line-height:1.9;color:#333;margin-bottom:14px;text-align:justify}
 
         /* ===== CAUSOS DE OBRA ===== */
-        .pg-stories{padding:35px 40px;height:842px;min-height:842px;overflow:visible}
+        .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
         .pg-stories .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
         .pg-stories .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
         .pg-stories .logo-sm .ck{color:#2e7d32}
@@ -287,7 +287,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         <?php $img3 = $page['image_url_3'] ?? ''; if($img3): ?><img src="<?= $img3 ?>" style="width:50%;height:240px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:240px">IMAGEM 3</div><?php endif; ?>
         <div style="width:50%;height:240px"></div>
     </div>
-    <div class="column-content"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
+    <div class="two-col"><?php $lines=array_filter(explode("\n",$page['content']??''),function($l){return trim($l)!=='';}); $lines=array_values($lines); $mid=(int)ceil(count($lines)/2); ?><div class="col"><?php foreach(array_slice($lines,0,$mid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div><div class="col"><?php foreach(array_slice($lines,$mid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div></div>
 </div>
 
 <?php elseif ($layout === 'internal_07'): ?>
@@ -419,160 +419,211 @@ function generatePDF() {
     })();
 }
 
-// Ajuste de páginas: paginação para guest_column/construction_stories, redução de fonte para demais
+// Sistema de paginação e ajuste de páginas
 document.addEventListener('DOMContentLoaded', function() {
     var PAGE_HEIGHT = 842;
+    var PAGE_PADDING = 60; // top + bottom padding aproximado
+    var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
 
     function processPages() {
-        var pages = document.querySelectorAll('.preview .page');
-
-        pages.forEach(function(page) {
-            var shouldPaginate = page.classList.contains('pg-guest') || page.classList.contains('pg-stories');
-
-            if (page.scrollHeight <= PAGE_HEIGHT + 5) return;
-
-            if (shouldPaginate) {
-                paginatePage(page);
-            } else {
-                shrinkPage(page);
+        var allPages = Array.from(document.querySelectorAll('.preview .page'));
+        
+        allPages.forEach(function(page) {
+            // Ignora capas e contracapas
+            if (page.classList.contains('pg-cover') || page.classList.contains('pg-back')) {
+                page.style.height = PAGE_HEIGHT + 'px';
+                page.style.overflow = 'hidden';
+                return;
             }
-        });
-    }
 
-    function shrinkPage(page) {
-        var attempts = 0;
-        while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 4) {
-            var currentSize = parseFloat(window.getComputedStyle(page).fontSize) || 14;
-            page.style.fontSize = (currentSize - 0.5) + 'px';
-            attempts++;
-        }
-        page.style.overflow = 'hidden';
+            // Se a página cabe, apenas fixa a altura
+            if (page.scrollHeight <= PAGE_HEIGHT + 5) {
+                page.style.height = PAGE_HEIGHT + 'px';
+                page.style.overflow = 'hidden';
+                return;
+            }
+
+            // Página com overflow — paginar
+            paginatePage(page);
+        });
+
+        // Após paginação, renumera todas as páginas internas
+        renumberPages();
     }
 
     function paginatePage(page) {
-        var MAX_CONTENT_HEIGHT = PAGE_HEIGHT - 60;
         var header = page.querySelector('.hdr');
         var headerHTML = header ? header.outerHTML : '';
         var pageClass = page.className;
+        var headerHeight = header ? header.offsetHeight + 20 : 0;
 
-        var children = Array.from(page.children);
+        // Coleta elementos de conteúdo (exceto header)
         var contentElements = [];
-        children.forEach(function(child) {
-            if (!child.classList.contains('hdr')) contentElements.push(child);
+        Array.from(page.children).forEach(function(child) {
+            if (!child.classList.contains('hdr')) {
+                contentElements.push(child);
+            }
         });
 
-        var currentHeight = header ? header.offsetHeight + 20 : 0;
-        var firstPageElements = [];
-        var overflowElements = [];
-        var overflowed = false;
+        // Determina o que cabe na primeira página
+        var currentHeight = headerHeight;
+        var splitIndex = contentElements.length; // por padrão tudo cabe
 
-        contentElements.forEach(function(el) {
-            if (overflowed) {
-                overflowElements.push(el.cloneNode(true));
-                return;
-            }
+        for (var i = 0; i < contentElements.length; i++) {
+            var el = contentElements[i];
             var style = window.getComputedStyle(el);
-            var elHeight = el.offsetHeight + parseInt(style.marginBottom || 0) + parseInt(style.marginTop || 0);
+            var elH = el.offsetHeight + parseInt(style.marginTop || 0) + parseInt(style.marginBottom || 0);
 
-            if (currentHeight + elHeight > MAX_CONTENT_HEIGHT) {
-                var innerChildren = Array.from(el.children);
-                if (innerChildren.length > 1) {
+            if (currentHeight + elH > MAX_CONTENT) {
+                // Tenta dividir containers com múltiplos filhos
+                var innerKids = Array.from(el.children);
+                if (innerKids.length > 1) {
                     var cloneBefore = el.cloneNode(false);
                     var cloneAfter = el.cloneNode(false);
-                    var innerOverflowed = false;
-                    var innerHeight = currentHeight;
+                    var splitInner = false;
+                    var innerH = currentHeight;
 
-                    innerChildren.forEach(function(innerEl) {
-                        if (innerOverflowed) {
-                            cloneAfter.appendChild(innerEl.cloneNode(true));
-                        } else {
-                            var iH = innerEl.offsetHeight + 14;
-                            if (innerHeight + iH > MAX_CONTENT_HEIGHT) {
-                                innerOverflowed = true;
-                                cloneAfter.appendChild(innerEl.cloneNode(true));
-                            } else {
-                                innerHeight += iH;
-                                cloneBefore.appendChild(innerEl.cloneNode(true));
-                            }
+                    for (var j = 0; j < innerKids.length; j++) {
+                        var kidH = innerKids[j].offsetHeight + 14;
+                        if (!splitInner && innerH + kidH > MAX_CONTENT) {
+                            splitInner = true;
                         }
-                    });
+                        if (splitInner) {
+                            cloneAfter.appendChild(innerKids[j].cloneNode(true));
+                        } else {
+                            innerH += kidH;
+                            cloneBefore.appendChild(innerKids[j].cloneNode(true));
+                        }
+                    }
 
-                    if (cloneBefore.children.length > 0) firstPageElements.push(cloneBefore);
-                    if (cloneAfter.children.length > 0) overflowElements.push(cloneAfter);
-                    overflowed = true;
+                    // Substitui o elemento original pelo que cabe
+                    if (cloneBefore.children.length > 0) {
+                        el.parentNode.insertBefore(cloneBefore, el);
+                    }
+                    el.parentNode.removeChild(el);
+                    contentElements.splice(i, 1, cloneBefore);
+
+                    // O resto vai para overflow
+                    splitIndex = i + 1;
+                    // Insere cloneAfter como próximo elemento
+                    contentElements.splice(splitIndex, 0, cloneAfter);
                 } else {
-                    overflowElements.push(el.cloneNode(true));
-                    overflowed = true;
+                    splitIndex = i;
                 }
-            } else {
-                currentHeight += elHeight;
-                firstPageElements.push(el);
+                break;
             }
-        });
+            currentHeight += elH;
+        }
 
-        if (overflowElements.length === 0) {
+        if (splitIndex >= contentElements.length) {
+            // Tudo coube — fixa a página
+            page.style.height = PAGE_HEIGHT + 'px';
             page.style.overflow = 'hidden';
             return;
         }
 
+        // Separa: o que fica na página atual vs overflow
+        var overflowEls = contentElements.slice(splitIndex);
+
+        // Limpa e reconstrói a página atual
         while (page.firstChild) page.removeChild(page.firstChild);
         if (header) page.appendChild(header);
-        firstPageElements.forEach(function(el) { page.appendChild(el); });
+        for (var k = 0; k < splitIndex; k++) {
+            page.appendChild(contentElements[k]);
+        }
         page.style.height = PAGE_HEIGHT + 'px';
         page.style.overflow = 'hidden';
 
-        var remainingElements = overflowElements;
+        // Cria páginas de continuação
+        var remaining = overflowEls;
         var prevPage = page;
-        while (remainingElements.length > 0) {
+
+        while (remaining.length > 0) {
             var newPage = document.createElement('div');
             newPage.className = pageClass;
-            newPage.style.height = PAGE_HEIGHT + 'px';
-            newPage.style.minHeight = PAGE_HEIGHT + 'px';
-            newPage.style.overflow = 'hidden';
+            newPage.setAttribute('data-continuation', 'true');
             newPage.innerHTML = headerHTML;
-
             prevPage.parentNode.insertBefore(newPage, prevPage.nextSibling);
 
-            var newPageHeight = 50;
-            var nextRemaining = [];
-            var addedAny = false;
-
-            for (var i = 0; i < remainingElements.length; i++) {
-                var el = remainingElements[i];
-                newPage.appendChild(el);
-                var elActualHeight = el.offsetHeight + 14;
-                if (newPageHeight + elActualHeight > MAX_CONTENT_HEIGHT && addedAny) {
-                    newPage.removeChild(el);
-                    nextRemaining = remainingElements.slice(i);
+            // Adiciona elementos até encher
+            var newH = headerHTML ? 50 : 0;
+            var fitted = 0;
+            for (var m = 0; m < remaining.length; m++) {
+                newPage.appendChild(remaining[m]);
+                var mH = remaining[m].offsetHeight + 14;
+                if (newH + mH > MAX_CONTENT && fitted > 0) {
+                    // Não coube, tenta dividir se tem filhos
+                    var innerC = Array.from(remaining[m].children);
+                    if (innerC.length > 1) {
+                        newPage.removeChild(remaining[m]);
+                        var fitClone = remaining[m].cloneNode(false);
+                        var restClone = remaining[m].cloneNode(false);
+                        var innerFitH = newH;
+                        for (var n = 0; n < innerC.length; n++) {
+                            var nH = innerC[n].offsetHeight + 14;
+                            if (innerFitH + nH > MAX_CONTENT) {
+                                for (var o = n; o < innerC.length; o++) {
+                                    restClone.appendChild(innerC[o].cloneNode(true));
+                                }
+                                break;
+                            }
+                            innerFitH += nH;
+                            fitClone.appendChild(innerC[n].cloneNode(true));
+                        }
+                        if (fitClone.children.length > 0) newPage.appendChild(fitClone);
+                        remaining = [restClone].concat(remaining.slice(m + 1));
+                    } else {
+                        newPage.removeChild(remaining[m]);
+                        remaining = remaining.slice(m);
+                    }
                     break;
                 }
-                newPageHeight += elActualHeight;
-                addedAny = true;
+                newH += mH;
+                fitted++;
+                if (m === remaining.length - 1) {
+                    remaining = [];
+                }
             }
 
-            remainingElements = nextRemaining;
+            newPage.style.height = PAGE_HEIGHT + 'px';
+            newPage.style.overflow = 'hidden';
             prevPage = newPage;
         }
     }
 
-    // Aguarda imagens carregarem
-    var images = document.querySelectorAll('.preview img');
-    var loadedCount = 0;
-    var totalImages = images.length;
+    function renumberPages() {
+        var allPages = Array.from(document.querySelectorAll('.preview .page'));
+        var pageNum = 0;
 
-    function checkAllLoaded() {
-        loadedCount++;
-        if (loadedCount >= totalImages) processPages();
+        allPages.forEach(function(page) {
+            if (page.classList.contains('pg-cover') || page.classList.contains('pg-back')) return;
+
+            pageNum++;
+            var pnEl = page.querySelector('.pn');
+            if (pnEl) {
+                pnEl.textContent = pageNum < 10 ? '0' + pageNum : '' + pageNum;
+            }
+        });
     }
 
-    if (totalImages === 0) {
+    // Aguarda imagens carregarem
+    var images = document.querySelectorAll('.preview img');
+    var loaded = 0;
+    var total = images.length;
+
+    function check() {
+        loaded++;
+        if (loaded >= total) processPages();
+    }
+
+    if (total === 0) {
         processPages();
     } else {
         images.forEach(function(img) {
-            if (img.complete) checkAllLoaded();
+            if (img.complete) check();
             else {
-                img.addEventListener('load', checkAllLoaded);
-                img.addEventListener('error', checkAllLoaded);
+                img.addEventListener('load', check);
+                img.addEventListener('error', check);
             }
         });
         setTimeout(processPages, 3000);
