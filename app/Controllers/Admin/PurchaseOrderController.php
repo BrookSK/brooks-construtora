@@ -2573,7 +2573,7 @@ class PurchaseOrderController extends Controller
         $orderId = (int) $this->input('order_id', 0);
         $type = $this->input('type', '');
         
-        if (!in_array($type, ['nf', 'boleto'])) {
+        if (!in_array($type, ['nf', 'boleto', 'pedido'])) {
             $this->json(['error' => 'Tipo inválido.'], 400);
             return;
         }

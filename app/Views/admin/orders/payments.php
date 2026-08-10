@@ -24,7 +24,7 @@
                     <?php foreach ($pending as $p): ?>
                     <tr class="<?= $p['due_date'] && strtotime($p['due_date']) < time() ? 'table-danger' : '' ?>">
                         <td><a href="/admin/orders/show/<?= $p['order_id'] ?>"><?= htmlspecialchars($p['order_code']) ?></a></td>
-                        <td><span class="badge bg-<?= $p['type'] === 'nf' ? 'info' : 'warning' ?>"><?= strtoupper($p['type']) ?></span></td>
+                        <td><span class="badge bg-<?= $p['type'] === 'nf' ? 'info' : ($p['type'] === 'boleto' ? 'warning' : 'primary') ?>"><?= strtoupper($p['type']) ?></span></td>
                         <td><?= htmlspecialchars($p['number'] ?? '-') ?></td>
                         <td class="text-end"><?= $p['amount'] ? 'R$ ' . number_format($p['amount'], 2, ',', '.') : '-' ?></td>
                         <td><?= $p['due_date'] ? date('d/m/Y', strtotime($p['due_date'])) : '-' ?></td>

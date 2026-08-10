@@ -506,7 +506,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     <div class="list-group-item px-0">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <span class="badge bg-<?= $p['type'] === 'nf' ? 'info' : 'warning' ?> me-1"><?= strtoupper($p['type']) ?></span>
+                                <span class="badge bg-<?= $p['type'] === 'nf' ? 'info' : ($p['type'] === 'boleto' ? 'warning' : 'primary') ?> me-1"><?= strtoupper($p['type']) ?></span>
                                 <strong class="small"><?= $p['number'] ? '#' . htmlspecialchars($p['number']) : '' ?></strong>
                                 <?= $p['amount'] ? ' - R$ ' . number_format($p['amount'], 2, ',', '.') : '' ?>
                                 <?php if ($p['paid']): ?>
@@ -563,6 +563,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <select class="form-select form-select-sm" name="type" required>
                                 <option value="nf">NF</option>
                                 <option value="boleto">Boleto</option>
+                                <option value="pedido">Pedido</option>
                             </select>
                         </div>
                         <div class="col-6 col-md-2">
