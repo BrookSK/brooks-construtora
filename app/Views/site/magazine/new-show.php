@@ -338,12 +338,20 @@ document.addEventListener('DOMContentLoaded', function() {
             if (shouldPaginate) {
                 paginatePage(page);
             } else {
-                page.style.height = 'auto';
-                page.style.overflow = 'visible';
                 var attempts = 0;
-                while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 10) {
-                    var cs = parseFloat(window.getComputedStyle(page).fontSize) || 14;
-                    page.style.fontSize = (cs - 0.4) + 'px';
+                while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 12) {
+                    var textEls = page.querySelectorAll('.text, .text-sm, .title-upper, .title-big, .subtitle, .caption, p');
+                    textEls.forEach(function(el) {
+                        var cur = parseFloat(window.getComputedStyle(el).fontSize);
+                        el.style.fontSize = (cur - 0.3) + 'px';
+                    });
+                    if (attempts > 5) {
+                        var imgs = page.querySelectorAll('img, .img-placeholder');
+                        imgs.forEach(function(img) {
+                            var curH = img.offsetHeight;
+                            if (curH > 100) img.style.height = (curH - 15) + 'px';
+                        });
+                    }
                     attempts++;
                 }
                 page.style.height = PAGE_HEIGHT + 'px';
