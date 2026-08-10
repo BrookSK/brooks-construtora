@@ -296,7 +296,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         <div style="width:50%"><?php foreach($sideLines as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div>
     </div>
     <?php if (count($bottomLines) > 0): ?>
-    <div class="two-col"><div class="col"><?php foreach(array_slice($bottomLines, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div><div class="col"><?php foreach(array_slice($bottomLines, 0, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div></div>
+    <div class="two-col"><div class="col"><?php foreach(array_slice($bottomLines, 0, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div><div class="col"><?php foreach(array_slice($bottomLines, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div></div>
     <?php endif; ?>
 </div>
 
