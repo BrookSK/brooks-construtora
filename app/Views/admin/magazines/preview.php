@@ -281,7 +281,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
     $allLines06 = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
     // Texto ao lado da img3 (coluna direita superior)
     $sideLines = array_slice($allLines06, 0, min(3, count($allLines06)));
-    // Texto embaixo: coluna esquerda continua, coluna direita tem o final
+    // Texto embaixo em 2 colunas
     $bottomLines = array_slice($allLines06, count($sideLines));
     $bottomMid = (int)ceil(count($bottomLines) / 2);
 ?>
@@ -291,12 +291,12 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         <?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:220px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:220px">IMAGEM 1</div><?php endif; ?>
         <?php if($img2): ?><img src="<?= $img2 ?>" style="width:50%;height:220px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:220px">IMAGEM 2</div><?php endif; ?>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
+    <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px">
         <?php $img3 = $page['image_url_3'] ?? ''; if($img3): ?><img src="<?= $img3 ?>" style="width:50%;height:220px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:220px">IMAGEM 3</div><?php endif; ?>
-        <div style="width:50%;padding:5px 0"><?php foreach($sideLines as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div>
+        <div style="width:50%"><?php foreach($sideLines as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div>
     </div>
     <?php if (count($bottomLines) > 0): ?>
-    <div class="two-col"><div class="col"><?php foreach(array_slice($bottomLines, 0, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div><div class="col"><?php foreach(array_slice($bottomLines, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div></div>
+    <div class="two-col"><div class="col"><?php foreach(array_slice($bottomLines, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div><div class="col"><?php foreach(array_slice($bottomLines, 0, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div></div>
     <?php endif; ?>
 </div>
 
