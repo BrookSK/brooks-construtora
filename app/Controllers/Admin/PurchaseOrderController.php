@@ -1109,7 +1109,8 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * Envia notificações de edição financeira (email + webhook) para cotador e aprovador
+     * Envia notificações de edição financeira (email + webhook) para cotador, aprovador e financeiro
+     * Respeita o notify_mode de cada fase e envia por obra quando configurado.
      */
     private function sendFinancialEditNotifications(int $orderId, array $order, array $changes, array $financialChanges, bool $obraChanged, string $oldObraName, string $newObraName, string $editedBy, float $oldTotal, float $newTotal): void
     {
@@ -1165,8 +1166,16 @@ class PurchaseOrderController extends Controller
             . $changesText;
 
         // Webhook para cotador (orders_quote_webhook)
+        $constructionSiteId = !empty($order['construction_site_id']) ? (int) $order['construction_site_id'] : null;
+
+        // === FASE COTAÇÃO ===
+        $quoteMode = Setting::get('orders_quote_notify_mode', 'global_only');
+        $sendQuoteGlobal = in_array($quoteMode, ['both', 'global_only']);
+        $sendQuoteSite = in_array($quoteMode, ['both', 'site_only']) && !empty($constructionSiteId);
+        if ($quoteMode === 'site_only' && empty($constructionSiteId)) $sendQuoteGlobal = true;
+
         $quoteWebhook = Setting::get('orders_quote_webhook', '');
-        if (!empty(trim($quoteWebhook))) {
+        if (!empty(trim($quoteWebhook)) && $sendQuoteGlobal) {
             $this->sendWebhook($quoteWebhook, [
                 'event' => 'financial_edit',
                 'order_code' => $order['code'],
@@ -1181,10 +1190,34 @@ class PurchaseOrderController extends Controller
                 'message' => $message,
             ], $orderId, 'financial_edit');
         }
+        if ($sendQuoteSite && $constructionSiteId) {
+            $siteQuoteUsers = \App\Models\ConstructionSite::getApprovers($constructionSiteId, 'quote');
+            if (!empty($siteQuoteUsers) && !empty(trim($quoteWebhook))) {
+                $sitePhones = implode(',', array_filter(array_column($siteQuoteUsers, 'phone')));
+                $siteNames = implode(',', array_filter(array_column($siteQuoteUsers, 'name')));
+                if (!empty($sitePhones)) {
+                    $this->sendWebhook($quoteWebhook, [
+                        'event' => 'financial_edit',
+                        'order_code' => $order['code'],
+                        'edited_by' => $editedBy,
+                        'old_total' => $oldTotal,
+                        'new_total' => $newTotal,
+                        'phone' => $sitePhones,
+                        'phone_name' => $siteNames,
+                        'message' => $message,
+                    ], $orderId, 'financial_edit');
+                }
+            }
+        }
 
-        // Webhook para aprovador (orders_approval_webhook)
+        // === FASE APROVAÇÃO ===
+        $approvalMode = Setting::get('orders_approval_notify_mode', 'global_only');
+        $sendApprovalGlobal = in_array($approvalMode, ['both', 'global_only']);
+        $sendApprovalSite = in_array($approvalMode, ['both', 'site_only']) && !empty($constructionSiteId);
+        if ($approvalMode === 'site_only' && empty($constructionSiteId)) $sendApprovalGlobal = true;
+
         $approvalWebhook = Setting::get('orders_approval_webhook', '');
-        if (!empty(trim($approvalWebhook)) && $approvalWebhook !== $quoteWebhook) {
+        if (!empty(trim($approvalWebhook)) && $sendApprovalGlobal) {
             $this->sendWebhook($approvalWebhook, [
                 'event' => 'financial_edit',
                 'order_code' => $order['code'],
@@ -1199,10 +1232,34 @@ class PurchaseOrderController extends Controller
                 'message' => $message,
             ], $orderId, 'financial_edit');
         }
+        if ($sendApprovalSite && $constructionSiteId) {
+            $siteApprovalUsers = \App\Models\ConstructionSite::getApprovers($constructionSiteId, 'approval');
+            if (!empty($siteApprovalUsers) && !empty(trim($approvalWebhook))) {
+                $sitePhones = implode(',', array_filter(array_column($siteApprovalUsers, 'phone')));
+                $siteNames = implode(',', array_filter(array_column($siteApprovalUsers, 'name')));
+                if (!empty($sitePhones)) {
+                    $this->sendWebhook($approvalWebhook, [
+                        'event' => 'financial_edit',
+                        'order_code' => $order['code'],
+                        'edited_by' => $editedBy,
+                        'old_total' => $oldTotal,
+                        'new_total' => $newTotal,
+                        'phone' => $sitePhones,
+                        'phone_name' => $siteNames,
+                        'message' => $message,
+                    ], $orderId, 'financial_edit');
+                }
+            }
+        }
 
-        // Webhook para conclusão/financeiro (orders_completed_webhook)
+        // === FASE CONCLUSÃO/FINANCEIRO ===
+        $completedMode = Setting::get('orders_completed_notify_mode', 'global_only');
+        $sendCompletedGlobal = in_array($completedMode, ['both', 'global_only']);
+        $sendCompletedSite = in_array($completedMode, ['both', 'site_only']) && !empty($constructionSiteId);
+        if ($completedMode === 'site_only' && empty($constructionSiteId)) $sendCompletedGlobal = true;
+
         $completedWebhook = Setting::get('orders_completed_webhook', '');
-        if (!empty(trim($completedWebhook)) && $completedWebhook !== $quoteWebhook && $completedWebhook !== $approvalWebhook) {
+        if (!empty(trim($completedWebhook)) && $sendCompletedGlobal) {
             $this->sendWebhook($completedWebhook, [
                 'event' => 'financial_edit',
                 'order_code' => $order['code'],
@@ -1217,17 +1274,96 @@ class PurchaseOrderController extends Controller
                 'message' => $message,
             ], $orderId, 'financial_edit');
         }
+        if ($sendCompletedSite && $constructionSiteId) {
+            $siteCompletedUsers = \App\Models\ConstructionSite::getApprovers($constructionSiteId, 'completed');
+            if (!empty($siteCompletedUsers) && !empty(trim($completedWebhook))) {
+                $sitePhones = implode(',', array_filter(array_column($siteCompletedUsers, 'phone')));
+                $siteNames = implode(',', array_filter(array_column($siteCompletedUsers, 'name')));
+                if (!empty($sitePhones)) {
+                    $this->sendWebhook($completedWebhook, [
+                        'event' => 'financial_edit',
+                        'order_code' => $order['code'],
+                        'edited_by' => $editedBy,
+                        'old_total' => $oldTotal,
+                        'new_total' => $newTotal,
+                        'phone' => $sitePhones,
+                        'phone_name' => $siteNames,
+                        'message' => $message,
+                    ], $orderId, 'financial_edit');
+                }
+            }
+        }
 
-        // E-mail para cotador e aprovador
+        // === FASE PAGAMENTO/NF (financeiro) ===
+        $paymentMode = Setting::get('orders_payment_notify_mode', 'global_only');
+        $sendPaymentGlobal = in_array($paymentMode, ['both', 'global_only']);
+        $sendPaymentSite = in_array($paymentMode, ['both', 'site_only']) && !empty($constructionSiteId);
+        if ($paymentMode === 'site_only' && empty($constructionSiteId)) $sendPaymentGlobal = true;
+
+        $paymentWebhook = Setting::get('orders_payment_webhook', '');
+        if (!empty(trim($paymentWebhook)) && $sendPaymentGlobal) {
+            $this->sendWebhook($paymentWebhook, [
+                'event' => 'financial_edit',
+                'order_code' => $order['code'],
+                'edited_by' => $editedBy,
+                'old_total' => $oldTotal,
+                'new_total' => $newTotal,
+                'changes' => $changes,
+                'financial_changes' => $financialChanges,
+                'obra_changed' => $obraChanged,
+                'phone' => Setting::get('orders_payment_phone', ''),
+                'phone_name' => Setting::get('orders_payment_phone_name', ''),
+                'message' => $message,
+            ], $orderId, 'financial_edit');
+        }
+        if ($sendPaymentSite && $constructionSiteId) {
+            $sitePaymentUsers = \App\Models\ConstructionSite::getApprovers($constructionSiteId, 'payment');
+            if (!empty($sitePaymentUsers) && !empty(trim($paymentWebhook))) {
+                $sitePhones = implode(',', array_filter(array_column($sitePaymentUsers, 'phone')));
+                $siteNames = implode(',', array_filter(array_column($sitePaymentUsers, 'name')));
+                if (!empty($sitePhones)) {
+                    $this->sendWebhook($paymentWebhook, [
+                        'event' => 'financial_edit',
+                        'order_code' => $order['code'],
+                        'edited_by' => $editedBy,
+                        'old_total' => $oldTotal,
+                        'new_total' => $newTotal,
+                        'phone' => $sitePhones,
+                        'phone_name' => $siteNames,
+                        'message' => $message,
+                    ], $orderId, 'financial_edit');
+                }
+            }
+        }
+
+        // === E-MAILS (todos os grupos) ===
         $quoteEmails = Setting::get('orders_quote_emails', '');
         $approvalEmails = Setting::get('orders_approval_emails', '');
         $completedEmails = Setting::get('orders_completed_emails', '');
+        $paymentEmails = Setting::get('orders_payment_emails', '');
 
-        $allEmails = array_unique(array_filter(array_map('trim', array_merge(
-            explode(',', $quoteEmails),
-            explode(',', $approvalEmails),
-            explode(',', $completedEmails)
-        ))));
+        $allEmails = [];
+        if ($sendQuoteGlobal) $allEmails = array_merge($allEmails, explode(',', $quoteEmails));
+        if ($sendApprovalGlobal) $allEmails = array_merge($allEmails, explode(',', $approvalEmails));
+        if ($sendCompletedGlobal) $allEmails = array_merge($allEmails, explode(',', $completedEmails));
+        if ($sendPaymentGlobal) $allEmails = array_merge($allEmails, explode(',', $paymentEmails));
+
+        // Adicionar emails de usuários da obra
+        if ($constructionSiteId) {
+            $phases = [];
+            if ($sendQuoteSite) $phases[] = 'quote';
+            if ($sendApprovalSite) $phases[] = 'approval';
+            if ($sendCompletedSite) $phases[] = 'completed';
+            if ($sendPaymentSite) $phases[] = 'payment';
+            foreach ($phases as $phase) {
+                $siteUsers = \App\Models\ConstructionSite::getApprovers($constructionSiteId, $phase);
+                foreach ($siteUsers as $su) {
+                    if (!empty($su['email'])) $allEmails[] = $su['email'];
+                }
+            }
+        }
+
+        $allEmails = array_unique(array_filter(array_map('trim', $allEmails)));
 
         if (!empty($allEmails)) {
             $subject = "⚠️ Pedido Editado pelo Financeiro - {$order['code']}";

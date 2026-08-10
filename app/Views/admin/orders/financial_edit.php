@@ -33,7 +33,7 @@
 
 <div class="alert alert-warning py-2 small mb-3">
     <i class="bi bi-exclamation-triangle"></i> <strong>Atenção:</strong> Esta edição é restrita ao financeiro. Você pode alterar <strong>quantidade</strong>, <strong>preço unitário ou total</strong> dos itens, <strong>dados financeiros</strong> (frete, IPI, ICMS, desconto, acréscimo) e a <strong>obra</strong>.
-    Todas as alterações serão registradas no histórico e notificadas para o cotador e aprovador.
+    Todas as alterações serão registradas no histórico e notificadas para o cotador, aprovador e financeiro.
 </div>
 
 <form method="POST" action="/admin/orders/financial-update" id="financialEditForm">
