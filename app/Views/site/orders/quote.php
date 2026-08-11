@@ -1813,8 +1813,29 @@ function showReviewModal() {
 }
 
 function confirmSubmit() {
+    // Proteção contra duplo clique — se já está enviando, não fazer nada
+    if (window._quoteSubmitting) return;
+
+    // Validar nome ANTES de qualquer conversão (para não corromper valores no caso de falha)
+    const nameInput = document.querySelector('input[name="quoted_by_name"]');
+    if (!nameInput || !nameInput.value.trim()) {
+        bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+        nameInput.classList.add('is-invalid');
+        nameInput.focus();
+        nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        alert('Informe seu nome para registrar a cotação.');
+        return;
+    }
+
     // Marcar que o submit está em andamento — impedir que o beforeunload salve draft com valores convertidos
     window._quoteSubmitting = true;
+
+    // Desabilitar botão de envio para feedback visual
+    const submitBtn = document.querySelector('#reviewModal .btn-success');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enviando...';
+    }
 
     // Sincronizar valores do mapa para a lista antes do envio (proteção contra dessincronização)
     if (currentView === 'map') {
@@ -1939,17 +1960,6 @@ function confirmSubmit() {
                 document.getElementById('quoteForm').appendChild(hidden);
             }
         });
-    }
-    
-    // Validar nome antes de submeter
-    const nameInput = document.querySelector('input[name="quoted_by_name"]');
-    if (!nameInput || !nameInput.value.trim()) {
-        bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
-        nameInput.classList.add('is-invalid');
-        nameInput.focus();
-        nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        alert('Informe seu nome para registrar a cotação.');
-        return;
     }
     
     bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
@@ -2807,7 +2817,22 @@ function removeServiceMaterial(sid, idx) {
                         const block = document.getElementById('supplier-block-' + sid);
                         if (!block) return;
 
-                        // Preços
+                        // Preços — validar que não é um draft contaminado (valores com 6 decimais = já convertido)
+                        let hasContaminatedValues = false;
+                        for (const itemId in sup.prices) {
+                            const v = sup.prices[itemId];
+                            if (v && /^\d+,\d{6}$/.test(v)) {
+                                hasContaminatedValues = true;
+                                break;
+                            }
+                        }
+                        if (hasContaminatedValues) {
+                            // Draft corrompido — descartar e não preencher preços
+                            console.warn('Draft contaminado detectado (valores com 6 decimais). Descartando.');
+                            clearDraft();
+                            return;
+                        }
+
                         for (const itemId in sup.prices) {
                             const input = block.querySelector(`[name="supplier_prices[${sid}][${itemId}]"]`);
                             if (input && sup.prices[itemId]) {
