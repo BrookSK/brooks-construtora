@@ -91,7 +91,7 @@ foreach ($pages as $page):
         <div class="sub-line"><span><?= htmlspecialchars(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — SUSTENTÁVEL')[0] ?? 'CONSTRUÇÃO') ?></span><span class="ln"></span><span><?= htmlspecialchars(trim(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — SUSTENTÁVEL')[1] ?? 'SUSTENTÁVEL')) ?></span></div>
         <img src="<?= $magazineLogo ?>" class="logo" alt="Brooks">
         <div class="topic"><?= htmlspecialchars($magazine['subtitle'] ?? '') ?></div>
-        <div class="foot"><span>&copy; <?= $year ?> BROOKS CONSTRUTORA.<br>TODOS OS DIREITOS RESERVADOS.</span><span><?= $siteUrl ?></span></div>
+        <div class="foot"><span>&copy; <?= $year ?> BROOKS CONSTRUTORA. TODOS OS DIREITOS RESERVADOS.</span><span><?= $siteUrl ?></span></div>
     </div>
 </div>
 
@@ -103,7 +103,7 @@ foreach ($pages as $page):
         <div class="sub-line" style="margin-top:12px"><span><?= htmlspecialchars(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — CONSCIENTE')[0] ?? 'CONSTRUÇÃO') ?></span><span class="ln"></span><span><?= htmlspecialchars(trim(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — CONSCIENTE')[1] ?? 'CONSCIENTE')) ?></span></div>
         <div style="flex:1"></div>
         <div class="topic"><?= htmlspecialchars($magazine['subtitle'] ?? '') ?></div>
-        <div class="foot"><span>&copy; <?= $year ?> BROOKS CONSTRUTORA.<br>TODOS OS DIREITOS RESERVADOS.</span><span><?= $siteUrl ?></span></div>
+        <div class="foot"><span>&copy; <?= $year ?> BROOKS CONSTRUTORA. TODOS OS DIREITOS RESERVADOS.</span><span><?= $siteUrl ?></span></div>
     </div>
 </div>
 
@@ -167,7 +167,7 @@ foreach ($pages as $page):
 <div class="page pg-back">
     <img src="<?= $magazineLogo ?>" class="logo" alt="Brooks Construtora">
     <div class="txt"><?= nl2br(htmlspecialchars($page['content'] ?? 'Construção consciente do zero ao acabamento. Comprometidos com o meio ambiente, com as pessoas e com o futuro.')) ?></div>
-    <div class="bar"><span>&copy; <?= $year ?> BROOKS CONSTRUTORA.<br>TODOS OS DIREITOS RESERVADOS.</span><span><?= $siteUrl ?></span></div>
+    <div class="bar"><span>&copy; <?= $year ?> BROOKS CONSTRUTORA. TODOS OS DIREITOS RESERVADOS.</span><span><?= $siteUrl ?></span></div>
 </div>
 
 <?php else: ?>
