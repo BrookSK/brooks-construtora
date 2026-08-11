@@ -100,10 +100,12 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     .mag-preview .pg-cover .topic{font-size:1rem;margin-bottom:50px}
     .mag-preview .pg-cover .logo{max-width:150px}
     .mag-preview .pg-int{padding:20px 20px;height:auto;overflow:visible}
+    .mag-preview .pg-guest{padding:20px 20px;height:auto;overflow:visible}
+    .mag-preview .pg-stories{padding:20px 20px;height:auto;overflow:visible}
     .mag-preview .pg-back{height:auto;min-height:500px}
-    .mag-preview .title-big{font-size:1.8rem}
-    .mag-preview .title-upper{font-size:0.6rem}
-    .mag-preview .text,.mag-preview .text-sm{font-size:0.75rem}
+    .mag-preview .title-big{font-size:1.4rem}
+    .mag-preview .title-upper{font-size:0.55rem}
+    .mag-preview .text,.mag-preview .text-sm{font-size:0.65rem}
     .mag-preview .two-col{flex-direction:column}
     .mag-preview .img-half{width:100%}
     .mag-preview .overlay-section{height:280px}
