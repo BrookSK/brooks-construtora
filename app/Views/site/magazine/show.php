@@ -153,10 +153,10 @@ foreach ($pages as $page):
 <?php
     $allLines06 = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
     $totalLines = count($allLines06);
-    $sideCount = max(2, (int)ceil($totalLines * 0.35));
-    $sideLines = array_slice($allLines06, 0, $sideCount);
-    $bottomLines = array_slice($allLines06, $sideCount);
+    $bottomCount = (int)ceil($totalLines * 0.65);
+    $bottomLines = array_slice($allLines06, 0, $bottomCount);
     $bottomMid = (int)ceil(count($bottomLines) / 2);
+    $sideLines = array_slice($allLines06, $bottomCount);
 ?>
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>

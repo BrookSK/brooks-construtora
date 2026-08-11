@@ -285,11 +285,12 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php
     $allLines06 = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
     $totalLines = count($allLines06);
-    // Divide: ~40% ao lado da img3, ~60% embaixo em 2 colunas
-    $sideCount = max(2, (int)ceil($totalLines * 0.35));
-    $sideLines = array_slice($allLines06, 0, $sideCount);
-    $bottomLines = array_slice($allLines06, $sideCount);
+    // Texto embaixo em 2 colunas (início do texto) - pega ~65%
+    $bottomCount = (int)ceil($totalLines * 0.65);
+    $bottomLines = array_slice($allLines06, 0, $bottomCount);
     $bottomMid = (int)ceil(count($bottomLines) / 2);
+    // Texto ao lado da img3 (final do texto) - ~35%
+    $sideLines = array_slice($allLines06, $bottomCount);
 ?>
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
