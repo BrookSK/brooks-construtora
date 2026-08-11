@@ -63,7 +63,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .title-big{font-family:'Montserrat',sans-serif;font-weight:900;font-style:normal;color:#111;margin-bottom:15px;line-height:1.1;font-size:min(2.8rem, 7vw)}
         .title-upper{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px}
         .subtitle{font-size:1.1rem;font-weight:400;color:#333;margin-bottom:18px}
-        .text{font-size:0.78rem;line-height:1.8;color:#333;text-align:left;margin-bottom:12px}
+        .text{font-size:0.78rem;line-height:1.8;color:#333;text-align:justify;margin-bottom:12px}
         .text-sm{font-size:0.68rem;line-height:1.7;color:#444;text-align:justify;margin-bottom:8px}
         .caption{font-size:0.78rem;font-weight:700;color:#111;margin-top:10px}
         .caption-sub{font-size:0.58rem;color:#666}
