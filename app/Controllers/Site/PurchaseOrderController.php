@@ -1833,6 +1833,7 @@ class PurchaseOrderController extends Controller
                 'payment' => 'financeiro',
                 'delivery' => 'comprador',
                 'epi' => 'epi',
+                'stock' => 'estoque',
                 'all' => 'comprador',
             ];
             $systemRole = $roleMap[$pinUser['role']] ?? 'comprador';
