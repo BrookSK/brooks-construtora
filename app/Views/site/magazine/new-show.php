@@ -222,14 +222,16 @@ foreach ($pages as $page):
     $allLines06 = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
     $totalLines = count($allLines06);
     $mid = (int)ceil($totalLines / 2);
+    $leftLines = array_slice($allLines06, 0, $mid);
+    $rightLines = array_slice($allLines06, $mid);
 ?>
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <div style="display:flex;gap:8px;margin-bottom:6px"><?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:140px;object-fit:cover" alt=""><?php endif; ?><?php if($img2): ?><img src="<?= $img2 ?>" style="width:50%;height:140px;object-fit:cover" alt=""><?php endif; ?></div>
-    <div style="margin-bottom:8px"><?php $img3=$page['image_url_3']??''; if($img3): ?><img src="<?= $img3 ?>" style="width:50%;height:140px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:140px">IMAGEM</div><?php endif; ?></div>
-    <?php if ($totalLines > 0): ?>
-    <div class="two-col"><div class="col"><?php foreach(array_slice($allLines06, 0, $mid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div><div class="col"><?php foreach(array_slice($allLines06, $mid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div></div>
-    <?php endif; ?>
+    <div class="two-col">
+        <div class="col"><?php $img3=$page['image_url_3']??''; if($img3): ?><img src="<?= $img3 ?>" style="width:100%;height:140px;object-fit:cover;margin-bottom:8px" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:140px;margin-bottom:8px">IMAGEM</div><?php endif; ?><?php foreach($leftLines as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div>
+        <div class="col"><?php foreach($rightLines as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div>
+    </div>
 </div>
 
 <?php elseif ($layout === 'internal_07'): ?>
