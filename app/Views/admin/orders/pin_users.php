@@ -59,7 +59,13 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
                     <tbody>
                     <?php foreach ($invites as $inv): ?>
                     <tr>
-                        <td><span class="badge bg-<?= $roleColors[$inv['role']] ?? 'secondary' ?>"><?= $roleLabels[$inv['role']] ?? $inv['role'] ?></span></td>
+                        <td>
+                            <?php if (($inv['role'] ?? '') === 'stock'): ?>
+                            <span class="badge text-white" style="background-color:#e67e22;"><?= $roleLabels[$inv['role']] ?? $inv['role'] ?></span>
+                            <?php else: ?>
+                            <span class="badge bg-<?= $roleColors[$inv['role']] ?? 'secondary' ?>"><?= $roleLabels[$inv['role']] ?? $inv['role'] ?></span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <div class="input-group input-group-sm" style="max-width:280px;">
                                 <input type="text" class="form-control" value="<?= $baseUrl ?>/pin/cadastro/<?= $inv['token'] ?>" readonly style="font-size:0.65rem;">
