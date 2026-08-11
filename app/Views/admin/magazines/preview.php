@@ -21,12 +21,17 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .preview{max-width:595px;margin:0 auto;padding:0 10px}
         .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
         @media(max-width:620px){
-            .page{width:100%;height:auto;min-height:500px;aspect-ratio:595/842}
-            .pg-cover .title{font-size:3rem}
+            .page{width:100%;height:auto;min-height:500px;aspect-ratio:auto}
+            .pg-cover{height:auto;min-height:500px}
+            .pg-cover .content{padding:20px 15px}
+            .pg-cover .title{font-size:clamp(1.6rem, 9vw, 2.5rem);letter-spacing:0}
             .pg-cover .topic{font-size:1rem;margin-bottom:50px}
             .pg-cover .logo{max-width:150px}
-            .pg-int{padding:20px;height:auto;overflow:visible}
-            .title-big{font-size:1.8rem}
+            .pg-int{padding:20px 15px;height:auto;overflow:visible}
+            .pg-guest{padding:20px 15px;height:auto;overflow:visible}
+            .pg-stories{padding:20px 15px;height:auto;overflow:visible}
+            .pg-back{height:auto;min-height:400px}
+            .title-big{font-size:clamp(1.2rem, 6vw, 1.4rem)}
             .two-col{flex-direction:column}
             .img-half{width:100%}
             .overlay-section{height:250px}
@@ -37,7 +42,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
         .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.4) 0%,rgba(0,0,0,0.05) 35%,rgba(0,0,0,0.05) 50%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0.8) 90%,rgba(0,0,0,0.92) 100%)}
         .pg-cover .content{position:relative;z-index:2;text-align:center;width:100%;height:100%;display:flex;flex-direction:column;padding:30px 40px}
-        .pg-cover .title{font-size:5rem;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}
+        .pg-cover .title{font-size:5rem;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3);word-break:break-word;overflow-wrap:break-word}
         .pg-cover .sub-line{display:flex;align-items:center;justify-content:center;gap:15px;margin-top:5px;font-size:0.7rem;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,0.9)}
         .pg-cover .sub-line .ln{width:40px;height:2px;background:#fff}
         .pg-cover .logo{margin:auto;max-width:220px;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7))}
@@ -55,7 +60,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         /* Elementos comuns */
         .img-full{width:100%;object-fit:cover;border-radius:0}
         .img-half{width:48%;object-fit:cover}
-        .title-big{font-family:'Montserrat',sans-serif;font-size:2.8rem;font-weight:900;font-style:normal;color:#111;margin-bottom:15px;line-height:1.1}
+        .title-big{font-family:'Montserrat',sans-serif;font-size:2.8rem;font-weight:900;font-style:normal;color:#111;margin-bottom:15px;line-height:1.1;word-break:break-word;overflow-wrap:break-word}
         .title-upper{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px}
         .subtitle{font-size:1.1rem;font-weight:400;color:#333;margin-bottom:18px}
         .text{font-size:0.78rem;line-height:1.8;color:#333;text-align:left;margin-bottom:12px}
