@@ -1004,6 +1004,53 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Gerar PDF agrupado por especificação (qualquer pessoa pode acessar)
+     */
+    public function pdfBySpecification(string $id = ''): void
+    {
+        $orderId = (int) $id;
+        $order = PurchaseOrder::findFull($orderId);
+
+        if (!$order || $order['status'] !== 'approved') {
+            $this->show404();
+            return;
+        }
+
+        $items = PurchaseOrderItem::getByOrder($orderId);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
+        $approvedSupplier = PurchaseOrderSupplier::getApproved($orderId);
+
+        // Agrupar itens por especificação (case-insensitive, trim, sem acentos duplicados)
+        $grouped = [];
+        foreach ($items as $item) {
+            $spec = trim($item['specification'] ?? '');
+            // Normalizar: lowercase para agrupamento
+            $key = mb_strtolower($spec, 'UTF-8');
+            if ($key === '') {
+                $key = 'sem especificação';
+            }
+            if (!isset($grouped[$key])) {
+                // Usar o nome original do primeiro item encontrado como label de exibição
+                $grouped[$key] = [
+                    'label' => $spec !== '' ? $spec : 'Sem Especificação',
+                    'items' => [],
+                ];
+            }
+            $grouped[$key]['items'][] = $item;
+        }
+
+        // Ordenar grupos alfabeticamente
+        ksort($grouped);
+
+        $this->view('site.orders.pdf_specification', [
+            'order' => $order,
+            'grouped' => $grouped,
+            'orderSuppliers' => $orderSuppliers,
+            'approvedSupplier' => $approvedSupplier,
+        ]);
+    }
+
+    /**
      * Gerar XLSX de um pedido aprovado
      */
     public function xlsx(string $id = ''): void
