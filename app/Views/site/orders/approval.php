@@ -130,6 +130,9 @@
                         <?php if (!empty($os['quote_notes'])): ?>
                         <div class="mt-1 small text-muted fst-italic">"<?= htmlspecialchars($os['quote_notes']) ?>"</div>
                         <?php endif; ?>
+                        <?php if (!empty($os['payment_notes'])): ?>
+                        <div class="mt-1 small" style="font-size:0.72rem; color:#856404;"><i class="bi bi-chat-left-text"></i> <strong>Obs pgto:</strong> <?= htmlspecialchars($os['payment_notes']) ?></div>
+                        <?php endif; ?>
                     </div>
                     <?php endforeach; ?>
                 </div>
