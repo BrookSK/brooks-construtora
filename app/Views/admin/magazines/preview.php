@@ -281,23 +281,28 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </div>
 
 <?php elseif ($layout === 'internal_06'): ?>
-<!-- PÁG INTERNA 06 v2: 3 imagens + texto em 2 colunas embaixo -->
+<!-- PÁG INTERNA 06 v2: 2 imgs topo + img3 esquerda com texto direita + 2 colunas embaixo -->
 <?php
     $allLines06 = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
     $totalLines = count($allLines06);
-    $mid = (int)ceil($totalLines / 2);
+    // Divide: ~40% ao lado da img3, ~60% embaixo em 2 colunas
+    $sideCount = max(2, (int)ceil($totalLines * 0.35));
+    $sideLines = array_slice($allLines06, 0, $sideCount);
+    $bottomLines = array_slice($allLines06, $sideCount);
+    $bottomMid = (int)ceil(count($bottomLines) / 2);
 ?>
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <div style="display:flex;gap:8px;margin-bottom:8px">
-        <?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:160px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:160px">IMAGEM 1</div><?php endif; ?>
-        <?php if($img2): ?><img src="<?= $img2 ?>" style="width:50%;height:160px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:160px">IMAGEM 2</div><?php endif; ?>
+    <div style="display:flex;gap:8px;margin-bottom:6px">
+        <?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:150px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:150px">IMAGEM 1</div><?php endif; ?>
+        <?php if($img2): ?><img src="<?= $img2 ?>" style="width:50%;height:150px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:150px">IMAGEM 2</div><?php endif; ?>
     </div>
-    <div style="margin-bottom:10px">
-        <?php $img3 = $page['image_url_3'] ?? ''; if($img3): ?><img src="<?= $img3 ?>" style="width:100%;height:180px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:180px">IMAGEM 3</div><?php endif; ?>
+    <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">
+        <?php $img3 = $page['image_url_3'] ?? ''; if($img3): ?><img src="<?= $img3 ?>" style="width:50%;height:150px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:150px">IMAGEM 3</div><?php endif; ?>
+        <div style="width:50%"><?php foreach($sideLines as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div>
     </div>
-    <?php if ($totalLines > 0): ?>
-    <div class="two-col"><div class="col"><?php foreach(array_slice($allLines06, 0, $mid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div><div class="col"><?php foreach(array_slice($allLines06, $mid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div></div>
+    <?php if (count($bottomLines) > 0): ?>
+    <div class="two-col"><div class="col"><?php foreach(array_slice($bottomLines, 0, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div><div class="col"><?php foreach(array_slice($bottomLines, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div></div>
     <?php endif; ?>
 </div>
 
