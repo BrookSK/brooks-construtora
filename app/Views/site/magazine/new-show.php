@@ -172,7 +172,7 @@ foreach ($pages as $page):
             <div style="font-size:0.75rem;color:#666;font-style:italic;"><?= htmlspecialchars($page['subtitle'] ?? 'Cargo / Empresa') ?></div>
         </div>
     </div>
-    <div class="column-content"><?php foreach(explode("\n", $page['content'] ?? '') as $p): if(trim($p)): ?><p class="text" style="text-align:justify;line-height:1.9;font-size:0.82rem;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
+    <div class="column-content"><?php foreach(explode("\n", $page['content'] ?? '') as $p): if(trim($p)): ?><p class="text" style="text-align:justify;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
 </div>
 
 <?php elseif ($layout === 'internal_01'): ?>
@@ -404,34 +404,62 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentPageEls.push(item.el);
                 currentH += item.height;
             } else {
-                if (currentPageEls.length > 0) {
+                var spaceLeft = MAX_CONTENT - currentH;
+                var innerKids = Array.from(item.el.children);
+
+                if (innerKids.length > 1 && spaceLeft > 80) {
+                    var fitPart = item.el.cloneNode(false);
+                    var overflowPart = item.el.cloneNode(false);
+                    var usedH = 0;
+                    var didSplit = false;
+
+                    for (var j = 0; j < innerKids.length; j++) {
+                        var kidH = innerKids[j].offsetHeight + 14;
+                        if (!didSplit && usedH + kidH <= spaceLeft) {
+                            fitPart.appendChild(innerKids[j].cloneNode(true));
+                            usedH += kidH;
+                        } else {
+                            didSplit = true;
+                            overflowPart.appendChild(innerKids[j].cloneNode(true));
+                        }
+                    }
+
+                    if (fitPart.children.length > 0) currentPageEls.push(fitPart);
                     pages_arr.push(currentPageEls);
                     currentPageEls = [];
                     currentH = headerHeight;
-                }
 
-                if (item.height <= MAX_CONTENT) {
-                    currentPageEls.push(item.el);
-                    currentH = headerHeight + item.height;
-                } else {
-                    var innerKids = Array.from(item.el.children);
-                    if (innerKids.length > 1) {
+                    if (overflowPart.children.length > 0) {
+                        page.appendChild(overflowPart);
+                        var ovH = overflowPart.offsetHeight + 14;
+                        page.removeChild(overflowPart);
+                        measured.splice(i + 1, 0, { el: overflowPart, height: ovH });
+                    }
+                } else if (innerKids.length > 1 && spaceLeft <= 80) {
+                    pages_arr.push(currentPageEls);
+                    currentPageEls = [];
+                    currentH = headerHeight;
+
+                    if (item.height <= MAX_CONTENT) {
+                        currentPageEls.push(item.el);
+                        currentH += item.height;
+                    } else {
                         var partA = item.el.cloneNode(false);
                         var partB = item.el.cloneNode(false);
-                        var usedH = 0;
-                        var didSplit = false;
+                        var usedHA = 0;
+                        var didSplitA = false;
+                        var maxForPage = MAX_CONTENT - headerHeight;
 
-                        for (var j = 0; j < innerKids.length; j++) {
-                            var kidH = innerKids[j].offsetHeight + 12;
-                            if (!didSplit && usedH + kidH <= MAX_CONTENT - headerHeight) {
-                                partA.appendChild(innerKids[j].cloneNode(true));
-                                usedH += kidH;
+                        for (var k = 0; k < innerKids.length; k++) {
+                            var kH = innerKids[k].offsetHeight + 14;
+                            if (!didSplitA && usedHA + kH <= maxForPage) {
+                                partA.appendChild(innerKids[k].cloneNode(true));
+                                usedHA += kH;
                             } else {
-                                didSplit = true;
-                                partB.appendChild(innerKids[j].cloneNode(true));
+                                didSplitA = true;
+                                partB.appendChild(innerKids[k].cloneNode(true));
                             }
                         }
-
                         if (partA.children.length > 0) {
                             currentPageEls.push(partA);
                             pages_arr.push(currentPageEls);
@@ -440,14 +468,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         if (partB.children.length > 0) {
                             page.appendChild(partB);
-                            var pbH = partB.offsetHeight + 12;
+                            var pbH = partB.offsetHeight + 14;
                             page.removeChild(partB);
                             measured.splice(i + 1, 0, { el: partB, height: pbH });
                         }
-                    } else {
-                        currentPageEls.push(item.el);
-                        currentH = headerHeight + item.height;
                     }
+                } else {
+                    if (currentPageEls.length > 0) {
+                        pages_arr.push(currentPageEls);
+                        currentPageEls = [];
+                        currentH = headerHeight;
+                    }
+                    currentPageEls.push(item.el);
+                    currentH += item.height;
                 }
             }
         }

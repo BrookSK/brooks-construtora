@@ -102,7 +102,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;border:3px solid #2e7d32;color:#2e7d32;font-size:0.5rem;text-transform:uppercase}
         .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
         .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
-        .pg-guest .column-content p{font-size:0.82rem;line-height:1.9;color:#333;margin-bottom:14px;text-align:justify}
+        .pg-guest .column-content p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
 
         /* ===== CAUSOS DE OBRA ===== */
         .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
@@ -493,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var pageClass = page.className;
         var headerHeight = header ? header.offsetHeight + 20 : 0;
 
-        // Coleta os filhos diretos (exceto header) como blocos indivisíveis
+        // Coleta filhos diretos exceto header
         var blocks = [];
         Array.from(page.children).forEach(function(child) {
             if (child.classList.contains('hdr')) return;
@@ -508,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function() {
             measured.push({ el: el, height: h });
         });
 
-        // Distribui em páginas — mantém blocos inteiros, não divide two-col nem containers
+        // Distribui em páginas
         var pages_arr = [];
         var currentPageEls = [];
         var currentH = headerHeight;
@@ -517,43 +517,74 @@ document.addEventListener('DOMContentLoaded', function() {
             var item = measured[i];
 
             if (currentH + item.height <= MAX_CONTENT) {
-                // Cabe na página atual
+                // Cabe inteiro
                 currentPageEls.push(item.el);
                 currentH += item.height;
             } else {
-                // Não cabe inteiro
-                // Se já tem algo na página atual, fecha ela e começa nova
-                if (currentPageEls.length > 0) {
+                // Não cabe inteiro — tenta dividir seus filhos
+                var spaceLeft = MAX_CONTENT - currentH;
+                var innerKids = Array.from(item.el.children);
+
+                if (innerKids.length > 1 && spaceLeft > 80) {
+                    // Divide: coloca o que cabe no espaço restante da página atual
+                    var fitPart = item.el.cloneNode(false);
+                    var overflowPart = item.el.cloneNode(false);
+                    var usedH = 0;
+                    var didSplit = false;
+
+                    for (var j = 0; j < innerKids.length; j++) {
+                        var kidH = innerKids[j].offsetHeight + 14;
+                        if (!didSplit && usedH + kidH <= spaceLeft) {
+                            fitPart.appendChild(innerKids[j].cloneNode(true));
+                            usedH += kidH;
+                        } else {
+                            didSplit = true;
+                            overflowPart.appendChild(innerKids[j].cloneNode(true));
+                        }
+                    }
+
+                    if (fitPart.children.length > 0) {
+                        currentPageEls.push(fitPart);
+                    }
                     pages_arr.push(currentPageEls);
                     currentPageEls = [];
                     currentH = headerHeight;
-                }
 
-                // Tenta colocar o bloco na nova página
-                if (item.height <= MAX_CONTENT) {
-                    // Cabe numa página sozinho
-                    currentPageEls.push(item.el);
-                    currentH = headerHeight + item.height;
-                } else {
-                    // Bloco maior que uma página inteira — divide seus filhos
-                    var innerKids = Array.from(item.el.children);
-                    if (innerKids.length > 1) {
+                    if (overflowPart.children.length > 0) {
+                        // Mede o overflow e re-insere para processar
+                        page.appendChild(overflowPart);
+                        var ovH = overflowPart.offsetHeight + 14;
+                        page.removeChild(overflowPart);
+                        measured.splice(i + 1, 0, { el: overflowPart, height: ovH });
+                    }
+                } else if (innerKids.length > 1 && spaceLeft <= 80) {
+                    // Pouco espaço — fecha a página e coloca na próxima, tentando dividir lá
+                    pages_arr.push(currentPageEls);
+                    currentPageEls = [];
+                    currentH = headerHeight;
+
+                    // Tenta caber na próxima página
+                    if (item.height <= MAX_CONTENT) {
+                        currentPageEls.push(item.el);
+                        currentH += item.height;
+                    } else {
+                        // Ainda não cabe numa página inteira — divide
                         var partA = item.el.cloneNode(false);
                         var partB = item.el.cloneNode(false);
-                        var usedH = 0;
-                        var didSplit = false;
+                        var usedHA = 0;
+                        var didSplitA = false;
+                        var maxForPage = MAX_CONTENT - headerHeight;
 
-                        for (var j = 0; j < innerKids.length; j++) {
-                            var kidH = innerKids[j].offsetHeight + 12;
-                            if (!didSplit && usedH + kidH <= MAX_CONTENT - headerHeight) {
-                                partA.appendChild(innerKids[j].cloneNode(true));
-                                usedH += kidH;
+                        for (var k = 0; k < innerKids.length; k++) {
+                            var kH = innerKids[k].offsetHeight + 14;
+                            if (!didSplitA && usedHA + kH <= maxForPage) {
+                                partA.appendChild(innerKids[k].cloneNode(true));
+                                usedHA += kH;
                             } else {
-                                didSplit = true;
-                                partB.appendChild(innerKids[j].cloneNode(true));
+                                didSplitA = true;
+                                partB.appendChild(innerKids[k].cloneNode(true));
                             }
                         }
-
                         if (partA.children.length > 0) {
                             currentPageEls.push(partA);
                             pages_arr.push(currentPageEls);
@@ -561,37 +592,39 @@ document.addEventListener('DOMContentLoaded', function() {
                             currentH = headerHeight;
                         }
                         if (partB.children.length > 0) {
-                            // Re-mede e re-insere pra processar
                             page.appendChild(partB);
-                            var pbH = partB.offsetHeight + 12;
+                            var pbH = partB.offsetHeight + 14;
                             page.removeChild(partB);
                             measured.splice(i + 1, 0, { el: partB, height: pbH });
                         }
-                    } else {
-                        // Bloco atômico gigante — coloca e aceita overflow
-                        currentPageEls.push(item.el);
-                        currentH = headerHeight + item.height;
                     }
+                } else {
+                    // Bloco sem filhos ou atômico
+                    if (currentPageEls.length > 0) {
+                        pages_arr.push(currentPageEls);
+                        currentPageEls = [];
+                        currentH = headerHeight;
+                    }
+                    currentPageEls.push(item.el);
+                    currentH += item.height;
                 }
             }
         }
         if (currentPageEls.length > 0) pages_arr.push(currentPageEls);
 
-        // Se tudo coube em 1 página
         if (pages_arr.length <= 1) {
             page.style.height = PAGE_HEIGHT + 'px';
             page.style.overflow = 'hidden';
             return;
         }
 
-        // Reconstrói: primeira página
+        // Reconstrói páginas
         while (page.firstChild) page.removeChild(page.firstChild);
         if (header) page.appendChild(header.cloneNode(true));
         pages_arr[0].forEach(function(el) { page.appendChild(el); });
         page.style.height = PAGE_HEIGHT + 'px';
         page.style.overflow = 'hidden';
 
-        // Páginas de continuação
         var prevPage = page;
         for (var p = 1; p < pages_arr.length; p++) {
             var newPage = document.createElement('div');
