@@ -242,6 +242,8 @@
                     <i class="bi bi-graph-up"></i> Histórico Preços
                 </a>
             </li>
+            <?php endif; ?>
+            <?php if (\App\Core\Auth::hasPermission('orders.payment') || \App\Core\Auth::isAdmin()): ?>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'payments' ? 'active' : '' ?>" href="/admin/orders/payments">
                     <i class="bi bi-receipt"></i> NF / Boletos
@@ -253,7 +255,7 @@
                 </a>
             </li>
             <?php endif; ?>
-            <?php if (\App\Core\Auth::hasPermission('orders') || \App\Core\Auth::hasPermission('epi')): ?>
+            <?php if (\App\Core\Auth::hasPermission('epi')): ?>
             <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
                 <small class="text-uppercase px-3 opacity-50" style="font-size:0.65rem; letter-spacing:1px;">EPIs</small>
             </li>
@@ -292,7 +294,7 @@
             </li>
             <?php endif; ?>
 
-            <?php if (\App\Core\Auth::hasPermission('orders')): ?>
+            <?php if (\App\Core\Auth::hasPermission('epi') || \App\Core\Auth::isAdmin()): ?>
             <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
                 <small class="text-uppercase px-3 opacity-50" style="font-size:0.65rem; letter-spacing:1px;">Presença</small>
             </li>
