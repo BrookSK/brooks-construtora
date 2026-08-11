@@ -53,9 +53,9 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .pg-int .pn{font-size:1rem;font-weight:300;color:#333}
 .mag-preview .img-full{width:100%;object-fit:cover}
 .mag-preview .img-half{width:48%;object-fit:cover}
-.mag-preview .title-big{font-family:'Montserrat',sans-serif;font-size:min(2.8rem, 7vw);font-weight:900;color:#111;margin-bottom:15px;line-height:1.1}
-.mag-preview .title-upper{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px}
-.mag-preview .subtitle{font-size:1.1rem;font-weight:400;color:#333;margin-bottom:18px}
+.mag-preview .title-big{font-family:'Montserrat',sans-serif;font-size:min(2.2rem, 7vw);font-weight:900;color:#111;margin-bottom:12px;line-height:1.1}
+.mag-preview .title-upper{font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:14px;border-bottom:1px solid #ddd;padding-bottom:8px}
+.mag-preview .subtitle{font-size:0.9rem;font-weight:400;color:#333;margin-bottom:14px}
 .mag-preview .text{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
 .mag-preview .text-sm{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
 .mag-preview .caption{font-size:0.78rem;font-weight:700;color:#111;margin-top:10px}
@@ -347,6 +347,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            // Primeiro tenta reduzir levemente a fonte pra caber (max 4 tentativas)
+            var attempts = 0;
+            while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 4) {
+                var textEls = page.querySelectorAll('.text, .text-sm, p');
+                textEls.forEach(function(el) {
+                    var cur = parseFloat(window.getComputedStyle(el).fontSize);
+                    el.style.fontSize = (cur - 0.3) + 'px';
+                });
+                attempts++;
+            }
+
+            if (page.scrollHeight <= PAGE_HEIGHT + 5) {
+                page.style.height = PAGE_HEIGHT + 'px';
+                page.style.overflow = 'hidden';
+                return;
+            }
+
             // Pagina TODAS as páginas internas que não cabem
             paginatePage(page);
         });
@@ -360,67 +377,74 @@ document.addEventListener('DOMContentLoaded', function() {
         var pageClass = page.className;
         var headerHeight = header ? header.offsetHeight + 20 : 0;
 
-        var allElements = [];
+        var blocks = [];
         Array.from(page.children).forEach(function(child) {
             if (child.classList.contains('hdr')) return;
-            allElements.push(child);
+            blocks.push(child);
         });
 
-        var measurements = [];
-        allElements.forEach(function(el) {
+        var measured = [];
+        blocks.forEach(function(el) {
             var style = window.getComputedStyle(el);
             var h = el.offsetHeight + parseInt(style.marginTop || 0) + parseInt(style.marginBottom || 0);
-            measurements.push({ el: el, height: h });
+            measured.push({ el: el, height: h });
         });
 
         var pages_arr = [];
         var currentPageEls = [];
         var currentH = headerHeight;
 
-        for (var i = 0; i < measurements.length; i++) {
-            var item = measurements[i];
+        for (var i = 0; i < measured.length; i++) {
+            var item = measured[i];
 
             if (currentH + item.height <= MAX_CONTENT) {
                 currentPageEls.push(item.el);
                 currentH += item.height;
             } else {
-                var innerKids = Array.from(item.el.children);
-                var spaceLeft = MAX_CONTENT - currentH;
-
-                if (innerKids.length > 1 && spaceLeft > 60) {
-                    var fitPart = item.el.cloneNode(false);
-                    var overflowPart = item.el.cloneNode(false);
-                    var usedH = 0;
-                    var didSplit = false;
-
-                    for (var j = 0; j < innerKids.length; j++) {
-                        var kidStyle = window.getComputedStyle(innerKids[j]);
-                        var kidH = innerKids[j].offsetHeight + parseInt(kidStyle.marginTop || 0) + parseInt(kidStyle.marginBottom || 0);
-                        if (!didSplit && usedH + kidH <= spaceLeft) {
-                            fitPart.appendChild(innerKids[j].cloneNode(true));
-                            usedH += kidH;
-                        } else {
-                            didSplit = true;
-                            overflowPart.appendChild(innerKids[j].cloneNode(true));
-                        }
-                    }
-
-                    if (fitPart.children.length > 0) currentPageEls.push(fitPart);
+                if (currentPageEls.length > 0) {
                     pages_arr.push(currentPageEls);
                     currentPageEls = [];
                     currentH = headerHeight;
+                }
 
-                    if (overflowPart.children.length > 0) {
-                        page.appendChild(overflowPart);
-                        var overflowStyle = window.getComputedStyle(overflowPart);
-                        var overflowH = overflowPart.offsetHeight + parseInt(overflowStyle.marginTop || 0) + parseInt(overflowStyle.marginBottom || 0);
-                        page.removeChild(overflowPart);
-                        measurements.splice(i + 1, 0, { el: overflowPart, height: overflowH });
-                    }
-                } else {
-                    if (currentPageEls.length > 0) pages_arr.push(currentPageEls);
-                    currentPageEls = [item.el];
+                if (item.height <= MAX_CONTENT) {
+                    currentPageEls.push(item.el);
                     currentH = headerHeight + item.height;
+                } else {
+                    var innerKids = Array.from(item.el.children);
+                    if (innerKids.length > 1) {
+                        var partA = item.el.cloneNode(false);
+                        var partB = item.el.cloneNode(false);
+                        var usedH = 0;
+                        var didSplit = false;
+
+                        for (var j = 0; j < innerKids.length; j++) {
+                            var kidH = innerKids[j].offsetHeight + 12;
+                            if (!didSplit && usedH + kidH <= MAX_CONTENT - headerHeight) {
+                                partA.appendChild(innerKids[j].cloneNode(true));
+                                usedH += kidH;
+                            } else {
+                                didSplit = true;
+                                partB.appendChild(innerKids[j].cloneNode(true));
+                            }
+                        }
+
+                        if (partA.children.length > 0) {
+                            currentPageEls.push(partA);
+                            pages_arr.push(currentPageEls);
+                            currentPageEls = [];
+                            currentH = headerHeight;
+                        }
+                        if (partB.children.length > 0) {
+                            page.appendChild(partB);
+                            var pbH = partB.offsetHeight + 12;
+                            page.removeChild(partB);
+                            measured.splice(i + 1, 0, { el: partB, height: pbH });
+                        }
+                    } else {
+                        currentPageEls.push(item.el);
+                        currentH = headerHeight + item.height;
+                    }
                 }
             }
         }
