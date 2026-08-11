@@ -25,7 +25,7 @@ include ROOT_PATH . '/app/Views/site/layouts/header.php';
 .mag-preview .pg-cover .logo{margin:auto;max-width:220px;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7))}
 .mag-preview .pg-cover .topic{font-size:1.4rem;font-weight:800;color:#fff;font-style:italic;text-align:left;padding:15px 30px;margin-top:auto;margin-bottom:70px;text-shadow:0 2px 10px rgba(0,0,0,0.8)}
 .mag-preview .pg-cover .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8)}
-.mag-preview .pg-int{padding:30px 35px;height:842px;overflow:hidden}
+.mag-preview .pg-int{padding:30px 35px;min-height:842px;overflow:visible}
 .mag-preview .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
 .mag-preview .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
 .mag-preview .pg-int .logo-sm .ck{color:#2e7d32}
@@ -37,7 +37,7 @@ include ROOT_PATH . '/app/Views/site/layouts/header.php';
 .mag-preview .title-upper{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px}
 .mag-preview .subtitle{font-size:1.1rem;font-weight:400;color:#333;margin-bottom:18px}
 .mag-preview .text{font-size:0.78rem;line-height:1.8;color:#333;margin-bottom:12px;text-align:justify}
-.mag-preview .text-sm{font-size:0.68rem;line-height:1.7;color:#444;margin-bottom:8px;text-align:justify}
+.mag-preview .text-sm{font-size:0.78rem;line-height:1.8;color:#333;margin-bottom:12px;text-align:justify}
 .mag-preview .caption{font-size:0.78rem;font-weight:700;color:#111;margin-top:10px}
 .mag-preview .two-col{display:flex;gap:18px}
 .mag-preview .two-col .col{flex:1}
@@ -246,8 +246,12 @@ function generatePDF() {
     })();
 }
 
-// Auto-ajuste de font-size quando conteúdo não cabe na página
+// Sistema de paginação e ajuste de páginas
 document.addEventListener('DOMContentLoaded', function() {
+    var PAGE_HEIGHT = 842;
+    var PAGE_PADDING = 60;
+    var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
+
     // Reduz títulos para caber em uma linha sem quebrar
     function fitTitles() {
         document.querySelectorAll('.mag-preview .pg-cover .title').forEach(function(el) {
@@ -268,17 +272,179 @@ document.addEventListener('DOMContentLoaded', function() {
             attempts++;
         }
     }
-    fitTitles();
 
-    document.querySelectorAll('.mag-preview .page').forEach(function(page) {
-        var maxH = page.offsetHeight;
-        var attempts = 0;
-        while (page.scrollHeight > maxH + 2 && attempts < 8) {
-            var currentSize = parseFloat(window.getComputedStyle(page).fontSize) || 14;
-            page.style.fontSize = (currentSize - 0.5) + 'px';
-            attempts++;
+    function processPages() {
+        if (window.innerWidth <= 620) return;
+
+        var allPages = Array.from(document.querySelectorAll('.mag-preview .page'));
+
+        allPages.forEach(function(page) {
+            if (page.classList.contains('pg-cover') || page.classList.contains('pg-back')) {
+                page.style.height = PAGE_HEIGHT + 'px';
+                page.style.overflow = 'hidden';
+                return;
+            }
+
+            if (page.scrollHeight <= PAGE_HEIGHT + 5) {
+                page.style.height = PAGE_HEIGHT + 'px';
+                page.style.overflow = 'hidden';
+                return;
+            }
+
+            paginatePage(page);
+        });
+
+        renumberPages();
+    }
+
+    function paginatePage(page) {
+        var header = page.querySelector('.hdr');
+        var headerHTML = header ? header.outerHTML : '';
+        var pageClass = page.className;
+        var headerHeight = header ? header.offsetHeight + 20 : 0;
+
+        var contentElements = [];
+        Array.from(page.children).forEach(function(child) {
+            if (!child.classList.contains('hdr')) contentElements.push(child);
+        });
+
+        var currentHeight = headerHeight;
+        var splitIndex = contentElements.length;
+
+        for (var i = 0; i < contentElements.length; i++) {
+            var el = contentElements[i];
+            var style = window.getComputedStyle(el);
+            var elH = el.offsetHeight + parseInt(style.marginTop || 0) + parseInt(style.marginBottom || 0);
+
+            if (currentHeight + elH > MAX_CONTENT) {
+                var innerKids = Array.from(el.children);
+                if (innerKids.length > 1) {
+                    var cloneBefore = el.cloneNode(false);
+                    var cloneAfter = el.cloneNode(false);
+                    var splitInner = false;
+                    var innerH = currentHeight;
+
+                    for (var j = 0; j < innerKids.length; j++) {
+                        var kidH = innerKids[j].offsetHeight + 14;
+                        if (!splitInner && innerH + kidH > MAX_CONTENT) splitInner = true;
+                        if (splitInner) cloneAfter.appendChild(innerKids[j].cloneNode(true));
+                        else { innerH += kidH; cloneBefore.appendChild(innerKids[j].cloneNode(true)); }
+                    }
+
+                    if (cloneBefore.children.length > 0) el.parentNode.insertBefore(cloneBefore, el);
+                    el.parentNode.removeChild(el);
+                    contentElements.splice(i, 1, cloneBefore);
+                    splitIndex = i + 1;
+                    contentElements.splice(splitIndex, 0, cloneAfter);
+                } else {
+                    splitIndex = i;
+                }
+                break;
+            }
+            currentHeight += elH;
         }
-    });
+
+        if (splitIndex >= contentElements.length) {
+            page.style.height = PAGE_HEIGHT + 'px';
+            page.style.overflow = 'hidden';
+            return;
+        }
+
+        var overflowEls = contentElements.slice(splitIndex);
+
+        while (page.firstChild) page.removeChild(page.firstChild);
+        if (header) page.appendChild(header);
+        for (var k = 0; k < splitIndex; k++) page.appendChild(contentElements[k]);
+        page.style.height = PAGE_HEIGHT + 'px';
+        page.style.overflow = 'hidden';
+
+        var remaining = overflowEls;
+        var prevPage = page;
+
+        while (remaining.length > 0) {
+            var newPage = document.createElement('div');
+            newPage.className = pageClass;
+            newPage.setAttribute('data-continuation', 'true');
+            newPage.innerHTML = headerHTML;
+            prevPage.parentNode.insertBefore(newPage, prevPage.nextSibling);
+
+            var newH = headerHTML ? 50 : 0;
+            var fitted = 0;
+            var didBreak = false;
+            for (var m = 0; m < remaining.length; m++) {
+                newPage.appendChild(remaining[m]);
+                var mH = remaining[m].offsetHeight + 14;
+
+                if (newH + mH > MAX_CONTENT) {
+                    var innerC = Array.from(remaining[m].children);
+                    if (innerC.length > 1) {
+                        var childHeights = [];
+                        for (var ci = 0; ci < innerC.length; ci++) childHeights.push(innerC[ci].offsetHeight + 14);
+                        newPage.removeChild(remaining[m]);
+                        var fitClone = remaining[m].cloneNode(false);
+                        var restClone = remaining[m].cloneNode(false);
+                        var innerFitH = newH;
+                        var addedSome = false;
+                        for (var n = 0; n < innerC.length; n++) {
+                            if (innerFitH + childHeights[n] > MAX_CONTENT && addedSome) {
+                                for (var o = n; o < innerC.length; o++) restClone.appendChild(innerC[o].cloneNode(true));
+                                break;
+                            }
+                            innerFitH += childHeights[n];
+                            fitClone.appendChild(innerC[n].cloneNode(true));
+                            addedSome = true;
+                        }
+                        if (fitClone.children.length > 0) newPage.appendChild(fitClone);
+                        if (restClone.children.length > 0) remaining = [restClone].concat(remaining.slice(m + 1));
+                        else remaining = remaining.slice(m + 1);
+                    } else if (fitted > 0) {
+                        newPage.removeChild(remaining[m]);
+                        remaining = remaining.slice(m);
+                    } else {
+                        remaining = remaining.slice(m + 1);
+                    }
+                    didBreak = true;
+                    break;
+                }
+                newH += mH;
+                fitted++;
+            }
+            if (!didBreak) remaining = [];
+
+            newPage.style.height = PAGE_HEIGHT + 'px';
+            newPage.style.overflow = 'hidden';
+            prevPage = newPage;
+        }
+    }
+
+    function renumberPages() {
+        var allPages = Array.from(document.querySelectorAll('.mag-preview .page'));
+        var pageNum = 0;
+        allPages.forEach(function(page) {
+            if (page.classList.contains('pg-cover') || page.classList.contains('pg-back')) return;
+            pageNum++;
+            var pnEl = page.querySelector('.pn');
+            if (pnEl) pnEl.textContent = pageNum < 10 ? '0' + pageNum : '' + pageNum;
+        });
+    }
+
+    var images = document.querySelectorAll('.mag-preview img');
+    var loaded = 0;
+    var total = images.length;
+
+    function check() {
+        loaded++;
+        if (loaded >= total) { fitTitles(); processPages(); }
+    }
+
+    if (total === 0) { fitTitles(); processPages(); }
+    else {
+        images.forEach(function(img) {
+            if (img.complete) check();
+            else { img.addEventListener('load', check); img.addEventListener('error', check); }
+        });
+        setTimeout(function() { fitTitles(); processPages(); }, 3000);
+    }
 });
 </script>
 

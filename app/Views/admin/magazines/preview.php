@@ -64,7 +64,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .title-upper{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px}
         .subtitle{font-size:1.1rem;font-weight:400;color:#333;margin-bottom:18px}
         .text{font-size:0.78rem;line-height:1.8;color:#333;text-align:justify;margin-bottom:12px}
-        .text-sm{font-size:0.68rem;line-height:1.7;color:#444;text-align:justify;margin-bottom:8px}
+        .text-sm{font-size:0.78rem;line-height:1.8;color:#333;text-align:justify;margin-bottom:12px}
         .caption{font-size:0.78rem;font-weight:700;color:#111;margin-top:10px}
         .caption-sub{font-size:0.58rem;color:#666}
         .two-col{display:flex;gap:18px}
@@ -102,7 +102,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;border:3px solid #2e7d32;color:#2e7d32;font-size:0.5rem;text-transform:uppercase}
         .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
         .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
-        .pg-guest .column-content p{font-size:0.82rem;line-height:1.9;color:#333;margin-bottom:14px;text-align:justify}
+        .pg-guest .column-content p{font-size:0.78rem;line-height:1.8;color:#333;margin-bottom:12px;text-align:justify}
 
         /* ===== CAUSOS DE OBRA ===== */
         .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
@@ -116,7 +116,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-stories .stories-subtitle{font-size:0.75rem;color:#666;font-style:italic;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #2e7d32}
         .pg-stories .story-item{margin-bottom:18px;padding-left:15px;border-left:3px solid #2e7d32}
         .pg-stories .story-item .story-title{font-weight:700;font-size:0.82rem;color:#111;margin-bottom:4px}
-        .pg-stories .story-item .story-text{font-size:0.75rem;line-height:1.7;color:#444;text-align:justify}
+        .pg-stories .story-item .story-text{font-size:0.78rem;line-height:1.8;color:#333;text-align:justify}
     </style>
 </head>
 <body>
@@ -458,32 +458,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Só pagina guest_column e construction_stories — demais reduzem fonte
-            var shouldPaginate = page.classList.contains('pg-guest') || page.classList.contains('pg-stories');
-            if (shouldPaginate) {
-                paginatePage(page);
-            } else {
-                // Reduz font-size dos textos gradualmente para caber
-                var attempts = 0;
-                while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 12) {
-                    var textEls = page.querySelectorAll('.text, .text-sm, .title-upper, .title-big, .subtitle, .caption, p');
-                    textEls.forEach(function(el) {
-                        var cur = parseFloat(window.getComputedStyle(el).fontSize);
-                        el.style.fontSize = (cur - 0.3) + 'px';
-                    });
-                    // Também reduz imagens levemente
-                    if (attempts > 5) {
-                        var imgs = page.querySelectorAll('img, .img-placeholder');
-                        imgs.forEach(function(img) {
-                            var curH = img.offsetHeight;
-                            if (curH > 100) img.style.height = (curH - 15) + 'px';
-                        });
-                    }
-                    attempts++;
-                }
-                page.style.height = PAGE_HEIGHT + 'px';
-                page.style.overflow = 'hidden';
-            }
+            // Pagina TODAS as páginas internas que não cabem
+            paginatePage(page);
         });
 
         // Após paginação, renumera todas as páginas internas

@@ -57,7 +57,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .title-upper{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px}
 .mag-preview .subtitle{font-size:1.1rem;font-weight:400;color:#333;margin-bottom:18px}
 .mag-preview .text{font-size:0.78rem;line-height:1.8;color:#333;margin-bottom:12px;text-align:justify}
-.mag-preview .text-sm{font-size:0.68rem;line-height:1.7;color:#444;margin-bottom:8px;text-align:justify}
+.mag-preview .text-sm{font-size:0.78rem;line-height:1.8;color:#333;margin-bottom:12px;text-align:justify}
 .mag-preview .caption{font-size:0.78rem;font-weight:700;color:#111;margin-top:10px}
 .mag-preview .two-col{display:flex;gap:18px}
 .mag-preview .two-col .col{flex:1}
@@ -347,30 +347,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Só pagina guest_column e construction_stories — demais reduzem fonte
-            var shouldPaginate = page.classList.contains('pg-guest') || page.classList.contains('pg-stories');
-            if (shouldPaginate) {
-                paginatePage(page);
-            } else {
-                var attempts = 0;
-                while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 12) {
-                    var textEls = page.querySelectorAll('.text, .text-sm, .title-upper, .title-big, .subtitle, .caption, p');
-                    textEls.forEach(function(el) {
-                        var cur = parseFloat(window.getComputedStyle(el).fontSize);
-                        el.style.fontSize = (cur - 0.3) + 'px';
-                    });
-                    if (attempts > 5) {
-                        var imgs = page.querySelectorAll('img, .img-placeholder');
-                        imgs.forEach(function(img) {
-                            var curH = img.offsetHeight;
-                            if (curH > 100) img.style.height = (curH - 15) + 'px';
-                        });
-                    }
-                    attempts++;
-                }
-                page.style.height = PAGE_HEIGHT + 'px';
-                page.style.overflow = 'hidden';
-            }
+            // Pagina TODAS as páginas internas que não cabem
+            paginatePage(page);
         });
 
         renumberPages();
