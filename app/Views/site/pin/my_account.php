@@ -20,7 +20,7 @@
                     <i class="bi bi-person-circle" style="font-size: 2.5rem; color: #3a3b4e;"></i>
                     <h5 class="fw-bold mt-2 mb-1">Minha Conta</h5>
                     <p class="text-muted small mb-0">
-                        <?= ['buyer'=>'Comprador/Entrega','quoter'=>'Cotador','approver'=>'Aprovador','payment'=>'Financeiro','delivery'=>'Entrega','epi'=>'EPI','all'=>'Completo'][$user['role']] ?? $user['role'] ?>
+                        <?= ['buyer'=>'Comprador/Entrega','quoter'=>'Cotador','approver'=>'Aprovador','payment'=>'Financeiro','delivery'=>'Entrega','epi'=>'EPI','stock'=>'Estoque','all'=>'Completo'][$user['role']] ?? $user['role'] ?>
                         &middot; PIN: <code><?= $user['pin'] ?></code>
                     </p>
                 </div>

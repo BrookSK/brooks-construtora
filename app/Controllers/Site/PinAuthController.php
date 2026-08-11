@@ -131,7 +131,7 @@ class PinAuthController extends Controller
             return;
         }
 
-        $roleLabels = ['buyer'=>'Comprador (criar pedidos)','quoter'=>'Cotador (fazer orçamentos)','approver'=>'Aprovador (aprovar pedidos)','payment'=>'Financeiro (NF/Boleto)','delivery'=>'Entrega (checklist)','epi'=>'EPI (controle de EPIs)','all'=>'Acesso completo'];
+        $roleLabels = ['buyer'=>'Comprador (criar pedidos)','quoter'=>'Cotador (fazer orçamentos)','approver'=>'Aprovador (aprovar pedidos)','payment'=>'Financeiro (NF/Boleto)','delivery'=>'Entrega (checklist)','epi'=>'EPI (controle de EPIs)','stock'=>'Estoque (pedidos, materiais, transporte)','all'=>'Acesso completo'];
 
         $this->view('site.pin.register', [
             'invite' => $invite,

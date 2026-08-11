@@ -1954,7 +1954,7 @@ class PurchaseOrderController extends Controller
             // Tentar validar como PIN individual (cookie de token)
             $pinUser = PinUser::findBySessionToken($cookie);
             if ($pinUser) {
-                $roleMap = ['buyer'=>'comprador','quoter'=>'cotador','approver'=>'aprovador','payment'=>'financeiro','delivery'=>'comprador','epi'=>'epi','all'=>'comprador'];
+                $roleMap = ['buyer'=>'comprador','quoter'=>'cotador','approver'=>'aprovador','payment'=>'financeiro','delivery'=>'comprador','epi'=>'epi','stock'=>'estoque','all'=>'comprador'];
                 $_SESSION['user_id'] = $pinUser['id'];
                 $_SESSION['user_name'] = $pinUser['name'];
                 $_SESSION['user_email'] = $pinUser['email'] ?? '';

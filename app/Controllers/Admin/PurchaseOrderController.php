@@ -3581,7 +3581,7 @@ class PurchaseOrderController extends Controller
         if (!$this->isPost()) { $this->redirect('/admin/orders/pin-users'); return; }
 
         $role = $this->input('role', 'all');
-        $validRoles = ['buyer', 'quoter', 'approver', 'payment', 'delivery', 'epi', 'all'];
+        $validRoles = ['buyer', 'quoter', 'approver', 'payment', 'delivery', 'epi', 'stock', 'all'];
         if (!in_array($role, $validRoles)) $role = 'all';
 
         $token = bin2hex(random_bytes(32));
@@ -3677,7 +3677,7 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        $roleLabels = ['buyer'=>'Comprador','quoter'=>'Cotador','approver'=>'Aprovador','payment'=>'Financeiro','delivery'=>'Entrega','all'=>'Completo'];
+        $roleLabels = ['buyer'=>'Comprador','quoter'=>'Cotador','approver'=>'Aprovador','payment'=>'Financeiro','delivery'=>'Entrega','stock'=>'Estoque','all'=>'Completo'];
         $roleLabel = $roleLabels[$role] ?? $role;
 
         $message = "*CADASTRO NO SISTEMA*\n\n"
