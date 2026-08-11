@@ -39,7 +39,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
 .mag-preview .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.4) 0%,rgba(0,0,0,0.05) 35%,rgba(0,0,0,0.05) 50%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0.8) 90%,rgba(0,0,0,0.92) 100%)}
 .mag-preview .pg-cover .content{position:relative;z-index:2;text-align:center;width:100%;height:100%;display:flex;flex-direction:column;padding:30px 40px}
-.mag-preview .pg-cover .title{font-size:5rem;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3);word-break:break-word;overflow-wrap:break-word}
+.mag-preview .pg-cover .title{font-size:5rem;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3);white-space:nowrap;overflow:hidden}
 .mag-preview .pg-cover .sub-line{display:flex;align-items:center;justify-content:center;gap:15px;margin-top:5px;font-size:0.7rem;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,0.9)}
 .mag-preview .pg-cover .sub-line .ln{width:40px;height:2px;background:#fff}
 .mag-preview .pg-cover .logo{margin:auto;max-width:220px;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7))}
@@ -53,7 +53,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .pg-int .pn{font-size:1rem;font-weight:300;color:#333}
 .mag-preview .img-full{width:100%;object-fit:cover}
 .mag-preview .img-half{width:48%;object-fit:cover}
-.mag-preview .title-big{font-family:'Montserrat',sans-serif;font-size:2.8rem;font-weight:900;color:#111;margin-bottom:15px;line-height:1.1;word-break:break-word;overflow-wrap:break-word}
+.mag-preview .title-big{font-family:'Montserrat',sans-serif;font-size:2.8rem;font-weight:900;color:#111;margin-bottom:15px;line-height:1.1;white-space:nowrap;overflow:hidden}
 .mag-preview .title-upper{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px}
 .mag-preview .subtitle{font-size:1.1rem;font-weight:400;color:#333;margin-bottom:18px}
 .mag-preview .text{font-size:0.78rem;line-height:1.8;color:#333;margin-bottom:12px}
@@ -529,6 +529,27 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Auto-fit: reduz fonte dos títulos até caber sem quebrar linha
+    function fitTitles() {
+        document.querySelectorAll('.mag-preview .pg-cover .title').forEach(function(el) {
+            shrinkToFit(el, 16);
+        });
+        document.querySelectorAll('.mag-preview .title-big').forEach(function(el) {
+            shrinkToFit(el, 12);
+        });
+    }
+    function shrinkToFit(el, minSize) {
+        var parent = el.parentElement;
+        var maxW = parent.clientWidth;
+        var attempts = 0;
+        while (el.scrollWidth > maxW + 1 && attempts < 30) {
+            var cur = parseFloat(window.getComputedStyle(el).fontSize);
+            if (cur <= minSize) break;
+            el.style.fontSize = (cur - 1) + 'px';
+            attempts++;
+        }
+    }
+
     // Aguarda imagens
     var images = document.querySelectorAll('.mag-preview img');
     var loaded = 0;
@@ -536,10 +557,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function check() {
         loaded++;
-        if (loaded >= total) processPages();
+        if (loaded >= total) { fitTitles(); processPages(); }
     }
 
     if (total === 0) {
+        fitTitles();
         processPages();
     } else {
         images.forEach(function(img) {
@@ -549,7 +571,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.addEventListener('error', check);
             }
         });
-        setTimeout(processPages, 3000);
+        setTimeout(function() { fitTitles(); processPages(); }, 3000);
     }
 });
 </script>

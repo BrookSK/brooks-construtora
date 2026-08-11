@@ -42,7 +42,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
         .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.4) 0%,rgba(0,0,0,0.05) 35%,rgba(0,0,0,0.05) 50%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0.8) 90%,rgba(0,0,0,0.92) 100%)}
         .pg-cover .content{position:relative;z-index:2;text-align:center;width:100%;height:100%;display:flex;flex-direction:column;padding:30px 40px}
-        .pg-cover .title{font-size:5rem;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3);word-break:break-word;overflow-wrap:break-word}
+        .pg-cover .title{font-size:5rem;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .pg-cover .sub-line{display:flex;align-items:center;justify-content:center;gap:15px;margin-top:5px;font-size:0.7rem;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,0.9)}
         .pg-cover .sub-line .ln{width:40px;height:2px;background:#fff}
         .pg-cover .logo{margin:auto;max-width:220px;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7))}
@@ -60,7 +60,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         /* Elementos comuns */
         .img-full{width:100%;object-fit:cover;border-radius:0}
         .img-half{width:48%;object-fit:cover}
-        .title-big{font-family:'Montserrat',sans-serif;font-size:2.8rem;font-weight:900;font-style:normal;color:#111;margin-bottom:15px;line-height:1.1;word-break:break-word;overflow-wrap:break-word}
+        .title-big{font-family:'Montserrat',sans-serif;font-size:2.8rem;font-weight:900;font-style:normal;color:#111;margin-bottom:15px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .title-upper{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px}
         .subtitle{font-size:1.1rem;font-weight:400;color:#333;margin-bottom:18px}
         .text{font-size:0.78rem;line-height:1.8;color:#333;text-align:left;margin-bottom:12px}
@@ -669,10 +669,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function check() {
         loaded++;
-        if (loaded >= total) processPages();
+        if (loaded >= total) {
+            fitTitles();
+            processPages();
+        }
+    }
+
+    // Auto-fit: reduz fonte dos títulos até caber na largura sem quebrar linha
+    function fitTitles() {
+        // Títulos da capa
+        document.querySelectorAll('.pg-cover .title').forEach(function(el) {
+            shrinkToFit(el, 16);
+        });
+        // Títulos internos grandes
+        document.querySelectorAll('.title-big').forEach(function(el) {
+            shrinkToFit(el, 12);
+        });
+    }
+
+    function shrinkToFit(el, minSize) {
+        var parent = el.parentElement;
+        var maxW = parent.clientWidth;
+        var attempts = 0;
+        while (el.scrollWidth > maxW + 1 && attempts < 30) {
+            var cur = parseFloat(window.getComputedStyle(el).fontSize);
+            if (cur <= minSize) break;
+            el.style.fontSize = (cur - 1) + 'px';
+            attempts++;
+        }
     }
 
     if (total === 0) {
+        fitTitles();
         processPages();
     } else {
         images.forEach(function(img) {
@@ -682,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.addEventListener('error', check);
             }
         });
-        setTimeout(processPages, 3000);
+        setTimeout(function() { fitTitles(); processPages(); }, 3000);
     }
 });
 </script>
