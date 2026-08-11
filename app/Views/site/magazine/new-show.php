@@ -326,6 +326,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
 
     function processPages() {
+        // No mobile, não pagina — conteúdo flui naturalmente
+        if (window.innerWidth <= 620) return;
+        
         var allPages = Array.from(document.querySelectorAll('.mag-preview .page'));
         
         allPages.forEach(function(page) {
