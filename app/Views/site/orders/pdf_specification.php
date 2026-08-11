@@ -57,21 +57,6 @@
         .spec-table th { background: #f0f1f3; color: #555; padding: 6px 8px; text-align: left; font-size: 0.7rem; text-transform: uppercase; border-bottom: 1px solid #ddd; }
         .spec-table td { padding: 7px 8px; border-bottom: 1px solid #eee; }
         .spec-table tr:last-child td { border-bottom: none; }
-        .spec-table .subtotal-row { background: #f8f9fa; font-weight: 700; }
-        .spec-table .subtotal-row td { border-top: 2px solid #ccc; }
-
-        .grand-total {
-            background: #e8f5e9;
-            border: 2px solid #4caf50;
-            border-radius: 6px;
-            padding: 12px 16px;
-            margin-top: 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .grand-total .label { font-size: 1rem; font-weight: 700; color: #2e7d32; }
-        .grand-total .value { font-size: 1.2rem; font-weight: 700; color: #2e7d32; }
 
         .pdf-footer { border-top: 1px solid #ddd; padding-top: 1rem; margin-top: 2rem; text-align: center; font-size: 0.65rem; color: #999; }
         .download-bar { text-align: center; margin: 1rem 0 2rem; }
@@ -157,13 +142,7 @@
 
         <!-- Grupos por especificação -->
         <?php
-        $grandTotal = 0;
         foreach ($grouped as $key => $group):
-            $subtotal = 0;
-            foreach ($group['items'] as $item) {
-                $subtotal += ($item['total_price'] ?? 0);
-            }
-            $grandTotal += $subtotal;
         ?>
         <div class="spec-group">
             <div class="spec-group-title">
@@ -175,11 +154,9 @@
                     <tr>
                         <th style="width:5%;">#</th>
                         <th style="width:40%;">Material</th>
+                        <th style="width:20%;">Especificação</th>
                         <th style="width:15%;">Classificação</th>
-                        <th style="width:10%; text-align:center;">Qtd</th>
-                        <th style="width:8%; text-align:center;">Und</th>
-                        <th style="width:11%; text-align:right;">Unit.</th>
-                        <th style="width:11%; text-align:right;">Total</th>
+                        <th style="width:20%; text-align:center;">Quantidade</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -187,27 +164,15 @@
                     <tr>
                         <td><?= $i + 1 ?></td>
                         <td><strong><?= htmlspecialchars($item['material_name']) ?></strong></td>
+                        <td><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
                         <td><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
-                        <td style="text-align:center;"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2, ',', '.') ?></td>
-                        <td style="text-align:center;"><?= htmlspecialchars($item['unit'] ?? '-') ?></td>
-                        <td style="text-align:right;">R$ <?= number_format($item['unit_price'] ?? 0, 2, ',', '.') ?></td>
-                        <td style="text-align:right;">R$ <?= number_format($item['total_price'] ?? 0, 2, ',', '.') ?></td>
+                        <td style="text-align:center;"><?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2, ',', '.') ?> <?= htmlspecialchars($item['unit'] ?? '') ?></td>
                     </tr>
                     <?php endforeach; ?>
-                    <tr class="subtotal-row">
-                        <td colspan="6" style="text-align:right;">Subtotal:</td>
-                        <td style="text-align:right;">R$ <?= number_format($subtotal, 2, ',', '.') ?></td>
-                    </tr>
                 </tbody>
             </table>
         </div>
         <?php endforeach; ?>
-
-        <!-- Total Geral -->
-        <div class="grand-total">
-            <span class="label">TOTAL GERAL</span>
-            <span class="value">R$ <?= number_format($grandTotal, 2, ',', '.') ?></span>
-        </div>
 
         <!-- Footer -->
         <div class="pdf-footer">

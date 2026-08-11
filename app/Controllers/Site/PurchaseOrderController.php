@@ -1011,7 +1011,7 @@ class PurchaseOrderController extends Controller
         $orderId = (int) $id;
         $order = PurchaseOrder::findFull($orderId);
 
-        if (!$order || $order['status'] !== 'approved') {
+        if (!$order) {
             $this->show404();
             return;
         }
