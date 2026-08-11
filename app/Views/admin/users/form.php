@@ -28,6 +28,7 @@
                         <?php endif; ?>
                         <option value="admin" <?= ($editUser['role'] ?? '') === 'admin' ? 'selected' : '' ?>>Admin</option>
                         <option value="comprador" <?= ($editUser['role'] ?? '') === 'comprador' ? 'selected' : '' ?>>Comprador</option>
+                        <option value="estoque" <?= ($editUser['role'] ?? '') === 'estoque' ? 'selected' : '' ?>>Estoque</option>
                         <option value="designer" <?= ($editUser['role'] ?? '') === 'designer' ? 'selected' : '' ?>>Designer</option>
                         <option value="editor" <?= ($editUser['role'] ?? '') === 'editor' ? 'selected' : '' ?>>Editor</option>
                     </select>
@@ -46,6 +47,7 @@
                 <strong>Super Admin:</strong> Acesso total ao sistema.<br>
                 <strong>Admin:</strong> Dashboard, configurações, newsletter, usuários, revistas (editar e publicar), pedidos completo.<br>
                 <strong>Comprador:</strong> Dashboard, pedidos (criar e gerenciar), fornecedores, materiais.<br>
+                <strong>Estoque:</strong> Dashboard, pedidos (criar e cotar), fornecedores, materiais, obras, estoque, transporte.<br>
                 <strong>Designer:</strong> Dashboard, revistas (editar - upload de capa e imagens, revisão de texto).<br>
                 <strong>Editor:</strong> Dashboard, visualizar revistas, visualizar pedidos e histórico.
             </div>

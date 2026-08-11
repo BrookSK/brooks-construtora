@@ -131,6 +131,7 @@ class Auth
             'epi' => ['dashboard', 'epi', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials', 'obras'],
             'entrega' => ['dashboard', 'orders', 'orders.create', 'suppliers', 'materials', 'obras'],
             'transporte' => ['dashboard', 'orders', 'transport', 'obras'],
+            'estoque' => ['dashboard', 'orders', 'orders.create', 'orders.quote', 'suppliers', 'materials', 'obras', 'stock', 'transport'],
         ];
 
         if (!isset($permissions[$role])) {
