@@ -63,8 +63,8 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .title-big{font-family:'Montserrat',sans-serif;font-weight:900;font-style:normal;color:#111;margin-bottom:15px;line-height:1.1;font-size:min(2.8rem, 7vw)}
         .title-upper{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px}
         .subtitle{font-size:1.1rem;font-weight:400;color:#333;margin-bottom:18px}
-        .text{font-size:0.78rem;line-height:1.8;color:#333;text-align:justify;margin-bottom:12px}
-        .text-sm{font-size:0.78rem;line-height:1.8;color:#333;text-align:justify;margin-bottom:12px}
+        .text{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify;margin-bottom:10px}
+        .text-sm{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify;margin-bottom:10px}
         .caption{font-size:0.78rem;font-weight:700;color:#111;margin-top:10px}
         .caption-sub{font-size:0.58rem;color:#666}
         .two-col{display:flex;gap:18px}
@@ -102,7 +102,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;border:3px solid #2e7d32;color:#2e7d32;font-size:0.5rem;text-transform:uppercase}
         .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
         .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
-        .pg-guest .column-content p{font-size:0.78rem;line-height:1.8;color:#333;margin-bottom:12px;text-align:justify}
+        .pg-guest .column-content p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
 
         /* ===== CAUSOS DE OBRA ===== */
         .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
@@ -116,7 +116,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-stories .stories-subtitle{font-size:0.75rem;color:#666;font-style:italic;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #2e7d32}
         .pg-stories .story-item{margin-bottom:18px;padding-left:15px;border-left:3px solid #2e7d32}
         .pg-stories .story-item .story-title{font-weight:700;font-size:0.82rem;color:#111;margin-bottom:4px}
-        .pg-stories .story-item .story-text{font-size:0.78rem;line-height:1.8;color:#333;text-align:justify}
+        .pg-stories .story-item .story-text{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify}
     </style>
 </head>
 <body>
@@ -472,151 +472,158 @@ document.addEventListener('DOMContentLoaded', function() {
         var pageClass = page.className;
         var headerHeight = header ? header.offsetHeight + 20 : 0;
 
-        // Coleta elementos de conteúdo (exceto header)
-        var contentElements = [];
+        // Coleta TODOS os elementos leaf (parágrafos individuais, imagens, divs com conteúdo)
+        // Se um container (two-col, div com flex) tem parágrafos dentro, extraímos os parágrafos
+        var allElements = [];
         Array.from(page.children).forEach(function(child) {
-            if (!child.classList.contains('hdr')) {
-                contentElements.push(child);
-            }
+            if (child.classList.contains('hdr')) return;
+            allElements.push(child);
         });
 
-        // Determina o que cabe na primeira página
-        var currentHeight = headerHeight;
-        var splitIndex = contentElements.length; // por padrão tudo cabe
+        // Flatten: expande containers que têm múltiplos filhos em elementos individuais
+        // mas mantém containers de layout (two-col, flex) intactos
+        var flatElements = [];
+        allElements.forEach(function(el) {
+            flatElements.push(el);
+        });
 
-        for (var i = 0; i < contentElements.length; i++) {
-            var el = contentElements[i];
+        // Mede cada elemento
+        var measurements = [];
+        flatElements.forEach(function(el) {
             var style = window.getComputedStyle(el);
-            var elH = el.offsetHeight + parseInt(style.marginTop || 0) + parseInt(style.marginBottom || 0);
+            var h = el.offsetHeight + parseInt(style.marginTop || 0) + parseInt(style.marginBottom || 0);
+            measurements.push({ el: el, height: h });
+        });
 
-            if (currentHeight + elH > MAX_CONTENT) {
-                // Tenta dividir containers com múltiplos filhos
-                var innerKids = Array.from(el.children);
-                if (innerKids.length > 1) {
-                    var cloneBefore = el.cloneNode(false);
-                    var cloneAfter = el.cloneNode(false);
-                    var splitInner = false;
-                    var innerH = currentHeight;
+        // Distribui em páginas
+        var pages_arr = [];
+        var currentPageEls = [];
+        var currentH = headerHeight;
+
+        for (var i = 0; i < measurements.length; i++) {
+            var item = measurements[i];
+
+            if (currentH + item.height <= MAX_CONTENT) {
+                // Cabe na página atual
+                currentPageEls.push(item.el);
+                currentH += item.height;
+            } else {
+                // Não cabe inteiro — tenta dividir o conteúdo interno
+                var innerKids = Array.from(item.el.children);
+                var spaceLeft = MAX_CONTENT - currentH;
+
+                if (innerKids.length > 1 && spaceLeft > 60) {
+                    // Tenta encaixar filhos individuais no espaço restante
+                    var fitPart = item.el.cloneNode(false);
+                    var overflowPart = item.el.cloneNode(false);
+                    var usedH = 0;
+                    var didSplit = false;
 
                     for (var j = 0; j < innerKids.length; j++) {
-                        var kidH = innerKids[j].offsetHeight + 14;
-                        if (!splitInner && innerH + kidH > MAX_CONTENT) {
-                            splitInner = true;
-                        }
-                        if (splitInner) {
-                            cloneAfter.appendChild(innerKids[j].cloneNode(true));
+                        var kidStyle = window.getComputedStyle(innerKids[j]);
+                        var kidH = innerKids[j].offsetHeight + parseInt(kidStyle.marginTop || 0) + parseInt(kidStyle.marginBottom || 0);
+
+                        if (!didSplit && usedH + kidH <= spaceLeft) {
+                            fitPart.appendChild(innerKids[j].cloneNode(true));
+                            usedH += kidH;
                         } else {
-                            innerH += kidH;
-                            cloneBefore.appendChild(innerKids[j].cloneNode(true));
+                            didSplit = true;
+                            overflowPart.appendChild(innerKids[j].cloneNode(true));
                         }
                     }
 
-                    // Substitui o elemento original pelo que cabe
-                    if (cloneBefore.children.length > 0) {
-                        el.parentNode.insertBefore(cloneBefore, el);
+                    if (fitPart.children.length > 0) {
+                        currentPageEls.push(fitPart);
                     }
-                    el.parentNode.removeChild(el);
-                    contentElements.splice(i, 1, cloneBefore);
 
-                    // O resto vai para overflow
-                    splitIndex = i + 1;
-                    // Insere cloneAfter como próximo elemento
-                    contentElements.splice(splitIndex, 0, cloneAfter);
+                    // Fecha página atual
+                    pages_arr.push(currentPageEls);
+                    currentPageEls = [];
+                    currentH = headerHeight;
+
+                    if (overflowPart.children.length > 0) {
+                        // Re-insere o overflow como próximo item a processar
+                        // Substitui no DOM temporariamente pra medir
+                        page.appendChild(overflowPart);
+                        var overflowStyle = window.getComputedStyle(overflowPart);
+                        var overflowH = overflowPart.offsetHeight + parseInt(overflowStyle.marginTop || 0) + parseInt(overflowStyle.marginBottom || 0);
+                        page.removeChild(overflowPart);
+
+                        measurements.splice(i + 1, 0, { el: overflowPart, height: overflowH });
+                    }
+                } else if (spaceLeft > 60 && item.el.querySelectorAll('p, .text, .text-sm').length > 1) {
+                    // É um elemento com múltiplos parágrafos de texto (ex: coluna)
+                    // Tenta dividir por parágrafos
+                    var textEls = Array.from(item.el.querySelectorAll('p, .text, .text-sm'));
+                    if (textEls.length > 1) {
+                        var fitPartB = item.el.cloneNode(false);
+                        var overflowPartB = item.el.cloneNode(false);
+                        var usedHB = 0;
+                        var didSplitB = false;
+
+                        for (var k = 0; k < textEls.length; k++) {
+                            var tH = textEls[k].offsetHeight + 12;
+                            if (!didSplitB && usedHB + tH <= spaceLeft) {
+                                fitPartB.appendChild(textEls[k].cloneNode(true));
+                                usedHB += tH;
+                            } else {
+                                didSplitB = true;
+                                overflowPartB.appendChild(textEls[k].cloneNode(true));
+                            }
+                        }
+
+                        if (fitPartB.children.length > 0) currentPageEls.push(fitPartB);
+                        pages_arr.push(currentPageEls);
+                        currentPageEls = [];
+                        currentH = headerHeight;
+
+                        if (overflowPartB.children.length > 0) {
+                            page.appendChild(overflowPartB);
+                            var obStyle = window.getComputedStyle(overflowPartB);
+                            var obH = overflowPartB.offsetHeight + parseInt(obStyle.marginTop || 0) + parseInt(obStyle.marginBottom || 0);
+                            page.removeChild(overflowPartB);
+                            measurements.splice(i + 1, 0, { el: overflowPartB, height: obH });
+                        }
+                    } else {
+                        // Não dá pra dividir — fecha página e coloca na próxima
+                        if (currentPageEls.length > 0) pages_arr.push(currentPageEls);
+                        currentPageEls = [item.el];
+                        currentH = headerHeight + item.height;
+                    }
                 } else {
-                    splitIndex = i;
+                    // Elemento atômico ou pouco espaço — fecha página atual e começa nova
+                    if (currentPageEls.length > 0) pages_arr.push(currentPageEls);
+                    currentPageEls = [item.el];
+                    currentH = headerHeight + item.height;
                 }
-                break;
             }
-            currentHeight += elH;
         }
+        if (currentPageEls.length > 0) pages_arr.push(currentPageEls);
 
-        if (splitIndex >= contentElements.length) {
-            // Tudo coube — fixa a página
+        // Se tudo coube em 1 página, apenas fixa
+        if (pages_arr.length <= 1) {
             page.style.height = PAGE_HEIGHT + 'px';
             page.style.overflow = 'hidden';
             return;
         }
 
-        // Separa: o que fica na página atual vs overflow
-        var overflowEls = contentElements.slice(splitIndex);
-
-        // Limpa e reconstrói a página atual
+        // Reconstrói: primeira página
         while (page.firstChild) page.removeChild(page.firstChild);
-        if (header) page.appendChild(header);
-        for (var k = 0; k < splitIndex; k++) {
-            page.appendChild(contentElements[k]);
-        }
+        if (header) page.appendChild(header.cloneNode(true));
+        pages_arr[0].forEach(function(el) { page.appendChild(el); });
         page.style.height = PAGE_HEIGHT + 'px';
         page.style.overflow = 'hidden';
 
-        // Cria páginas de continuação
-        var remaining = overflowEls;
+        // Páginas de continuação
         var prevPage = page;
-
-        while (remaining.length > 0) {
+        for (var p = 1; p < pages_arr.length; p++) {
             var newPage = document.createElement('div');
             newPage.className = pageClass;
             newPage.setAttribute('data-continuation', 'true');
             newPage.innerHTML = headerHTML;
             prevPage.parentNode.insertBefore(newPage, prevPage.nextSibling);
 
-            // Adiciona elementos até encher
-            var newH = headerHTML ? 50 : 0;
-            var fitted = 0;
-            var didBreak = false;
-            for (var m = 0; m < remaining.length; m++) {
-                newPage.appendChild(remaining[m]);
-                var mH = remaining[m].offsetHeight + 14;
-
-                if (newH + mH > MAX_CONTENT) {
-                    // Elemento não cabe — tenta dividir seus filhos
-                    // Mede filhos ENQUANTO no DOM
-                    var innerC = Array.from(remaining[m].children);
-                    if (innerC.length > 1) {
-                        var childHeights = [];
-                        for (var ci = 0; ci < innerC.length; ci++) {
-                            childHeights.push(innerC[ci].offsetHeight + 14);
-                        }
-                        newPage.removeChild(remaining[m]);
-                        var fitClone = remaining[m].cloneNode(false);
-                        var restClone = remaining[m].cloneNode(false);
-                        var innerFitH = newH;
-                        var addedSome = false;
-                        for (var n = 0; n < innerC.length; n++) {
-                            if (innerFitH + childHeights[n] > MAX_CONTENT && addedSome) {
-                                for (var o = n; o < innerC.length; o++) {
-                                    restClone.appendChild(innerC[o].cloneNode(true));
-                                }
-                                break;
-                            }
-                            innerFitH += childHeights[n];
-                            fitClone.appendChild(innerC[n].cloneNode(true));
-                            addedSome = true;
-                        }
-                        if (fitClone.children.length > 0) newPage.appendChild(fitClone);
-                        if (restClone.children.length > 0) {
-                            remaining = [restClone].concat(remaining.slice(m + 1));
-                        } else {
-                            remaining = remaining.slice(m + 1);
-                        }
-                    } else if (fitted > 0) {
-                        // Não tem filhos para dividir e já tem algo na página
-                        newPage.removeChild(remaining[m]);
-                        remaining = remaining.slice(m);
-                    } else {
-                        // Elemento atômico que não cabe sozinho — aceita cortado
-                        remaining = remaining.slice(m + 1);
-                    }
-                    didBreak = true;
-                    break;
-                }
-                newH += mH;
-                fitted++;
-            }
-            if (!didBreak) {
-                remaining = [];
-            }
-
+            pages_arr[p].forEach(function(el) { newPage.appendChild(el); });
             newPage.style.height = PAGE_HEIGHT + 'px';
             newPage.style.overflow = 'hidden';
             prevPage = newPage;
