@@ -150,10 +150,19 @@ foreach ($pages as $page):
 </div>
 
 <?php elseif ($layout === 'internal_06'): ?>
+<?php
+    $allLines06 = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
+    $sideLines = array_slice($allLines06, 0, min(7, count($allLines06)));
+    $bottomLines = array_slice($allLines06, count($sideLines));
+    $bottomMid = (int)ceil(count($bottomLines) / 2);
+?>
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <div style="display:flex;gap:8px;margin-bottom:8px"><?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:280px;object-fit:cover" alt=""><?php endif; ?><?php if($img2): ?><img src="<?= $img2 ?>" style="width:50%;height:280px;object-fit:cover" alt=""><?php endif; ?></div>
-    <div style="display:flex;gap:8px"><?php $img3=$page['image_url_3']??''; if($img3): ?><img src="<?= $img3 ?>" style="width:50%;height:280px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:280px">IMAGEM</div><?php endif; ?><div style="width:50%;padding:15px 10px"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div></div>
+    <div style="display:flex;gap:8px;margin-bottom:8px"><?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:180px;object-fit:cover" alt=""><?php endif; ?><?php if($img2): ?><img src="<?= $img2 ?>" style="width:50%;height:180px;object-fit:cover" alt=""><?php endif; ?></div>
+    <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px"><?php $img3=$page['image_url_3']??''; if($img3): ?><img src="<?= $img3 ?>" style="width:50%;height:180px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:180px">IMAGEM</div><?php endif; ?><div style="width:50%"><?php foreach($sideLines as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div></div>
+    <?php if (count($bottomLines) > 0): ?>
+    <div class="two-col"><div class="col"><?php foreach(array_slice($bottomLines, 0, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div><div class="col"><?php foreach(array_slice($bottomLines, $bottomMid) as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div></div>
+    <?php endif; ?>
 </div>
 
 <?php elseif ($layout === 'internal_07'): ?>
@@ -291,6 +300,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            // Tenta reduzir levemente a fonte (não no guest column)
+            if (!page.classList.contains('pg-guest')) {
+                var attempts = 0;
+                while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 4) {
+                    var textEls = page.querySelectorAll('.text, .text-sm, p');
+                    textEls.forEach(function(el) {
+                        var cur = parseFloat(window.getComputedStyle(el).fontSize);
+                        el.style.fontSize = (cur - 0.3) + 'px';
+                    });
+                    attempts++;
+                }
+            }
+
+            if (page.scrollHeight <= PAGE_HEIGHT + 5) {
+                page.style.height = PAGE_HEIGHT + 'px';
+                page.style.overflow = 'hidden';
+                return;
+            }
+
             paginatePage(page);
         });
 
@@ -303,114 +331,97 @@ document.addEventListener('DOMContentLoaded', function() {
         var pageClass = page.className;
         var headerHeight = header ? header.offsetHeight + 20 : 0;
 
-        var contentElements = [];
+        var blocks = [];
         Array.from(page.children).forEach(function(child) {
-            if (!child.classList.contains('hdr')) contentElements.push(child);
+            if (child.classList.contains('hdr')) return;
+            blocks.push(child);
         });
 
-        var currentHeight = headerHeight;
-        var splitIndex = contentElements.length;
-
-        for (var i = 0; i < contentElements.length; i++) {
-            var el = contentElements[i];
+        var measured = [];
+        blocks.forEach(function(el) {
             var style = window.getComputedStyle(el);
-            var elH = el.offsetHeight + parseInt(style.marginTop || 0) + parseInt(style.marginBottom || 0);
+            var h = el.offsetHeight + parseInt(style.marginTop || 0) + parseInt(style.marginBottom || 0);
+            measured.push({ el: el, height: h });
+        });
 
-            if (currentHeight + elH > MAX_CONTENT) {
-                var innerKids = Array.from(el.children);
-                if (innerKids.length > 1) {
-                    var cloneBefore = el.cloneNode(false);
-                    var cloneAfter = el.cloneNode(false);
-                    var splitInner = false;
-                    var innerH = currentHeight;
+        var pages_arr = [];
+        var currentPageEls = [];
+        var currentH = headerHeight;
 
-                    for (var j = 0; j < innerKids.length; j++) {
-                        var kidH = innerKids[j].offsetHeight + 14;
-                        if (!splitInner && innerH + kidH > MAX_CONTENT) splitInner = true;
-                        if (splitInner) cloneAfter.appendChild(innerKids[j].cloneNode(true));
-                        else { innerH += kidH; cloneBefore.appendChild(innerKids[j].cloneNode(true)); }
-                    }
+        for (var i = 0; i < measured.length; i++) {
+            var item = measured[i];
 
-                    if (cloneBefore.children.length > 0) el.parentNode.insertBefore(cloneBefore, el);
-                    el.parentNode.removeChild(el);
-                    contentElements.splice(i, 1, cloneBefore);
-                    splitIndex = i + 1;
-                    contentElements.splice(splitIndex, 0, cloneAfter);
-                } else {
-                    splitIndex = i;
+            if (currentH + item.height <= MAX_CONTENT) {
+                currentPageEls.push(item.el);
+                currentH += item.height;
+            } else {
+                if (currentPageEls.length > 0) {
+                    pages_arr.push(currentPageEls);
+                    currentPageEls = [];
+                    currentH = headerHeight;
                 }
-                break;
-            }
-            currentHeight += elH;
-        }
 
-        if (splitIndex >= contentElements.length) {
+                if (item.height <= MAX_CONTENT) {
+                    currentPageEls.push(item.el);
+                    currentH = headerHeight + item.height;
+                } else {
+                    var innerKids = Array.from(item.el.children);
+                    if (innerKids.length > 1) {
+                        var partA = item.el.cloneNode(false);
+                        var partB = item.el.cloneNode(false);
+                        var usedH = 0;
+                        var didSplit = false;
+                        for (var j = 0; j < innerKids.length; j++) {
+                            var kidH = innerKids[j].offsetHeight + 12;
+                            if (!didSplit && usedH + kidH <= MAX_CONTENT - headerHeight) {
+                                partA.appendChild(innerKids[j].cloneNode(true));
+                                usedH += kidH;
+                            } else {
+                                didSplit = true;
+                                partB.appendChild(innerKids[j].cloneNode(true));
+                            }
+                        }
+                        if (partA.children.length > 0) {
+                            currentPageEls.push(partA);
+                            pages_arr.push(currentPageEls);
+                            currentPageEls = [];
+                            currentH = headerHeight;
+                        }
+                        if (partB.children.length > 0) {
+                            page.appendChild(partB);
+                            var pbH = partB.offsetHeight + 12;
+                            page.removeChild(partB);
+                            measured.splice(i + 1, 0, { el: partB, height: pbH });
+                        }
+                    } else {
+                        currentPageEls.push(item.el);
+                        currentH = headerHeight + item.height;
+                    }
+                }
+            }
+        }
+        if (currentPageEls.length > 0) pages_arr.push(currentPageEls);
+
+        if (pages_arr.length <= 1) {
             page.style.height = PAGE_HEIGHT + 'px';
             page.style.overflow = 'hidden';
             return;
         }
 
-        var overflowEls = contentElements.slice(splitIndex);
-
         while (page.firstChild) page.removeChild(page.firstChild);
-        if (header) page.appendChild(header);
-        for (var k = 0; k < splitIndex; k++) page.appendChild(contentElements[k]);
+        if (header) page.appendChild(header.cloneNode(true));
+        pages_arr[0].forEach(function(el) { page.appendChild(el); });
         page.style.height = PAGE_HEIGHT + 'px';
         page.style.overflow = 'hidden';
 
-        var remaining = overflowEls;
         var prevPage = page;
-
-        while (remaining.length > 0) {
+        for (var p = 1; p < pages_arr.length; p++) {
             var newPage = document.createElement('div');
             newPage.className = pageClass;
             newPage.setAttribute('data-continuation', 'true');
             newPage.innerHTML = headerHTML;
             prevPage.parentNode.insertBefore(newPage, prevPage.nextSibling);
-
-            var newH = headerHTML ? 50 : 0;
-            var fitted = 0;
-            var didBreak = false;
-            for (var m = 0; m < remaining.length; m++) {
-                newPage.appendChild(remaining[m]);
-                var mH = remaining[m].offsetHeight + 14;
-
-                if (newH + mH > MAX_CONTENT) {
-                    var innerC = Array.from(remaining[m].children);
-                    if (innerC.length > 1) {
-                        var childHeights = [];
-                        for (var ci = 0; ci < innerC.length; ci++) childHeights.push(innerC[ci].offsetHeight + 14);
-                        newPage.removeChild(remaining[m]);
-                        var fitClone = remaining[m].cloneNode(false);
-                        var restClone = remaining[m].cloneNode(false);
-                        var innerFitH = newH;
-                        var addedSome = false;
-                        for (var n = 0; n < innerC.length; n++) {
-                            if (innerFitH + childHeights[n] > MAX_CONTENT && addedSome) {
-                                for (var o = n; o < innerC.length; o++) restClone.appendChild(innerC[o].cloneNode(true));
-                                break;
-                            }
-                            innerFitH += childHeights[n];
-                            fitClone.appendChild(innerC[n].cloneNode(true));
-                            addedSome = true;
-                        }
-                        if (fitClone.children.length > 0) newPage.appendChild(fitClone);
-                        if (restClone.children.length > 0) remaining = [restClone].concat(remaining.slice(m + 1));
-                        else remaining = remaining.slice(m + 1);
-                    } else if (fitted > 0) {
-                        newPage.removeChild(remaining[m]);
-                        remaining = remaining.slice(m);
-                    } else {
-                        remaining = remaining.slice(m + 1);
-                    }
-                    didBreak = true;
-                    break;
-                }
-                newH += mH;
-                fitted++;
-            }
-            if (!didBreak) remaining = [];
-
+            pages_arr[p].forEach(function(el) { newPage.appendChild(el); });
             newPage.style.height = PAGE_HEIGHT + 'px';
             newPage.style.overflow = 'hidden';
             prevPage = newPage;

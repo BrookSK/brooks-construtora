@@ -102,7 +102,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;border:3px solid #2e7d32;color:#2e7d32;font-size:0.5rem;text-transform:uppercase}
         .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
         .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
-        .pg-guest .column-content p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
+        .pg-guest .column-content p{font-size:0.82rem;line-height:1.9;color:#333;margin-bottom:14px;text-align:justify}
 
         /* ===== CAUSOS DE OBRA ===== */
         .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
@@ -284,20 +284,20 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <!-- PÁG INTERNA 06 v2: img3 esquerda + texto direita, depois 2 colunas -->
 <?php
     $allLines06 = array_values(array_filter(explode("\n", $page['content'] ?? ''), function($l){ return trim($l) !== ''; }));
-    // Texto ao lado da img3 (coluna direita superior)
-    $sideLines = array_slice($allLines06, 0, min(5, count($allLines06)));
-    // Texto embaixo em 2 colunas: esq continua, dir finaliza
+    // Texto ao lado da img3 (coluna direita superior) - até 7 parágrafos
+    $sideLines = array_slice($allLines06, 0, min(7, count($allLines06)));
+    // Texto embaixo em 2 colunas
     $bottomLines = array_slice($allLines06, count($sideLines));
     $bottomMid = (int)ceil(count($bottomLines) / 2);
 ?>
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
-        <?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:220px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:220px">IMAGEM 1</div><?php endif; ?>
-        <?php if($img2): ?><img src="<?= $img2 ?>" style="width:50%;height:220px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:220px">IMAGEM 2</div><?php endif; ?>
+        <?php if($img1): ?><img src="<?= $img1 ?>" style="width:50%;height:180px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:180px">IMAGEM 1</div><?php endif; ?>
+        <?php if($img2): ?><img src="<?= $img2 ?>" style="width:50%;height:180px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:180px">IMAGEM 2</div><?php endif; ?>
     </div>
     <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px">
-        <?php $img3 = $page['image_url_3'] ?? ''; if($img3): ?><img src="<?= $img3 ?>" style="width:50%;height:220px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:220px">IMAGEM 3</div><?php endif; ?>
+        <?php $img3 = $page['image_url_3'] ?? ''; if($img3): ?><img src="<?= $img3 ?>" style="width:50%;height:180px;object-fit:cover" alt=""><?php else: ?><div class="img-placeholder" style="width:50%;height:180px">IMAGEM 3</div><?php endif; ?>
         <div style="width:50%"><?php foreach($sideLines as $p): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endforeach; ?></div>
     </div>
     <?php if (count($bottomLines) > 0): ?>
@@ -459,14 +459,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Primeiro tenta reduzir levemente a fonte pra caber (max 4 tentativas)
-            var attempts = 0;
-            while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 4) {
-                var textEls = page.querySelectorAll('.text, .text-sm, p');
-                textEls.forEach(function(el) {
-                    var cur = parseFloat(window.getComputedStyle(el).fontSize);
-                    el.style.fontSize = (cur - 0.3) + 'px';
-                });
-                attempts++;
+            // Não reduz fonte na coluna do convidado (pg-guest)
+            if (!page.classList.contains('pg-guest')) {
+                var attempts = 0;
+                while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 4) {
+                    var textEls = page.querySelectorAll('.text, .text-sm, p');
+                    textEls.forEach(function(el) {
+                        var cur = parseFloat(window.getComputedStyle(el).fontSize);
+                        el.style.fontSize = (cur - 0.3) + 'px';
+                    });
+                    attempts++;
+                }
             }
 
             // Se coube com a redução, fixa

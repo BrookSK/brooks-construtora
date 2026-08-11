@@ -172,7 +172,7 @@ foreach ($pages as $page):
             <div style="font-size:0.75rem;color:#666;font-style:italic;"><?= htmlspecialchars($page['subtitle'] ?? 'Cargo / Empresa') ?></div>
         </div>
     </div>
-    <div class="column-content"><?php foreach(explode("\n", $page['content'] ?? '') as $p): if(trim($p)): ?><p class="text" style="text-align:justify;line-height:1.9;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
+    <div class="column-content"><?php foreach(explode("\n", $page['content'] ?? '') as $p): if(trim($p)): ?><p class="text" style="text-align:justify;line-height:1.9;font-size:0.82rem;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
 </div>
 
 <?php elseif ($layout === 'internal_01'): ?>
@@ -348,14 +348,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Primeiro tenta reduzir levemente a fonte pra caber (max 4 tentativas)
-            var attempts = 0;
-            while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 4) {
-                var textEls = page.querySelectorAll('.text, .text-sm, p');
-                textEls.forEach(function(el) {
-                    var cur = parseFloat(window.getComputedStyle(el).fontSize);
-                    el.style.fontSize = (cur - 0.3) + 'px';
-                });
-                attempts++;
+            // Não reduz fonte na coluna do convidado (pg-guest)
+            if (!page.classList.contains('pg-guest')) {
+                var attempts = 0;
+                while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 4) {
+                    var textEls = page.querySelectorAll('.text, .text-sm, p');
+                    textEls.forEach(function(el) {
+                        var cur = parseFloat(window.getComputedStyle(el).fontSize);
+                        el.style.fontSize = (cur - 0.3) + 'px';
+                    });
+                    attempts++;
+                }
             }
 
             if (page.scrollHeight <= PAGE_HEIGHT + 5) {
