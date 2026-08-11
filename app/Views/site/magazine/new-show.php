@@ -39,7 +39,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
 .mag-preview .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.4) 0%,rgba(0,0,0,0.05) 35%,rgba(0,0,0,0.05) 50%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0.8) 90%,rgba(0,0,0,0.92) 100%)}
 .mag-preview .pg-cover .content{position:relative;z-index:2;text-align:center;width:100%;height:100%;display:flex;flex-direction:column;padding:30px 40px}
-.mag-preview .pg-cover .title{font-size:5rem;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3);white-space:nowrap;overflow:hidden}
+.mag-preview .pg-cover .title{font-size:min(5rem, 11vw);font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:min(2px, 0.3vw);margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}
 .mag-preview .pg-cover .sub-line{display:flex;align-items:center;justify-content:center;gap:15px;margin-top:5px;font-size:0.7rem;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,0.9)}
 .mag-preview .pg-cover .sub-line .ln{width:40px;height:2px;background:#fff}
 .mag-preview .pg-cover .logo{margin:auto;max-width:220px;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7))}
@@ -53,7 +53,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .pg-int .pn{font-size:1rem;font-weight:300;color:#333}
 .mag-preview .img-full{width:100%;object-fit:cover}
 .mag-preview .img-half{width:48%;object-fit:cover}
-.mag-preview .title-big{font-family:'Montserrat',sans-serif;font-size:2.8rem;font-weight:900;color:#111;margin-bottom:15px;line-height:1.1;white-space:nowrap;overflow:hidden}
+.mag-preview .title-big{font-family:'Montserrat',sans-serif;font-size:min(2.8rem, 7vw);font-weight:900;color:#111;margin-bottom:15px;line-height:1.1}
 .mag-preview .title-upper{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:18px;border-bottom:1px solid #ddd;padding-bottom:10px}
 .mag-preview .subtitle{font-size:1.1rem;font-weight:400;color:#333;margin-bottom:18px}
 .mag-preview .text{font-size:0.78rem;line-height:1.8;color:#333;margin-bottom:12px}
@@ -95,16 +95,16 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 #pdf-loading p{margin:0;font-size:13px;color:#555;font-weight:500;}
 @media(max-width:620px){
     .mag-preview .page{height:auto;min-height:500px}
-    .mag-preview .pg-cover{height:auto}
+    .mag-preview .pg-cover{height:auto;overflow:visible}
     .mag-preview .pg-cover .content{padding:20px 15px}
-    .mag-preview .pg-cover .title{font-size:clamp(1.6rem, 9vw, 2.5rem);letter-spacing:0}
+    .mag-preview .pg-cover .title{font-size:min(2.5rem, 11vw);letter-spacing:0}
     .mag-preview .pg-cover .topic{font-size:1rem;margin-bottom:50px}
     .mag-preview .pg-cover .logo{max-width:150px}
     .mag-preview .pg-int{padding:20px 15px;height:auto;overflow:visible}
     .mag-preview .pg-guest{padding:20px 15px;height:auto;overflow:visible}
     .mag-preview .pg-stories{padding:20px 15px;height:auto;overflow:visible}
     .mag-preview .pg-back{height:auto;min-height:500px}
-    .mag-preview .title-big{font-size:clamp(1.2rem, 6vw, 1.4rem)}
+    .mag-preview .title-big{font-size:min(1.4rem, 7vw)}
     .mag-preview .title-upper{font-size:0.55rem}
     .mag-preview .text,.mag-preview .text-sm{font-size:0.65rem}
     .mag-preview .two-col{flex-direction:column}
