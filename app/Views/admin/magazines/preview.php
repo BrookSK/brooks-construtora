@@ -11,7 +11,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=615, initial-scale=1.0">
     <base href="<?= $baseUrl ?>/">
     <title>Preview - <?= htmlspecialchars($magazine['title']) ?></title>
     <link rel="icon" href="/assets/images/wp/2023/01/cropped-favicon-1-32x32.png" />
@@ -493,23 +493,9 @@ function generatePDF() {
 // Sistema de paginação e ajuste de páginas
 document.addEventListener('DOMContentLoaded', function() {
     // Mobile: escala a revista pra caber na tela (mantém layout desktop)
-    function scaleForMobile() {
-        var preview = document.querySelector('.preview');
-        if (!preview) return;
-        var screenW = window.innerWidth;
-        if (screenW < 620) {
-            var zoomLevel = screenW / 615;
-            preview.style.zoom = zoomLevel;
-        } else {
-            preview.style.zoom = '';
-        }
-    }
-
-    // Aplica scale depois da paginação
-    function applyMobileScale() {
-        scaleForMobile();
-    }
-    window.addEventListener('resize', scaleForMobile);
+    function scaleForMobile() {}
+    function applyMobileScale() {}
+    window.addEventListener('resize', function(){});
 
     var PAGE_HEIGHT = 842;
     var PAGE_PADDING = 60; // top + bottom padding aproximado
