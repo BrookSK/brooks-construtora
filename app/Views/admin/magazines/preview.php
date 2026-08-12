@@ -18,8 +18,10 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Inter',sans-serif;background:#333;padding:20px 0}
+        body.site-embed{background:#fff;padding:0}
         .preview{max-width:595px;margin:0 auto;padding:0 10px}
         .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
+        body.site-embed .page{box-shadow:0 2px 15px rgba(0,0,0,0.1);margin-bottom:15px}
         @media(max-width:620px){
             .page{width:100%;height:auto;min-height:500px;aspect-ratio:auto}
             .pg-cover{height:auto;min-height:500px;overflow:visible}
@@ -122,7 +124,8 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-stories .story-item .story-text{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify}
     </style>
 </head>
-<body>
+<?php $isAdmin = false; try { $isAdmin = \App\Core\Auth::check(); } catch(\Exception $e) {} ?>
+<body<?= $isAdmin ? '' : ' class="site-embed"' ?>>
 <div class="preview">
 <?php foreach ($pages as $page):
     $img1 = $page['image_url'] ?? '';
@@ -428,7 +431,7 @@ if (!empty($sources)):
 </div>
 
 <!-- Botão flutuante para baixar PDF (só aparece no admin) -->
-<?php if (\App\Core\Auth::check()): ?>
+<?php if ($isAdmin): ?>
 <div id="pdf-toolbar" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;gap:10px;">
     <button onclick="generatePDF()" id="btn-pdf" style="background:#e53935;color:#fff;border:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.3);display:flex;align-items:center;gap:8px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>

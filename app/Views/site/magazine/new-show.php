@@ -29,8 +29,8 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 </section>
 
 <!-- Magazine Preview (iframe isolado - sem conflito de CSS) -->
-<section style="padding: var(--space-2xl) 0 var(--space-4xl); background: #f5f5f5;">
-    <div style="max-width: 635px; margin: 0 auto; padding: 0 10px;">
+<section style="padding: var(--space-xl) 0 var(--space-4xl);">
+    <div style="max-width: 615px; margin: 0 auto;">
         <div id="pdf-loading" style="display:none;text-align:center;margin:30px 0;">
             <div style="display:inline-block;width:24px;height:24px;border:3px solid #ddd;border-top-color:#1a3d6d;border-radius:50%;animation:pdfspin 0.8s linear infinite;margin-bottom:10px;"></div>
             <p style="margin:0;font-size:13px;color:#555;font-weight:500;">Gerando PDF, aguarde...</p>
@@ -44,18 +44,23 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 // Ajusta altura do iframe para mostrar todo o conteúdo
 function adjustIframeHeight() {
     var iframe = document.getElementById('magazine-frame');
-    try {
-        var doc = iframe.contentDocument || iframe.contentWindow.document;
-        // Aguarda processamento de páginas do iframe
-        setTimeout(function() {
+    function doAdjust() {
+        try {
+            var doc = iframe.contentDocument || iframe.contentWindow.document;
             var body = doc.body;
-            var height = body.scrollHeight || body.offsetHeight;
-            iframe.style.height = height + 'px';
-        }, 3500); // espera paginação + imagens carregarem
-    } catch(e) {
-        // fallback se não conseguir acessar (cross-origin)
-        iframe.style.height = '5000px';
+            if (body) {
+                var height = Math.max(body.scrollHeight, body.offsetHeight);
+                iframe.style.height = height + 50 + 'px';
+            }
+        } catch(e) {
+            iframe.style.height = '8000px';
+        }
     }
+    // Ajusta múltiplas vezes pra pegar a paginação
+    setTimeout(doAdjust, 1000);
+    setTimeout(doAdjust, 3000);
+    setTimeout(doAdjust, 5000);
+    setTimeout(doAdjust, 8000);
 }
 
 // Recalcula altura quando a janela redimensiona
