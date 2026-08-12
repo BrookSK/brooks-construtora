@@ -38,7 +38,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         }
 
         /* ===== CAPA ===== */
-        .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#1a472a;height:842px;overflow:hidden}
+        .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#0a1628;height:842px;overflow:hidden}
         .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
         .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.4) 0%,rgba(0,0,0,0.05) 35%,rgba(0,0,0,0.05) 50%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0.8) 90%,rgba(0,0,0,0.92) 100%)}
         .pg-cover .content{position:relative;z-index:2;text-align:center;width:100%;height:100%;display:flex;flex-direction:column;padding:30px 40px}
@@ -53,7 +53,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-int{padding:30px 35px;min-height:842px;overflow:visible}
         .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
         .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
-        .pg-int .logo-sm .ck{color:#2e7d32}
+        .pg-int .logo-sm .ck{color:#e53935}
         .pg-int .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
         .pg-int .pn{font-size:1rem;font-weight:300;color:#333}
 
@@ -75,12 +75,12 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         /* ===== INTERNAL_04 - Imagem full com overlay ===== */
         .overlay-section{position:relative;width:100%;height:420px;overflow:hidden;margin-bottom:15px}
         .overlay-section img{width:100%;height:100%;object-fit:cover}
-        .overlay-section .ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,50,0,0.95));padding:25px 30px 20px}
+        .overlay-section .ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(5,15,40,0.95));padding:25px 30px 20px}
         .overlay-section .ov h2{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#fff}
         .overlay-section .ov p{font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.8);margin-top:5px}
 
         /* ===== CONTRACAPA ===== */
-        .pg-back{background:#1a3a2a;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;height:842px;overflow:hidden;position:relative}
+        .pg-back{background:#0a1628;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;height:842px;overflow:hidden;position:relative}
         .pg-back .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
         .pg-back .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55)}
         .pg-back .logo{max-width:250px;margin-bottom:35px;position:relative;z-index:2}
@@ -88,20 +88,20 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-back .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8);z-index:2}
 
         /* Placeholder para imagens não carregadas */
-        .img-placeholder{background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;color:#2e7d32;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
+        .img-placeholder{background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;color:#1a3d6d;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
 
         /* ===== COLUNA DO CONVIDADO ===== */
         .pg-guest{padding:40px 40px;height:auto;min-height:842px;overflow:visible}
         .pg-guest .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:25px}
         .pg-guest .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
-        .pg-guest .logo-sm .ck{color:#2e7d32}
+        .pg-guest .logo-sm .ck{color:#e53935}
         .pg-guest .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
         .pg-guest .pn{font-size:1rem;font-weight:300;color:#333}
-        .pg-guest .column-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:#2e7d32;font-weight:600;margin-bottom:8px}
+        .pg-guest .column-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:#1a3d6d;font-weight:600;margin-bottom:8px}
         .pg-guest .column-title{font-family:'Montserrat',sans-serif;font-size:2.2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:20px}
-        .pg-guest .author-box{display:flex;align-items:center;gap:15px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #2e7d32}
-        .pg-guest .author-photo{width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #2e7d32}
-        .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;border:3px solid #2e7d32;color:#2e7d32;font-size:0.5rem;text-transform:uppercase}
+        .pg-guest .author-box{display:flex;align-items:center;gap:15px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #1a3d6d}
+        .pg-guest .author-photo{width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #1a3d6d}
+        .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;border:3px solid #1a3d6d;color:#1a3d6d;font-size:0.5rem;text-transform:uppercase}
         .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
         .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
         .pg-guest .column-content p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
@@ -110,13 +110,13 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
         .pg-stories .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
         .pg-stories .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
-        .pg-stories .logo-sm .ck{color:#2e7d32}
+        .pg-stories .logo-sm .ck{color:#e53935}
         .pg-stories .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
         .pg-stories .pn{font-size:1rem;font-weight:300;color:#333}
-        .pg-stories .stories-label{font-size:0.6rem;text-transform:uppercase;letter-spacing:3px;color:#2e7d32;font-weight:600;margin-bottom:6px}
+        .pg-stories .stories-label{font-size:0.6rem;text-transform:uppercase;letter-spacing:3px;color:#1a3d6d;font-weight:600;margin-bottom:6px}
         .pg-stories .stories-title{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:8px}
-        .pg-stories .stories-subtitle{font-size:0.75rem;color:#666;font-style:italic;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #2e7d32}
-        .pg-stories .story-item{margin-bottom:18px;padding-left:15px;border-left:3px solid #2e7d32}
+        .pg-stories .stories-subtitle{font-size:0.75rem;color:#666;font-style:italic;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #1a3d6d}
+        .pg-stories .story-item{margin-bottom:18px;padding-left:15px;border-left:3px solid #1a3d6d}
         .pg-stories .story-item .story-title{font-weight:700;font-size:0.82rem;color:#111;margin-bottom:4px}
         .pg-stories .story-item .story-text{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify}
     </style>
@@ -353,13 +353,13 @@ if (!empty($sources)):
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <div style="margin-top:30px">
         <div class="title-big" style="font-size:1.8rem; margin-bottom:5px;">Fontes e Referências</div>
-        <div style="width:60px; height:3px; background:#2e7d32; margin-bottom:25px;"></div>
+        <div style="width:60px; height:3px; background:#1a3d6d; margin-bottom:25px;"></div>
         <p class="text" style="margin-bottom:20px; color:#666;">As informações e dados apresentados nesta edição foram baseados nas seguintes fontes:</p>
         <?php foreach ($sources as $i => $src): ?>
         <div style="padding:8px 0; border-bottom:1px solid #eee; font-size:0.75rem;">
             <strong style="color:#111;"><?= ($i + 1) ?>. <?= htmlspecialchars($src['title']) ?></strong>
             <?php if ($src['author']): ?><span style="color:#666;"> — <?= htmlspecialchars($src['author']) ?></span><?php endif; ?>
-            <?php if ($src['url']): ?><br><span style="color:#2e7d32; font-size:0.65rem;"><?= htmlspecialchars($src['url']) ?></span><?php endif; ?>
+            <?php if ($src['url']): ?><br><span style="color:#1a3d6d; font-size:0.65rem;"><?= htmlspecialchars($src['url']) ?></span><?php endif; ?>
             <?php if ($src['accessed_at']): ?><span style="color:#999; font-size:0.6rem; margin-left:5px;">Acesso em <?= date('d/m/Y', strtotime($src['accessed_at'])) ?></span><?php endif; ?>
         </div>
         <?php endforeach; ?>

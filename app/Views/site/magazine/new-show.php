@@ -35,7 +35,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <style>
 .mag-preview{max-width:595px;margin:0 auto;padding:0 10px}
 .mag-preview .page{background:#fff;width:100%;max-width:595px;min-height:842px;aspect-ratio:unset;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 30px rgba(0,0,0,0.12);border-radius:4px;page-break-before:always}
-.mag-preview .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#1a472a;height:842px}
+.mag-preview .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#0a1628;height:842px}
 .mag-preview .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
 .mag-preview .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.4) 0%,rgba(0,0,0,0.05) 35%,rgba(0,0,0,0.05) 50%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0.8) 90%,rgba(0,0,0,0.92) 100%)}
 .mag-preview .pg-cover .content{position:relative;z-index:2;text-align:center;width:100%;height:100%;display:flex;flex-direction:column;padding:30px 40px}
@@ -48,7 +48,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .pg-int{padding:30px 35px;min-height:842px;overflow:visible}
 .mag-preview .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
 .mag-preview .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
-.mag-preview .pg-int .logo-sm .ck{color:#2e7d32}
+.mag-preview .pg-int .logo-sm .ck{color:#e53935}
 .mag-preview .pg-int .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
 .mag-preview .pg-int .pn{font-size:1rem;font-weight:300;color:#333}
 .mag-preview .img-full{width:100%;object-fit:cover}
@@ -63,30 +63,30 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .two-col .col{flex:1}
 .mag-preview .overlay-section{position:relative;width:100%;height:420px;overflow:hidden;margin-bottom:15px}
 .mag-preview .overlay-section img{width:100%;height:100%;object-fit:cover}
-.mag-preview .overlay-section .ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,50,0,0.95));padding:25px 30px 20px}
+.mag-preview .overlay-section .ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(5,15,40,0.95));padding:25px 30px 20px}
 .mag-preview .overlay-section .ov h2{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#fff}
 .mag-preview .overlay-section .ov p{font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.8);margin-top:5px}
-.mag-preview .pg-back{background:#1a3a2a;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;height:842px}
-.mag-preview .pg-back .logo{max-width:250px;margin-bottom:35px}
-.mag-preview .pg-back .txt{color:rgba(255,255,255,0.85);font-size:0.9rem;max-width:380px;line-height:1.6}
+.mag-preview .pg-back{background:#0a1628;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;height:842px}
+.mag-preview .pg-back .logo{max-width:250px;margin-bottom:35px;position:relative;z-index:2}
+.mag-preview .pg-back .txt{color:rgba(255,255,255,0.85);font-size:0.9rem;max-width:380px;line-height:1.6;position:relative;z-index:2}
 .mag-preview .pg-back .bar{position:absolute;bottom:0;left:0;right:0;background:#e53935;padding:12px 25px;display:flex;justify-content:space-between;font-size:0.6rem;color:#fff}
-.mag-preview .img-placeholder{background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;color:#2e7d32;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
+.mag-preview .img-placeholder{background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;color:#1a3d6d;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
 .mag-preview .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
 .mag-preview .pg-stories .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
 .mag-preview .pg-stories .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
-.mag-preview .pg-stories .logo-sm .ck{color:#2e7d32}
+.mag-preview .pg-stories .logo-sm .ck{color:#e53935}
 .mag-preview .pg-stories .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
 .mag-preview .pg-stories .pn{font-size:1rem;font-weight:300;color:#333}
-.mag-preview .pg-stories .stories-label{font-size:0.6rem;text-transform:uppercase;letter-spacing:3px;color:#2e7d32;font-weight:600;margin-bottom:6px}
+.mag-preview .pg-stories .stories-label{font-size:0.6rem;text-transform:uppercase;letter-spacing:3px;color:#1a3d6d;font-weight:600;margin-bottom:6px}
 .mag-preview .pg-stories .stories-title{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:8px}
-.mag-preview .pg-stories .stories-subtitle{font-size:0.75rem;color:#666;font-style:italic;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #2e7d32}
-.mag-preview .pg-stories .story-item{margin-bottom:18px;padding-left:15px;border-left:3px solid #2e7d32}
+.mag-preview .pg-stories .stories-subtitle{font-size:0.75rem;color:#666;font-style:italic;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #1a3d6d}
+.mag-preview .pg-stories .story-item{margin-bottom:18px;padding-left:15px;border-left:3px solid #1a3d6d}
 .mag-preview .pg-stories .story-item .story-title{font-weight:700;font-size:0.82rem;color:#111;margin-bottom:4px}
 .mag-preview .pg-stories .story-item .story-text{font-size:0.75rem;line-height:1.7;color:#444;text-align:justify}
 .mag-preview .pg-guest{padding:40px 40px;height:auto;min-height:842px;overflow:visible}
 .mag-preview .pg-guest .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
 .mag-preview .pg-guest .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
-.mag-preview .pg-guest .logo-sm .ck{color:#2e7d32}
+.mag-preview .pg-guest .logo-sm .ck{color:#e53935}
 .mag-preview .pg-guest .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
 .mag-preview .pg-guest .pn{font-size:1rem;font-weight:300;color:#333}
 #pdf-loading{display:none;text-align:center;margin:30px 0 50px;}
@@ -160,12 +160,12 @@ foreach ($pages as $page):
 <?php elseif ($layout === 'guest_column'): ?>
 <div class="page pg-guest">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:#2e7d32;font-weight:600;margin-bottom:8px;"><?= htmlspecialchars($page['caption'] ?? 'Coluna do Convidado') ?></div>
-    <div style="display:flex;align-items:center;gap:15px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #2e7d32;">
+    <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:#1a3d6d;font-weight:600;margin-bottom:8px;"><?= htmlspecialchars($page['caption'] ?? 'Coluna do Convidado') ?></div>
+    <div style="display:flex;align-items:center;gap:15px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #1a3d6d;">
         <?php if($img1): ?>
-            <img src="<?= $img1 ?>" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #2e7d32;" alt="<?= htmlspecialchars($page['title'] ?? '') ?>">
+            <img src="<?= $img1 ?>" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #1a3d6d;" alt="<?= htmlspecialchars($page['title'] ?? '') ?>">
         <?php else: ?>
-            <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;border:3px solid #2e7d32;color:#2e7d32;font-size:0.5rem;text-transform:uppercase;">FOTO</div>
+            <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;border:3px solid #1a3d6d;color:#1a3d6d;font-size:0.5rem;text-transform:uppercase;">FOTO</div>
         <?php endif; ?>
         <div>
             <div style="font-weight:700;font-size:1rem;color:#111;"><?= htmlspecialchars($page['title'] ?? 'Nome do Convidado') ?></div>

@@ -56,7 +56,7 @@
         <div class="card mb-3">
             <div class="card-header"><h6 class="mb-0">Capa da Revista</h6></div>
             <div class="card-body">
-                <div id="cover-preview" class="mb-2 text-center" style="background:#1a472a;border-radius:6px;padding:10px;min-height:120px;display:flex;align-items:center;justify-content:center;">
+                <div id="cover-preview" class="mb-2 text-center" style="background:#0a1628;border-radius:6px;padding:10px;min-height:120px;display:flex;align-items:center;justify-content:center;">
                     <?php if ($magazine['cover_image']): ?>
                         <img src="<?= $magazine['cover_image'] ?>" alt="Capa" style="max-height:180px;max-width:100%;border-radius:4px;">
                     <?php else: ?>

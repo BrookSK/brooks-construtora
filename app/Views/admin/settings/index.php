@@ -118,7 +118,7 @@ $_isProduction = $_currentBranch === 'main';
             <p class="text-muted small mb-3">Esta imagem será usada como logo nas capas e contracapas das revistas geradas. Recomendado: PNG ou WEBP com fundo transparente, branca (para aparecer em fundo escuro).</p>
             <div class="row align-items-center">
                 <div class="col-md-4 text-center">
-                    <div style="background:#1a472a; padding:20px; border-radius:8px; display:inline-block;">
+                    <div style="background:#0a1628; padding:20px; border-radius:8px; display:inline-block;">
                         <?php $magazineLogo = $settings['magazine_logo'] ?? ''; ?>
                         <?php if (!empty($magazineLogo)): ?>
                             <img src="<?= htmlspecialchars($magazineLogo) ?>" alt="Logo Revista" style="max-width:200px; max-height:80px;">
@@ -161,7 +161,7 @@ $_isProduction = $_currentBranch === 'main';
                         <?php if (!empty($defaultCover)): ?>
                             <img src="<?= htmlspecialchars($defaultCover) ?>" alt="Capa Padrão" style="max-width:150px; max-height:200px; border-radius:4px;">
                         <?php else: ?>
-                            <div style="width:150px; height:200px; background:#1a472a; border-radius:4px; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.5); font-size:0.75rem;">Sem capa padrão</div>
+                            <div style="width:150px; height:200px; background:#0a1628; border-radius:4px; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.5); font-size:0.75rem;">Sem capa padrão</div>
                         <?php endif; ?>
                     </div>
                     <p class="text-muted small mt-2"><?= !empty($defaultCover) ? 'Capa padrão definida' : 'Nenhuma capa padrão' ?></p>
