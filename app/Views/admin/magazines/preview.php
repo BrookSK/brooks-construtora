@@ -19,25 +19,13 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Inter',sans-serif;background:#333;padding:20px 0}
-        body.site-embed{background:#fff;padding:0}
+        body.site-embed{background:#f5f5f5;padding:0}
         .preview{max-width:595px;margin:0 auto;padding:0 10px}
         .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
         body.site-embed .page{box-shadow:0 2px 15px rgba(0,0,0,0.1);margin-bottom:15px}
         @media(max-width:620px){
-            .page{width:100%;height:auto;min-height:500px;aspect-ratio:auto}
-            .pg-cover{height:auto;min-height:500px;overflow:visible}
-            .pg-cover .content{padding:20px 15px}
-            .pg-cover .title{font-size:min(2.5rem, 11vw);letter-spacing:0}
-            .pg-cover .topic{font-size:1rem;margin-bottom:50px}
-            .pg-cover .logo{max-width:150px}
-            .pg-int{padding:20px 15px;height:auto;overflow:visible}
-            .pg-guest{padding:20px 15px;height:auto;overflow:visible}
-            .pg-stories{padding:20px 15px;height:auto;overflow:visible}
-            .pg-back{height:auto;min-height:400px}
-            .title-big{font-size:min(1.4rem, 7vw)}
-            .two-col{flex-direction:column}
-            .img-half{width:100%}
-            .overlay-section{height:250px}
+            .preview{transform-origin:top center;padding:0}
+            body.site-embed .preview{padding-top:10px}
         }
 
         /* ===== CAPA ===== */
@@ -504,6 +492,30 @@ function generatePDF() {
 
 // Sistema de paginação e ajuste de páginas
 document.addEventListener('DOMContentLoaded', function() {
+    // Mobile: escala a revista pra caber na tela (mantém layout desktop)
+    function scaleForMobile() {
+        var preview = document.querySelector('.preview');
+        if (!preview) return;
+        var screenW = window.innerWidth;
+        if (screenW < 620) {
+            var scale = screenW / 615;
+            preview.style.transform = 'scale(' + scale + ')';
+            preview.style.transformOrigin = 'top center';
+            // Ajusta container height pra não ficar espaço vazio
+            var originalH = preview.scrollHeight;
+            preview.parentElement.style.height = (originalH * scale) + 'px';
+            preview.parentElement.style.overflow = 'hidden';
+        } else {
+            preview.style.transform = '';
+            if (preview.parentElement) {
+                preview.parentElement.style.height = '';
+                preview.parentElement.style.overflow = '';
+            }
+        }
+    }
+    scaleForMobile();
+    window.addEventListener('resize', scaleForMobile);
+
     var PAGE_HEIGHT = 842;
     var PAGE_PADDING = 60; // top + bottom padding aproximado
     var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
@@ -742,6 +754,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (loaded >= total) {
             fitTitles();
             processPages();
+            setTimeout(scaleForMobile, 500);
         }
     }
 
@@ -772,6 +785,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (total === 0) {
         fitTitles();
         processPages();
+        setTimeout(scaleForMobile, 500);
     } else {
         images.forEach(function(img) {
             if (img.complete) check();
@@ -780,7 +794,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.addEventListener('error', check);
             }
         });
-        setTimeout(function() { fitTitles(); processPages(); }, 3000);
+        setTimeout(function() { fitTitles(); processPages(); setTimeout(scaleForMobile, 500); }, 3000);
     }
 });
 </script>
