@@ -105,6 +105,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
         .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
         .pg-guest .column-content p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
+        .pg-guest > p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
 
         /* ===== CAUSOS DE OBRA ===== */
         .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
