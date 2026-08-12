@@ -45,8 +45,13 @@ $previewHtml = ob_get_clean();
 <script id="preview-data" type="text/plain"><?= base64_encode($previewHtml) ?></script>
 <script>
 (function() {
-    var b64 = document.getElementById('preview-data').textContent;
-    var html = atob(b64);
+    var b64 = document.getElementById('preview-data').textContent.trim();
+    var binary = atob(b64);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    var html = new TextDecoder('utf-8').decode(bytes);
     var iframe = document.getElementById('magazine-frame');
     var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
     var url = URL.createObjectURL(blob);
