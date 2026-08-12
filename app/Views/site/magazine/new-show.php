@@ -3,19 +3,6 @@ $pageTitle = htmlspecialchars($magazine['title']) . ' — Revista Brooks';
 $pageDescription = 'Leia a edição "' . htmlspecialchars($magazine['title']) . '" da Revista Digital Brooks Construtora.';
 $currentPage = 'revista';
 $bodyClass = 'page-revista-show';
-$siteUrl = 'WWW.BROOKSCONSTRUTORA.COM.BR';
-$year = date('Y');
-try { $magazineLogo = \App\Models\Setting::get('magazine_logo', ''); } catch (\Exception $e) { $magazineLogo = ''; }
-if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks-1400x396.webp';
-
-// Gera o HTML do preview (idêntico ao admin) via output buffer
-ob_start();
-$isAdmin = false; // Força modo site (sem toolbar, fundo claro)
-include ROOT_PATH . '/app/Views/admin/magazines/preview.php';
-$previewHtml = ob_get_clean();
-// Escapa aspas para uso no srcdoc
-$previewHtmlEscaped = htmlspecialchars($previewHtml, ENT_QUOTES, 'UTF-8');
-
 include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 ?>
 
@@ -37,10 +24,10 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
-<!-- Magazine Preview (iframe srcdoc - isolamento total de CSS) -->
+<!-- Magazine Preview (iframe com src - isolamento total de CSS) -->
 <section style="padding: var(--space-xl) 0 var(--space-4xl);">
     <div style="max-width: 615px; margin: 0 auto;">
-        <iframe id="magazine-frame" srcdoc="<?= $previewHtmlEscaped ?>" style="width:100%;min-height:5000px;border:none;display:block;" onload="adjustIframeHeight()"></iframe>
+        <iframe id="magazine-frame" src="/revista/preview/<?= $magazine['id'] ?>" style="width:100%;min-height:5000px;border:none;display:block;" onload="adjustIframeHeight()"></iframe>
     </div>
 </section>
 
@@ -70,7 +57,7 @@ window.addEventListener('resize', function() {
 function downloadPDF() {
     var iframe = document.getElementById('magazine-frame');
     var btn = document.getElementById('btn-pdf');
-    
+
     try {
         var iframeWin = iframe.contentWindow;
         if (iframeWin && typeof iframeWin.generatePDF === 'function') {
@@ -86,7 +73,7 @@ function downloadPDF() {
             alert('Aguarde o carregamento completo da revista.');
         }
     } catch(e) {
-        alert('Erro ao gerar PDF. Tente novamente.');
+        window.open('/revista/preview/' + <?= $magazine['id'] ?>, '_blank');
     }
 }
 </script>

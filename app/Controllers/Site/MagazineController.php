@@ -114,6 +114,9 @@ class MagazineController extends Controller
 
         $pages = Magazine::getPages($id);
 
+        // Força modo site (sem toolbar, fundo claro)
+        $isAdmin = false;
+
         // Renderiza o mesmo template do admin preview (isolado, sem CSS do site)
         include ROOT_PATH . '/app/Views/admin/magazines/preview.php';
     }
