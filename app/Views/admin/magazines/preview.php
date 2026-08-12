@@ -116,7 +116,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php if (!isset($isAdmin)) { $isAdmin = false; try { $isAdmin = \App\Core\Auth::check(); } catch(\Exception $e) {} } ?>
 <body<?= $isAdmin ? '' : ' class="site-embed"' ?>>
 <?php if (!$isAdmin): ?>
-<div style="background:#0a1628;padding:14px 15px 12px;">
+<div id="site-nav" style="position:sticky;top:0;z-index:9999;background:#0a1628;padding:14px 15px 12px;">
     <div style="max-width:595px;margin:0 auto;">
         <a href="/revista" style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:6px;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -502,18 +502,19 @@ document.addEventListener('DOMContentLoaded', function() {
             preview.style.transform = 'scale(' + scale + ')';
             preview.style.transformOrigin = 'top left';
             preview.style.marginLeft = '5px';
-            // Ajusta altura do wrapper pra acomodar o conteúdo escalado
-            setTimeout(function() {
-                var realH = preview.scrollHeight * scale;
-                preview.style.marginBottom = '-' + (preview.scrollHeight - realH) + 'px';
-            }, 100);
+            preview.style.marginBottom = '-' + Math.floor(preview.scrollHeight * (1 - scale)) + 'px';
         } else {
             preview.style.transform = '';
             preview.style.marginLeft = '';
             preview.style.marginBottom = '';
         }
     }
-    scaleForMobile();
+
+    // Aplica scale depois da paginação
+    function applyMobileScale() {
+        setTimeout(scaleForMobile, 300);
+        setTimeout(scaleForMobile, 1500);
+    }
     window.addEventListener('resize', scaleForMobile);
 
     var PAGE_HEIGHT = 842;
@@ -754,7 +755,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (loaded >= total) {
             fitTitles();
             processPages();
-            setTimeout(scaleForMobile, 500);
+            applyMobileScale();
         }
     }
 
@@ -785,7 +786,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (total === 0) {
         fitTitles();
         processPages();
-        setTimeout(scaleForMobile, 500);
+        applyMobileScale();
     } else {
         images.forEach(function(img) {
             if (img.complete) check();
@@ -794,7 +795,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.addEventListener('error', check);
             }
         });
-        setTimeout(function() { fitTitles(); processPages(); setTimeout(scaleForMobile, 500); }, 3000);
+        setTimeout(function() { fitTitles(); processPages(); applyMobileScale(); }, 3000);
     }
 });
 </script>
