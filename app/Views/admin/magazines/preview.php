@@ -128,15 +128,25 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php if (!isset($isAdmin)) { $isAdmin = false; try { $isAdmin = \App\Core\Auth::check(); } catch(\Exception $e) {} } ?>
 <body<?= $isAdmin ? '' : ' class="site-embed"' ?>>
 <?php if (!$isAdmin): ?>
-<div style="position:sticky;top:0;z-index:9999;background:#fff;border-bottom:1px solid #eee;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;max-width:595px;margin:0 auto;">
-    <div>
-        <a href="/revista" style="font-family:'Inter',sans-serif;font-size:12px;color:#888;text-decoration:none;">← Voltar para Revista</a>
-        <div style="font-family:'Inter',sans-serif;font-size:15px;font-weight:700;color:#111;margin-top:2px;"><?= htmlspecialchars($magazine['title']) ?></div>
-        <?php if (!empty($magazine['subtitle'])): ?>
-            <div style="font-family:'Inter',sans-serif;font-size:11px;color:#666;"><?= htmlspecialchars($magazine['subtitle']) ?></div>
-        <?php endif; ?>
+<div style="background:#0a1628;padding:18px 20px 16px;margin-bottom:20px;">
+    <div style="max-width:595px;margin:0 auto;">
+        <a href="/revista" style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+            Voltar para Revista
+        </a>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <div style="font-family:'Inter',sans-serif;font-size:18px;font-weight:700;color:#fff;"><?= htmlspecialchars($magazine['title']) ?></div>
+                <?php if (!empty($magazine['subtitle'])): ?>
+                    <div style="font-family:'Inter',sans-serif;font-size:12px;color:rgba(255,255,255,0.7);margin-top:3px;"><?= htmlspecialchars($magazine['subtitle']) ?></div>
+                <?php endif; ?>
+            </div>
+            <button onclick="generatePDF()" style="font-family:'Inter',sans-serif;background:#fff;color:#0a1628;border:none;padding:10px 20px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Baixar PDF
+            </button>
+        </div>
     </div>
-    <button onclick="generatePDF()" style="font-family:'Inter',sans-serif;background:#0a1628;color:#fff;border:none;padding:9px 18px;border-radius:4px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap;">Baixar PDF</button>
 </div>
 <?php endif; ?>
 <div class="preview">
