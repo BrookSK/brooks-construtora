@@ -24,8 +24,8 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
         body.site-embed .page{box-shadow:0 2px 15px rgba(0,0,0,0.1);margin-bottom:15px}
         @media(max-width:620px){
-            .preview{transform-origin:top center;padding:0}
-            body.site-embed .preview{padding-top:10px}
+            .preview{padding:0 0 20px}
+            body.site-embed .preview{padding-top:5px}
         }
 
         /* ===== CAPA ===== */
@@ -116,7 +116,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php if (!isset($isAdmin)) { $isAdmin = false; try { $isAdmin = \App\Core\Auth::check(); } catch(\Exception $e) {} } ?>
 <body<?= $isAdmin ? '' : ' class="site-embed"' ?>>
 <?php if (!$isAdmin): ?>
-<div id="site-nav" style="position:sticky;top:0;z-index:9999;background:#0a1628;padding:14px 15px 12px;">
+<div id="site-nav" style="background:#0a1628;padding:14px 15px 12px;margin-bottom:15px;">
     <div style="max-width:595px;margin:0 auto;">
         <a href="/revista" style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:6px;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -498,22 +498,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!preview) return;
         var screenW = window.innerWidth;
         if (screenW < 620) {
-            var scale = (screenW - 10) / 595;
-            preview.style.transform = 'scale(' + scale + ')';
-            preview.style.transformOrigin = 'top left';
-            preview.style.marginLeft = '5px';
-            preview.style.marginBottom = '-' + Math.floor(preview.scrollHeight * (1 - scale)) + 'px';
+            var zoomLevel = screenW / 615;
+            preview.style.zoom = zoomLevel;
         } else {
-            preview.style.transform = '';
-            preview.style.marginLeft = '';
-            preview.style.marginBottom = '';
+            preview.style.zoom = '';
         }
     }
 
     // Aplica scale depois da paginação
     function applyMobileScale() {
-        setTimeout(scaleForMobile, 300);
-        setTimeout(scaleForMobile, 1500);
+        scaleForMobile();
     }
     window.addEventListener('resize', scaleForMobile);
 
