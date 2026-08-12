@@ -116,21 +116,21 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <?php if (!isset($isAdmin)) { $isAdmin = false; try { $isAdmin = \App\Core\Auth::check(); } catch(\Exception $e) {} } ?>
 <body<?= $isAdmin ? '' : ' class="site-embed"' ?>>
 <?php if (!$isAdmin): ?>
-<div style="background:#0a1628;padding:18px 20px 16px;margin-bottom:20px;">
+<div style="background:#0a1628;padding:14px 15px 12px;">
     <div style="max-width:595px;margin:0 auto;">
-        <a href="/revista" style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+        <a href="/revista" style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
             Voltar para Revista
         </a>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div>
-                <div style="font-family:'Inter',sans-serif;font-size:18px;font-weight:700;color:#fff;"><?= htmlspecialchars($magazine['title']) ?></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+            <div style="min-width:0;">
+                <div style="font-family:'Inter',sans-serif;font-size:15px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= htmlspecialchars($magazine['title']) ?></div>
                 <?php if (!empty($magazine['subtitle'])): ?>
-                    <div style="font-family:'Inter',sans-serif;font-size:12px;color:rgba(255,255,255,0.7);margin-top:3px;"><?= htmlspecialchars($magazine['subtitle']) ?></div>
+                    <div style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= htmlspecialchars($magazine['subtitle']) ?></div>
                 <?php endif; ?>
             </div>
-            <button onclick="generatePDF()" style="font-family:'Inter',sans-serif;background:#fff;color:#0a1628;border:none;padding:10px 20px;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <button onclick="generatePDF()" style="font-family:'Inter',sans-serif;background:#fff;color:#0a1628;border:none;padding:8px 14px;border-radius:5px;font-weight:600;font-size:11px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;flex-shrink:0;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Baixar PDF
             </button>
         </div>
@@ -498,19 +498,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!preview) return;
         var screenW = window.innerWidth;
         if (screenW < 620) {
-            var scale = screenW / 615;
+            var scale = (screenW - 10) / 595;
             preview.style.transform = 'scale(' + scale + ')';
-            preview.style.transformOrigin = 'top center';
-            // Ajusta container height pra não ficar espaço vazio
-            var originalH = preview.scrollHeight;
-            preview.parentElement.style.height = (originalH * scale) + 'px';
-            preview.parentElement.style.overflow = 'hidden';
+            preview.style.transformOrigin = 'top left';
+            preview.style.marginLeft = '5px';
+            // Ajusta altura do wrapper pra acomodar o conteúdo escalado
+            setTimeout(function() {
+                var realH = preview.scrollHeight * scale;
+                preview.style.marginBottom = '-' + (preview.scrollHeight - realH) + 'px';
+            }, 100);
         } else {
             preview.style.transform = '';
-            if (preview.parentElement) {
-                preview.parentElement.style.height = '';
-                preview.parentElement.style.overflow = '';
-            }
+            preview.style.marginLeft = '';
+            preview.style.marginBottom = '';
         }
     }
     scaleForMobile();
