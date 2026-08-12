@@ -7,6 +7,15 @@ $siteUrl = 'WWW.BROOKSCONSTRUTORA.COM.BR';
 $year = date('Y');
 try { $magazineLogo = \App\Models\Setting::get('magazine_logo', ''); } catch (\Exception $e) { $magazineLogo = ''; }
 if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks-1400x396.webp';
+
+// Gera o HTML do preview (idêntico ao admin) via output buffer
+ob_start();
+$isAdmin = false; // Força modo site (sem toolbar, fundo claro)
+include ROOT_PATH . '/app/Views/admin/magazines/preview.php';
+$previewHtml = ob_get_clean();
+// Escapa aspas para uso no srcdoc
+$previewHtmlEscaped = htmlspecialchars($previewHtml, ENT_QUOTES, 'UTF-8');
+
 include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 ?>
 
@@ -28,20 +37,14 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
-<!-- Magazine Preview (iframe isolado - sem conflito de CSS) -->
+<!-- Magazine Preview (iframe srcdoc - isolamento total de CSS) -->
 <section style="padding: var(--space-xl) 0 var(--space-4xl);">
     <div style="max-width: 615px; margin: 0 auto;">
-        <div id="pdf-loading" style="display:none;text-align:center;margin:30px 0;">
-            <div style="display:inline-block;width:24px;height:24px;border:3px solid #ddd;border-top-color:#1a3d6d;border-radius:50%;animation:pdfspin 0.8s linear infinite;margin-bottom:10px;"></div>
-            <p style="margin:0;font-size:13px;color:#555;font-weight:500;">Gerando PDF, aguarde...</p>
-        </div>
-        <style>@keyframes pdfspin{to{transform:rotate(360deg)}}</style>
-        <iframe id="magazine-frame" src="/revista/preview/<?= $magazine['id'] ?>" style="width:100%;border:none;display:block;" onload="adjustIframeHeight()"></iframe>
+        <iframe id="magazine-frame" srcdoc="<?= $previewHtmlEscaped ?>" style="width:100%;min-height:5000px;border:none;display:block;" onload="adjustIframeHeight()"></iframe>
     </div>
 </section>
 
 <script>
-// Ajusta altura do iframe para mostrar todo o conteúdo
 function adjustIframeHeight() {
     var iframe = document.getElementById('magazine-frame');
     function doAdjust() {
@@ -50,53 +53,40 @@ function adjustIframeHeight() {
             var body = doc.body;
             if (body) {
                 var height = Math.max(body.scrollHeight, body.offsetHeight);
-                iframe.style.height = height + 50 + 'px';
+                iframe.style.height = (height + 50) + 'px';
             }
-        } catch(e) {
-            iframe.style.height = '8000px';
-        }
+        } catch(e) {}
     }
-    // Ajusta múltiplas vezes pra pegar a paginação
-    setTimeout(doAdjust, 1000);
-    setTimeout(doAdjust, 3000);
-    setTimeout(doAdjust, 5000);
-    setTimeout(doAdjust, 8000);
+    setTimeout(doAdjust, 500);
+    setTimeout(doAdjust, 2000);
+    setTimeout(doAdjust, 4000);
+    setTimeout(doAdjust, 7000);
 }
 
-// Recalcula altura quando a janela redimensiona
 window.addEventListener('resize', function() {
     setTimeout(adjustIframeHeight, 500);
 });
 
-// Baixa o PDF chamando a função dentro do iframe
 function downloadPDF() {
     var iframe = document.getElementById('magazine-frame');
     var btn = document.getElementById('btn-pdf');
-    var loading = document.getElementById('pdf-loading');
     
     try {
         var iframeWin = iframe.contentWindow;
         if (iframeWin && typeof iframeWin.generatePDF === 'function') {
             btn.disabled = true;
             btn.innerHTML = '<span>Gerando PDF...</span>';
-            if (loading) loading.style.display = 'block';
-            
-            // Chama a função de gerar PDF que já existe no iframe (do admin)
             iframeWin.generatePDF();
-            
-            // Restaura botão após um tempo (o PDF é gerado no iframe)
             setTimeout(function() {
                 btn.disabled = false;
                 btn.innerHTML = '<i data-lucide="download" style="width:16px;height:16px;"></i> Baixar PDF';
-                if (loading) loading.style.display = 'none';
                 if (typeof lucide !== 'undefined') lucide.createIcons();
-            }, 8000);
+            }, 10000);
         } else {
-            alert('Aguarde o carregamento da revista.');
+            alert('Aguarde o carregamento completo da revista.');
         }
     } catch(e) {
-        // Fallback: abre o preview em nova aba para baixar
-        window.open('/revista/preview/' + <?= $magazine['id'] ?>, '_blank');
+        alert('Erro ao gerar PDF. Tente novamente.');
     }
 }
 </script>

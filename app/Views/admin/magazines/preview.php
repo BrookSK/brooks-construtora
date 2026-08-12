@@ -124,7 +124,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-stories .story-item .story-text{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify}
     </style>
 </head>
-<?php $isAdmin = false; try { $isAdmin = \App\Core\Auth::check(); } catch(\Exception $e) {} ?>
+<?php if (!isset($isAdmin)) { $isAdmin = false; try { $isAdmin = \App\Core\Auth::check(); } catch(\Exception $e) {} } ?>
 <body<?= $isAdmin ? '' : ' class="site-embed"' ?>>
 <div class="preview">
 <?php foreach ($pages as $page):
