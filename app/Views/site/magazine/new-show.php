@@ -6,7 +6,6 @@ $bodyClass = 'page-revista-show';
 include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 ?>
 
-<!-- Page Header -->
 <section style="padding-top: calc(var(--header-height) + var(--space-2xl)); padding-bottom: var(--space-xl); background: var(--brooks-off-white);">
     <div class="container" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md);">
         <div>
@@ -24,26 +23,16 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
     </div>
 </section>
 
-<!-- Magazine Content via iframe (isolamento total de CSS) -->
-<section style="padding: var(--space-2xl) 0 var(--space-4xl);">
-    <div style="max-width:620px;margin:0 auto;padding:0 10px;">
-        <iframe id="magazine-frame" src="/revista/embed/<?= $magazine['id'] ?>" style="width:100%;border:none;display:block;" onload="resizeIframe(this)"></iframe>
-    </div>
+<section style="padding: var(--space-xl) 0 var(--space-4xl); background: #2a2a2a;">
+    <iframe id="magazine-frame" src="/revista/embed/<?= $magazine['id'] ?>" scrolling="no" style="width:615px;max-width:100%;margin:0 auto;display:block;border:none;overflow:hidden;" onload="resizeFrame(this)"></iframe>
 </section>
 
 <script>
-function resizeIframe(iframe) {
+function resizeFrame(f) {
     try {
-        iframe.style.height = iframe.contentWindow.document.documentElement.scrollHeight + 'px';
-        // Observa mudanças (paginação pode alterar altura)
-        var observer = new MutationObserver(function() {
-            iframe.style.height = iframe.contentWindow.document.documentElement.scrollHeight + 'px';
-        });
-        observer.observe(iframe.contentWindow.document.body, { childList: true, subtree: true, attributes: true });
-        // Fallback: recheck after images load
-        setTimeout(function() {
-            iframe.style.height = iframe.contentWindow.document.documentElement.scrollHeight + 'px';
-        }, 4000);
+        f.style.height = f.contentWindow.document.documentElement.scrollHeight + 'px';
+        setTimeout(function(){ f.style.height = f.contentWindow.document.documentElement.scrollHeight + 'px'; }, 4000);
+        setTimeout(function(){ f.style.height = f.contentWindow.document.documentElement.scrollHeight + 'px'; }, 7000);
     } catch(e) {}
 }
 
@@ -52,7 +41,7 @@ function downloadPDF() {
     try {
         iframe.contentWindow.generatePDF();
     } catch(e) {
-        alert('Erro ao gerar PDF. Tente novamente.');
+        alert('Aguarde a revista carregar completamente.');
     }
 }
 </script>
