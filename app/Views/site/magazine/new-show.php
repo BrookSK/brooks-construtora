@@ -29,12 +29,21 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 </section>
 
 <!-- Magazine Content -->
-<section style="padding: var(--space-2xl) 0 var(--space-4xl); background: #333;">
+<section style="padding: var(--space-2xl) 0 var(--space-4xl); background: #f5f5f5;">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
 <style>
-.mag-preview{max-width:595px;margin:0 auto;padding:0 10px}
-.mag-preview .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
+/* Reset completo dentro do mag-preview para evitar conflitos com CSS do site */
+.mag-preview{max-width:595px;margin:0 auto;padding:20px 10px}
+.mag-preview *{margin:0;padding:0;box-sizing:border-box;text-decoration:none;border:none}
+.mag-preview{font-family:'Inter',sans-serif !important;font-size:16px;line-height:1.5;color:#333}
+.mag-preview img{display:block;max-width:100%;border:none}
+.mag-preview p{margin:0;padding:0;font-family:'Inter',sans-serif}
+.mag-preview small{font-size:inherit;display:block}
+.mag-preview .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1;display:block}
+.mag-preview .logo-sm .ck{color:#e53935}
+.mag-preview .logo-sm small{display:block !important;font-size:0.4rem !important;font-weight:400 !important;letter-spacing:2px !important;color:#666 !important;line-height:1.2 !important;margin-top:2px !important;position:static !important;text-transform:uppercase}
+.mag-preview .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.3);page-break-before:always;page-break-inside:avoid}
 @media(max-width:620px){
     .mag-preview .page{width:100%;height:auto;min-height:500px;aspect-ratio:auto}
     .mag-preview .pg-cover{height:auto;min-height:500px;overflow:visible}
@@ -69,17 +78,16 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
 .mag-preview .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
 .mag-preview .pg-int .logo-sm .ck{color:#e53935}
-.mag-preview .pg-int .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
 .mag-preview .pg-int .pn{font-size:1rem;font-weight:300;color:#333}
 
 /* Elementos comuns */
 .mag-preview .img-full{width:100%;object-fit:cover;border-radius:0}
 .mag-preview .img-half{width:48%;object-fit:cover}
-.mag-preview .title-big{font-family:'Montserrat',sans-serif;font-weight:900;font-style:normal;color:#111;margin-bottom:12px;line-height:1.1;font-size:min(2.2rem, 7vw)}
+.mag-preview .title-big{font-family:'Montserrat',sans-serif !important;font-weight:900;font-style:normal;color:#111;margin-bottom:12px;line-height:1.1;font-size:min(2.2rem, 7vw)}
 .mag-preview .title-upper{font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:14px;border-bottom:1px solid #ddd;padding-bottom:8px}
 .mag-preview .subtitle{font-size:0.9rem;font-weight:400;color:#333;margin-bottom:14px}
-.mag-preview .text{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify;margin-bottom:10px}
-.mag-preview .text-sm{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify;margin-bottom:10px}
+.mag-preview .text{font-size:0.72rem !important;line-height:1.75 !important;color:#333;text-align:justify;margin-bottom:10px;font-family:'Inter',sans-serif !important}
+.mag-preview .text-sm{font-size:0.72rem !important;line-height:1.75 !important;color:#333;text-align:justify;margin-bottom:10px;font-family:'Inter',sans-serif !important}
 .mag-preview .caption{font-size:0.78rem;font-weight:700;color:#111;margin-top:10px}
 .mag-preview .caption-sub{font-size:0.58rem;color:#666}
 .mag-preview .two-col{display:flex;gap:18px}
@@ -110,24 +118,22 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .pg-guest .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:25px}
 .mag-preview .pg-guest .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
 .mag-preview .pg-guest .logo-sm .ck{color:#e53935}
-.mag-preview .pg-guest .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
 .mag-preview .pg-guest .pn{font-size:1rem;font-weight:300;color:#333}
 .mag-preview .pg-guest .column-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:#1a3d6d;font-weight:600;margin-bottom:8px}
 .mag-preview .pg-guest .column-title{font-family:'Montserrat',sans-serif;font-size:2.2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:20px}
 .mag-preview .pg-guest .author-box{display:flex;align-items:center;gap:15px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #1a3d6d}
-.mag-preview .pg-guest .author-photo{width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #1a3d6d}
-.mag-preview .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;border:3px solid #1a3d6d;color:#1a3d6d;font-size:0.5rem;text-transform:uppercase}
+.mag-preview .pg-guest .author-photo{width:70px;height:70px;min-width:70px;min-height:70px;border-radius:50%;object-fit:cover;border:3px solid #1a3d6d}
+.mag-preview .pg-guest .author-photo-placeholder{width:70px;height:70px;min-width:70px;min-height:70px;border-radius:50%;background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;border:3px solid #1a3d6d;color:#1a3d6d;font-size:0.5rem;text-transform:uppercase}
 .mag-preview .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
 .mag-preview .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
-.mag-preview .pg-guest .column-content p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
-.mag-preview .pg-guest > p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
+.mag-preview .pg-guest .column-content p{font-size:0.72rem !important;line-height:1.75 !important;color:#333;margin-bottom:10px;text-align:justify;font-family:'Inter',sans-serif !important}
+.mag-preview .pg-guest > p{font-size:0.72rem !important;line-height:1.75 !important;color:#333;margin-bottom:10px;text-align:justify;font-family:'Inter',sans-serif !important}
 
 /* ===== CAUSOS DE OBRA ===== */
 .mag-preview .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
 .mag-preview .pg-stories .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
 .mag-preview .pg-stories .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
 .mag-preview .pg-stories .logo-sm .ck{color:#e53935}
-.mag-preview .pg-stories .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
 .mag-preview .pg-stories .pn{font-size:1rem;font-weight:300;color:#333}
 .mag-preview .pg-stories .stories-label{font-size:0.6rem;text-transform:uppercase;letter-spacing:3px;color:#1a3d6d;font-weight:600;margin-bottom:6px}
 .mag-preview .pg-stories .stories-title{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:8px}
@@ -140,7 +146,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 #pdf-loading{display:none;text-align:center;margin:30px 0 50px;}
 #pdf-loading .spinner{display:inline-block;width:24px;height:24px;border:3px solid #ddd;border-top-color:#1a3d6d;border-radius:50%;animation:pdfspin 0.8s linear infinite;margin-bottom:10px;}
 @keyframes pdfspin{to{transform:rotate(360deg)}}
-#pdf-loading p{margin:0;font-size:13px;color:#ccc;font-weight:500;}
+#pdf-loading p{margin:0;font-size:13px;color:#555;font-weight:500;}
 </style>
 
 <div id="pdf-loading">
