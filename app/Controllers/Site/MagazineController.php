@@ -87,7 +87,9 @@ class MagazineController extends Controller
         if (defined('ANTIGO_PREFIX')) {
             include ROOT_PATH . '/app/Views/site/magazine/show.php';
         } else {
-            include ROOT_PATH . '/app/Views/site/magazine/new-show.php';
+            // Renderiza exatamente o preview do admin (standalone), apenas com botão Voltar para /revista
+            $_backUrl = '/revista';
+            include ROOT_PATH . '/app/Views/admin/magazines/preview.php';
         }
     }
 
