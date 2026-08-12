@@ -90,4 +90,46 @@ class MagazineController extends Controller
             include ROOT_PATH . '/app/Views/site/magazine/new-show.php';
         }
     }
+
+    /**
+     * Renderiza o preview puro da revista (usado via iframe no site público)
+     */
+    public function embed(string $id = ''): void
+    {
+        $id = (int) $id;
+
+        try {
+            $magazine = Magazine::find($id);
+        } catch (\Exception $e) {
+            http_response_code(404);
+            echo 'Revista não encontrada.';
+            return;
+        }
+
+        if (!$magazine || $magazine['status'] !== 'published') {
+            http_response_code(404);
+            echo 'Revista não encontrada.';
+            return;
+        }
+
+        $pages = Magazine::getPages($id);
+        $siteUrl = 'WWW.BROOKSCONSTRUTORA.COM.BR';
+        $year = date('Y');
+        try { $magazineLogo = Setting::get('magazine_logo', ''); } catch (\Exception $e) { $magazineLogo = ''; }
+        if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks-1400x396.webp';
+        $_renderContext = ['showAdminToolbar' => false];
+
+        // Renderiza a mesma estrutura do admin preview, porém standalone (sem layout do site)
+        ?><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= htmlspecialchars($magazine['title']) ?></title>
+</head>
+<body style="margin:0;padding:0;font-family:'Inter',sans-serif;background:#fff;">
+<?php include ROOT_PATH . '/app/Views/shared/_magazine_render.php'; ?>
+</body>
+</html><?php
+    }
 }

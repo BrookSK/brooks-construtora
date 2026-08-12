@@ -3,11 +3,6 @@ $pageTitle = htmlspecialchars($magazine['title']) . ' — Revista Brooks';
 $pageDescription = 'Leia a edição "' . htmlspecialchars($magazine['title']) . '" da Revista Digital Brooks Construtora.';
 $currentPage = 'revista';
 $bodyClass = 'page-revista-show';
-$siteUrl = 'WWW.BROOKSCONSTRUTORA.COM.BR';
-$year = date('Y');
-try { $magazineLogo = \App\Models\Setting::get('magazine_logo', ''); } catch (\Exception $e) { $magazineLogo = ''; }
-if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks-1400x396.webp';
-$_renderContext = ['showAdminToolbar' => false];
 include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 ?>
 
@@ -23,15 +18,43 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                 <p style="font-size: var(--text-sm); color: var(--brooks-gray-500); margin-top: var(--space-xs);"><?= htmlspecialchars($magazine['subtitle']) ?></p>
             <?php endif; ?>
         </div>
-        <button onclick="generatePDF()" id="btn-pdf" class="btn btn--primary btn--sm">
+        <button onclick="downloadPDF()" id="btn-pdf-site" class="btn btn--primary btn--sm">
             <i data-lucide="download" style="width:16px;height:16px;"></i> Baixar PDF
         </button>
     </div>
 </section>
 
-<!-- Magazine Content -->
+<!-- Magazine Content via iframe (isolamento total de CSS) -->
 <section style="padding: var(--space-2xl) 0 var(--space-4xl);">
-<?php include ROOT_PATH . '/app/Views/shared/_magazine_render.php'; ?>
+    <div style="max-width:620px;margin:0 auto;padding:0 10px;">
+        <iframe id="magazine-frame" src="/revista/embed/<?= $magazine['id'] ?>" style="width:100%;border:none;display:block;" onload="resizeIframe(this)"></iframe>
+    </div>
 </section>
+
+<script>
+function resizeIframe(iframe) {
+    try {
+        iframe.style.height = iframe.contentWindow.document.documentElement.scrollHeight + 'px';
+        // Observa mudanças (paginação pode alterar altura)
+        var observer = new MutationObserver(function() {
+            iframe.style.height = iframe.contentWindow.document.documentElement.scrollHeight + 'px';
+        });
+        observer.observe(iframe.contentWindow.document.body, { childList: true, subtree: true, attributes: true });
+        // Fallback: recheck after images load
+        setTimeout(function() {
+            iframe.style.height = iframe.contentWindow.document.documentElement.scrollHeight + 'px';
+        }, 4000);
+    } catch(e) {}
+}
+
+function downloadPDF() {
+    var iframe = document.getElementById('magazine-frame');
+    try {
+        iframe.contentWindow.generatePDF();
+    } catch(e) {
+        alert('Erro ao gerar PDF. Tente novamente.');
+    }
+}
+</script>
 
 <?php include ROOT_PATH . '/app/Views/site/layouts/new-footer.php'; ?>
