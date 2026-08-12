@@ -418,32 +418,38 @@ document.getElementById('cover-form').addEventListener('submit', function(e) {
 
 // Toggle de limite de caracteres
 function toggleCharLimits(disabled) {
-    var textareas = document.querySelectorAll('textarea[maxlength]');
+    var textareas = document.querySelectorAll('textarea[data-max]');
     var inputs = document.querySelectorAll('input[maxlength]');
-    textareas.forEach(function(ta) {
-        if (disabled) {
-            ta.dataset.originalMaxlength = ta.getAttribute('maxlength');
-            ta.removeAttribute('maxlength');
-        } else {
-            if (ta.dataset.originalMaxlength) {
-                ta.setAttribute('maxlength', ta.dataset.originalMaxlength);
-            }
-        }
-    });
-    inputs.forEach(function(inp) {
-        if (disabled) {
+    if (disabled) {
+        textareas.forEach(function(ta) { ta.removeAttribute('maxlength'); });
+        inputs.forEach(function(inp) {
             inp.dataset.originalMaxlength = inp.getAttribute('maxlength');
             inp.removeAttribute('maxlength');
-        } else {
-            if (inp.dataset.originalMaxlength) {
-                inp.setAttribute('maxlength', inp.dataset.originalMaxlength);
-            }
-        }
-    });
-    // Atualiza visual dos contadores
+        });
+        localStorage.setItem('magazine_char_limit_off', '1');
+    } else {
+        textareas.forEach(function(ta) {
+            if (ta.dataset.max) ta.setAttribute('maxlength', ta.dataset.max);
+        });
+        inputs.forEach(function(inp) {
+            if (inp.dataset.originalMaxlength) inp.setAttribute('maxlength', inp.dataset.originalMaxlength);
+        });
+        localStorage.removeItem('magazine_char_limit_off');
+    }
     document.querySelectorAll('.content-textarea').forEach(function(ta) { updateCharCount(ta); });
     document.querySelectorAll('.story-textarea').forEach(function(ta) { updateStoryCharCount(ta); });
 }
+
+// Restaura estado do toggle ao carregar a página
+document.addEventListener('DOMContentLoaded', function() {
+    if (localStorage.getItem('magazine_char_limit_off') === '1') {
+        var toggle = document.getElementById('toggleCharLimit');
+        if (toggle) {
+            toggle.checked = true;
+            toggleCharLimits(true);
+        }
+    }
+});
 
 // Contador de caracteres
 function updateCharCount(textarea) {
