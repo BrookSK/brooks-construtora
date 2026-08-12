@@ -42,10 +42,11 @@ $previewHtml = ob_get_clean();
     </div>
 </section>
 
-<script id="preview-data" type="application/json"><?= json_encode($previewHtml, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
+<script id="preview-data" type="text/plain"><?= base64_encode($previewHtml) ?></script>
 <script>
 (function() {
-    var html = JSON.parse(document.getElementById('preview-data').textContent);
+    var b64 = document.getElementById('preview-data').textContent;
+    var html = atob(b64);
     var iframe = document.getElementById('magazine-frame');
     var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
     var url = URL.createObjectURL(blob);
