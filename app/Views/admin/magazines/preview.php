@@ -11,7 +11,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=615, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="<?= $baseUrl ?>/">
     <title>Preview - <?= htmlspecialchars($magazine['title']) ?></title>
     <link rel="icon" href="/assets/images/wp/2023/01/cropped-favicon-1-32x32.png" />
@@ -24,8 +24,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
         body.site-embed .page{box-shadow:0 2px 15px rgba(0,0,0,0.1);margin-bottom:15px}
         @media(max-width:620px){
-            .preview{padding:0 0 20px}
-            body.site-embed .preview{padding-top:5px}
+            body{overflow-x:auto}
         }
 
         /* ===== CAPA ===== */
@@ -493,10 +492,6 @@ function generatePDF() {
 // Sistema de paginação e ajuste de páginas
 document.addEventListener('DOMContentLoaded', function() {
     // Mobile: escala a revista pra caber na tela (mantém layout desktop)
-    function scaleForMobile() {}
-    function applyMobileScale() {}
-    window.addEventListener('resize', function(){});
-
     var PAGE_HEIGHT = 842;
     var PAGE_PADDING = 60; // top + bottom padding aproximado
     var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
@@ -735,7 +730,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (loaded >= total) {
             fitTitles();
             processPages();
-            applyMobileScale();
         }
     }
 
@@ -766,7 +760,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (total === 0) {
         fitTitles();
         processPages();
-        applyMobileScale();
     } else {
         images.forEach(function(img) {
             if (img.complete) check();
@@ -775,7 +768,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.addEventListener('error', check);
             }
         });
-        setTimeout(function() { fitTitles(); processPages(); applyMobileScale(); }, 3000);
+        setTimeout(function() { fitTitles(); processPages(); }, 3000);
     }
 });
 </script>
