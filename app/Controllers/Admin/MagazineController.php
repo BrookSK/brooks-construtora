@@ -622,6 +622,7 @@ class MagazineController extends Controller
                     'subtitle' => $subtitle,
                     'content' => $contentToSave,
                     'caption' => $pageData['caption'] ?? '',
+                    'image_caption' => $pageData['image_caption'] ?? '',
                     'show_images' => $showImagesValue,
                 ]);
 

@@ -155,11 +155,28 @@
                         $guestMaxChars = 3000;
                         $guestCurrentChars = mb_strlen($page['content'] ?? '');
                         ?>
-                        <textarea class="form-control form-control-sm content-textarea" name="pages[<?= $page['id'] ?>][content]" rows="8" maxlength="<?= $guestMaxChars ?>" data-max="<?= $guestMaxChars ?>" oninput="updateCharCount(this)" placeholder="Texto escrito pelo convidado..."><?= htmlspecialchars($page['content'] ?? '') ?></textarea>
+                        <textarea class="form-control form-control-sm content-textarea" name="pages[<?= $page['id'] ?>][content]" rows="8" maxlength="<?= $guestMaxChars ?>" data-max="<?= $guestMaxChars ?>" oninput="updateCharCount(this)" placeholder="Texto escrito pelo convidado... Use [imagem] para posicionar o gráfico/imagem no meio do texto."><?= htmlspecialchars($page['content'] ?? '') ?></textarea>
                         <small class="text-muted d-flex justify-content-between mt-1">
-                            <span>Máx: <?= $guestMaxChars ?> caracteres</span>
+                            <span>Máx: <?= $guestMaxChars ?> caracteres — Use <code>[imagem]</code> no texto para posicionar a imagem</span>
                             <span class="char-counter <?= $guestCurrentChars > $guestMaxChars ? 'text-danger' : '' ?>"><?= $guestCurrentChars ?>/<?= $guestMaxChars ?></span>
                         </small>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Imagem / Gráfico da Coluna</label>
+                        <div class="border rounded p-2" style="min-height:80px;background:#f9f9f9;">
+                            <?php if ($page['image_url_2'] ?? null): ?>
+                                <img src="<?= $page['image_url_2'] ?>" alt="" style="width:100%;max-height:120px;object-fit:contain;border-radius:4px;margin-bottom:5px;">
+                                <button type="button" class="btn btn-sm btn-outline-danger w-100 mb-1" style="font-size:0.6rem;" onclick="deletePageImage(<?= $page['id'] ?>, 'image_url_2', this)"><i class="bi bi-trash"></i> Remover Imagem</button>
+                            <?php else: ?>
+                                <div class="text-center text-muted small py-2"><i class="bi bi-bar-chart"></i> Nenhuma imagem/gráfico</div>
+                            <?php endif; ?>
+                            <input type="file" class="form-control form-control-sm mt-1" name="page_image_<?= $page['id'] ?>_2" accept="image/*" style="font-size:0.65rem;">
+                            <small class="text-muted">Aparece onde você colocar <code>[imagem]</code> no texto, ou no final se não usar o marcador.</small>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Legenda da Imagem</label>
+                        <input type="text" class="form-control form-control-sm" name="pages[<?= $page['id'] ?>][image_caption]" value="<?= htmlspecialchars($page['image_caption'] ?? '') ?>" placeholder="Ex: Fonte: IBGE, 2026 — Crescimento do setor de construção civil">
                     </div>
                     <input type="hidden" name="pages[<?= $page['id'] ?>][show_images]" value="1">
                     <?php elseif ($page['layout_type'] === 'construction_stories'): ?>

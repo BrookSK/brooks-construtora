@@ -201,9 +201,43 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         </div>
     </div>
     <div class="column-content">
-        <?php foreach(explode("\n", $page['content'] ?? '') as $p): if(trim($p)): ?>
-            <p><?= htmlspecialchars(trim($p)) ?></p>
-        <?php endif; endforeach; ?>
+        <?php
+        $guestContent = $page['content'] ?? '';
+        $guestImage = $page['image_url_2'] ?? '';
+        $guestImageCaption = $page['image_caption'] ?? '';
+        $hasMarker = stripos($guestContent, '[imagem]') !== false;
+
+        if ($guestImage && $hasMarker):
+            // Divide o texto no marcador [imagem]
+            $parts = preg_split('/\[imagem\]/i', $guestContent, 2);
+            // Parágrafos antes da imagem
+            foreach(explode("\n", $parts[0] ?? '') as $p): if(trim($p)): ?>
+                <p><?= htmlspecialchars(trim($p)) ?></p>
+            <?php endif; endforeach; ?>
+            <div style="margin:12px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:220px;border-radius:4px;object-fit:contain;">
+                <?php if ($guestImageCaption): ?>
+                    <p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p>
+                <?php endif; ?>
+            </div>
+            <?php // Parágrafos depois da imagem
+            foreach(explode("\n", $parts[1] ?? '') as $p): if(trim($p)): ?>
+                <p><?= htmlspecialchars(trim($p)) ?></p>
+            <?php endif; endforeach;
+        else:
+            // Sem marcador: texto normal + imagem no final (se tiver)
+            foreach(explode("\n", $guestContent) as $p): if(trim($p)): ?>
+                <p><?= htmlspecialchars(trim($p)) ?></p>
+            <?php endif; endforeach;
+            if ($guestImage): ?>
+            <div style="margin:12px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:220px;border-radius:4px;object-fit:contain;">
+                <?php if ($guestImageCaption): ?>
+                    <p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p>
+                <?php endif; ?>
+            </div>
+            <?php endif;
+        endif; ?>
     </div>
 </div>
 

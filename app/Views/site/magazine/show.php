@@ -77,7 +77,7 @@ foreach ($pages as $page):
     $img1 = $page['image_url'] ?? '';
     $img2 = $page['image_url_2'] ?? '';
     $showImages = ($page['show_images'] ?? '1') !== '0';
-    if (!$showImages) { $img1 = ''; $img2 = ''; }
+    if (!$showImages && !in_array($page['layout_type'] ?? '', ['guest_column', 'construction_stories'])) { $img1 = ''; $img2 = ''; }
     $layout = $page['layout_type'] ?? 'internal_01';
     if (!in_array($layout, ['cover','subcover','backcover'])) $intNum++;
     $displayPageNum = str_pad($intNum, 2, '0', STR_PAD_LEFT);
@@ -171,6 +171,46 @@ foreach ($pages as $page):
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
     <div style="margin:40px 0 30px"><p style="font-size:1.8rem;font-weight:600;color:#111;line-height:1.3"><?= htmlspecialchars($page['title'] ?? '') ?></p></div>
     <div class="two-col"><div class="col"><?php if($img1): ?><img src="<?= $img1 ?>" style="width:100%;height:420px;object-fit:cover" alt=""><?php endif; ?></div><div class="col"><?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text-sm"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div></div>
+</div>
+
+<?php elseif ($layout === 'guest_column'): ?>
+<div class="page pg-guest" style="padding:40px 40px;min-height:842px;">
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
+    <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:#1a3d6d;font-weight:600;margin-bottom:8px;"><?= htmlspecialchars($page['caption'] ?? 'Coluna do Convidado') ?></div>
+    <div style="display:flex;align-items:center;gap:15px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #1a3d6d;">
+        <?php if($img1): ?>
+            <img src="<?= $img1 ?>" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #1a3d6d;" alt="<?= htmlspecialchars($page['title'] ?? '') ?>">
+        <?php else: ?>
+            <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;border:3px solid #1a3d6d;color:#1a3d6d;font-size:0.5rem;text-transform:uppercase;">FOTO</div>
+        <?php endif; ?>
+        <div>
+            <div style="font-weight:700;font-size:1rem;color:#111;"><?= htmlspecialchars($page['title'] ?? 'Nome do Convidado') ?></div>
+            <div style="font-size:0.75rem;color:#666;font-style:italic;"><?= htmlspecialchars($page['subtitle'] ?? 'Cargo / Empresa') ?></div>
+        </div>
+    </div>
+    <div class="column-content"><?php
+        $guestContent = $page['content'] ?? '';
+        $guestImage = $page['image_url_2'] ?? '';
+        $guestImageCaption = $page['image_caption'] ?? '';
+        $hasMarker = stripos($guestContent, '[imagem]') !== false;
+
+        if ($guestImage && $hasMarker):
+            $parts = preg_split('/\[imagem\]/i', $guestContent, 2);
+            foreach(explode("\n", $parts[0] ?? '') as $p): if(trim($p)): ?><p class="text" style="text-align:justify;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
+            <div style="margin:12px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:220px;border-radius:4px;object-fit:contain;">
+                <?php if ($guestImageCaption): ?><p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p><?php endif; ?>
+            </div>
+            <?php foreach(explode("\n", $parts[1] ?? '') as $p): if(trim($p)): ?><p class="text" style="text-align:justify;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach;
+        else:
+            foreach(explode("\n", $guestContent) as $p): if(trim($p)): ?><p class="text" style="text-align:justify;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach;
+            if ($guestImage): ?>
+            <div style="margin:12px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:220px;border-radius:4px;object-fit:contain;">
+                <?php if ($guestImageCaption): ?><p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p><?php endif; ?>
+            </div>
+            <?php endif;
+        endif; ?></div>
 </div>
 
 <?php elseif ($layout === 'backcover'): ?>

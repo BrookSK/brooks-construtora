@@ -172,7 +172,29 @@ foreach ($pages as $page):
             <div style="font-size:0.75rem;color:#666;font-style:italic;"><?= htmlspecialchars($page['subtitle'] ?? 'Cargo / Empresa') ?></div>
         </div>
     </div>
-    <div class="column-content"><?php foreach(explode("\n", $page['content'] ?? '') as $p): if(trim($p)): ?><p class="text" style="text-align:justify;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
+    <div class="column-content"><?php
+        $guestContent = $page['content'] ?? '';
+        $guestImage = $page['image_url_2'] ?? '';
+        $guestImageCaption = $page['image_caption'] ?? '';
+        $hasMarker = stripos($guestContent, '[imagem]') !== false;
+
+        if ($guestImage && $hasMarker):
+            $parts = preg_split('/\[imagem\]/i', $guestContent, 2);
+            foreach(explode("\n", $parts[0] ?? '') as $p): if(trim($p)): ?><p class="text" style="text-align:justify;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
+            <div style="margin:12px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:220px;border-radius:4px;object-fit:contain;">
+                <?php if ($guestImageCaption): ?><p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p><?php endif; ?>
+            </div>
+            <?php foreach(explode("\n", $parts[1] ?? '') as $p): if(trim($p)): ?><p class="text" style="text-align:justify;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach;
+        else:
+            foreach(explode("\n", $guestContent) as $p): if(trim($p)): ?><p class="text" style="text-align:justify;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach;
+            if ($guestImage): ?>
+            <div style="margin:12px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:220px;border-radius:4px;object-fit:contain;">
+                <?php if ($guestImageCaption): ?><p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p><?php endif; ?>
+            </div>
+            <?php endif;
+        endif; ?></div>
 </div>
 
 <?php elseif ($layout === 'internal_01'): ?>
