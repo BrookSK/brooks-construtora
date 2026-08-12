@@ -127,6 +127,12 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </head>
 <?php if (!isset($isAdmin)) { $isAdmin = false; try { $isAdmin = \App\Core\Auth::check(); } catch(\Exception $e) {} } ?>
 <body<?= $isAdmin ? '' : ' class="site-embed"' ?>>
+<?php if (!$isAdmin): ?>
+<div style="max-width:595px;margin:0 auto 15px;padding:10px;display:flex;justify-content:space-between;align-items:center;">
+    <a href="/revista" style="font-family:'Inter',sans-serif;font-size:13px;color:#555;text-decoration:none;display:flex;align-items:center;gap:5px;">← Voltar para Revista</a>
+    <button onclick="generatePDF()" style="font-family:'Inter',sans-serif;background:#0a1628;color:#fff;border:none;padding:10px 20px;border-radius:4px;font-weight:600;font-size:13px;cursor:pointer;">Baixar PDF</button>
+</div>
+<?php endif; ?>
 <div class="preview">
 <?php foreach ($pages as $page):
     $img1 = $page['image_url'] ?? '';
