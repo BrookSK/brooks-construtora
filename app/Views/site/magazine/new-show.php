@@ -35,7 +35,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 <style>
 .mag-preview{max-width:595px;margin:0 auto;padding:0 10px}
 .mag-preview .page{background:#fff;width:100%;max-width:595px;min-height:842px;aspect-ratio:unset;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 30px rgba(0,0,0,0.12);border-radius:4px;page-break-before:always}
-.mag-preview .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#0a1628;height:842px}
+.mag-preview .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#0a1628;height:842px;position:relative;overflow:hidden}
 .mag-preview .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
 .mag-preview .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.4) 0%,rgba(0,0,0,0.05) 35%,rgba(0,0,0,0.05) 50%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0.8) 90%,rgba(0,0,0,0.92) 100%)}
 .mag-preview .pg-cover .content{position:relative;z-index:2;text-align:center;width:100%;height:100%;display:flex;flex-direction:column;padding:30px 40px}
@@ -66,10 +66,12 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 .mag-preview .overlay-section .ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(5,15,40,0.95));padding:25px 30px 20px}
 .mag-preview .overlay-section .ov h2{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#fff}
 .mag-preview .overlay-section .ov p{font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.8);margin-top:5px}
-.mag-preview .pg-back{background:#0a1628;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;height:842px}
+.mag-preview .pg-back{background:#0a1628;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;height:842px;position:relative;overflow:hidden}
+.mag-preview .pg-back .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
+.mag-preview .pg-back .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55)}
 .mag-preview .pg-back .logo{max-width:250px;margin-bottom:35px;position:relative;z-index:2}
 .mag-preview .pg-back .txt{color:rgba(255,255,255,0.85);font-size:0.9rem;max-width:380px;line-height:1.6;position:relative;z-index:2}
-.mag-preview .pg-back .bar{position:absolute;bottom:0;left:0;right:0;background:#e53935;padding:12px 25px;display:flex;justify-content:space-between;font-size:0.6rem;color:#fff}
+.mag-preview .pg-back .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8);z-index:2}
 .mag-preview .img-placeholder{background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;color:#1a3d6d;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
 .mag-preview .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
 .mag-preview .pg-stories .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
@@ -134,7 +136,8 @@ foreach ($pages as $page):
 ?>
 
 <?php if ($layout === 'cover'): ?>
-<div class="page pg-cover" <?php if ($magazine['cover_image']): ?>style="background-image:url('<?= $magazine['cover_image'] ?>');background-size:cover;background-position:center;"<?php endif; ?>>
+<div class="page pg-cover">
+    <?php if ($magazine['cover_image']): ?><img src="<?= $magazine['cover_image'] ?>" class="bg" alt=""><?php endif; ?>
     <div class="overlay"></div>
     <div class="content">
         <div class="title"><?= htmlspecialchars($page['title'] ?? $magazine['title']) ?></div>
@@ -146,7 +149,8 @@ foreach ($pages as $page):
 </div>
 
 <?php elseif ($layout === 'subcover'): ?>
-<div class="page pg-cover" <?php if ($magazine['cover_image']): ?>style="background-image:url('<?= $magazine['cover_image'] ?>');background-size:cover;background-position:center;"<?php endif; ?>>
+<div class="page pg-cover">
+    <?php if ($magazine['cover_image']): ?><img src="<?= $magazine['cover_image'] ?>" class="bg" alt=""><?php endif; ?>
     <div class="overlay"></div>
     <div class="content">
         <div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-top:20px;"><span style="font-size:3.5rem;font-weight:900;color:#fff;"><?= htmlspecialchars($page['title'] ?? 'ECO') ?></span><img src="<?= $magazineLogo ?>" style="max-width:180px" alt="Brooks"></div>
@@ -286,9 +290,11 @@ foreach ($pages as $page):
 
 <?php elseif ($layout === 'backcover'): ?>
 <div class="page pg-back">
+    <?php if ($magazine['cover_image']): ?><img src="<?= $magazine['cover_image'] ?>" class="bg" alt=""><?php endif; ?>
+    <div class="overlay"></div>
     <img src="<?= $magazineLogo ?>" class="logo" alt="Brooks Construtora">
     <div class="txt"><?= nl2br(htmlspecialchars($page['content'] ?? 'Construção consciente do zero ao acabamento. Comprometidos com o meio ambiente, com as pessoas e com o futuro.')) ?></div>
-    <div class="bar"><span>&copy; <?= $year ?> BROOKS CONSTRUTORA. TODOS OS DIREITOS RESERVADOS.</span><span><?= $siteUrl ?></span></div>
+    <div class="foot"><span>&copy; <?= $year ?> BROOKS CONSTRUTORA. TODOS OS DIREITOS RESERVADOS.</span><span><?= $siteUrl ?></span></div>
 </div>
 
 <?php else: ?>
@@ -402,6 +408,16 @@ document.addEventListener('DOMContentLoaded', function() {
         var headerHTML = header ? header.outerHTML : '';
         var pageClass = page.className;
         var headerHeight = header ? header.offsetHeight + 20 : 0;
+
+        // Para pg-guest: extrai filhos do .column-content para nível direto (permite paginação granular)
+        if (page.classList.contains('pg-guest')) {
+            var colContent = page.querySelector('.column-content');
+            if (colContent) {
+                var kids = Array.from(colContent.children);
+                kids.forEach(function(kid) { page.insertBefore(kid, colContent); });
+                colContent.remove();
+            }
+        }
 
         var blocks = [];
         Array.from(page.children).forEach(function(child) {
