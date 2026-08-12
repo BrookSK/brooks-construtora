@@ -59,6 +59,8 @@ class Router
             'settings/update' => ['SettingsController', 'update'],
             'settings/upload-magazine-logo' => ['SettingsController', 'uploadMagazineLogo'],
             'settings/remove-magazine-logo' => ['SettingsController', 'removeMagazineLogo'],
+            'settings/upload-default-cover' => ['SettingsController', 'uploadDefaultCover'],
+            'settings/remove-default-cover' => ['SettingsController', 'removeDefaultCover'],
             'newsletter' => ['NewsletterController', 'index'],
             'newsletter/export' => ['NewsletterController', 'export'],
             'newsletter/delete' => ['NewsletterController', 'delete'],

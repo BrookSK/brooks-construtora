@@ -80,10 +80,12 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .overlay-section .ov p{font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.8);margin-top:5px}
 
         /* ===== CONTRACAPA ===== */
-        .pg-back{background:#1a3a2a;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;height:842px;overflow:hidden}
-        .pg-back .logo{max-width:250px;margin-bottom:35px}
-        .pg-back .txt{color:rgba(255,255,255,0.85);font-size:0.9rem;max-width:380px;line-height:1.6}
-        .pg-back .bar{position:absolute;bottom:0;left:0;right:0;background:#e53935;padding:12px 25px;display:flex;justify-content:space-between;font-size:0.6rem;color:#fff}
+        .pg-back{background:#1a3a2a;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;height:842px;overflow:hidden;position:relative}
+        .pg-back .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
+        .pg-back .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55)}
+        .pg-back .logo{max-width:250px;margin-bottom:35px;position:relative;z-index:2}
+        .pg-back .txt{color:rgba(255,255,255,0.85);font-size:0.9rem;max-width:380px;line-height:1.6;position:relative;z-index:2}
+        .pg-back .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8);z-index:2}
 
         /* Placeholder para imagens não carregadas */
         .img-placeholder{background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;color:#2e7d32;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
@@ -367,9 +369,11 @@ if (!empty($sources)):
 
 <!-- CONTRACAPA -->
 <div class="page pg-back">
+    <?php if ($magazine['cover_image']): ?><img src="<?= $magazine['cover_image'] ?>" class="bg" alt=""><?php endif; ?>
+    <div class="overlay"></div>
     <img src="<?= $magazineLogo ?>" class="logo" alt="Brooks Construtora">
     <div class="txt"><?= nl2br(htmlspecialchars($page['content'] ?? 'Construção consciente do zero ao acabamento. Comprometidos com o meio ambiente, com as pessoas e com o futuro.')) ?></div>
-    <div class="bar">
+    <div class="foot">
         <span>&copy; <?= $year ?> BROOKS CONSTRUTORA. TODOS OS DIREITOS RESERVADOS.</span>
         <span><?= $siteUrl ?></span>
     </div>

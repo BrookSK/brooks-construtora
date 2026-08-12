@@ -52,6 +52,9 @@ class SettingsController extends Controller
             // Logo da Revista
             'magazine_logo' => Setting::get('magazine_logo', ''),
 
+            // Capa Padrão da Revista
+            'magazine_default_cover' => Setting::get('magazine_default_cover', ''),
+
             // E-mails de notificação
             'notification_emails' => Setting::get('notification_emails', ''),
 
@@ -171,6 +174,67 @@ class SettingsController extends Controller
         }
 
         Setting::set('magazine_logo', '');
+        $this->json(['success' => true]);
+    }
+
+    public function uploadDefaultCover(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        if (!isset($_FILES['magazine_default_cover']) || $_FILES['magazine_default_cover']['error'] !== UPLOAD_ERR_OK) {
+            $this->json(['error' => 'Erro no upload do arquivo.'], 400);
+            return;
+        }
+
+        $file = $_FILES['magazine_default_cover'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+        if (!in_array($file['type'], $allowedTypes)) {
+            $this->json(['error' => 'Tipo não permitido. Use PNG, WEBP ou JPG.'], 400);
+            return;
+        }
+
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = 'magazine_default_cover_' . time() . '.' . $ext;
+        $uploadDir = ROOT_PATH . '/public/uploads/settings/';
+
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $destination = $uploadDir . $filename;
+
+        if (move_uploaded_file($file['tmp_name'], $destination)) {
+            // Remove capa anterior se existir
+            $oldCover = Setting::get('magazine_default_cover', '');
+            if (!empty($oldCover) && file_exists(ROOT_PATH . '/public' . $oldCover)) {
+                unlink(ROOT_PATH . '/public' . $oldCover);
+            }
+
+            $coverUrl = '/uploads/settings/' . $filename;
+            Setting::set('magazine_default_cover', $coverUrl);
+            $this->json(['success' => true, 'url' => $coverUrl]);
+        } else {
+            $this->json(['error' => 'Erro ao salvar arquivo.'], 500);
+        }
+    }
+
+    public function removeDefaultCover(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $oldCover = Setting::get('magazine_default_cover', '');
+        if (!empty($oldCover) && file_exists(ROOT_PATH . '/public' . $oldCover)) {
+            unlink(ROOT_PATH . '/public' . $oldCover);
+        }
+
+        Setting::set('magazine_default_cover', '');
         $this->json(['success' => true]);
     }
 }

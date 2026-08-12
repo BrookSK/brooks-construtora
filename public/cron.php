@@ -178,7 +178,7 @@ try {
         'subtitle' => $content['subtitle'],
         'topic_id' => $topic['id'],
         'status' => Magazine::STATUS_GENERATED,
-        'cover_image' => null,
+        'cover_image' => \App\Models\Setting::get('magazine_default_cover', null),
         'generated_by' => 'ai',
         'created_at' => date('Y-m-d H:i:s'),
     ]);

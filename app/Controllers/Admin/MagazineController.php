@@ -149,12 +149,13 @@ class MagazineController extends Controller
         }
 
         // Cria a revista em modo draft
+        $defaultCover = \App\Models\Setting::get('magazine_default_cover', null);
         $magazineId = Magazine::create([
             'title' => $title,
             'subtitle' => $subtitle,
             'topic_id' => null,
             'status' => Magazine::STATUS_GENERATED,
-            'cover_image' => null,
+            'cover_image' => $defaultCover,
             'generated_by' => 'manual',
             'created_at' => date('Y-m-d H:i:s'),
         ]);
@@ -1248,7 +1249,7 @@ class MagazineController extends Controller
                 'subtitle' => $content['subtitle'] ?? '',
                 'topic_id' => $topicId,
                 'status' => Magazine::STATUS_GENERATED,
-                'cover_image' => null,
+                'cover_image' => Setting::get('magazine_default_cover', null),
                 'generated_by' => 'ai',
                 'created_at' => date('Y-m-d H:i:s'),
             ]);

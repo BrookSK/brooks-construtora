@@ -147,6 +147,44 @@ $_isProduction = $_currentBranch === 'main';
         </div>
     </div>
 
+    <!-- Capa Padrão da Revista -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-card-image"></i> Capa Padrão da Revista</h6>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">Esta imagem será usada como capa padrão para toda revista criada (manual ou automática). Você pode alterar a capa de cada revista individualmente depois. Recomendado: JPG ou WEBP, 595×842px (proporção A4).</p>
+            <div class="row align-items-center">
+                <div class="col-md-4 text-center">
+                    <div style="background:#222; padding:10px; border-radius:8px; display:inline-block;">
+                        <?php $defaultCover = $settings['magazine_default_cover'] ?? ''; ?>
+                        <?php if (!empty($defaultCover)): ?>
+                            <img src="<?= htmlspecialchars($defaultCover) ?>" alt="Capa Padrão" style="max-width:150px; max-height:200px; border-radius:4px;">
+                        <?php else: ?>
+                            <div style="width:150px; height:200px; background:#1a472a; border-radius:4px; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.5); font-size:0.75rem;">Sem capa padrão</div>
+                        <?php endif; ?>
+                    </div>
+                    <p class="text-muted small mt-2"><?= !empty($defaultCover) ? 'Capa padrão definida' : 'Nenhuma capa padrão' ?></p>
+                </div>
+                <div class="col-md-8">
+                    <div id="default-cover-form">
+                        <div class="mb-2">
+                            <input type="file" class="form-control" name="magazine_default_cover" id="default-cover-input" accept="image/jpeg,image/png,image/webp">
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary" id="default-cover-submit">
+                            <i class="bi bi-upload"></i> Enviar Capa Padrão
+                        </button>
+                        <?php if (!empty($defaultCover)): ?>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDefaultCover()">
+                                <i class="bi bi-trash"></i> Remover
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Notificações -->
     <div class="card mb-4">
         <div class="card-header">
@@ -300,6 +338,31 @@ if (logoBtn) {
 function removeMagazineLogo() {
     if (!confirm('Remover logo customizada e voltar para a padrão?')) return;
     fetch('/admin/settings/remove-magazine-logo', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => { if (data.success) location.reload(); })
+    .catch(() => alert('Erro.'));
+}
+
+var coverBtn = document.getElementById('default-cover-submit');
+if (coverBtn) {
+    coverBtn.addEventListener('click', function() {
+        var fileInput = document.getElementById('default-cover-input');
+        if (!fileInput.files.length) { alert('Selecione um arquivo.'); return; }
+        var fd = new FormData();
+        fd.append('magazine_default_cover', fileInput.files[0]);
+        fetch('/admin/settings/upload-default-cover', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) { alert('Capa padrão atualizada!'); location.reload(); }
+            else { alert(data.error || 'Erro ao enviar.'); }
+        })
+        .catch(() => alert('Erro ao enviar.'));
+    });
+}
+
+function removeDefaultCover() {
+    if (!confirm('Remover capa padrão? Novas revistas serão criadas sem capa.')) return;
+    fetch('/admin/settings/remove-default-cover', { method: 'POST' })
     .then(r => r.json())
     .then(data => { if (data.success) location.reload(); })
     .catch(() => alert('Erro.'));
