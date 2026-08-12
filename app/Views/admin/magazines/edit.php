@@ -107,6 +107,11 @@
                             <input type="text" class="form-control form-control-sm" name="subtitle" value="<?= htmlspecialchars($magazine['subtitle'] ?? '') ?>">
                         </div>
                     </div>
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" id="toggleCharLimit" onchange="toggleCharLimits(this.checked)">
+                        <label class="form-check-label small" for="toggleCharLimit">Desativar limite de caracteres</label>
+                        <small class="text-muted d-block">Permite editar textos que ultrapassaram o limite recomendado.</small>
+                    </div>
                 </div>
             </div>
 
@@ -410,6 +415,35 @@ document.getElementById('cover-form').addEventListener('submit', function(e) {
         else alert(d.error||'Erro.');
     }).catch(()=>alert('Erro.'));
 });
+
+// Toggle de limite de caracteres
+function toggleCharLimits(disabled) {
+    var textareas = document.querySelectorAll('textarea[maxlength]');
+    var inputs = document.querySelectorAll('input[maxlength]');
+    textareas.forEach(function(ta) {
+        if (disabled) {
+            ta.dataset.originalMaxlength = ta.getAttribute('maxlength');
+            ta.removeAttribute('maxlength');
+        } else {
+            if (ta.dataset.originalMaxlength) {
+                ta.setAttribute('maxlength', ta.dataset.originalMaxlength);
+            }
+        }
+    });
+    inputs.forEach(function(inp) {
+        if (disabled) {
+            inp.dataset.originalMaxlength = inp.getAttribute('maxlength');
+            inp.removeAttribute('maxlength');
+        } else {
+            if (inp.dataset.originalMaxlength) {
+                inp.setAttribute('maxlength', inp.dataset.originalMaxlength);
+            }
+        }
+    });
+    // Atualiza visual dos contadores
+    document.querySelectorAll('.content-textarea').forEach(function(ta) { updateCharCount(ta); });
+    document.querySelectorAll('.story-textarea').forEach(function(ta) { updateStoryCharCount(ta); });
+}
 
 // Contador de caracteres
 function updateCharCount(textarea) {
