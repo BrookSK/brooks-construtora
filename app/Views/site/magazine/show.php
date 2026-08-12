@@ -197,16 +197,16 @@ foreach ($pages as $page):
         if ($guestImage && $hasMarker):
             $parts = preg_split('/\[imagem\]/i', $guestContent, 2);
             foreach(explode("\n", $parts[0] ?? '') as $p): if(trim($p)): ?><p class="text" style="text-align:justify;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
-            <div style="margin:12px 0;text-align:center;">
-                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:220px;border-radius:4px;object-fit:contain;">
+            <div style="margin:10px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:140px;border-radius:4px;object-fit:contain;">
                 <?php if ($guestImageCaption): ?><p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p><?php endif; ?>
             </div>
             <?php foreach(explode("\n", $parts[1] ?? '') as $p): if(trim($p)): ?><p class="text" style="text-align:justify;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach;
         else:
             foreach(explode("\n", $guestContent) as $p): if(trim($p)): ?><p class="text" style="text-align:justify;"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach;
             if ($guestImage): ?>
-            <div style="margin:12px 0;text-align:center;">
-                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:220px;border-radius:4px;object-fit:contain;">
+            <div style="margin:10px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:140px;border-radius:4px;object-fit:contain;">
                 <?php if ($guestImageCaption): ?><p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p><?php endif; ?>
             </div>
             <?php endif;

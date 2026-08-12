@@ -214,8 +214,8 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
             foreach(explode("\n", $parts[0] ?? '') as $p): if(trim($p)): ?>
                 <p><?= htmlspecialchars(trim($p)) ?></p>
             <?php endif; endforeach; ?>
-            <div style="margin:12px 0;text-align:center;">
-                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:220px;border-radius:4px;object-fit:contain;">
+            <div style="margin:10px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:140px;border-radius:4px;object-fit:contain;">
                 <?php if ($guestImageCaption): ?>
                     <p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p>
                 <?php endif; ?>
@@ -230,8 +230,8 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
                 <p><?= htmlspecialchars(trim($p)) ?></p>
             <?php endif; endforeach;
             if ($guestImage): ?>
-            <div style="margin:12px 0;text-align:center;">
-                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:220px;border-radius:4px;object-fit:contain;">
+            <div style="margin:10px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:140px;border-radius:4px;object-fit:contain;">
                 <?php if ($guestImageCaption): ?>
                     <p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p>
                 <?php endif; ?>
@@ -531,6 +531,16 @@ document.addEventListener('DOMContentLoaded', function() {
         var headerHTML = header ? header.outerHTML : '';
         var pageClass = page.className;
         var headerHeight = header ? header.offsetHeight + 20 : 0;
+
+        // Para pg-guest: extrai filhos do .column-content para nível direto (permite paginação granular)
+        if (page.classList.contains('pg-guest')) {
+            var colContent = page.querySelector('.column-content');
+            if (colContent) {
+                var kids = Array.from(colContent.children);
+                kids.forEach(function(kid) { page.insertBefore(kid, colContent); });
+                colContent.remove();
+            }
+        }
 
         // Coleta filhos diretos exceto header
         var blocks = [];
