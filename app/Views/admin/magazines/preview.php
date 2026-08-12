@@ -19,7 +19,7 @@ $_renderContext = [
     <title>Preview - <?= htmlspecialchars($magazine['title']) ?></title>
     <link rel="icon" href="/assets/images/wp/2023/01/cropped-favicon-1-32x32.png" />
 </head>
-<body>
+<body style="margin:0;padding:0;font-family:'Inter',sans-serif;background:#333;">
 <?php include ROOT_PATH . '/app/Views/shared/_magazine_render.php'; ?>
 </body>
 </html>

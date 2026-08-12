@@ -20,110 +20,108 @@ $internalPageNum  = 0;
 ?>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
 <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Inter',sans-serif;background:#333;padding:20px 0}
-    .preview{max-width:595px;margin:0 auto;padding:0 10px}
-    .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
+    .preview{max-width:595px;margin:0 auto;padding:20px 10px;font-family:'Inter',sans-serif}
+    .preview .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
     @media(max-width:620px){
-        .page{width:100%;height:auto;min-height:500px;aspect-ratio:auto}
-        .pg-cover{height:auto;min-height:500px;overflow:visible}
-        .pg-cover .content{padding:20px 15px}
-        .pg-cover .title{font-size:min(2.5rem, 11vw);letter-spacing:0}
-        .pg-cover .topic{font-size:1rem;margin-bottom:50px}
-        .pg-cover .logo{max-width:150px}
-        .pg-int{padding:20px 15px;height:auto;overflow:visible}
-        .pg-guest{padding:20px 15px;height:auto;overflow:visible}
-        .pg-stories{padding:20px 15px;height:auto;overflow:visible}
-        .pg-back{height:auto;min-height:400px}
-        .title-big{font-size:min(1.4rem, 7vw)}
-        .two-col{flex-direction:column}
-        .img-half{width:100%}
-        .overlay-section{height:250px}
+        .preview .page{width:100%;height:auto;min-height:500px;aspect-ratio:auto}
+        .preview .pg-cover{height:auto;min-height:500px;overflow:visible}
+        .preview .pg-cover .content{padding:20px 15px}
+        .preview .pg-cover .title{font-size:min(2.5rem, 11vw);letter-spacing:0}
+        .preview .pg-cover .topic{font-size:1rem;margin-bottom:50px}
+        .preview .pg-cover .logo{max-width:150px}
+        .preview .pg-int{padding:20px 15px;height:auto;overflow:visible}
+        .preview .pg-guest{padding:20px 15px;height:auto;overflow:visible}
+        .preview .pg-stories{padding:20px 15px;height:auto;overflow:visible}
+        .preview .pg-back{height:auto;min-height:400px}
+        .preview .title-big{font-size:min(1.4rem, 7vw)}
+        .preview .two-col{flex-direction:column}
+        .preview .img-half{width:100%}
+        .preview .overlay-section{height:250px}
     }
 
     /* ===== CAPA ===== */
-    .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#0a1628;height:842px;overflow:hidden}
-    .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
-    .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.4) 0%,rgba(0,0,0,0.05) 35%,rgba(0,0,0,0.05) 50%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0.8) 90%,rgba(0,0,0,0.92) 100%)}
-    .pg-cover .content{position:relative;z-index:2;text-align:center;width:100%;height:100%;display:flex;flex-direction:column;padding:30px 40px}
-    .pg-cover .title{font-weight:900;color:#fff;text-transform:uppercase;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3);font-size:min(5rem, 11vw);letter-spacing:min(2px, 0.3vw)}
-    .pg-cover .sub-line{display:flex;align-items:center;justify-content:center;gap:15px;margin-top:5px;font-size:0.7rem;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,0.9)}
-    .pg-cover .sub-line .ln{width:40px;height:2px;background:#fff}
-    .pg-cover .logo{margin:auto;max-width:220px;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7))}
-    .pg-cover .topic{font-size:1.4rem;font-weight:800;color:#fff;font-style:italic;text-align:left;padding:15px 30px;margin-top:auto;margin-bottom:70px;text-shadow:0 2px 10px rgba(0,0,0,0.8)}
-    .pg-cover .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8);flex-wrap:wrap;gap:4px}
+    .preview .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#0a1628;height:842px;overflow:hidden}
+    .preview .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
+    .preview .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.4) 0%,rgba(0,0,0,0.05) 35%,rgba(0,0,0,0.05) 50%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0.8) 90%,rgba(0,0,0,0.92) 100%)}
+    .preview .pg-cover .content{position:relative;z-index:2;text-align:center;width:100%;height:100%;display:flex;flex-direction:column;padding:30px 40px}
+    .preview .pg-cover .title{font-weight:900;color:#fff;text-transform:uppercase;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3);font-size:min(5rem, 11vw);letter-spacing:min(2px, 0.3vw)}
+    .preview .pg-cover .sub-line{display:flex;align-items:center;justify-content:center;gap:15px;margin-top:5px;font-size:0.7rem;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,0.9)}
+    .preview .pg-cover .sub-line .ln{width:40px;height:2px;background:#fff}
+    .preview .pg-cover .logo{margin:auto;max-width:220px;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.7))}
+    .preview .pg-cover .topic{font-size:1.4rem;font-weight:800;color:#fff;font-style:italic;text-align:left;padding:15px 30px;margin-top:auto;margin-bottom:70px;text-shadow:0 2px 10px rgba(0,0,0,0.8)}
+    .preview .pg-cover .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8);flex-wrap:wrap;gap:4px}
 
     /* ===== PÁGINA INTERNA BASE ===== */
-    .pg-int{padding:30px 35px;min-height:842px;overflow:visible}
-    .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
-    .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
-    .pg-int .logo-sm .ck{color:#e53935}
-    .pg-int .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
-    .pg-int .pn{font-size:1rem;font-weight:300;color:#333}
+    .preview .pg-int{padding:30px 35px;min-height:842px;overflow:visible}
+    .preview .pg-int .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+    .preview .pg-int .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
+    .preview .pg-int .logo-sm .ck{color:#e53935}
+    .preview .pg-int .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
+    .preview .pg-int .pn{font-size:1rem;font-weight:300;color:#333}
 
     /* Elementos comuns */
-    .img-full{width:100%;object-fit:cover;border-radius:0}
-    .img-half{width:48%;object-fit:cover}
-    .title-big{font-family:'Montserrat',sans-serif;font-weight:900;font-style:normal;color:#111;margin-bottom:12px;line-height:1.1;font-size:min(2.2rem, 7vw)}
-    .title-upper{font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:14px;border-bottom:1px solid #ddd;padding-bottom:8px}
-    .subtitle{font-size:0.9rem;font-weight:400;color:#333;margin-bottom:14px}
-    .text{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify;margin-bottom:10px}
-    .text-sm{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify;margin-bottom:10px}
-    .caption{font-size:0.78rem;font-weight:700;color:#111;margin-top:10px}
-    .caption-sub{font-size:0.58rem;color:#666}
-    .two-col{display:flex;gap:18px}
-    .two-col .col{flex:1}
-    .img-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .img-grid img,.img-grid .img-placeholder{width:100%;height:280px;object-fit:cover}
+    .preview .img-full{width:100%;object-fit:cover;border-radius:0}
+    .preview .img-half{width:48%;object-fit:cover}
+    .preview .title-big{font-family:'Montserrat',sans-serif;font-weight:900;font-style:normal;color:#111;margin-bottom:12px;line-height:1.1;font-size:min(2.2rem, 7vw)}
+    .preview .title-upper{font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;color:#111;margin-bottom:14px;border-bottom:1px solid #ddd;padding-bottom:8px}
+    .preview .subtitle{font-size:0.9rem;font-weight:400;color:#333;margin-bottom:14px}
+    .preview .text{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify;margin-bottom:10px}
+    .preview .text-sm{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify;margin-bottom:10px}
+    .preview .caption{font-size:0.78rem;font-weight:700;color:#111;margin-top:10px}
+    .preview .caption-sub{font-size:0.58rem;color:#666}
+    .preview .two-col{display:flex;gap:18px}
+    .preview .two-col .col{flex:1}
+    .preview .img-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .preview .img-grid img,.preview .img-grid .img-placeholder{width:100%;height:280px;object-fit:cover}
 
     /* ===== INTERNAL_04 - Imagem full com overlay ===== */
-    .overlay-section{position:relative;width:100%;height:420px;overflow:hidden;margin-bottom:15px}
-    .overlay-section img{width:100%;height:100%;object-fit:cover}
-    .overlay-section .ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(5,15,40,0.95));padding:25px 30px 20px}
-    .overlay-section .ov h2{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#fff}
-    .overlay-section .ov p{font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.8);margin-top:5px}
+    .preview .overlay-section{position:relative;width:100%;height:420px;overflow:hidden;margin-bottom:15px}
+    .preview .overlay-section img{width:100%;height:100%;object-fit:cover}
+    .preview .overlay-section .ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(5,15,40,0.95));padding:25px 30px 20px}
+    .preview .overlay-section .ov h2{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#fff}
+    .preview .overlay-section .ov p{font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.8);margin-top:5px}
 
     /* ===== CONTRACAPA ===== */
-    .pg-back{background:#0a1628;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;height:842px;overflow:hidden;position:relative}
-    .pg-back .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
-    .pg-back .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55)}
-    .pg-back .logo{max-width:250px;margin-bottom:35px;position:relative;z-index:2}
-    .pg-back .txt{color:rgba(255,255,255,0.85);font-size:0.9rem;max-width:380px;line-height:1.6;position:relative;z-index:2}
-    .pg-back .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8);z-index:2}
+    .preview .pg-back{background:#0a1628;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;height:842px;overflow:hidden;position:relative}
+    .preview .pg-back .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
+    .preview .pg-back .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55)}
+    .preview .pg-back .logo{max-width:250px;margin-bottom:35px;position:relative;z-index:2}
+    .preview .pg-back .txt{color:rgba(255,255,255,0.85);font-size:0.9rem;max-width:380px;line-height:1.6;position:relative;z-index:2}
+    .preview .pg-back .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8);z-index:2}
 
     /* Placeholder para imagens não carregadas */
-    .img-placeholder{background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;color:#1a3d6d;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
+    .preview .img-placeholder{background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;color:#1a3d6d;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
 
     /* ===== COLUNA DO CONVIDADO ===== */
-    .pg-guest{padding:40px 40px;height:auto;min-height:842px;overflow:visible}
-    .pg-guest .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:25px}
-    .pg-guest .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
-    .pg-guest .logo-sm .ck{color:#e53935}
-    .pg-guest .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
-    .pg-guest .pn{font-size:1rem;font-weight:300;color:#333}
-    .pg-guest .column-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:#1a3d6d;font-weight:600;margin-bottom:8px}
-    .pg-guest .column-title{font-family:'Montserrat',sans-serif;font-size:2.2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:20px}
-    .pg-guest .author-box{display:flex;align-items:center;gap:15px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #1a3d6d}
-    .pg-guest .author-photo{width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #1a3d6d}
-    .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;border:3px solid #1a3d6d;color:#1a3d6d;font-size:0.5rem;text-transform:uppercase}
-    .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
-    .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
-    .pg-guest .column-content p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
-    .pg-guest > p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
+    .preview .pg-guest{padding:40px 40px;height:auto;min-height:842px;overflow:visible}
+    .preview .pg-guest .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:25px}
+    .preview .pg-guest .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
+    .preview .pg-guest .logo-sm .ck{color:#e53935}
+    .preview .pg-guest .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
+    .preview .pg-guest .pn{font-size:1rem;font-weight:300;color:#333}
+    .preview .pg-guest .column-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:#1a3d6d;font-weight:600;margin-bottom:8px}
+    .preview .pg-guest .column-title{font-family:'Montserrat',sans-serif;font-size:2.2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:20px}
+    .preview .pg-guest .author-box{display:flex;align-items:center;gap:15px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #1a3d6d}
+    .preview .pg-guest .author-photo{width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #1a3d6d}
+    .preview .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;border:3px solid #1a3d6d;color:#1a3d6d;font-size:0.5rem;text-transform:uppercase}
+    .preview .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
+    .preview .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
+    .preview .pg-guest .column-content p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
+    .preview .pg-guest > p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
 
     /* ===== CAUSOS DE OBRA ===== */
-    .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
-    .pg-stories .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
-    .pg-stories .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
-    .pg-stories .logo-sm .ck{color:#e53935}
-    .pg-stories .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
-    .pg-stories .pn{font-size:1rem;font-weight:300;color:#333}
-    .pg-stories .stories-label{font-size:0.6rem;text-transform:uppercase;letter-spacing:3px;color:#1a3d6d;font-weight:600;margin-bottom:6px}
-    .pg-stories .stories-title{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:8px}
-    .pg-stories .stories-subtitle{font-size:0.75rem;color:#666;font-style:italic;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #1a3d6d}
-    .pg-stories .story-item{margin-bottom:18px;padding-left:15px;border-left:3px solid #1a3d6d}
-    .pg-stories .story-item .story-title{font-weight:700;font-size:0.82rem;color:#111;margin-bottom:4px}
-    .pg-stories .story-item .story-text{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify}
+    .preview .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
+    .preview .pg-stories .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+    .preview .pg-stories .logo-sm{font-weight:800;font-size:0.9rem;color:#111;line-height:1}
+    .preview .pg-stories .logo-sm .ck{color:#e53935}
+    .preview .pg-stories .logo-sm small{display:block;font-size:0.4rem;font-weight:400;letter-spacing:2px;color:#666}
+    .preview .pg-stories .pn{font-size:1rem;font-weight:300;color:#333}
+    .preview .pg-stories .stories-label{font-size:0.6rem;text-transform:uppercase;letter-spacing:3px;color:#1a3d6d;font-weight:600;margin-bottom:6px}
+    .preview .pg-stories .stories-title{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:8px}
+    .preview .pg-stories .stories-subtitle{font-size:0.75rem;color:#666;font-style:italic;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #1a3d6d}
+    .preview .pg-stories .story-item{margin-bottom:18px;padding-left:15px;border-left:3px solid #1a3d6d}
+    .preview .pg-stories .story-item .story-title{font-weight:700;font-size:0.82rem;color:#111;margin-bottom:4px}
+    .preview .pg-stories .story-item .story-text{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify}
 </style>
 
 <div class="preview">

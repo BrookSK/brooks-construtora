@@ -30,7 +30,7 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
 </section>
 
 <!-- Magazine Content -->
-<section style="padding: var(--space-2xl) 0 var(--space-4xl); background: #333;">
+<section style="padding: var(--space-2xl) 0 var(--space-4xl);">
 <?php include ROOT_PATH . '/app/Views/shared/_magazine_render.php'; ?>
 </section>
 
