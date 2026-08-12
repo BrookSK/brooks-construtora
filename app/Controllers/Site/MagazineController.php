@@ -87,36 +87,7 @@ class MagazineController extends Controller
         if (defined('ANTIGO_PREFIX')) {
             include ROOT_PATH . '/app/Views/site/magazine/show.php';
         } else {
-            // Renderiza exatamente o preview do admin (standalone), apenas com botão Voltar para /revista
-            $_backUrl = '/revista';
-            include ROOT_PATH . '/app/Views/admin/magazines/preview.php';
+            include ROOT_PATH . '/app/Views/site/magazine/new-show.php';
         }
-    }
-
-    /**
-     * Renderiza o preview puro da revista (embed standalone)
-     */
-    public function embed(string $id = ''): void
-    {
-        $id = (int) $id;
-
-        try {
-            $magazine = Magazine::find($id);
-        } catch (\Exception $e) {
-            http_response_code(404);
-            echo 'Revista não encontrada.';
-            return;
-        }
-
-        if (!$magazine || $magazine['status'] !== 'published') {
-            http_response_code(404);
-            echo 'Revista não encontrada.';
-            return;
-        }
-
-        $pages = Magazine::getPages($id);
-        $_hideToolbar = true;
-
-        include ROOT_PATH . '/app/Views/admin/magazines/preview.php';
     }
 }

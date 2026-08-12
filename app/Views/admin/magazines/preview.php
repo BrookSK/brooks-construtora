@@ -100,11 +100,12 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-guest .column-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:#1a3d6d;font-weight:600;margin-bottom:8px}
         .pg-guest .column-title{font-family:'Montserrat',sans-serif;font-size:2.2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:20px}
         .pg-guest .author-box{display:flex;align-items:center;gap:15px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #1a3d6d}
-        .pg-guest .author-photo{width:70px;height:70px;min-width:70px;max-width:70px;min-height:70px;max-height:70px;border-radius:50%;object-fit:cover;border:3px solid #1a3d6d}
+        .pg-guest .author-photo{width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #1a3d6d}
         .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;border:3px solid #1a3d6d;color:#1a3d6d;font-size:0.5rem;text-transform:uppercase}
         .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
         .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
         .pg-guest .column-content p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
+        .pg-guest > p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
 
         /* ===== CAUSOS DE OBRA ===== */
         .pg-stories{padding:35px 40px;height:auto;min-height:842px;overflow:visible}
@@ -214,8 +215,8 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
             foreach(explode("\n", $parts[0] ?? '') as $p): if(trim($p)): ?>
                 <p><?= htmlspecialchars(trim($p)) ?></p>
             <?php endif; endforeach; ?>
-            <div style="margin:12px 0;text-align:center;">
-                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:220px;border-radius:4px;object-fit:contain;">
+            <div style="margin:10px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:140px;border-radius:4px;object-fit:contain;">
                 <?php if ($guestImageCaption): ?>
                     <p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p>
                 <?php endif; ?>
@@ -230,8 +231,8 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
                 <p><?= htmlspecialchars(trim($p)) ?></p>
             <?php endif; endforeach;
             if ($guestImage): ?>
-            <div style="margin:12px 0;text-align:center;">
-                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:220px;border-radius:4px;object-fit:contain;">
+            <div style="margin:10px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:140px;border-radius:4px;object-fit:contain;">
                 <?php if ($guestImageCaption): ?>
                     <p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p>
                 <?php endif; ?>
@@ -427,17 +428,15 @@ if (!empty($sources)):
 </div>
 
 <!-- Botão flutuante para baixar PDF -->
-<?php if (!isset($_hideToolbar) || !$_hideToolbar): ?>
 <div id="pdf-toolbar" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;gap:10px;">
     <button onclick="generatePDF()" id="btn-pdf" style="background:#e53935;color:#fff;border:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.3);display:flex;align-items:center;gap:8px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Baixar PDF
     </button>
-    <a href="<?= $_backUrl ?? '/admin/magazines/edit/' . $magazine['id'] ?>" style="background:#3a3b4e;color:#fff;border:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.3);text-decoration:none;display:flex;align-items:center;gap:8px;">
+    <a href="/admin/magazines/edit/<?= $magazine['id'] ?>" style="background:#3a3b4e;color:#fff;border:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.3);text-decoration:none;display:flex;align-items:center;gap:8px;">
         ← Voltar
     </a>
 </div>
-<?php endif; ?>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -533,6 +532,16 @@ document.addEventListener('DOMContentLoaded', function() {
         var headerHTML = header ? header.outerHTML : '';
         var pageClass = page.className;
         var headerHeight = header ? header.offsetHeight + 20 : 0;
+
+        // Para pg-guest: extrai filhos do .column-content para nível direto (permite paginação granular)
+        if (page.classList.contains('pg-guest')) {
+            var colContent = page.querySelector('.column-content');
+            if (colContent) {
+                var kids = Array.from(colContent.children);
+                kids.forEach(function(kid) { page.insertBefore(kid, colContent); });
+                colContent.remove();
+            }
+        }
 
         // Coleta filhos diretos exceto header
         var blocks = [];
