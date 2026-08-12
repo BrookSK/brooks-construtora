@@ -11,7 +11,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=615, shrink-to-fit=no">
     <base href="<?= $baseUrl ?>/">
     <title>Preview - <?= htmlspecialchars($magazine['title']) ?></title>
     <link rel="icon" href="/assets/images/wp/2023/01/cropped-favicon-1-32x32.png" />
