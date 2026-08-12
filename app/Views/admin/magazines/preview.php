@@ -127,6 +127,18 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </head>
 <?php if (!isset($isAdmin)) { $isAdmin = false; try { $isAdmin = \App\Core\Auth::check(); } catch(\Exception $e) {} } ?>
 <body<?= $isAdmin ? '' : ' class="site-embed"' ?>>
+<?php if (!$isAdmin): ?>
+<div style="position:sticky;top:0;z-index:9999;background:#fff;border-bottom:1px solid #eee;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;max-width:595px;margin:0 auto;">
+    <div>
+        <a href="/revista" style="font-family:'Inter',sans-serif;font-size:12px;color:#888;text-decoration:none;">← Voltar para Revista</a>
+        <div style="font-family:'Inter',sans-serif;font-size:15px;font-weight:700;color:#111;margin-top:2px;"><?= htmlspecialchars($magazine['title']) ?></div>
+        <?php if (!empty($magazine['subtitle'])): ?>
+            <div style="font-family:'Inter',sans-serif;font-size:11px;color:#666;"><?= htmlspecialchars($magazine['subtitle']) ?></div>
+        <?php endif; ?>
+    </div>
+    <button onclick="generatePDF()" style="font-family:'Inter',sans-serif;background:#0a1628;color:#fff;border:none;padding:9px 18px;border-radius:4px;font-weight:600;font-size:12px;cursor:pointer;white-space:nowrap;">Baixar PDF</button>
+</div>
+<?php endif; ?>
 <div class="preview">
 <?php foreach ($pages as $page):
     $img1 = $page['image_url'] ?? '';
