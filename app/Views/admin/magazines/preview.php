@@ -427,7 +427,8 @@ if (!empty($sources)):
 <?php endforeach; ?>
 </div>
 
-<!-- Botão flutuante para baixar PDF -->
+<!-- Botão flutuante para baixar PDF (só aparece no admin) -->
+<?php if (\App\Core\Auth::check()): ?>
 <div id="pdf-toolbar" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;gap:10px;">
     <button onclick="generatePDF()" id="btn-pdf" style="background:#e53935;color:#fff;border:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,0.3);display:flex;align-items:center;gap:8px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -437,13 +438,14 @@ if (!empty($sources)):
         ← Voltar
     </a>
 </div>
+<?php endif; ?>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 function generatePDF() {
     var btn = document.getElementById('btn-pdf');
-    btn.disabled = true;
+    if (btn) btn.disabled = true;
     
     var toolbar = document.getElementById('pdf-toolbar');
     if (toolbar) toolbar.style.display = 'none';
@@ -470,7 +472,7 @@ function generatePDF() {
 
         pdf.save('Revista_Brooks_<?= preg_replace('/[^a-zA-Z0-9]/', '_', $magazine['title'] ?? 'Construtora') ?>.pdf');
         if (toolbar) toolbar.style.display = 'flex';
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
     })();
 }
 

@@ -90,4 +90,31 @@ class MagazineController extends Controller
             include ROOT_PATH . '/app/Views/site/magazine/new-show.php';
         }
     }
+
+    /**
+     * Preview isolado (renderiza a revista sem CSS do site - usado em iframe)
+     */
+    public function preview(string $id = ''): void
+    {
+        $id = (int) $id;
+
+        try {
+            $magazine = Magazine::find($id);
+        } catch (\Exception $e) {
+            http_response_code(404);
+            echo 'Revista não encontrada.';
+            return;
+        }
+
+        if (!$magazine || $magazine['status'] !== 'published') {
+            http_response_code(404);
+            echo 'Revista não encontrada.';
+            return;
+        }
+
+        $pages = Magazine::getPages($id);
+
+        // Renderiza o mesmo template do admin preview (isolado, sem CSS do site)
+        include ROOT_PATH . '/app/Views/admin/magazines/preview.php';
+    }
 }

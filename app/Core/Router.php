@@ -278,6 +278,7 @@ class Router
             'newsletter/check-email' => ['NewsletterController', 'checkEmail'],
             'revista' => ['MagazineController', 'index'],
             'revista/ver' => ['MagazineController', 'show'],
+            'revista/preview' => ['MagazineController', 'preview'],
             'revista/image-proxy' => ['MagazineController', 'imageProxy'],
         ];
 
@@ -344,6 +345,7 @@ class Router
             'newsletter/check-email' => ['NewsletterController', 'checkEmail'],
             'revista' => ['MagazineController', 'index'],
             'revista/ver' => ['MagazineController', 'show'],
+            'revista/preview' => ['MagazineController', 'preview'],
             'revista/image-proxy' => ['MagazineController', 'imageProxy'],
 
             // Pedidos - Links públicos
