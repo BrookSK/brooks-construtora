@@ -15,6 +15,12 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 $pages = \App\Models\Magazine::getPages($magazine['id']);
 include ROOT_PATH . '/app/Views/admin/magazines/preview.php';
 $previewHtml = ob_get_clean();
+
+// Converte URLs relativas para absolutas (necessário para iframe blob)
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'www.brooksconstrutora.com.br';
+$absBase = $scheme . '://' . $host;
+$previewHtml = preg_replace('/(src|href)=(["\'])\//', '$1=$2' . $absBase . '/', $previewHtml);
 ?>
 
 <!-- Page Header -->
