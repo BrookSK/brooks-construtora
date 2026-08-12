@@ -974,6 +974,7 @@ class PurchaseOrderController extends Controller
         $editedSuppliers = $_POST['suppliers'] ?? [];
         $priceMode = $this->input('price_mode', 'unit');
         $newConstructionSiteId = $this->input('construction_site_id', '');
+        $financialNotes = trim($this->input('financial_notes', ''));
 
         // Capturar estado anterior dos itens para histórico detalhado
         $oldItems = PurchaseOrderItem::getByOrder($id);
@@ -1123,14 +1124,18 @@ class PurchaseOrderController extends Controller
         }
 
         // ====== VERIFICAR SE HOUVE ALGUMA MUDANÇA ======
-        if (empty($changes) && empty($financialChanges) && !$obraChanged) {
+        $notesChanged = $financialNotes !== ($order['financial_notes'] ?? '');
+        if (empty($changes) && empty($financialChanges) && !$obraChanged && !$notesChanged) {
             $this->setFlash('info', 'Nenhuma alteração detectada.');
             $this->redirect('/admin/orders/show/' . $id);
             return;
         }
 
-        // Atualizar total do pedido
-        PurchaseOrder::updateById($id, ['total_estimated' => $newTotal]);
+        // Atualizar total do pedido e observações do financeiro
+        PurchaseOrder::updateById($id, [
+            'total_estimated' => $newTotal,
+            'financial_notes' => $financialNotes,
+        ]);
 
         // ====== MONTAR HISTÓRICO DETALHADO ======
         $historyDescription = "Edição financeira realizada por {$userName}.\n";
@@ -1138,6 +1143,9 @@ class PurchaseOrderController extends Controller
         if ($obraChanged) {
             $oldObraDisplay = !empty($oldObraName) ? $oldObraName : '(nenhuma)';
             $historyDescription .= "Obra: {$oldObraDisplay} → {$newObraName}\n";
+        }
+        if ($notesChanged) {
+            $historyDescription .= "Observações do Financeiro atualizadas.\n";
         }
         if (!empty($financialChanges)) {
             $historyDescription .= "\nAlterações financeiras:\n";

@@ -310,6 +310,17 @@
         </div>
     </div>
 
+    <!-- Observações do Financeiro -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <i class="bi bi-chat-left-text"></i> Observações do Financeiro
+        </div>
+        <div class="card-body">
+            <textarea name="financial_notes" class="form-control" rows="3" placeholder="Observações do financeiro (opcional). Ex: condições especiais, pendências, informações adicionais..."><?= htmlspecialchars($order['financial_notes'] ?? '') ?></textarea>
+            <small class="text-muted mt-1 d-block">Estas observações aparecerão nos detalhes do pedido e no PDF.</small>
+        </div>
+    </div>
+
     <!-- Hidden field para modo de preço -->
     <input type="hidden" name="price_mode" id="priceModeField" value="unit">
 

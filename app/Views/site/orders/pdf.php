@@ -499,6 +499,14 @@
             <?php endif; ?>
         </div>
 
+        <?php if (!empty($order['financial_notes'])): ?>
+        <!-- Observações do Financeiro -->
+        <div style="background:#ede7f6; border:1px solid #d1c4e9; border-radius:6px; padding:1rem; margin-top:1rem;">
+            <h6 style="color:#5e35b1; margin-bottom:0.5rem; font-size:0.9rem;"><i class="bi bi-cash-stack"></i> Observações do Financeiro</h6>
+            <div style="font-size:0.8rem;"><?= nl2br(htmlspecialchars($order['financial_notes'])) ?></div>
+        </div>
+        <?php endif; ?>
+
         <!-- Edições -->
         <?php
         $pdfEdits = \App\Core\Database::fetchAll("SELECT * FROM purchase_order_edits WHERE order_id = ? ORDER BY created_at ASC", [$order['id']]);

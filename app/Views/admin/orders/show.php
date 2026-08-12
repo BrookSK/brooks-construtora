@@ -172,6 +172,11 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <small class="text-muted d-block"><i class="bi bi-check-circle"></i> Observações da Aprovação</small>
                 <p class="mb-0"><?= nl2br(htmlspecialchars($order['approval_notes'])) ?></p>
                 <?php endif; ?>
+                <?php if (!empty($order['financial_notes'])): ?>
+                <hr>
+                <small class="text-muted d-block"><i class="bi bi-cash-stack"></i> Observações do Financeiro</small>
+                <p class="mb-0"><?= nl2br(htmlspecialchars($order['financial_notes'])) ?></p>
+                <?php endif; ?>
             </div>
         </div>
 
