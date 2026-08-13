@@ -777,7 +777,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         setTimeout(function() { fitTitles(); processPages(); }, 3000);
     }
-    }
 });
 </script>
 
