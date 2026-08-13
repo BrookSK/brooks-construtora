@@ -508,6 +508,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            // Para pg-guest: força recalcular altura real expandindo temporariamente
+            if (page.classList.contains('pg-guest')) {
+                page.style.height = 'auto';
+                page.style.overflow = 'visible';
+            }
+
             // Se a página cabe, apenas fixa a altura
             if (page.scrollHeight <= PAGE_HEIGHT + 5) {
                 page.style.height = PAGE_HEIGHT + 'px';
