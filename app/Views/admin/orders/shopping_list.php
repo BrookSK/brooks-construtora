@@ -31,6 +31,9 @@
         </a>
     </div>
     <div class="d-flex flex-wrap gap-1">
+        <button class="btn btn-sm btn-success" id="copyWhatsappBtn" title="Copiar lista em texto para WhatsApp">
+            <i class="bi bi-whatsapp"></i> Copiar Lista
+        </button>
         <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
             <i class="bi bi-printer"></i> Imprimir
         </button>
@@ -118,26 +121,84 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchItems');
-    if (!searchInput) return;
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const term = this.value.toLowerCase().trim();
+            const cards = document.querySelectorAll('.spec-group-card');
 
-    searchInput.addEventListener('input', function() {
-        const term = this.value.toLowerCase().trim();
-        const cards = document.querySelectorAll('.spec-group-card');
+            cards.forEach(card => {
+                const rows = card.querySelectorAll('.item-row');
+                let hasVisible = false;
 
-        cards.forEach(card => {
-            const rows = card.querySelectorAll('.item-row');
-            let hasVisible = false;
+                rows.forEach(row => {
+                    const data = row.getAttribute('data-search') || '';
+                    const match = !term || data.includes(term);
+                    row.style.display = match ? '' : 'none';
+                    if (match) hasVisible = true;
+                });
 
-            rows.forEach(row => {
-                const data = row.getAttribute('data-search') || '';
-                const match = !term || data.includes(term);
-                row.style.display = match ? '' : 'none';
-                if (match) hasVisible = true;
+                card.style.display = hasVisible ? '' : 'none';
             });
-
-            card.style.display = hasVisible ? '' : 'none';
         });
-    });
+    }
+
+    // Copiar lista para WhatsApp
+    const copyBtn = document.getElementById('copyWhatsappBtn');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+            const text = <?php
+                $textParts = [];
+                $textParts[] = "📋 *LISTA DE COMPRAS*";
+                $textParts[] = "📅 " . date('d/m/Y');
+                $textParts[] = "";
+                foreach ($grouped as $key => $group) {
+                    $label = mb_convert_case($group['label'], MB_CASE_TITLE, 'UTF-8');
+                    $textParts[] = "━━━━━━━━━━━━━━━━━━";
+                    $textParts[] = "*" . $label . "* (" . count($group['items']) . " " . (count($group['items']) === 1 ? "item" : "itens") . ")";
+                    $textParts[] = "";
+                    foreach ($group['items'] as $item) {
+                        $qty = $item['quantity'] == (int)$item['quantity']
+                            ? (int)$item['quantity']
+                            : number_format($item['quantity'], 2, ',', '.');
+                        $line = "• " . $item['material_name'];
+                        if (!empty($item['classification']) && $item['classification'] !== '-') {
+                            $line .= " — " . $item['classification'];
+                        }
+                        $line .= " → *" . $qty . " " . ($item['unit'] ?? 'un') . "*";
+                        $line .= " (" . $item['order_code'] . ")";
+                        $textParts[] = $line;
+                    }
+                    $textParts[] = "";
+                }
+                $textParts[] = "━━━━━━━━━━━━━━━━━━";
+                $textParts[] = "Total: " . count($items) . " itens | " . count($grouped) . " especificações";
+                echo json_encode(implode("\n", $textParts), JSON_UNESCAPED_UNICODE);
+            ?>;
+
+            navigator.clipboard.writeText(text).then(() => {
+                const original = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="bi bi-check-lg"></i> Copiado!';
+                copyBtn.classList.remove('btn-success');
+                copyBtn.classList.add('btn-outline-success');
+                setTimeout(() => {
+                    copyBtn.innerHTML = original;
+                    copyBtn.classList.remove('btn-outline-success');
+                    copyBtn.classList.add('btn-success');
+                }, 2000);
+            }).catch(() => {
+                // Fallback para navegadores mais antigos
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                const original = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="bi bi-check-lg"></i> Copiado!';
+                setTimeout(() => { copyBtn.innerHTML = original; }, 2000);
+            });
+        });
+    }
 });
 </script>
 

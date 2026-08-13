@@ -50,6 +50,9 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     <?php endif; ?>
                 </div>
                 <div class="ms-auto">
+                    <button class="btn btn-sm btn-success" id="copyWhatsappBtn" title="Copiar lista em texto para WhatsApp">
+                        <i class="bi bi-whatsapp"></i>
+                    </button>
                     <a href="/pedido/xlsx-especificacao/<?= $order['id'] ?>" class="btn btn-sm btn-outline-success" target="_blank" title="Excel agrupado por especificação">
                         <i class="bi bi-file-earmark-spreadsheet"></i> Excel Espec.
                     </a>
@@ -1539,6 +1542,79 @@ function resendPhase(orderId, phase) {
         return resultado == digitos[1];
     }
 })();
+</script>
+
+<script>
+// Copiar lista do pedido para WhatsApp
+document.addEventListener('DOMContentLoaded', function() {
+    const copyBtn = document.getElementById('copyWhatsappBtn');
+    if (!copyBtn) return;
+
+    copyBtn.addEventListener('click', function() {
+        const text = <?php
+            $textParts = [];
+            $textParts[] = "📋 *PEDIDO " . $order['code'] . "*";
+            if (!empty($order['construction_site_name'])) {
+                $textParts[] = "🏗️ " . ($order['construction_site_code'] ?? '') . " - " . $order['construction_site_name'];
+            }
+            $textParts[] = "📅 " . date('d/m/Y', strtotime($order['created_at']));
+            $textParts[] = "";
+
+            // Agrupar por especificação
+            $groupedItems = [];
+            foreach ($items as $item) {
+                $spec = trim($item['specification'] ?? '');
+                $key = mb_strtolower($spec, 'UTF-8');
+                if ($key === '') $key = 'sem especificação';
+                if (!isset($groupedItems[$key])) {
+                    $groupedItems[$key] = ['label' => $spec !== '' ? $spec : 'Sem Especificação', 'items' => []];
+                }
+                $groupedItems[$key]['items'][] = $item;
+            }
+            ksort($groupedItems);
+
+            foreach ($groupedItems as $gKey => $group) {
+                $label = mb_convert_case($group['label'], MB_CASE_TITLE, 'UTF-8');
+                $textParts[] = "*" . $label . "*";
+                foreach ($group['items'] as $item) {
+                    $qty = $item['quantity'] == (int)$item['quantity']
+                        ? (int)$item['quantity']
+                        : number_format($item['quantity'], 2, ',', '.');
+                    $line = "• " . $item['material_name'];
+                    if (!empty($item['classification']) && $item['classification'] !== '-') {
+                        $line .= " — " . $item['classification'];
+                    }
+                    $line .= " → *" . $qty . " " . ($item['unit'] ?? 'un') . "*";
+                    $textParts[] = $line;
+                }
+                $textParts[] = "";
+            }
+            echo json_encode(implode("\n", $textParts), JSON_UNESCAPED_UNICODE);
+        ?>;
+
+        navigator.clipboard.writeText(text).then(() => {
+            const original = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+            copyBtn.classList.remove('btn-success');
+            copyBtn.classList.add('btn-outline-success');
+            setTimeout(() => {
+                copyBtn.innerHTML = original;
+                copyBtn.classList.remove('btn-outline-success');
+                copyBtn.classList.add('btn-success');
+            }, 2000);
+        }).catch(() => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            const original = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+            setTimeout(() => { copyBtn.innerHTML = original; }, 2000);
+        });
+    });
+});
 </script>
 
 <?php $content = ob_get_clean(); ?>
