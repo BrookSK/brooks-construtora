@@ -1004,9 +1004,9 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * Gerar PDF agrupado por especificação (qualquer pessoa pode acessar)
+     * Gerar XLSX agrupado por especificação (qualquer pessoa pode acessar)
      */
-    public function pdfBySpecification(string $id = ''): void
+    public function xlsxBySpecification(string $id = ''): void
     {
         $orderId = (int) $id;
         $order = PurchaseOrder::findFull($orderId);
@@ -1017,20 +1017,16 @@ class PurchaseOrderController extends Controller
         }
 
         $items = PurchaseOrderItem::getByOrder($orderId);
-        $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
-        $approvedSupplier = PurchaseOrderSupplier::getApproved($orderId);
 
-        // Agrupar itens por especificação (case-insensitive, trim, sem acentos duplicados)
+        // Agrupar itens por especificação (case-insensitive, trim)
         $grouped = [];
         foreach ($items as $item) {
             $spec = trim($item['specification'] ?? '');
-            // Normalizar: lowercase para agrupamento
             $key = mb_strtolower($spec, 'UTF-8');
             if ($key === '') {
                 $key = 'sem especificação';
             }
             if (!isset($grouped[$key])) {
-                // Usar o nome original do primeiro item encontrado como label de exibição
                 $grouped[$key] = [
                     'label' => $spec !== '' ? $spec : 'Sem Especificação',
                     'items' => [],
@@ -1042,12 +1038,55 @@ class PurchaseOrderController extends Controller
         // Ordenar grupos alfabeticamente
         ksort($grouped);
 
-        $this->view('site.orders.pdf_specification', [
-            'order' => $order,
-            'grouped' => $grouped,
-            'orderSuppliers' => $orderSuppliers,
-            'approvedSupplier' => $approvedSupplier,
-        ]);
+        // Gerar Excel
+        $xlsx = new XlsxService();
+        $xlsx->setSheetName('Materiais por Espec.');
+        $xlsx->setColumnWidths([6, 45, 18, 18, 12, 10]);
+
+        // Título
+        $xlsx->addRow(['BROOKS CONSTRUTORA - Materiais por Especificação'], 'title');
+        $xlsx->addEmptyRow();
+
+        // Info do pedido
+        $xlsx->addRow(['Pedido:', $order['code'], '', 'Data:', date('d/m/Y', strtotime($order['created_at']))], 'bold');
+        $xlsx->addRow(['Solicitante:', $order['created_by_name'] ?? '-'], 'bold');
+        if (!empty($order['construction_site_name'])) {
+            $xlsx->addRow(['Obra:', ($order['construction_site_code'] ?? '') . ' - ' . $order['construction_site_name']], 'bold');
+        }
+        $xlsx->addEmptyRow();
+
+        // Cada grupo
+        foreach ($grouped as $key => $group) {
+            // Cabeçalho do grupo
+            $label = mb_convert_case($group['label'], MB_CASE_TITLE, 'UTF-8');
+            $xlsx->addRow([$label . ' (' . count($group['items']) . ' ' . (count($group['items']) === 1 ? 'item' : 'itens') . ')'], 'total');
+
+            // Cabeçalho da tabela
+            $xlsx->addRow(['#', 'Material', 'Especificação', 'Classificação', 'Quantidade', 'Unidade'], 'header');
+
+            // Itens
+            foreach ($group['items'] as $i => $item) {
+                $qty = $item['quantity'] == (int)$item['quantity']
+                    ? (int)$item['quantity']
+                    : number_format($item['quantity'], 2, ',', '.');
+
+                $xlsx->addRow([
+                    $i + 1,
+                    $item['material_name'],
+                    $item['specification'] ?? '-',
+                    $item['classification'] ?? '-',
+                    $qty,
+                    $item['unit'] ?? '-',
+                ]);
+            }
+
+            $xlsx->addEmptyRow();
+        }
+
+        // Resumo final
+        $xlsx->addRow(['Total de itens: ' . count($items) . ' | Especificações: ' . count($grouped)], 'bold');
+
+        $xlsx->download('Materiais_Especificacao_' . $order['code'] . '.xlsx');
     }
 
     /**

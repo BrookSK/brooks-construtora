@@ -359,7 +359,7 @@ class Router
             'pedido/aprovacao' => ['PurchaseOrderController', 'approval'],
             'pedido/aprovacao/enviar' => ['PurchaseOrderController', 'submitApproval'],
             'pedido/pdf' => ['PurchaseOrderController', 'pdf'],
-            'pedido/pdf-especificacao' => ['PurchaseOrderController', 'pdfBySpecification'],
+            'pedido/xlsx-especificacao' => ['PurchaseOrderController', 'xlsxBySpecification'],
             'pedido/xlsx' => ['PurchaseOrderController', 'xlsx'],
             'pedido/entrega' => ['PurchaseOrderController', 'deliveryPublic'],
             'pedido/entrega/update' => ['PurchaseOrderController', 'deliveryPublicUpdate'],

@@ -50,8 +50,8 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     <?php endif; ?>
                 </div>
                 <div class="ms-auto">
-                    <a href="/pedido/pdf-especificacao/<?= $order['id'] ?>" class="btn btn-sm btn-outline-success" target="_blank" title="PDF agrupado por especificação">
-                        <i class="bi bi-list-nested"></i> PDF Espec.
+                    <a href="/pedido/xlsx-especificacao/<?= $order['id'] ?>" class="btn btn-sm btn-outline-success" target="_blank" title="Excel agrupado por especificação">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Excel Espec.
                     </a>
                     <?php if ($order['status'] === 'approved'): ?>
                     <a href="/pedido/pdf/<?= $order['id'] ?>" class="btn btn-sm btn-success" target="_blank">
