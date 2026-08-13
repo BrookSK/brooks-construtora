@@ -6,6 +6,5 @@ try { $magazineLogo = \App\Models\Setting::get('magazine_logo', ''); } catch (\E
 if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks-1400x396.webp';
 
 $isAdmin = false;
-$pages = \App\Models\Magazine::getPages($magazine['id']);
 
 include ROOT_PATH . '/app/Views/admin/magazines/preview.php';
