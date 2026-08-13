@@ -26,7 +26,6 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         body.site-embed .page{box-shadow:0 2px 15px rgba(0,0,0,0.1);margin-bottom:15px}
         @media(max-width:620px){
             body{overflow-x:auto}
-            .page{height:auto!important;overflow:visible!important;min-height:auto}
         }
 
         /* ===== CAPA ===== */
@@ -499,8 +498,16 @@ document.addEventListener('DOMContentLoaded', function() {
     var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
 
     function processPages() {
-        // No mobile, não pagina — conteúdo flui naturalmente (evita bugs no iOS Safari)
-        if (window.innerWidth < 620) return;
+        // No iOS Safari, não pagina — evita bugs de cálculo de altura
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (isIOS && window.innerWidth < 620) {
+            // No iOS mobile, só fixa altura das capas/contracapas
+            document.querySelectorAll('.preview .pg-cover, .preview .pg-back').forEach(function(page) {
+                page.style.height = PAGE_HEIGHT + 'px';
+                page.style.overflow = 'hidden';
+            });
+            return;
+        }
 
         var allPages = Array.from(document.querySelectorAll('.preview .page'));
         
