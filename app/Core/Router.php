@@ -150,6 +150,7 @@ class Router
             'orders/update-pin-user-phone' => ['PurchaseOrderController', 'updatePinUserPhone'],
             'orders/update-pin-user-email' => ['PurchaseOrderController', 'updatePinUserEmail'],
             'orders/send-invite-webhook' => ['PurchaseOrderController', 'sendInviteWebhook'],
+            'orders/shopping-list' => ['PurchaseOrderController', 'shoppingList'],
             'orders/edit-items' => ['PurchaseOrderController', 'editItems'],
             'orders/update-items' => ['PurchaseOrderController', 'updateItems'],
             'orders/quote-logs' => ['PurchaseOrderController', 'quoteLogs'],

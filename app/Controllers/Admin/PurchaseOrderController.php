@@ -2306,6 +2306,67 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Lista de Compras — todos os itens de pedidos aprovados e não comprados
+     */
+    public function shoppingList(): void
+    {
+        // Buscar pedidos aprovados que ainda NÃO foram marcados como comprados
+        $orders = Database::fetchAll(
+            "SELECT po.id, po.code, po.created_at, po.created_by_name, po.description,
+                    cs.name as construction_site_name, cs.code as construction_site_code,
+                    s.name as supplier_name
+             FROM purchase_orders po
+             LEFT JOIN suppliers s ON po.supplier_id = s.id
+             LEFT JOIN construction_sites cs ON po.construction_site_id = cs.id
+             WHERE po.status = 'approved' AND po.purchased_at IS NULL
+             ORDER BY po.created_at DESC"
+        );
+
+        // Buscar todos os itens desses pedidos
+        $orderIds = array_column($orders, 'id');
+        $items = [];
+        if (!empty($orderIds)) {
+            $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
+            $items = Database::fetchAll(
+                "SELECT poi.*, po.code as order_code, po.id as order_id,
+                        cs.name as construction_site_name, cs.code as construction_site_code
+                 FROM purchase_order_items poi
+                 JOIN purchase_orders po ON poi.order_id = po.id
+                 LEFT JOIN construction_sites cs ON po.construction_site_id = cs.id
+                 WHERE poi.order_id IN ({$placeholders})
+                 ORDER BY poi.specification ASC, poi.material_name ASC",
+                $orderIds
+            );
+        }
+
+        // Agrupar por especificação (case-insensitive)
+        $grouped = [];
+        foreach ($items as $item) {
+            $spec = trim($item['specification'] ?? '');
+            $key = mb_strtolower($spec, 'UTF-8');
+            if ($key === '') {
+                $key = 'sem especificação';
+            }
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'label' => $spec !== '' ? $spec : 'Sem Especificação',
+                    'items' => [],
+                ];
+            }
+            $grouped[$key]['items'][] = $item;
+        }
+        ksort($grouped);
+
+        $this->view('admin.orders.shopping_list', [
+            'orders' => $orders,
+            'items' => $items,
+            'grouped' => $grouped,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
+    }
+
+    /**
      * Exportar planilha CSV
      */
     public function export(string $id = ''): void

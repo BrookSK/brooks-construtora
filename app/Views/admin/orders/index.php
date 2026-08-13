@@ -23,6 +23,9 @@
         <a href="/admin/orders/tracking" class="btn btn-outline-dark btn-sm">
             <i class="bi bi-clipboard-check"></i> <span class="d-none d-sm-inline">Acompanhamento</span><span class="d-sm-none">Acomp.</span>
         </a>
+        <a href="/admin/orders/shopping-list" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-cart-check"></i> <span class="d-none d-sm-inline">Lista de Compras</span><span class="d-sm-none">Compras</span>
+        </a>
         <a href="/admin/orders/spare-items" class="btn btn-outline-warning btn-sm">
             <i class="bi bi-bag-plus"></i> <span class="d-none d-sm-inline">Sobressalentes</span><span class="d-sm-none">Sobress.</span>
         </a>
