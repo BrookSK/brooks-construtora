@@ -729,7 +729,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function check() {
         loaded++;
         if (loaded >= total) {
-            document.fonts.ready.then(function() { fitTitles(); processPages(); });
+            fitTitles();
+            processPages();
         }
     }
 
@@ -758,7 +759,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (total === 0) {
-        document.fonts.ready.then(function() { fitTitles(); processPages(); });
+        fitTitles();
+        processPages();
     } else {
         images.forEach(function(img) {
             if (img.complete) check();
@@ -767,7 +769,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.addEventListener('error', check);
             }
         });
-        setTimeout(function() { document.fonts.ready.then(function() { fitTitles(); processPages(); }); }, 3000);
+        setTimeout(function() { fitTitles(); processPages(); }, 3000);
     }
     }
 });
