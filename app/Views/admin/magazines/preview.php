@@ -498,17 +498,6 @@ document.addEventListener('DOMContentLoaded', function() {
     var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
 
     function processPages() {
-        // No iOS Safari, não pagina — evita bugs de cálculo de altura
-        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        if (isIOS && window.innerWidth < 620) {
-            // No iOS mobile, só fixa altura das capas/contracapas
-            document.querySelectorAll('.preview .pg-cover, .preview .pg-back').forEach(function(page) {
-                page.style.height = PAGE_HEIGHT + 'px';
-                page.style.overflow = 'hidden';
-            });
-            return;
-        }
-
         var allPages = Array.from(document.querySelectorAll('.preview .page'));
         
         allPages.forEach(function(page) {
@@ -740,8 +729,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function check() {
         loaded++;
         if (loaded >= total) {
-            fitTitles();
-            processPages();
+            document.fonts.ready.then(function() { fitTitles(); processPages(); });
         }
     }
 
@@ -770,8 +758,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (total === 0) {
-        fitTitles();
-        processPages();
+        document.fonts.ready.then(function() { fitTitles(); processPages(); });
     } else {
         images.forEach(function(img) {
             if (img.complete) check();
@@ -780,7 +767,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.addEventListener('error', check);
             }
         });
-        setTimeout(function() { fitTitles(); processPages(); }, 3000);
+        setTimeout(function() { document.fonts.ready.then(function() { fitTitles(); processPages(); }); }, 3000);
+    }
     }
 });
 </script>
