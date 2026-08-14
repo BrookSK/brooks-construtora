@@ -1179,6 +1179,12 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <i class="bi bi-send"></i> Reenviar p/ Aprovação
                     </button>
                 </form>
+                <form method="POST" action="/admin/orders/revert-to-quote" class="mt-2" onsubmit="return confirm('Voltar este pedido para cotação? O status voltará para Aguardando Cotação e os dados de cotação serão mantidos para edição.')">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn btn-outline-warning w-100">
+                        <i class="bi bi-arrow-counterclockwise"></i> Voltar p/ Cotação
+                    </button>
+                </form>
 
                 <?php
                 // Mostrar botão de Split Order se há itens de origens diferentes (fornecedores distintos ou estoque + compra)

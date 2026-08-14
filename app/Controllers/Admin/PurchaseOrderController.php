@@ -5351,6 +5351,53 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Reverter pedido de pending_approval para pending_quote (voltar para cotação)
+     */
+    public function revertToQuote(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::findFull($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if ($order['status'] !== 'pending_approval') {
+            $this->setFlash('error', 'Apenas pedidos aguardando aprovação podem voltar para cotação.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        // Voltar status para pending_quote
+        PurchaseOrder::updateById($id, [
+            'status' => 'pending_quote',
+        ]);
+
+        PurchaseOrderHistory::log(
+            $id,
+            'reverted_to_quote',
+            'Pedido devolvido para cotação por ' . Auth::user()['name'] . '.',
+            Auth::user()['name'],
+            Auth::id()
+        );
+
+        // Reenviar notificação de cotação
+        if (!empty($order['quote_token'])) {
+            $this->sendQuoteNotifications($id, $order['quote_token']);
+        }
+
+        $this->setFlash('success', 'Pedido devolvido para cotação. Link de cotação reenviado.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
      * Split Pré-Cotação — Dividir itens de um pedido pending_quote em múltiplos pedidos
      */
     public function splitPreQuote(): void
