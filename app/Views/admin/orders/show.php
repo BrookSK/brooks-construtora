@@ -1170,6 +1170,27 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <i class="bi bi-send"></i> Reenviar p/ Cotação
                     </button>
                 </form>
+
+                <hr>
+                <?php if (empty($order['stock_dispatched_at'])): ?>
+                <form method="POST" action="/admin/orders/mark-stock-dispatched">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn btn-outline-secondary w-100" onclick="return confirm('Marcar como saiu do estoque?')">
+                        <i class="bi bi-box-arrow-right"></i> Saiu do Estoque
+                    </button>
+                </form>
+                <?php else: ?>
+                <div class="alert alert-secondary py-2 px-3 small mb-2">
+                    <i class="bi bi-box-arrow-right"></i> <strong>Saiu do estoque</strong>
+                    <br><small class="text-muted"><?= htmlspecialchars($order['stock_dispatched_by'] ?? '') ?> — <?= date('d/m/Y H:i', strtotime($order['stock_dispatched_at'])) ?></small>
+                </div>
+                <form method="POST" action="/admin/orders/unmark-stock-dispatched">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100" onclick="return confirm('Desmarcar saiu do estoque?')">
+                        <i class="bi bi-x"></i> Desmarcar
+                    </button>
+                </form>
+                <?php endif; ?>
                 <?php endif; ?>
 
                 <?php if ($order['status'] === 'pending_approval'): ?>

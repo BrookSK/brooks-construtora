@@ -799,6 +799,74 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Marcar pedido como saiu do estoque (aguardando organização)
+     */
+    public function markStockDispatched(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if ($order['status'] !== 'pending_quote') {
+            $this->setFlash('error', 'Este pedido não está aguardando cotação.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Usuário';
+
+        PurchaseOrder::updateById($id, [
+            'stock_dispatched_at' => date('Y-m-d H:i:s'),
+            'stock_dispatched_by' => $userName,
+        ]);
+
+        PurchaseOrderHistory::log($id, 'stock_dispatched', "Saiu do estoque (aguardando organização) — marcado por: {$userName}", $userName, Auth::id());
+
+        $this->setFlash('success', 'Pedido marcado como saiu do estoque.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
+     * Desmarcar saiu do estoque
+     */
+    public function unmarkStockDispatched(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        PurchaseOrder::updateById($id, [
+            'stock_dispatched_at' => null,
+            'stock_dispatched_by' => null,
+        ]);
+
+        PurchaseOrderHistory::log($id, 'stock_dispatched_undone', "Desmarcado saiu do estoque por: " . Auth::user()['name'], Auth::user()['name'], Auth::id());
+
+        $this->setFlash('success', 'Marcação removida.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
      * Marcar pedido como revisado pelo financeiro
      */
     public function financialReview(): void

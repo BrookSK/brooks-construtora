@@ -232,6 +232,9 @@
                             <?php if (!empty($order['purchased_at'])): ?>
                             <span class="badge ms-1" style="font-size:0.6rem; background-color:#e67e22;" title="Comprado por <?= htmlspecialchars($order['purchased_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['purchased_at'])) ?>"><i class="bi bi-bag-check"></i> Comprado</span>
                             <?php endif; ?>
+                            <?php if (!empty($order['stock_dispatched_at'])): ?>
+                            <span class="badge ms-1" style="font-size:0.6rem; background-color:#607d8b;" title="Saiu do estoque — <?= htmlspecialchars($order['stock_dispatched_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['stock_dispatched_at'])) ?>"><i class="bi bi-box-arrow-right"></i> Saiu Estoque</span>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <?php $orderTotal = $order['display_total'] ?? $order['total_estimated']; ?>
@@ -295,6 +298,9 @@
                         <?php endif; ?>
                         <?php if (!empty($order['purchased_at'])): ?>
                         <span class="badge" style="font-size:0.6rem; background-color:#e67e22;"><i class="bi bi-bag-check"></i></span>
+                        <?php endif; ?>
+                        <?php if (!empty($order['stock_dispatched_at'])): ?>
+                        <span class="badge" style="font-size:0.6rem; background-color:#607d8b;" title="Saiu do Estoque"><i class="bi bi-box-arrow-right"></i></span>
                         <?php endif; ?>
                         <?php if (($order['order_type'] ?? 'material') === 'service'): ?>
                         <span class="badge bg-dark" style="font-size:0.6rem;"><i class="bi bi-wrench"></i></span>
