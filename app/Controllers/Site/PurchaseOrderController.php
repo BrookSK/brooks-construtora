@@ -898,6 +898,9 @@ class PurchaseOrderController extends Controller
             // Criar checklist de entrega e enviar notificação
             $this->initDeliveryOnApproval($order['id']);
 
+            // Executar movimentações de estoque pendentes (deduzir do estoque de origem)
+            $this->executeStockMovementsOnApproval($order['id']);
+
             $this->view('site.orders.approval_success', [
                 'order' => $order,
                 'action' => 'approved',
@@ -2408,6 +2411,54 @@ class PurchaseOrderController extends Controller
         }
 
         PurchaseOrderHistory::log($orderId, 'delivery_init', 'Checklist de entrega criado automaticamente na aprovação', $order['approved_by_name'] ?? 'Sistema');
+    }
+
+    /**
+     * Executar movimentações de estoque pendentes ao aprovar o pedido
+     * Debita do estoque de origem imediatamente (sem aguardar transporte confirmar)
+     */
+    private function executeStockMovementsOnApproval(int $orderId): void
+    {
+        $items = PurchaseOrderItem::getByOrder($orderId);
+
+        foreach ($items as $item) {
+            if (empty($item['stock_movement_id'])) continue;
+
+            $movement = StockMovement::find((int) $item['stock_movement_id']);
+            if (!$movement || $movement['status'] !== StockMovement::STATUS_PENDING) continue;
+
+            // Debitar do estoque de origem
+            $debited = false;
+            if ($movement['from_location_id']) {
+                // Buscar item de estoque pelo location_id diretamente
+                $stockItem = StockItem::findByMaterialAndLocation($movement['material_id'], $movement['from_location_id']);
+                if ($stockItem) {
+                    StockItem::debit($stockItem['id'], $movement['quantity']);
+                    $debited = true;
+                }
+            } elseif ($movement['from_site_id']) {
+                // Fallback: buscar por site
+                $stockItem = StockItem::findByMaterialAndSite($movement['material_id'], $movement['from_site_id']);
+                if ($stockItem) {
+                    StockItem::debit($stockItem['id'], $movement['quantity']);
+                    $debited = true;
+                }
+            }
+
+            // Creditar no destino (se for transferência)
+            if ($movement['type'] === StockMovement::TYPE_TRANSFER && $movement['to_site_id']) {
+                $destStockId = StockItem::findOrCreateBySite($movement['material_id'], (int) $movement['to_site_id']);
+                StockItem::credit($destStockId, $movement['quantity']);
+            }
+
+            // Marcar movimentação como executada
+            StockMovement::updateById((int) $item['stock_movement_id'], [
+                'status' => StockMovement::STATUS_DELIVERED,
+                'delivered_by' => 'Sistema (aprovação)',
+                'delivered_at' => date('Y-m-d H:i:s'),
+                'notes' => ($movement['notes'] ?? '') ? $movement['notes'] . ' | Executado automaticamente na aprovação do pedido.' : 'Executado automaticamente na aprovação do pedido.',
+            ]);
+        }
     }
 
     private function sendWebhook(string $url, array $data, ?int $orderId = null, ?string $eventType = null): void

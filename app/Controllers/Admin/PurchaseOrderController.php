@@ -394,6 +394,9 @@ class PurchaseOrderController extends Controller
             // Criar checklist de entrega e enviar notificação
             $this->initDeliveryOnApproval($orderId);
 
+            // Executar movimentações de estoque (deduzir do estoque de origem)
+            $this->executeStockMovementsOnApproval($orderId);
+
             $this->setFlash('success', "Pedido {$code} criado! Itens de estoque aprovados automaticamente. Checklist de entrega criado.");
             $this->redirect('/admin/orders');
             return;
@@ -3583,6 +3586,70 @@ class PurchaseOrderController extends Controller
         }
 
         return $stockItem && !empty($stockItem['unit_price']) ? (float) $stockItem['unit_price'] : null;
+    }
+
+    /**
+     * Executar movimentações de estoque pendentes ao aprovar o pedido
+     * Debita do estoque de origem imediatamente
+     */
+    private function executeStockMovementsOnApproval(int $orderId): void
+    {
+        $items = PurchaseOrderItem::getByOrder($orderId);
+
+        foreach ($items as $item) {
+            if (empty($item['stock_movement_id'])) continue;
+
+            $movement = \App\Models\StockMovement::find((int) $item['stock_movement_id']);
+            if (!$movement || $movement['status'] !== \App\Models\StockMovement::STATUS_PENDING) continue;
+
+            // Debitar do estoque de origem
+            if ($movement['from_location_id']) {
+                $stockItem = \App\Models\StockItem::findByMaterialAndLocation($movement['material_id'], $movement['from_location_id']);
+                if ($stockItem) {
+                    \App\Models\StockItem::debit($stockItem['id'], $movement['quantity']);
+                }
+            } elseif ($movement['from_site_id']) {
+                $stockItem = \App\Models\StockItem::findByMaterialAndSite($movement['material_id'], $movement['from_site_id']);
+                if ($stockItem) {
+                    \App\Models\StockItem::debit($stockItem['id'], $movement['quantity']);
+                }
+            }
+
+            // Creditar no destino (se for transferência)
+            if ($movement['type'] === \App\Models\StockMovement::TYPE_TRANSFER && $movement['to_site_id']) {
+                $destStockId = \App\Models\StockItem::findOrCreateBySite($movement['material_id'], (int) $movement['to_site_id']);
+                \App\Models\StockItem::credit($destStockId, $movement['quantity']);
+            }
+
+            // Marcar movimentação como executada
+            \App\Models\StockMovement::updateById((int) $item['stock_movement_id'], [
+                'status' => \App\Models\StockMovement::STATUS_DELIVERED,
+                'delivered_by' => 'Sistema (aprovação)',
+                'delivered_at' => date('Y-m-d H:i:s'),
+                'notes' => ($movement['notes'] ?? '') ? $movement['notes'] . ' | Executado automaticamente na aprovação do pedido.' : 'Executado automaticamente na aprovação do pedido.',
+            ]);
+        }
+    }
+
+    /**
+     * Inicializar checklist de entrega ao aprovar automaticamente
+     */
+    private function initDeliveryOnApproval(int $orderId): void
+    {
+        $order = PurchaseOrder::findFull($orderId);
+        if (!$order) return;
+
+        // Inicializar checklist
+        \App\Models\PurchaseOrderDelivery::initializeForOrder($orderId);
+
+        // Gerar delivery token se não tem
+        $deliveryToken = $order['delivery_token'] ?? '';
+        if (empty($deliveryToken)) {
+            $deliveryToken = bin2hex(random_bytes(32));
+            PurchaseOrder::updateById($orderId, ['delivery_token' => $deliveryToken]);
+        }
+
+        PurchaseOrderHistory::log($orderId, 'delivery_init', 'Checklist de entrega criado automaticamente na aprovação', $order['approved_by_name'] ?? 'Sistema');
     }
 
     // ============================
