@@ -180,16 +180,25 @@ class StockMovement extends Model
         if (!$movement) return;
 
         // Debitar do estoque de origem
-        if ($movement['from_site_id']) {
+        $debited = false;
+        if ($movement['from_location_id']) {
+            $stockItem = StockItem::findByMaterialAndLocation($movement['material_id'], $movement['from_location_id']);
+            if ($stockItem) {
+                StockItem::debit($stockItem['id'], $movement['quantity']);
+                $debited = true;
+            }
+        }
+        if (!$debited && $movement['from_site_id']) {
             $stockItem = StockItem::findByMaterialAndSite($movement['material_id'], $movement['from_site_id']);
             if ($stockItem) {
                 StockItem::debit($stockItem['id'], $movement['quantity']);
             }
         }
 
-        // Creditar no estoque destino (se for transferência)
-        if ($movement['to_site_id'] && $movement['type'] === self::TYPE_TRANSFER) {
-            $destStockId = StockItem::findOrCreate($movement['material_id'], $movement['to_site_id']);
+        // Creditar no estoque destino APENAS se for transferência pura (sem pedido vinculado)
+        // Quando há pedido (order_id), o material é consumido/usado na obra — não credita
+        if ($movement['to_site_id'] && $movement['type'] === self::TYPE_TRANSFER && empty($movement['order_id'])) {
+            $destStockId = StockItem::findOrCreateBySite($movement['material_id'], (int) $movement['to_site_id']);
             StockItem::credit($destStockId, $movement['quantity']);
         }
 
