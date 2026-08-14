@@ -34,9 +34,21 @@
                         <?php endforeach; ?>
                     </div>
                     <?php else: ?>
+                    <?php
+                    // Calcular valor dos itens de estoque
+                    $stockTotal = 0;
+                    $orderItems = \App\Models\PurchaseOrderItem::getByOrder($order['id']);
+                    foreach ($orderItems as $oi) {
+                        if (!empty($oi['source_type']) && $oi['source_type'] !== 'purchase' && !empty($oi['total_price'])) {
+                            $stockTotal += (float) $oi['total_price'];
+                        }
+                    }
+                    $displayValue = $total > 0 ? $total : $stockTotal;
+                    $displayLabel = $total > 0 ? 'Valor Total' : ($stockTotal > 0 ? 'Valor Itens de Estoque' : 'Valor Total');
+                    ?>
                     <div class="bg-light rounded p-3 mb-3">
-                        <small class="text-muted">Valor Total</small>
-                        <h4 class="text-success mb-0">R$ <?= number_format($total, 2, ',', '.') ?></h4>
+                        <small class="text-muted"><?= $displayLabel ?></small>
+                        <h4 class="<?= $stockTotal > 0 && $total == 0 ? '' : 'text-success' ?> mb-0" <?= $stockTotal > 0 && $total == 0 ? 'style="color:#6f42c1;"' : '' ?>>R$ <?= number_format($displayValue, 2, ',', '.') ?></h4>
                     </div>
                     <?php endif; ?>
 

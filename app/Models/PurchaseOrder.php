@@ -98,7 +98,9 @@ class PurchaseOrder extends Model
                  cs.name as construction_site_name, cs.code as construction_site_code,
                  COALESCE(
                     (SELECT pos.subtotal_final FROM purchase_order_suppliers pos WHERE pos.order_id = po.id AND pos.approved = 1 LIMIT 1),
-                    po.total_estimated
+                    NULLIF(po.total_estimated, 0),
+                    (SELECT SUM(poi2.total_price) FROM purchase_order_items poi2 WHERE poi2.order_id = po.id AND poi2.source_type IS NOT NULL AND poi2.source_type != 'purchase' AND poi2.total_price > 0),
+                    0
                  ) as display_total,
                  (SELECT COALESCE(SUM(pop.amount), 0) FROM purchase_order_payments pop WHERE pop.order_id = po.id) as nf_total,
                  (SELECT GROUP_CONCAT(poi.material_name SEPARATOR ' | ') FROM purchase_order_items poi WHERE poi.order_id = po.id) as items_names
@@ -112,7 +114,9 @@ class PurchaseOrder extends Model
             "SELECT po.*, s.name as supplier_name,
              COALESCE(
                 (SELECT pos.subtotal_final FROM purchase_order_suppliers pos WHERE pos.order_id = po.id AND pos.approved = 1 LIMIT 1),
-                po.total_estimated
+                NULLIF(po.total_estimated, 0),
+                (SELECT SUM(poi2.total_price) FROM purchase_order_items poi2 WHERE poi2.order_id = po.id AND poi2.source_type IS NOT NULL AND poi2.source_type != 'purchase' AND poi2.total_price > 0),
+                0
              ) as display_total,
              (SELECT COALESCE(SUM(pop.amount), 0) FROM purchase_order_payments pop WHERE pop.order_id = po.id) as nf_total,
              (SELECT GROUP_CONCAT(poi.material_name SEPARATOR ' | ') FROM purchase_order_items poi WHERE poi.order_id = po.id) as items_names
