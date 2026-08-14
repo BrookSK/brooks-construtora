@@ -19,6 +19,7 @@ use App\Models\Supplier;
 use App\Models\Setting;
 use App\Models\ConstructionSite;
 use App\Models\StockMovement;
+use App\Models\StockItem;
 use App\Models\StockLocation;
 use App\Services\MailService;
 use App\Services\EmailTemplate;

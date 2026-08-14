@@ -5399,10 +5399,13 @@ class PurchaseOrderController extends Controller
             $pricesByItemSupplier[$ip['item_id']][$ip['supplier_id']] = $ip;
         }
 
+        // Receber a atribuição do usuário (item_id => supplier_id)
+        $itemAssignments = $_POST['item_assignments'] ?? [];
+
         // Agrupar itens
         $splitGroups = [];
 
-        // Itens de estoque
+        // Itens de estoque (sempre ficam separados)
         $stockItems = array_filter($items, fn($i) => !empty($i['source_type']) && $i['source_type'] !== 'purchase');
         if (!empty($stockItems)) {
             $splitGroups['stock'] = [
@@ -5413,19 +5416,15 @@ class PurchaseOrderController extends Controller
             ];
         }
 
-        // Itens de compra — agrupar por melhor fornecedor
+        // Itens de compra — agrupar conforme escolha do usuário
         $purchaseItems = array_filter($items, fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase');
         if (!empty($purchaseItems) && !empty($orderSuppliers)) {
-            if (count($orderSuppliers) === 1) {
-                $sid = $orderSuppliers[0]['supplier_id'];
-                $splitGroups['supplier_' . $sid] = [
-                    'supplier_id' => $sid,
-                    'supplier_data' => $supplierMap[$sid] ?? null,
-                    'items' => array_values($purchaseItems),
-                    'source' => 'purchase',
-                ];
-            } else {
-                foreach ($purchaseItems as $pi) {
+            foreach ($purchaseItems as $pi) {
+                // Verificar se o usuário atribuiu este item a um fornecedor
+                $assignedSid = isset($itemAssignments[$pi['id']]) ? (int)$itemAssignments[$pi['id']] : null;
+
+                if (!$assignedSid) {
+                    // Fallback: usar menor preço
                     $bestSid = null;
                     $bestPrice = PHP_FLOAT_MAX;
                     if (isset($pricesByItemSupplier[$pi['id']])) {
@@ -5437,21 +5436,20 @@ class PurchaseOrderController extends Controller
                             }
                         }
                     }
-                    if (!$bestSid && !empty($orderSuppliers)) {
-                        $bestSid = $orderSuppliers[0]['supplier_id'];
+                    $assignedSid = $bestSid ?: ($orderSuppliers[0]['supplier_id'] ?? null);
+                }
+
+                if ($assignedSid) {
+                    $key = 'supplier_' . $assignedSid;
+                    if (!isset($splitGroups[$key])) {
+                        $splitGroups[$key] = [
+                            'supplier_id' => $assignedSid,
+                            'supplier_data' => $supplierMap[$assignedSid] ?? null,
+                            'items' => [],
+                            'source' => 'purchase',
+                        ];
                     }
-                    if ($bestSid) {
-                        $key = 'supplier_' . $bestSid;
-                        if (!isset($splitGroups[$key])) {
-                            $splitGroups[$key] = [
-                                'supplier_id' => $bestSid,
-                                'supplier_data' => $supplierMap[$bestSid] ?? null,
-                                'items' => [],
-                                'source' => 'purchase',
-                            ];
-                        }
-                        $splitGroups[$key]['items'][] = $pi;
-                    }
+                    $splitGroups[$key]['items'][] = $pi;
                 }
             }
         } elseif (!empty($purchaseItems)) {
@@ -5465,7 +5463,7 @@ class PurchaseOrderController extends Controller
 
         // Validar que há pelo menos 2 grupos para dividir
         if (count($splitGroups) < 2) {
-            $this->setFlash('error', 'Este pedido não pode ser dividido — todos os itens pertencem ao mesmo grupo.');
+            $this->setFlash('error', 'Este pedido não pode ser dividido — todos os itens pertencem ao mesmo grupo. Atribua itens a fornecedores diferentes.');
             $this->redirect('/admin/orders/show/' . $id);
             return;
         }
@@ -5481,8 +5479,6 @@ class PurchaseOrderController extends Controller
             $code = PurchaseOrder::generateCode();
             $quoteToken = PurchaseOrder::generateToken();
             $approvalToken = PurchaseOrder::generateToken();
-
-            $isStock = $group['source'] === 'stock';
 
             $newOrderData = [
                 'code' => $code,
@@ -5509,9 +5505,21 @@ class PurchaseOrderController extends Controller
             $newOrderId = PurchaseOrder::create($newOrderData);
             $newOrderIds[] = ['id' => $newOrderId, 'code' => $code, 'group' => $gKey];
 
-            // Copiar itens para o novo pedido
+            // Copiar itens para o novo pedido e calcular total
             $groupTotal = 0;
             foreach ($group['items'] as $item) {
+                // Para itens de compra, buscar preço do fornecedor atribuído
+                $itemUnitPrice = $item['unit_price'] ?? null;
+                $itemTotalPrice = $item['total_price'] ?? null;
+
+                if ($group['source'] === 'purchase' && $group['supplier_id']) {
+                    $priceRecord = $pricesByItemSupplier[$item['id']][$group['supplier_id']] ?? null;
+                    if ($priceRecord) {
+                        $itemUnitPrice = $priceRecord['unit_price'];
+                        $itemTotalPrice = $priceRecord['total_price'];
+                    }
+                }
+
                 $newItemData = [
                     'order_id' => $newOrderId,
                     'material_id' => $item['material_id'],
@@ -5520,8 +5528,8 @@ class PurchaseOrderController extends Controller
                     'classification' => $item['classification'] ?? '',
                     'unit' => $item['unit'] ?? '',
                     'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'] ?? null,
-                    'total_price' => $item['total_price'] ?? null,
+                    'unit_price' => $itemUnitPrice,
+                    'total_price' => $itemTotalPrice,
                     'source_type' => $item['source_type'] ?? null,
                     'stock_from_site_id' => $item['stock_from_site_id'] ?? null,
                     'stock_movement_id' => $item['stock_movement_id'] ?? null,
@@ -5531,9 +5539,9 @@ class PurchaseOrderController extends Controller
                     'created_at' => date('Y-m-d H:i:s'),
                 ];
                 $newItemId = PurchaseOrderItem::create($newItemData);
-                $groupTotal += (float)($item['total_price'] ?? 0);
+                $groupTotal += (float)($itemTotalPrice ?? 0);
 
-                // Copiar preços por fornecedor para este item (se é item de compra)
+                // Copiar preços de TODOS os fornecedores para este item (mantém histórico de cotação)
                 if ($group['source'] === 'purchase' && isset($pricesByItemSupplier[$item['id']])) {
                     foreach ($pricesByItemSupplier[$item['id']] as $sid => $priceInfo) {
                         PurchaseOrderItemPrice::create([
@@ -5553,7 +5561,7 @@ class PurchaseOrderController extends Controller
                 }
             }
 
-            // Copiar fornecedor(es) do pedido original para o novo
+            // Copiar fornecedor do pedido original para o novo (com total correto)
             if ($group['supplier_id'] && $group['supplier_data']) {
                 $sd = $group['supplier_data'];
                 PurchaseOrderSupplier::create([
