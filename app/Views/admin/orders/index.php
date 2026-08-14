@@ -117,6 +117,14 @@
                         <option value="not_purchased">Não comprado</option>
                     </select>
                 </div>
+                <!-- Saiu do Estoque -->
+                <div class="col-6 col-md-2">
+                    <select id="filterStockDispatched" class="form-select form-select-sm">
+                        <option value="">Saiu Estoque</option>
+                        <option value="dispatched">Sim</option>
+                        <option value="not_dispatched">Não</option>
+                    </select>
+                </div>
                 <!-- Período -->
                 <div class="col-6 col-md-3">
                     <input type="date" id="filterDateFrom" class="form-control form-control-sm" title="Data inicial">
@@ -202,6 +210,7 @@
                         data-type="<?= htmlspecialchars($order['order_type'] ?? 'material') ?>"
                         data-financial="<?= !empty($order['financial_reviewed_at']) ? 'reviewed' : 'not_reviewed' ?>"
                         data-purchased="<?= !empty($order['purchased_at']) ? 'purchased' : 'not_purchased' ?>"
+                        data-stock-dispatched="<?= !empty($order['stock_dispatched_at']) ? 'dispatched' : 'not_dispatched' ?>"
                         data-date="<?= date('Y-m-d', strtotime($order['created_at'])) ?>"
                         data-requester="<?= htmlspecialchars($order['created_by_name'] ?? '') ?>"
                         data-items="<?= htmlspecialchars(strtolower($order['items_names'] ?? '')) ?>"
@@ -280,6 +289,7 @@
        data-type="<?= htmlspecialchars($order['order_type'] ?? 'material') ?>"
        data-financial="<?= !empty($order['financial_reviewed_at']) ? 'reviewed' : 'not_reviewed' ?>"
        data-purchased="<?= !empty($order['purchased_at']) ? 'purchased' : 'not_purchased' ?>"
+       data-stock-dispatched="<?= !empty($order['stock_dispatched_at']) ? 'dispatched' : 'not_dispatched' ?>"
        data-date="<?= date('Y-m-d', strtotime($order['created_at'])) ?>"
        data-requester="<?= htmlspecialchars($order['created_by_name'] ?? '') ?>"
        data-items="<?= htmlspecialchars(strtolower($order['items_names'] ?? '')) ?>"
@@ -349,6 +359,7 @@
     const typeSelect = document.getElementById('filterType');
     const financialSelect = document.getElementById('filterFinancial');
     const purchasedSelect = document.getElementById('filterPurchased');
+    const stockDispatchedSelect = document.getElementById('filterStockDispatched');
     const dateFrom = document.getElementById('filterDateFrom');
     const dateTo = document.getElementById('filterDateTo');
     const requesterSelect = document.getElementById('filterRequester');
@@ -400,12 +411,13 @@
         if (data.type && typeSelect) typeSelect.value = data.type;
         if (data.financial && financialSelect) financialSelect.value = data.financial;
         if (data.purchased && purchasedSelect) purchasedSelect.value = data.purchased;
+        if (data.stockDispatched && stockDispatchedSelect) stockDispatchedSelect.value = data.stockDispatched;
         if (data.from && dateFrom) dateFrom.value = data.from;
         if (data.to && dateTo) dateTo.value = data.to;
         if (data.requester && requesterSelect) requesterSelect.value = data.requester;
 
         // Abrir painel se algum filtro avançado estiver ativo
-        if (data.q || data.material || data.supplier || data.site || data.type || data.financial || data.purchased || data.from || data.to || data.requester) {
+        if (data.q || data.material || data.supplier || data.site || data.type || data.financial || data.purchased || data.stockDispatched || data.from || data.to || data.requester) {
             const panel = document.getElementById('advancedFilters');
             if (panel && typeof bootstrap !== 'undefined') {
                 new bootstrap.Collapse(panel, { show: true });
@@ -426,6 +438,7 @@
             type: typeSelect ? typeSelect.value : '',
             financial: financialSelect ? financialSelect.value : '',
             purchased: purchasedSelect ? purchasedSelect.value : '',
+            stockDispatched: stockDispatchedSelect ? stockDispatchedSelect.value : '',
             from: dateFrom ? dateFrom.value : '',
             to: dateTo ? dateTo.value : '',
             requester: requesterSelect ? requesterSelect.value : ''
@@ -461,6 +474,7 @@
         const type = typeSelect ? typeSelect.value : '';
         const financial = financialSelect ? financialSelect.value : '';
         const purchased = purchasedSelect ? purchasedSelect.value : '';
+        const stockDispatched = stockDispatchedSelect ? stockDispatchedSelect.value : '';
         const from = dateFrom ? dateFrom.value : '';
         const to = dateTo ? dateTo.value : '';
         const requester = requesterSelect ? requesterSelect.value : '';
@@ -479,6 +493,7 @@
             if (show && financial && financial !== 'all' && row.dataset.financial !== financial) show = false;
             if (show && !financial && row.dataset.financial === 'reviewed') show = false;
             if (show && purchased && row.dataset.purchased !== purchased) show = false;
+            if (show && stockDispatched && row.dataset.stockDispatched !== stockDispatched) show = false;
             if (show && activeStatus === 'all' && row.dataset.status === 'cancelled') show = false;
             if (show && from && row.dataset.date < from) show = false;
             if (show && to && row.dataset.date > to) show = false;
@@ -511,6 +526,7 @@
     if (typeSelect) typeSelect.addEventListener('change', applyFilters);
     if (financialSelect) financialSelect.addEventListener('change', applyFilters);
     if (purchasedSelect) purchasedSelect.addEventListener('change', applyFilters);
+    if (stockDispatchedSelect) stockDispatchedSelect.addEventListener('change', applyFilters);
     if (dateFrom) dateFrom.addEventListener('change', applyFilters);
     if (dateTo) dateTo.addEventListener('change', applyFilters);
     if (requesterSelect) requesterSelect.addEventListener('change', applyFilters);
@@ -525,6 +541,7 @@
             if (typeSelect) typeSelect.value = '';
             if (financialSelect) financialSelect.value = '';
             if (purchasedSelect) purchasedSelect.value = '';
+            if (stockDispatchedSelect) stockDispatchedSelect.value = '';
             if (dateFrom) dateFrom.value = '';
             if (dateTo) dateTo.value = '';
             if (requesterSelect) requesterSelect.value = '';
