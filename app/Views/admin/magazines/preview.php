@@ -498,6 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
 
     function processPages() {
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         var allPages = Array.from(document.querySelectorAll('.preview .page'));
         
         allPages.forEach(function(page) {
@@ -508,14 +509,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            // iOS: usa paginação por estimativa (não confia em scrollHeight)
+            if (isIOS) {
+                paginateByEstimate(page);
+                return;
+            }
+
             // Para pg-guest: força recalcular altura real
             if (page.classList.contains('pg-guest')) {
-                var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-                if (isIOS) {
-                    // iOS: paginação manual baseada em estimativa de altura por texto
-                    paginateGuestIOS(page);
-                    return;
-                }
                 page.style.height = 'auto';
                 page.style.minHeight = '0';
                 page.style.overflow = 'visible';
@@ -720,18 +721,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Paginação específica para pg-guest no iOS (não depende de scrollHeight/offsetHeight)
-    function paginateGuestIOS(page) {
+    // Paginação por estimativa de altura (iOS Safari - não depende de scrollHeight/offsetHeight)
+    function paginateByEstimate(page) {
         var header = page.querySelector('.hdr');
         var headerHTML = header ? header.outerHTML : '';
         var pageClass = page.className;
 
-        // Extrai filhos do .column-content para nível direto
-        var colContent = page.querySelector('.column-content');
-        if (colContent) {
-            var kids = Array.from(colContent.children);
-            kids.forEach(function(kid) { page.insertBefore(kid, colContent); });
-            colContent.remove();
+        // Se for pg-guest, extrai filhos do .column-content
+        if (page.classList.contains('pg-guest')) {
+            var colContent = page.querySelector('.column-content');
+            if (colContent) {
+                var kids = Array.from(colContent.children);
+                kids.forEach(function(kid) { page.insertBefore(kid, colContent); });
+                colContent.remove();
+            }
         }
 
         // Coleta todos os blocos (exceto header)
@@ -741,8 +744,7 @@ document.addEventListener('DOMContentLoaded', function() {
             blocks.push(child);
         });
 
-        // Estima altura de cada bloco baseado no texto (fallback pra iOS)
-        // Linha de texto ~18px, header ~80px, author-box ~100px, imagem ~160px
+        // Estima altura de cada bloco
         var USABLE_HEIGHT = 740; // 842 - padding top/bottom - header
         var pages_arr = [];
         var currentPageEls = [];
@@ -750,30 +752,47 @@ document.addEventListener('DOMContentLoaded', function() {
 
         for (var i = 0; i < blocks.length; i++) {
             var el = blocks[i];
-            var estimatedH;
-
-            if (el.classList.contains('column-label')) {
-                estimatedH = 25;
-            } else if (el.classList.contains('author-box')) {
-                estimatedH = 110;
-            } else if (el.tagName === 'DIV' && el.querySelector('img')) {
-                estimatedH = 170;
-            } else {
-                // Parágrafo: estima baseado no número de caracteres
-                var text = el.textContent || '';
-                var charsPerLine = 75; // ~75 chars por linha em 0.72rem com 515px de largura
-                var lineHeight = 18; // line-height: 1.75 * 0.72rem ≈ 18px
-                var lines = Math.max(1, Math.ceil(text.length / charsPerLine));
-                estimatedH = (lines * lineHeight) + 10; // +10 margin
-            }
+            var estimatedH = estimateElementHeight(el);
 
             if (currentH + estimatedH <= USABLE_HEIGHT) {
                 currentPageEls.push(el);
                 currentH += estimatedH;
             } else {
-                pages_arr.push(currentPageEls);
-                currentPageEls = [el];
-                currentH = estimatedH;
+                // Se o bloco tem filhos (tipo .two-col, .column-content), tenta dividir
+                if (el.children.length > 1 && currentH < USABLE_HEIGHT - 50) {
+                    var spaceLeft = USABLE_HEIGHT - currentH;
+                    var fitEls = [];
+                    var overflowEls = [];
+                    var usedH = 0;
+                    Array.from(el.children).forEach(function(child) {
+                        var childH = estimateElementHeight(child);
+                        if (usedH + childH <= spaceLeft && overflowEls.length === 0) {
+                            fitEls.push(child);
+                            usedH += childH;
+                        } else {
+                            overflowEls.push(child);
+                        }
+                    });
+                    if (fitEls.length > 0) {
+                        var fitWrapper = el.cloneNode(false);
+                        fitEls.forEach(function(c) { fitWrapper.appendChild(c.cloneNode(true)); });
+                        currentPageEls.push(fitWrapper);
+                    }
+                    pages_arr.push(currentPageEls);
+                    currentPageEls = [];
+                    currentH = 0;
+                    if (overflowEls.length > 0) {
+                        var overWrapper = el.cloneNode(false);
+                        overflowEls.forEach(function(c) { overWrapper.appendChild(c.cloneNode(true)); });
+                        blocks.splice(i + 1, 0, overWrapper);
+                    }
+                } else {
+                    if (currentPageEls.length > 0) {
+                        pages_arr.push(currentPageEls);
+                    }
+                    currentPageEls = [el];
+                    currentH = estimatedH;
+                }
             }
         }
         if (currentPageEls.length > 0) pages_arr.push(currentPageEls);
@@ -803,6 +822,79 @@ document.addEventListener('DOMContentLoaded', function() {
             newPage.style.overflow = 'hidden';
             prevPage = newPage;
         }
+    }
+
+    function estimateElementHeight(el) {
+        var tag = el.tagName;
+        var cls = el.className || '';
+
+        // Imagens
+        if (tag === 'IMG') {
+            var h = el.getAttribute('style') || '';
+            var match = h.match(/height:\s*(\d+)/);
+            return match ? parseInt(match[1]) + 15 : 300;
+        }
+
+        // Divs com imagem dentro (overlay-section, img containers)
+        if (cls.indexOf('overlay-section') !== -1) return 435;
+        if (cls.indexOf('img-full') !== -1 || cls.indexOf('img-placeholder') !== -1) {
+            var s = el.getAttribute('style') || '';
+            var m = s.match(/height:\s*(\d+)/);
+            return m ? parseInt(m[1]) + 15 : 300;
+        }
+
+        // Títulos
+        if (cls.indexOf('title-big') !== -1) return 50;
+        if (cls.indexOf('title-upper') !== -1) return 35;
+        if (cls.indexOf('subtitle') !== -1) return 30;
+        if (cls.indexOf('column-label') !== -1) return 25;
+        if (cls.indexOf('stories-label') !== -1) return 20;
+        if (cls.indexOf('stories-title') !== -1) return 40;
+        if (cls.indexOf('stories-subtitle') !== -1) return 40;
+        if (cls.indexOf('caption') !== -1) return 25;
+
+        // Author box
+        if (cls.indexOf('author-box') !== -1) return 110;
+
+        // Story items
+        if (cls.indexOf('story-item') !== -1) {
+            var text = el.textContent || '';
+            var lines = Math.max(2, Math.ceil(text.length / 75));
+            return (lines * 16) + 20;
+        }
+
+        // Two-col containers
+        if (cls.indexOf('two-col') !== -1) {
+            var maxChildH = 0;
+            Array.from(el.children).forEach(function(child) {
+                var childH = estimateElementHeight(child);
+                if (childH > maxChildH) maxChildH = childH;
+            });
+            return maxChildH + 10;
+        }
+
+        // Div genérica com estilo inline (ex: flex containers, img wrappers)
+        if (tag === 'DIV') {
+            var style = el.getAttribute('style') || '';
+            var hMatch = style.match(/height:\s*(\d+)/);
+            if (hMatch) return parseInt(hMatch[1]) + 15;
+            // Div com imagem dentro
+            if (el.querySelector('img')) return 170;
+            // Div com texto
+            var txt = el.textContent || '';
+            if (txt.length > 0) {
+                var l = Math.max(1, Math.ceil(txt.length / 75));
+                return (l * 16) + 15;
+            }
+            return 30;
+        }
+
+        // Parágrafos e texto genérico
+        var text = el.textContent || '';
+        var charsPerLine = 75;
+        var lineHeight = 16;
+        var lines = Math.max(1, Math.ceil(text.length / charsPerLine));
+        return (lines * lineHeight) + 10;
     }
 
     function renumberPages() {
