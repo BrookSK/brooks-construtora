@@ -762,15 +762,9 @@
         const totalItems = itemIds.length;
         const selectedCount = Object.keys(selections).length;
 
-        if (totalItems > 0 && selectedCount === 0) {
-            alert('Selecione o fornecedor para pelo menos um item.');
+        if (totalItems > 0 && selectedCount < totalItems) {
+            alert('Selecione o fornecedor para TODOS os ' + totalItems + ' itens antes de aprovar. Faltam ' + (totalItems - selectedCount) + ' item(ns).');
             return false;
-        }
-
-        if (selectedCount < totalItems) {
-            if (!confirm('Atenção: ' + (totalItems - selectedCount) + ' item(ns) ainda não têm fornecedor selecionado. Deseja aprovar apenas os itens selecionados?')) {
-                return false;
-            }
         }
 
         return confirm('Confirma a APROVAÇÃO deste pedido com os fornecedores selecionados?');

@@ -3602,7 +3602,7 @@ class PurchaseOrderController extends Controller
             $movement = \App\Models\StockMovement::find((int) $item['stock_movement_id']);
             if (!$movement || $movement['status'] !== \App\Models\StockMovement::STATUS_PENDING) continue;
 
-            // Debitar do estoque de origem
+            // Debitar do estoque de origem (material saiu para uso na obra)
             if ($movement['from_location_id']) {
                 $stockItem = \App\Models\StockItem::findByMaterialAndLocation($movement['material_id'], $movement['from_location_id']);
                 if ($stockItem) {
@@ -3615,18 +3615,14 @@ class PurchaseOrderController extends Controller
                 }
             }
 
-            // Creditar no destino (se for transferência)
-            if ($movement['type'] === \App\Models\StockMovement::TYPE_TRANSFER && $movement['to_site_id']) {
-                $destStockId = \App\Models\StockItem::findOrCreateBySite($movement['material_id'], (int) $movement['to_site_id']);
-                \App\Models\StockItem::credit($destStockId, $movement['quantity']);
-            }
+            // NÃO creditar no destino — pedido aprovado = material consumido/usado na obra
 
             // Marcar movimentação como executada
             \App\Models\StockMovement::updateById((int) $item['stock_movement_id'], [
                 'status' => \App\Models\StockMovement::STATUS_DELIVERED,
                 'delivered_by' => 'Sistema (aprovação)',
                 'delivered_at' => date('Y-m-d H:i:s'),
-                'notes' => ($movement['notes'] ?? '') ? $movement['notes'] . ' | Executado automaticamente na aprovação do pedido.' : 'Executado automaticamente na aprovação do pedido.',
+                'notes' => ($movement['notes'] ?? '') ? $movement['notes'] . ' | Baixa automática na aprovação do pedido.' : 'Baixa automática na aprovação do pedido.',
             ]);
         }
     }

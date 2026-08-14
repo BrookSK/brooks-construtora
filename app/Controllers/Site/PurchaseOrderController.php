@@ -2428,36 +2428,27 @@ class PurchaseOrderController extends Controller
             $movement = StockMovement::find((int) $item['stock_movement_id']);
             if (!$movement || $movement['status'] !== StockMovement::STATUS_PENDING) continue;
 
-            // Debitar do estoque de origem
-            $debited = false;
+            // Debitar do estoque de origem (material saiu para uso na obra)
             if ($movement['from_location_id']) {
-                // Buscar item de estoque pelo location_id diretamente
                 $stockItem = StockItem::findByMaterialAndLocation($movement['material_id'], $movement['from_location_id']);
                 if ($stockItem) {
                     StockItem::debit($stockItem['id'], $movement['quantity']);
-                    $debited = true;
                 }
             } elseif ($movement['from_site_id']) {
-                // Fallback: buscar por site
                 $stockItem = StockItem::findByMaterialAndSite($movement['material_id'], $movement['from_site_id']);
                 if ($stockItem) {
                     StockItem::debit($stockItem['id'], $movement['quantity']);
-                    $debited = true;
                 }
             }
 
-            // Creditar no destino (se for transferência)
-            if ($movement['type'] === StockMovement::TYPE_TRANSFER && $movement['to_site_id']) {
-                $destStockId = StockItem::findOrCreateBySite($movement['material_id'], (int) $movement['to_site_id']);
-                StockItem::credit($destStockId, $movement['quantity']);
-            }
+            // NÃO creditar no destino — pedido aprovado = material consumido/usado na obra
 
             // Marcar movimentação como executada
             StockMovement::updateById((int) $item['stock_movement_id'], [
                 'status' => StockMovement::STATUS_DELIVERED,
                 'delivered_by' => 'Sistema (aprovação)',
                 'delivered_at' => date('Y-m-d H:i:s'),
-                'notes' => ($movement['notes'] ?? '') ? $movement['notes'] . ' | Executado automaticamente na aprovação do pedido.' : 'Executado automaticamente na aprovação do pedido.',
+                'notes' => ($movement['notes'] ?? '') ? $movement['notes'] . ' | Baixa automática na aprovação do pedido.' : 'Baixa automática na aprovação do pedido.',
             ]);
         }
     }
