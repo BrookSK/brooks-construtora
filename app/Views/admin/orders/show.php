@@ -1685,86 +1685,86 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <div class="modal-body">
                 <div class="alert alert-info small">
-                    <i class="bi bi-info-circle"></i> Divida os itens em grupos. Cada grupo será um novo pedido separado para cotação independente.
-                    O pedido original (<strong><?= htmlspecialchars($order['code']) ?></strong>) será cancelado.
+                    <i class="bi bi-info-circle"></i> Marque os itens que deseja <strong>separar</strong> para um novo pedido.
+                    Os itens não marcados permanecem no pedido atual.
+                    Pode repetir o processo se precisar dividir em mais pedidos.
                 </div>
 
                 <form method="POST" action="/admin/orders/split-pre-quote" id="splitPreQuoteForm">
                     <input type="hidden" name="id" value="<?= $order['id'] ?>">
 
-                    <p class="small text-muted mb-2">Selecione o grupo (pedido) para cada item:</p>
-
-                    <table class="table table-sm table-bordered">
+                    <table class="table table-sm table-hover">
                         <thead class="table-light">
                             <tr>
-                                <th style="min-width:200px;">Material</th>
+                                <th style="width:40px;" class="text-center">
+                                    <input type="checkbox" id="splitCheckAll" onchange="toggleAllSplitItems(this)">
+                                </th>
+                                <th>Material</th>
                                 <th class="text-center" style="width:60px;">Qtd</th>
-                                <th style="width:140px;">Pedido</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($preSplitItems as $psi): ?>
-                            <tr>
+                            <tr onclick="toggleSplitRow(this)" style="cursor:pointer;">
+                                <td class="text-center">
+                                    <input type="checkbox" name="split_items[]" value="<?= $psi['id'] ?>" class="split-item-check" onclick="event.stopPropagation();">
+                                </td>
                                 <td>
-                                    <strong style="font-size:0.8rem;"><?= htmlspecialchars($psi['material_name']) ?></strong>
+                                    <strong style="font-size:0.85rem;"><?= htmlspecialchars($psi['material_name']) ?></strong>
                                     <?php if (!empty($psi['specification'])): ?>
                                     <br><small class="text-muted"><?= htmlspecialchars($psi['specification']) ?></small>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center"><?= number_format($psi['quantity'], $psi['quantity'] == (int)$psi['quantity'] ? 0 : 2) ?></td>
-                                <td>
-                                    <select name="item_groups[<?= $psi['id'] ?>]" class="form-select form-select-sm split-group-select">
-                                        <option value="1">Pedido 1</option>
-                                        <option value="2">Pedido 2</option>
-                                        <option value="3">Pedido 3</option>
-                                    </select>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-
-                            <?php 
-                            // Mostrar itens de estoque (não editáveis, vão junto com o Pedido 1)
-                            $preSplitStockItems = array_filter($items, fn($i) => !empty($i['source_type']) && $i['source_type'] !== 'purchase');
-                            foreach ($preSplitStockItems as $ssi): ?>
-                            <tr class="table-success">
-                                <td>
-                                    <?= htmlspecialchars($ssi['material_name']) ?>
-                                    <span class="badge bg-success" style="font-size:0.6rem;">Estoque</span>
-                                </td>
-                                <td class="text-center"><?= number_format($ssi['quantity'], $ssi['quantity'] == (int)$ssi['quantity'] ? 0 : 2) ?></td>
-                                <td><small class="text-muted">Segue com os itens</small>
-                                    <input type="hidden" name="item_groups[<?= $ssi['id'] ?>]" value="1">
-                                </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
 
-                    <div class="alert alert-warning small mt-2">
-                        <i class="bi bi-exclamation-triangle"></i> Distribua os itens em pelo menos 2 grupos diferentes. Grupos vazios serão ignorados.
+                    <div class="d-flex justify-content-between align-items-center mt-2 p-2 bg-light rounded">
+                        <small class="text-muted"><span id="splitSelectedCount">0</span> item(ns) selecionado(s) para o novo pedido</small>
+                        <small class="text-muted"><span id="splitRemainingCount"><?= count($preSplitItems) ?></span> ficam neste pedido</small>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-secondary" onclick="submitPreQuoteSplit()">
-                    <i class="bi bi-scissors"></i> Confirmar Divisão
+                <button type="button" class="btn btn-secondary" id="splitPreQuoteBtn" onclick="submitPreQuoteSplit()" disabled>
+                    <i class="bi bi-scissors"></i> Separar Itens Marcados
                 </button>
             </div>
         </div>
     </div>
 </div>
 <script>
+function toggleSplitRow(tr) {
+    const cb = tr.querySelector('.split-item-check');
+    cb.checked = !cb.checked;
+    updateSplitCount();
+}
+function toggleAllSplitItems(masterCb) {
+    document.querySelectorAll('.split-item-check').forEach(cb => cb.checked = masterCb.checked);
+    updateSplitCount();
+}
+function updateSplitCount() {
+    const total = document.querySelectorAll('.split-item-check').length;
+    const checked = document.querySelectorAll('.split-item-check:checked').length;
+    document.getElementById('splitSelectedCount').textContent = checked;
+    document.getElementById('splitRemainingCount').textContent = total - checked;
+    // Habilitar botão apenas se selecionou pelo menos 1 e não selecionou todos
+    document.getElementById('splitPreQuoteBtn').disabled = (checked === 0 || checked === total);
+}
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('split-item-check')) updateSplitCount();
+});
 function submitPreQuoteSplit() {
-    // Verificar que há pelo menos 2 grupos diferentes
-    const selects = document.querySelectorAll('.split-group-select');
-    const groups = new Set();
-    selects.forEach(s => groups.add(s.value));
-    if (groups.size < 2) {
-        alert('Distribua os itens em pelo menos 2 pedidos diferentes para fazer a divisão.');
+    const checked = document.querySelectorAll('.split-item-check:checked').length;
+    const total = document.querySelectorAll('.split-item-check').length;
+    if (checked === 0 || checked === total) {
+        alert('Selecione pelo menos 1 item (mas não todos) para separar.');
         return;
     }
-    if (confirm('Confirma a divisão? O pedido original será cancelado e novos pedidos serão criados.')) {
+    if (confirm('Confirma? Os itens marcados irão para um novo pedido e o pedido atual ficará com os restantes.')) {
         document.getElementById('splitPreQuoteForm').submit();
     }
 }

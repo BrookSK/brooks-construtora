@@ -5376,117 +5376,97 @@ class PurchaseOrderController extends Controller
         }
 
         $items = PurchaseOrderItem::getByOrder($id);
-        $itemGroups = $_POST['item_groups'] ?? [];
+        $splitItemIds = $_POST['split_items'] ?? [];
 
-        if (empty($itemGroups)) {
-            $this->setFlash('error', 'Nenhuma atribuição de grupo recebida.');
+        if (empty($splitItemIds)) {
+            $this->setFlash('error', 'Selecione pelo menos um item para separar.');
             $this->redirect('/admin/orders/show/' . $id);
             return;
         }
 
-        // Agrupar itens por grupo
-        $groups = [];
+        $splitItemIds = array_map('intval', $splitItemIds);
+
+        // Separar itens: marcados vão pro novo pedido, não-marcados ficam no atual
+        $itemsForNewOrder = [];
+        $itemsForCurrentOrder = [];
         foreach ($items as $item) {
-            $groupNum = $itemGroups[$item['id']] ?? '1';
-            $groups[$groupNum][] = $item;
+            if (in_array((int)$item['id'], $splitItemIds)) {
+                $itemsForNewOrder[] = $item;
+            } else {
+                $itemsForCurrentOrder[] = $item;
+            }
         }
 
-        // Validar que há pelo menos 2 grupos com itens
-        $groups = array_filter($groups, fn($g) => !empty($g));
-        if (count($groups) < 2) {
-            $this->setFlash('error', 'Distribua os itens em pelo menos 2 pedidos diferentes.');
+        // Validar que não está movendo todos os itens
+        if (empty($itemsForCurrentOrder)) {
+            $this->setFlash('error', 'Não é possível mover todos os itens. Deixe pelo menos um no pedido atual.');
             $this->redirect('/admin/orders/show/' . $id);
             return;
         }
 
-        // Criar novos pedidos
-        $newOrderIds = [];
+        // Criar o novo pedido com os itens marcados
         $constructionSiteId = $order['construction_site_id'] ?? null;
         $hasConstructionSiteCol = (bool) Database::fetch(
             "SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_orders' AND COLUMN_NAME = 'construction_site_id' LIMIT 1"
         );
 
-        foreach ($groups as $groupNum => $groupItems) {
-            $code = PurchaseOrder::generateCode();
-            $quoteToken = PurchaseOrder::generateToken();
-            $approvalToken = PurchaseOrder::generateToken();
+        $code = PurchaseOrder::generateCode();
+        $quoteToken = PurchaseOrder::generateToken();
+        $approvalToken = PurchaseOrder::generateToken();
 
-            $newOrderData = [
-                'code' => $code,
-                'order_type' => $order['order_type'] ?? 'material',
-                'supplier_id' => null,
-                'status' => 'pending_quote',
-                'description' => ($order['description'] ? $order['description'] . ' ' : '') . '[Split de ' . $order['code'] . ']',
-                'created_by' => $order['created_by'],
-                'created_by_name' => $order['created_by_name'],
-                'quote_token' => $quoteToken,
-                'approval_token' => $approvalToken,
-                'created_at' => date('Y-m-d H:i:s'),
-            ];
+        $newOrderData = [
+            'code' => $code,
+            'order_type' => $order['order_type'] ?? 'material',
+            'supplier_id' => null,
+            'status' => 'pending_quote',
+            'description' => ($order['description'] ? $order['description'] . ' ' : '') . '[Split de ' . $order['code'] . ']',
+            'created_by' => $order['created_by'],
+            'created_by_name' => $order['created_by_name'],
+            'quote_token' => $quoteToken,
+            'approval_token' => $approvalToken,
+            'created_at' => date('Y-m-d H:i:s'),
+        ];
 
-            if ($hasConstructionSiteCol && $constructionSiteId) {
-                $newOrderData['construction_site_id'] = $constructionSiteId;
-            }
+        if ($hasConstructionSiteCol && $constructionSiteId) {
+            $newOrderData['construction_site_id'] = $constructionSiteId;
+        }
 
-            $newOrderId = PurchaseOrder::create($newOrderData);
-            $newOrderIds[] = ['id' => $newOrderId, 'code' => $code];
+        $newOrderId = PurchaseOrder::create($newOrderData);
 
-            // Copiar itens para o novo pedido
-            foreach ($groupItems as $item) {
-                PurchaseOrderItem::create([
-                    'order_id' => $newOrderId,
-                    'material_id' => $item['material_id'],
-                    'material_name' => $item['material_name'],
-                    'specification' => $item['specification'] ?? '',
-                    'classification' => $item['classification'] ?? '',
-                    'unit' => $item['unit'] ?? '',
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'] ?? null,
-                    'total_price' => $item['total_price'] ?? null,
-                    'source_type' => $item['source_type'] ?? null,
-                    'stock_from_site_id' => $item['stock_from_site_id'] ?? null,
-                    'stock_movement_id' => $item['stock_movement_id'] ?? null,
-                    'created_at' => date('Y-m-d H:i:s'),
-                ]);
+        // Mover itens marcados para o novo pedido (atualizar order_id)
+        foreach ($itemsForNewOrder as $item) {
+            PurchaseOrderItem::updateById((int)$item['id'], [
+                'order_id' => $newOrderId,
+            ]);
 
-                // Atualizar stock_movement para apontar para o novo pedido
-                if (!empty($item['stock_movement_id'])) {
-                    Database::update('stock_movements', ['order_id' => $newOrderId], 'id = ?', [$item['stock_movement_id']]);
-                }
-            }
-
-            // Registrar histórico no novo pedido
-            PurchaseOrderHistory::log(
-                $newOrderId,
-                'created',
-                "Pedido criado via Split (pré-cotação) do pedido {$order['code']}.",
-                Auth::user()['name']
-            );
-
-            // Enviar notificações de cotação para os novos pedidos
-            try {
-                $this->sendQuoteNotifications($newOrderId, $quoteToken);
-            } catch (\Exception $e) {
-                // Não bloquear se notificação falhar
+            // Atualizar stock_movement para apontar para o novo pedido
+            if (!empty($item['stock_movement_id'])) {
+                Database::update('stock_movements', ['order_id' => $newOrderId], 'id = ?', [$item['stock_movement_id']]);
             }
         }
 
-        // Cancelar pedido original
-        PurchaseOrder::updateById($id, [
-            'status' => 'cancelled',
-        ]);
-
-        // Registrar histórico no pedido original
-        $newCodes = array_map(fn($o) => $o['code'], $newOrderIds);
+        // Registrar histórico
         PurchaseOrderHistory::log(
-            $id,
-            'cancelled',
-            "Pedido cancelado via Split pré-cotação. Novos pedidos: " . implode(', ', $newCodes) . ".",
+            $newOrderId,
+            'created',
+            "Pedido criado via Split (pré-cotação) do pedido {$order['code']}. " . count($itemsForNewOrder) . " item(ns) separado(s).",
             Auth::user()['name']
         );
 
-        $this->setFlash('success', 'Pedido dividido! ' . count($newOrderIds) . ' novo(s) pedido(s) criado(s): ' . implode(', ', $newCodes) . '. Enviados para cotação.');
-        $this->redirect('/admin/orders');
+        PurchaseOrderHistory::log(
+            $id,
+            'split',
+            count($itemsForNewOrder) . " item(ns) separado(s) para o pedido {$code}. " . count($itemsForCurrentOrder) . " item(ns) permanecem neste pedido.",
+            Auth::user()['name']
+        );
+
+        // Enviar notificação de cotação para o novo pedido
+        try {
+            $this->sendQuoteNotifications($newOrderId, $quoteToken);
+        } catch (\Exception $e) {}
+
+        $this->setFlash('success', count($itemsForNewOrder) . ' item(ns) separado(s) para o novo pedido ' . $code . '. Enviado para cotação.');
+        $this->redirect('/admin/orders/show/' . $id);
     }
 
     /**
