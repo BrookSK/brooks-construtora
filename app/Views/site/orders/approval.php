@@ -286,7 +286,7 @@
                         <?php foreach ($orderSuppliers as $os): ?>
                         <?php $p = $pricesByItem[$item['id']][$os['supplier_id']] ?? null; ?>
                         <?php if ($p): ?>
-                        <?php $isZeroPriceList = (float)$p['unit_price'] <= 0; ?>
+                        <?php $isZeroPriceList = (float)$p['total_price'] == 0; ?>
                         <div class="supplier-option <?= $isZeroPriceList ? 'supplier-option-zero' : '' ?>" id="opt-<?= $item['id'] ?>-<?= $os['supplier_id'] ?>"
                              <?= !$isZeroPriceList ? 'onclick="selectItemSupplier(' . $item['id'] . ', ' . $os['supplier_id'] . ')"' : '' ?>
                              <?= $isZeroPriceList ? 'title="Preço zerado — não pode ser selecionado"' : '' ?>>
@@ -344,7 +344,7 @@
                                 <?php foreach ($orderSuppliers as $os): ?>
                                 <?php $p = $pricesBySupplier[$os['supplier_id']][$item['id']] ?? null; ?>
                                 <?php 
-                                $isZeroPrice = $p && (float)$p['unit_price'] <= 0;
+                                $isZeroPrice = $p && (float)$p['total_price'] == 0;
                                 $cellClass = $p ? ($isZeroPrice ? 'map-cell-zero' : 'map-cell-selectable') : '';
                                 ?>
                                 <td class="text-center <?= $cellClass ?>"
@@ -601,10 +601,10 @@
             return;
         }
 
-        // Bloquear seleção de itens com preço zero (unit_price = 0)
+        // Bloquear seleção de itens com preço zero (total_price = 0)
         if (priceData[itemId] && priceData[itemId][supplierId]) {
-            const unitPrice = parseFloat(priceData[itemId][supplierId]['unit_price']) || 0;
-            if (unitPrice <= 0) {
+            const totalPrice = parseFloat(priceData[itemId][supplierId]['total_price']) || 0;
+            if (totalPrice === 0) {
                 alert('Não é possível selecionar um item com preço R$ 0,00. Solicite a cotação correta ao fornecedor.');
                 return;
             }
@@ -635,9 +635,9 @@
     function selectAllFromSupplier(supplierId) {
         itemIds.forEach(function(itemId) {
             if (priceData[itemId] && priceData[itemId][supplierId]) {
-                // Pular se preço é zero
-                const unitPrice = parseFloat(priceData[itemId][supplierId]['unit_price']) || 0;
-                if (unitPrice <= 0) return;
+                // Pular se preço total é zero
+                const totalPrice = parseFloat(priceData[itemId][supplierId]['total_price']) || 0;
+                if (totalPrice === 0) return;
 
                 // Pular se já está selecionado em outro fornecedor
                 if (selections[itemId] && selections[itemId] !== supplierId) return;
