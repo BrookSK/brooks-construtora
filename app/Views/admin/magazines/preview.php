@@ -510,10 +510,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Para pg-guest: força recalcular altura real (fix Safari iOS)
             if (page.classList.contains('pg-guest')) {
+                // No iOS Safari, não pagina a pg-guest (bug de cálculo de altura)
+                var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                if (isIOS) {
+                    page.style.height = 'auto';
+                    page.style.minHeight = '842px';
+                    page.style.overflow = 'visible';
+                    return;
+                }
                 page.style.height = 'auto';
                 page.style.minHeight = '0';
                 page.style.overflow = 'visible';
-                // Força reflow
                 void page.offsetHeight;
             }
 
