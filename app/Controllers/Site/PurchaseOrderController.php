@@ -582,6 +582,20 @@ class PurchaseOrderController extends Controller
 
                     $movId = StockMovement::record($movData);
 
+                    // Buscar valor unitário do estoque
+                    $stockUnitPrice = null;
+                    if ($fromLocationId && $item['material_id']) {
+                        $stockItemData = StockItem::findByMaterialAndLocation($item['material_id'], $fromLocationId);
+                        if ($stockItemData && !empty($stockItemData['unit_price'])) {
+                            $stockUnitPrice = (float) $stockItemData['unit_price'];
+                        }
+                    } elseif ($sd['site_id'] && $item['material_id']) {
+                        $stockItemData = StockItem::findByMaterialAndSite($item['material_id'], $sd['site_id']);
+                        if ($stockItemData && !empty($stockItemData['unit_price'])) {
+                            $stockUnitPrice = (float) $stockItemData['unit_price'];
+                        }
+                    }
+
                     // Criar novo item de pedido para a parte do estoque
                     PurchaseOrderItem::create([
                         'order_id' => $order['id'],
@@ -594,6 +608,8 @@ class PurchaseOrderController extends Controller
                         'source_type' => $sourceType,
                         'stock_from_site_id' => $sd['site_id'] ?: null,
                         'stock_movement_id' => $movId,
+                        'unit_price' => $stockUnitPrice,
+                        'total_price' => $stockUnitPrice ? round($stockUnitPrice * $sd['qty'], 2) : null,
                         'created_at' => date('Y-m-d H:i:s'),
                     ]);
                 }

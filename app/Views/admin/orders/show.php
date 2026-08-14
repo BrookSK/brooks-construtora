@@ -209,7 +209,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
             <?php
             // Só exibir colunas de preço se algum item realmente tem unit_price preenchido
             $hasItemPrices = !empty(array_filter($items, fn($it) => !empty($it['unit_price'])));
-            $showPriceColumns = $order['total_estimated'] > 0 && $hasItemPrices;
+            $showPriceColumns = $hasItemPrices || ($order['total_estimated'] > 0);
             ?>
             <div class="table-responsive">
                 <table class="table table-sm mb-0">
