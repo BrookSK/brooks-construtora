@@ -1136,6 +1136,20 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <i class="bi bi-send"></i> Reenviar p/ Aprovação
                     </button>
                 </form>
+
+                <?php
+                // Mostrar botão de Split Order se há itens de origens diferentes (fornecedores distintos ou estoque + compra)
+                $hasStock = !empty(array_filter($items, fn($i) => !empty($i['source_type']) && $i['source_type'] !== 'purchase'));
+                $hasPurchase = !empty(array_filter($items, fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase'));
+                $multipleSuppliers = count($orderSuppliers) > 1;
+                $canSplit = ($hasStock && $hasPurchase) || $multipleSuppliers;
+                ?>
+                <?php if ($canSplit): ?>
+                <hr>
+                <button type="button" class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#splitOrderModal">
+                    <i class="bi bi-scissors"></i> Split Order (Dividir Pedido)
+                </button>
+                <?php endif; ?>
                 <?php endif; ?>
 
                 <?php if ($order['status'] === 'approved'): ?>
@@ -1616,6 +1630,170 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<?php if (isset($canSplit) && $canSplit): ?>
+<!-- Modal Split Order -->
+<div class="modal fade" id="splitOrderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary bg-opacity-10">
+                <h5 class="modal-title"><i class="bi bi-scissors"></i> Split Order — Dividir Pedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info small">
+                    <i class="bi bi-info-circle"></i> O pedido será dividido em pedidos separados por fornecedor/origem.
+                    O pedido original (<strong><?= htmlspecialchars($order['code']) ?></strong>) será cancelado e novos pedidos serão criados.
+                </div>
+
+                <h6 class="fw-bold mb-3">Prévia da divisão:</h6>
+
+                <?php
+                // Agrupar itens por origem
+                $splitGroups = [];
+
+                // Itens de estoque (stock_use e stock_transfer)
+                $stockSplitItems = array_filter($items, fn($i) => !empty($i['source_type']) && $i['source_type'] !== 'purchase');
+                if (!empty($stockSplitItems)) {
+                    $splitGroups['stock'] = [
+                        'label' => 'Estoque / Transferência',
+                        'icon' => 'bi-box-seam',
+                        'color' => 'success',
+                        'items' => $stockSplitItems,
+                    ];
+                }
+
+                // Itens de compra — agrupar por fornecedor (se há item_prices com approved_supplier_id)
+                $purchaseSplitItems = array_filter($items, fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase');
+                if (!empty($purchaseSplitItems) && !empty($orderSuppliers)) {
+                    // Agrupar por fornecedor usando itemPrices
+                    $supplierMap = [];
+                    foreach ($orderSuppliers as $os) {
+                        $supplierMap[$os['supplier_id']] = $os['supplier_name'];
+                    }
+
+                    // Itens com preços por fornecedor
+                    $pricesByItemSupplier = [];
+                    foreach ($itemPrices as $ip) {
+                        $pricesByItemSupplier[$ip['item_id']][$ip['supplier_id']] = $ip;
+                    }
+
+                    // Se há apenas 1 fornecedor, todos os itens de compra vão para ele
+                    if (count($orderSuppliers) === 1) {
+                        $sid = $orderSuppliers[0]['supplier_id'];
+                        $splitGroups['supplier_' . $sid] = [
+                            'label' => $supplierMap[$sid] ?? 'Fornecedor #' . $sid,
+                            'icon' => 'bi-building',
+                            'color' => 'primary',
+                            'supplier_id' => $sid,
+                            'items' => $purchaseSplitItems,
+                        ];
+                    } else {
+                        // Múltiplos fornecedores: dividir itens de compra entre eles
+                        // Usando a menor cotação de cada item para decidir o agrupamento padrão
+                        $unassigned = [];
+                        foreach ($purchaseSplitItems as $pi) {
+                            $bestSid = null;
+                            $bestPrice = PHP_FLOAT_MAX;
+                            if (isset($pricesByItemSupplier[$pi['id']])) {
+                                foreach ($pricesByItemSupplier[$pi['id']] as $sid => $priceInfo) {
+                                    $up = (float)($priceInfo['unit_price'] ?? 0);
+                                    if ($up > 0 && $up < $bestPrice) {
+                                        $bestPrice = $up;
+                                        $bestSid = $sid;
+                                    }
+                                }
+                            }
+                            if ($bestSid) {
+                                $key = 'supplier_' . $bestSid;
+                                if (!isset($splitGroups[$key])) {
+                                    $splitGroups[$key] = [
+                                        'label' => $supplierMap[$bestSid] ?? 'Fornecedor #' . $bestSid,
+                                        'icon' => 'bi-building',
+                                        'color' => 'primary',
+                                        'supplier_id' => $bestSid,
+                                        'items' => [],
+                                    ];
+                                }
+                                $splitGroups[$key]['items'][] = $pi;
+                            } else {
+                                $unassigned[] = $pi;
+                            }
+                        }
+                        // Itens sem fornecedor com melhor preço — colocar no primeiro fornecedor
+                        if (!empty($unassigned) && !empty($orderSuppliers)) {
+                            $fallbackSid = $orderSuppliers[0]['supplier_id'];
+                            $key = 'supplier_' . $fallbackSid;
+                            if (!isset($splitGroups[$key])) {
+                                $splitGroups[$key] = [
+                                    'label' => $supplierMap[$fallbackSid] ?? 'Fornecedor #' . $fallbackSid,
+                                    'icon' => 'bi-building',
+                                    'color' => 'primary',
+                                    'supplier_id' => $fallbackSid,
+                                    'items' => [],
+                                ];
+                            }
+                            foreach ($unassigned as $ui) {
+                                $splitGroups[$key]['items'][] = $ui;
+                            }
+                        }
+                    }
+                } elseif (!empty($purchaseSplitItems)) {
+                    // Sem fornecedores vinculados, todos os itens de compra ficam juntos
+                    $splitGroups['purchase'] = [
+                        'label' => 'Compra (sem fornecedor definido)',
+                        'icon' => 'bi-cart',
+                        'color' => 'warning',
+                        'items' => $purchaseSplitItems,
+                    ];
+                }
+                ?>
+
+                <?php if (count($splitGroups) < 2): ?>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> Este pedido não pode ser dividido porque todos os itens pertencem ao mesmo grupo.
+                </div>
+                <?php else: ?>
+                <?php $groupIdx = 0; foreach ($splitGroups as $gKey => $group): $groupIdx++; ?>
+                <div class="card mb-2 border-<?= $group['color'] ?>">
+                    <div class="card-header py-2 bg-<?= $group['color'] ?> bg-opacity-10">
+                        <i class="bi <?= $group['icon'] ?>"></i>
+                        <strong>Novo Pedido #<?= $groupIdx ?></strong> — <?= htmlspecialchars($group['label']) ?>
+                        <span class="badge bg-<?= $group['color'] ?> ms-1"><?= count($group['items']) ?> item(ns)</span>
+                    </div>
+                    <div class="card-body py-2">
+                        <ul class="list-unstyled mb-0 small">
+                            <?php foreach ($group['items'] as $gi): ?>
+                            <li class="py-1 border-bottom">
+                                <?= htmlspecialchars($gi['material_name']) ?>
+                                <span class="text-muted">— Qtd: <?= number_format($gi['quantity'], $gi['quantity'] == (int)$gi['quantity'] ? 0 : 2) ?></span>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+
+                <form method="POST" action="/admin/orders/split-order" id="splitOrderForm">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <div class="alert alert-warning small mt-3">
+                        <i class="bi bi-exclamation-triangle"></i> <strong>Atenção:</strong> Ao confirmar, o pedido <strong><?= htmlspecialchars($order['code']) ?></strong> será cancelado e <?= count($splitGroups) ?> novo(s) pedido(s) serão criados. Esta ação não pode ser desfeita.
+                    </div>
+                </form>
+                <?php endif; ?>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <?php if (count($splitGroups) >= 2): ?>
+                <button type="button" class="btn btn-primary" onclick="if(confirm('Confirma a divisão do pedido em <?= count($splitGroups) ?> novos pedidos?')) document.getElementById('splitOrderForm').submit();">
+                    <i class="bi bi-scissors"></i> Confirmar Split Order
+                </button>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php $content = ob_get_clean(); ?>
 <?php require ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>

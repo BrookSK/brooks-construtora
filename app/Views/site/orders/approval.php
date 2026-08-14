@@ -18,6 +18,8 @@
             align-items: center; justify-content: space-between; gap: 0.5rem; }
         .supplier-option:hover { border-color: #28a745; background: #f8fff8; }
         .supplier-option.selected { border-color: #28a745; background: #f0fff4; }
+        .supplier-option-zero { cursor: not-allowed; border-color: #f5c6cb !important; background: #f8d7da !important; opacity: 0.7; }
+        .supplier-option-zero:hover { border-color: #f5c6cb !important; background: #f8d7da !important; }
         .supplier-option .supplier-name { font-size: 0.78rem; font-weight: 500; }
         .supplier-option .supplier-price { font-size: 0.8rem; font-weight: 700; color: #28a745; white-space: nowrap; }
         #approvalMap { background: #fff; border-radius: 8px; border: 1px solid #dee2e6; padding: 0.75rem; }
@@ -26,6 +28,7 @@
         .map-cell-selectable { cursor: pointer; transition: background 0.2s; }
         .map-cell-selectable:hover { background: #e8f5e9 !important; }
         .map-cell-selectable.selected { background: #c8e6c9 !important; }
+        .map-cell-zero { cursor: not-allowed; background: #f8d7da !important; opacity: 0.7; }
         .map-supplier-header { min-width: 110px; }
         .total-display { background: #e8f5e9; border: 1px solid #c3e6cb; border-radius: 8px; padding: 1rem;
             text-align: center; margin-top: 1rem; }
@@ -283,13 +286,19 @@
                         <?php foreach ($orderSuppliers as $os): ?>
                         <?php $p = $pricesByItem[$item['id']][$os['supplier_id']] ?? null; ?>
                         <?php if ($p): ?>
-                        <div class="supplier-option" id="opt-<?= $item['id'] ?>-<?= $os['supplier_id'] ?>"
-                             onclick="selectItemSupplier(<?= $item['id'] ?>, <?= $os['supplier_id'] ?>)">
+                        <?php $isZeroPriceList = (float)$p['unit_price'] <= 0; ?>
+                        <div class="supplier-option <?= $isZeroPriceList ? 'supplier-option-zero' : '' ?>" id="opt-<?= $item['id'] ?>-<?= $os['supplier_id'] ?>"
+                             <?= !$isZeroPriceList ? 'onclick="selectItemSupplier(' . $item['id'] . ', ' . $os['supplier_id'] . ')"' : '' ?>
+                             <?= $isZeroPriceList ? 'title="Preço zerado — não pode ser selecionado"' : '' ?>>
                             <div>
                                 <div class="supplier-name"><?= htmlspecialchars($os['supplier_name']) ?></div>
+                                <?php if ($isZeroPriceList): ?>
+                                <div style="font-size:0.68rem; color:#dc3545;"><i class="bi bi-x-circle"></i> R$ 0,00/un</div>
+                                <?php else: ?>
                                 <div style="font-size:0.68rem; color:#888;">R$ <?= number_format($p['unit_price'], 2, ',', '.') ?>/un</div>
+                                <?php endif; ?>
                             </div>
-                            <div class="supplier-price">R$ <?= number_format($p['total_price'], 2, ',', '.') ?></div>
+                            <div class="supplier-price <?= $isZeroPriceList ? 'text-danger' : '' ?>">R$ <?= number_format($p['total_price'], 2, ',', '.') ?></div>
                         </div>
                         <?php endif; ?>
                         <?php endforeach; ?>
@@ -334,12 +343,21 @@
                                 <td class="text-center"><?= number_format($effectiveQty, $effectiveQty == (int)$effectiveQty ? 0 : 2) ?></td>
                                 <?php foreach ($orderSuppliers as $os): ?>
                                 <?php $p = $pricesBySupplier[$os['supplier_id']][$item['id']] ?? null; ?>
-                                <td class="text-center <?= $p ? 'map-cell-selectable' : '' ?>"
+                                <?php 
+                                $isZeroPrice = $p && (float)$p['unit_price'] <= 0;
+                                $cellClass = $p ? ($isZeroPrice ? 'map-cell-zero' : 'map-cell-selectable') : '';
+                                ?>
+                                <td class="text-center <?= $cellClass ?>"
                                     id="map-cell-<?= $item['id'] ?>-<?= $os['supplier_id'] ?>"
-                                    <?= $p ? 'onclick="selectItemSupplier(' . $item['id'] . ', ' . $os['supplier_id'] . ')"' : '' ?>>
+                                    <?= ($p && !$isZeroPrice) ? 'onclick="selectItemSupplier(' . $item['id'] . ', ' . $os['supplier_id'] . ')"' : '' ?>
+                                    <?= $isZeroPrice ? 'title="Preço zerado — não pode ser selecionado"' : '' ?>>
                                     <?php if ($p): ?>
-                                    R$ <?= number_format($p['unit_price'], 2, ',', '.') ?>
-                                    <br><small class="fw-bold text-dark">= R$ <?= number_format($p['total_price'], 2, ',', '.') ?></small>
+                                        <?php if ($isZeroPrice): ?>
+                                        <span class="text-danger"><i class="bi bi-x-circle"></i> R$ 0,00</span>
+                                        <?php else: ?>
+                                        R$ <?= number_format($p['unit_price'], 2, ',', '.') ?>
+                                        <br><small class="fw-bold text-dark">= R$ <?= number_format($p['total_price'], 2, ',', '.') ?></small>
+                                        <?php endif; ?>
                                     <?php else: ?>
                                     <span class="text-muted">-</span>
                                     <?php endif; ?>
@@ -583,6 +601,15 @@
             return;
         }
 
+        // Bloquear seleção de itens com preço zero (unit_price = 0)
+        if (priceData[itemId] && priceData[itemId][supplierId]) {
+            const unitPrice = parseFloat(priceData[itemId][supplierId]['unit_price']) || 0;
+            if (unitPrice <= 0) {
+                alert('Não é possível selecionar um item com preço R$ 0,00. Solicite a cotação correta ao fornecedor.');
+                return;
+            }
+        }
+
         selections[itemId] = supplierId;
 
         // Highlight na lista
@@ -608,6 +635,13 @@
     function selectAllFromSupplier(supplierId) {
         itemIds.forEach(function(itemId) {
             if (priceData[itemId] && priceData[itemId][supplierId]) {
+                // Pular se preço é zero
+                const unitPrice = parseFloat(priceData[itemId][supplierId]['unit_price']) || 0;
+                if (unitPrice <= 0) return;
+
+                // Pular se já está selecionado em outro fornecedor
+                if (selections[itemId] && selections[itemId] !== supplierId) return;
+
                 selectItemSupplier(itemId, supplierId);
             }
         });

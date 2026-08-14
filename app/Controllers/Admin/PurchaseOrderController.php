@@ -1586,9 +1586,39 @@ class PurchaseOrderController extends Controller
             return;
         }
 
+        // Filtrar itens sem material (linhas vazias) e validar que sobra pelo menos 1
+        $validItems = array_filter($newItems, fn($item) => !empty($item['material_name']));
+        if (empty($validItems)) {
+            $this->setFlash('error', 'Adicione pelo menos um item com material selecionado ao pedido.');
+            $this->redirect('/admin/orders/edit-items/' . $id);
+            return;
+        }
+
+        // Atualizar nome do material a partir do cadastro (caso tenha sido renomeado)
+        $allMaterials = Material::allActive();
+        $materialsMap = [];
+        foreach ($allMaterials as $mat) {
+            $materialsMap[(int)$mat['id']] = $mat;
+        }
+        foreach ($validItems as $idx => &$item) {
+            $matId = !empty($item['material_id']) ? (int)$item['material_id'] : 0;
+            if ($matId > 0 && isset($materialsMap[$matId])) {
+                $item['material_name'] = $materialsMap[$matId]['name'];
+                if (empty($item['specification']) && !empty($materialsMap[$matId]['specification'])) {
+                    $item['specification'] = $materialsMap[$matId]['specification'];
+                }
+                if (empty($item['classification']) && !empty($materialsMap[$matId]['classification'])) {
+                    $item['classification'] = $materialsMap[$matId]['classification'];
+                }
+            }
+        }
+        unset($item);
+
+        // Usar apenas itens válidos daqui pra frente
+        $newItems = $validItems;
+
         // Validar quantidades
         foreach ($newItems as $item) {
-            if (empty($item['material_name'])) continue;
             $qty = (float) ($item['quantity'] ?? 0);
             if ($qty < 0.01) {
                 $this->setFlash('error', 'A quantidade de "' . ($item['material_name'] ?? 'item') . '" deve ser no mínimo 0,01.');
@@ -1628,8 +1658,6 @@ class PurchaseOrderController extends Controller
         $constructionSiteId = !empty($order['construction_site_id']) ? (int) $order['construction_site_id'] : null;
 
         foreach ($newItems as $idx => $item) {
-            if (empty($item['material_name'])) continue;
-
             $materialId = !empty($item['material_id']) ? (int) $item['material_id'] : null;
             $quantity = (float) ($item['quantity'] ?? 1);
 
@@ -5261,6 +5289,277 @@ class PurchaseOrderController extends Controller
         }
 
         return ['success' => true, 'materials' => $parsed, 'totals' => null];
+    }
+
+    /**
+     * Split Order — Dividir pedido em múltiplos pedidos por fornecedor/estoque
+     */
+    public function splitOrder(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::findFull($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if ($order['status'] !== 'pending_approval') {
+            $this->setFlash('error', 'Apenas pedidos aguardando aprovação podem ser divididos.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        $items = PurchaseOrderItem::getByOrder($id);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($id);
+        $itemPrices = PurchaseOrderItemPrice::getByOrder($id);
+
+        // Construir mapa de fornecedores
+        $supplierMap = [];
+        foreach ($orderSuppliers as $os) {
+            $supplierMap[$os['supplier_id']] = $os;
+        }
+
+        // Construir mapa de preços por item/fornecedor
+        $pricesByItemSupplier = [];
+        foreach ($itemPrices as $ip) {
+            $pricesByItemSupplier[$ip['item_id']][$ip['supplier_id']] = $ip;
+        }
+
+        // Agrupar itens
+        $splitGroups = [];
+
+        // Itens de estoque
+        $stockItems = array_filter($items, fn($i) => !empty($i['source_type']) && $i['source_type'] !== 'purchase');
+        if (!empty($stockItems)) {
+            $splitGroups['stock'] = [
+                'supplier_id' => null,
+                'supplier_data' => null,
+                'items' => array_values($stockItems),
+                'source' => 'stock',
+            ];
+        }
+
+        // Itens de compra — agrupar por melhor fornecedor
+        $purchaseItems = array_filter($items, fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase');
+        if (!empty($purchaseItems) && !empty($orderSuppliers)) {
+            if (count($orderSuppliers) === 1) {
+                $sid = $orderSuppliers[0]['supplier_id'];
+                $splitGroups['supplier_' . $sid] = [
+                    'supplier_id' => $sid,
+                    'supplier_data' => $supplierMap[$sid] ?? null,
+                    'items' => array_values($purchaseItems),
+                    'source' => 'purchase',
+                ];
+            } else {
+                foreach ($purchaseItems as $pi) {
+                    $bestSid = null;
+                    $bestPrice = PHP_FLOAT_MAX;
+                    if (isset($pricesByItemSupplier[$pi['id']])) {
+                        foreach ($pricesByItemSupplier[$pi['id']] as $sid => $priceInfo) {
+                            $up = (float)($priceInfo['unit_price'] ?? 0);
+                            if ($up > 0 && $up < $bestPrice) {
+                                $bestPrice = $up;
+                                $bestSid = $sid;
+                            }
+                        }
+                    }
+                    if (!$bestSid && !empty($orderSuppliers)) {
+                        $bestSid = $orderSuppliers[0]['supplier_id'];
+                    }
+                    if ($bestSid) {
+                        $key = 'supplier_' . $bestSid;
+                        if (!isset($splitGroups[$key])) {
+                            $splitGroups[$key] = [
+                                'supplier_id' => $bestSid,
+                                'supplier_data' => $supplierMap[$bestSid] ?? null,
+                                'items' => [],
+                                'source' => 'purchase',
+                            ];
+                        }
+                        $splitGroups[$key]['items'][] = $pi;
+                    }
+                }
+            }
+        } elseif (!empty($purchaseItems)) {
+            $splitGroups['purchase'] = [
+                'supplier_id' => null,
+                'supplier_data' => null,
+                'items' => array_values($purchaseItems),
+                'source' => 'purchase',
+            ];
+        }
+
+        // Validar que há pelo menos 2 grupos para dividir
+        if (count($splitGroups) < 2) {
+            $this->setFlash('error', 'Este pedido não pode ser dividido — todos os itens pertencem ao mesmo grupo.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        // Criar novos pedidos
+        $newOrderIds = [];
+        $constructionSiteId = $order['construction_site_id'] ?? null;
+        $hasConstructionSiteCol = (bool) Database::fetch(
+            "SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_orders' AND COLUMN_NAME = 'construction_site_id' LIMIT 1"
+        );
+
+        foreach ($splitGroups as $gKey => $group) {
+            $code = PurchaseOrder::generateCode();
+            $quoteToken = PurchaseOrder::generateToken();
+            $approvalToken = PurchaseOrder::generateToken();
+
+            $isStock = $group['source'] === 'stock';
+
+            $newOrderData = [
+                'code' => $code,
+                'order_type' => $order['order_type'] ?? 'material',
+                'supplier_id' => $group['supplier_id'],
+                'status' => 'pending_approval',
+                'description' => ($order['description'] ? $order['description'] . ' ' : '') . '[Split de ' . $order['code'] . ']',
+                'created_by' => $order['created_by'],
+                'created_by_name' => $order['created_by_name'],
+                'quote_token' => $quoteToken,
+                'approval_token' => $approvalToken,
+                'quoted_by_name' => $order['quoted_by_name'],
+                'quoted_at' => $order['quoted_at'],
+                'quote_notes' => $order['quote_notes'],
+                'quote_started_at' => $order['quote_started_at'] ?? null,
+                'quote_started_by' => $order['quote_started_by'] ?? null,
+                'created_at' => date('Y-m-d H:i:s'),
+            ];
+
+            if ($hasConstructionSiteCol && $constructionSiteId) {
+                $newOrderData['construction_site_id'] = $constructionSiteId;
+            }
+
+            $newOrderId = PurchaseOrder::create($newOrderData);
+            $newOrderIds[] = ['id' => $newOrderId, 'code' => $code, 'group' => $gKey];
+
+            // Copiar itens para o novo pedido
+            $groupTotal = 0;
+            foreach ($group['items'] as $item) {
+                $newItemData = [
+                    'order_id' => $newOrderId,
+                    'material_id' => $item['material_id'],
+                    'material_name' => $item['material_name'],
+                    'specification' => $item['specification'] ?? '',
+                    'classification' => $item['classification'] ?? '',
+                    'unit' => $item['unit'] ?? '',
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $item['unit_price'] ?? null,
+                    'total_price' => $item['total_price'] ?? null,
+                    'source_type' => $item['source_type'] ?? null,
+                    'stock_from_site_id' => $item['stock_from_site_id'] ?? null,
+                    'stock_movement_id' => $item['stock_movement_id'] ?? null,
+                    'already_purchased' => $item['already_purchased'] ?? 0,
+                    'already_purchased_qty' => $item['already_purchased_qty'] ?? null,
+                    'already_purchased_price' => $item['already_purchased_price'] ?? null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ];
+                $newItemId = PurchaseOrderItem::create($newItemData);
+                $groupTotal += (float)($item['total_price'] ?? 0);
+
+                // Copiar preços por fornecedor para este item (se é item de compra)
+                if ($group['source'] === 'purchase' && isset($pricesByItemSupplier[$item['id']])) {
+                    foreach ($pricesByItemSupplier[$item['id']] as $sid => $priceInfo) {
+                        PurchaseOrderItemPrice::create([
+                            'order_id' => $newOrderId,
+                            'item_id' => $newItemId,
+                            'supplier_id' => $sid,
+                            'unit_price' => $priceInfo['unit_price'],
+                            'total_price' => $priceInfo['total_price'],
+                            'created_at' => date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                }
+
+                // Atualizar stock_movement para apontar para o novo pedido
+                if (!empty($item['stock_movement_id'])) {
+                    Database::update('stock_movements', ['order_id' => $newOrderId], 'id = ?', [$item['stock_movement_id']]);
+                }
+            }
+
+            // Copiar fornecedor(es) do pedido original para o novo
+            if ($group['supplier_id'] && $group['supplier_data']) {
+                $sd = $group['supplier_data'];
+                PurchaseOrderSupplier::create([
+                    'order_id' => $newOrderId,
+                    'supplier_id' => $group['supplier_id'],
+                    'status' => 'quoted',
+                    'quoted_by_name' => $sd['quoted_by_name'] ?? $order['quoted_by_name'],
+                    'quoted_at' => $sd['quoted_at'] ?? $order['quoted_at'],
+                    'quote_notes' => $sd['quote_notes'] ?? null,
+                    'total' => $groupTotal,
+                    'subtotal_items' => $groupTotal,
+                    'subtotal_final' => $groupTotal,
+                    'discount_type' => $sd['discount_type'] ?? 'percent',
+                    'discount_value' => $sd['discount_value'] ?? 0,
+                    'surcharge_type' => $sd['surcharge_type'] ?? 'percent',
+                    'surcharge_value' => $sd['surcharge_value'] ?? 0,
+                    'ipi_percent' => $sd['ipi_percent'] ?? 0,
+                    'icms_percent' => $sd['icms_percent'] ?? 0,
+                    'freight' => $sd['freight'] ?? 0,
+                    'vendor_name' => $sd['vendor_name'] ?? '',
+                    'vendor_phone' => $sd['vendor_phone'] ?? '',
+                    'vendor_email' => $sd['vendor_email'] ?? '',
+                    'delivery_days' => $sd['delivery_days'] ?? null,
+                    'payment_method' => $sd['payment_method'] ?? null,
+                    'payment_condition' => $sd['payment_condition'] ?? null,
+                    'payment_first_due' => $sd['payment_first_due'] ?? null,
+                    'payment_notes' => $sd['payment_notes'] ?? null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            // Atualizar total_estimated do novo pedido
+            PurchaseOrder::updateById($newOrderId, [
+                'total_estimated' => $groupTotal,
+            ]);
+
+            // Registrar histórico no novo pedido
+            PurchaseOrderHistory::log(
+                $newOrderId,
+                'created',
+                "Pedido criado via Split Order do pedido {$order['code']}.",
+                Auth::user()['name']
+            );
+        }
+
+        // Cancelar pedido original
+        PurchaseOrder::updateById($id, [
+            'status' => 'cancelled',
+        ]);
+
+        // Registrar histórico no pedido original
+        $newCodes = array_map(fn($o) => $o['code'], $newOrderIds);
+        PurchaseOrderHistory::log(
+            $id,
+            'cancelled',
+            "Pedido cancelado via Split Order. Novos pedidos criados: " . implode(', ', $newCodes) . ".",
+            Auth::user()['name']
+        );
+
+        // Enviar notificações de aprovação para os novos pedidos
+        foreach ($newOrderIds as $newOrder) {
+            $newOrderFull = PurchaseOrder::find($newOrder['id']);
+            if ($newOrderFull && !empty($newOrderFull['approval_token'])) {
+                try {
+                    $this->sendApprovalNotifications($newOrder['id'], $newOrderFull['approval_token']);
+                } catch (\Exception $e) {
+                    // Não bloquear se notificação falhar
+                }
+            }
+        }
+
+        $this->setFlash('success', 'Pedido dividido com sucesso! ' . count($newOrderIds) . ' novo(s) pedido(s) criado(s): ' . implode(', ', $newCodes));
+        $this->redirect('/admin/orders');
     }
 
     /**

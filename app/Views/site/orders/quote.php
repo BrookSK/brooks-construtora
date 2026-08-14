@@ -434,7 +434,7 @@
                     <button type="button" class="btn btn-success btn-lg px-5" id="submitBtn" disabled onclick="showReviewModal()">
                         <i class="bi bi-check-lg"></i> Revisar e Enviar
                     </button>
-                    <p class="text-muted small mt-2 mb-0">Adicione pelo menos um fornecedor para enviar.</p>
+                    <p class="text-muted small mt-2 mb-0" id="submitHint">Adicione pelo menos um fornecedor para enviar, ou distribua todos os itens no estoque.</p>
                 </div>
             </form>
         </div>
@@ -804,6 +804,31 @@
             // Recalcular totais dos fornecedores
             addedSuppliers.forEach(sid => calculateSupplierTotal(sid));
         }
+
+        // Verificar se pode habilitar submit (todos os itens cobertos por estoque)
+        checkSubmitEligibility();
+    }
+
+    /**
+     * Verifica se o botão de envio pode ser habilitado:
+     * - Se tem fornecedores adicionados, OU
+     * - Se todos os itens de cotação foram 100% cobertos pelo estoque (quantity = 0)
+     */
+    function checkSubmitEligibility() {
+        const submitBtn = document.getElementById('submitBtn');
+        const submitHint = document.getElementById('submitHint');
+        if (!submitBtn) return;
+
+        const hasSuppliers = addedSuppliers.length > 0;
+        const allCoveredByStock = quoteOnlyItems.length > 0 && quoteOnlyItems.every(i => parseFloat(i.quantity) <= 0);
+
+        if (hasSuppliers || allCoveredByStock) {
+            submitBtn.disabled = false;
+            if (submitHint) submitHint.style.display = allCoveredByStock && !hasSuppliers ? 'none' : '';
+        } else {
+            submitBtn.disabled = true;
+            if (submitHint) submitHint.style.display = '';
+        }
     }
 
     // ─── Modo de entrada de preço (unitário vs total) ────────────────────────
@@ -924,7 +949,7 @@
         supplierSS.clear();
         sel.dataset.selectedId = '';
         sel.dataset.selectedName = '';
-        document.getElementById('submitBtn').disabled = false;
+        checkSubmitEligibility();
     }
 
     async function saveNewSupplier() {
@@ -949,7 +974,7 @@
             // Adicionar direto como bloco
             addedSuppliers.push(String(data.supplier.id));
             addSupplierBlock(data.supplier.id, data.supplier.name);
-            document.getElementById('submitBtn').disabled = false;
+            checkSubmitEligibility();
 
             // Limpar e fechar o formulário
             document.getElementById('newSupName').value = '';
@@ -1194,7 +1219,7 @@
         document.getElementById('supplier-block-' + sid)?.remove();
         addedSuppliers = addedSuppliers.filter(s => s !== sid);
         delete supplierNames[sid];
-        if (addedSuppliers.length === 0) document.getElementById('submitBtn').disabled = true;
+        checkSubmitEligibility();
     }
 
     function calculateSupplierTotal(sid) {
@@ -1627,7 +1652,7 @@
         }, 500);
         <?php endforeach; ?>
 
-        document.getElementById('submitBtn').disabled = false;
+        checkSubmitEligibility();
 
         // Fornecedores que têm preços mas NÃO estão na purchase_order_suppliers
         for (const sid in pricesBySupplier) {
@@ -1695,6 +1720,12 @@ function showReviewModal() {
     if (quoteNotes) html += '<p class="mb-0"><strong>Observações:</strong> ' + escHtml(quoteNotes) + '</p>';
     html += '</div>';
 
+    // Verificar se todos os itens são de estoque (sem fornecedores)
+    const allFromStock = quoteOnlyItems.length > 0 && quoteOnlyItems.every(i => parseFloat(i.quantity) <= 0);
+
+    if (addedSuppliers.length === 0 && allFromStock) {
+        html += '<div class="alert alert-success"><i class="bi bi-box-seam"></i> <strong>Todos os itens foram distribuídos no estoque.</strong> Nenhum fornecedor necessário.</div>';
+    } else {
     // Fornecedores e preços
     html += '<h6 class="fw-bold mb-2"><i class="bi bi-building"></i> Fornecedores Cotados</h6>';
 
@@ -1805,6 +1836,7 @@ function showReviewModal() {
         
         html += '</div></div>';
     });
+    } // end else (has suppliers)
 
     html += '<div class="alert alert-info small mt-3 mb-0"><i class="bi bi-info-circle"></i> Ao confirmar, a cotação será enviada e o pedido seguirá para aprovação. Revise os valores com atenção.</div>';
 
@@ -2857,7 +2889,7 @@ function removeServiceMaterial(sid, idx) {
                     }, 200);
                 });
 
-                        document.getElementById('submitBtn').disabled = addedSuppliers.length === 0;
+                        checkSubmitEligibility();
             }
 
             draftRestoredFromStorage = true;

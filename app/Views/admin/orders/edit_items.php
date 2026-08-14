@@ -191,13 +191,29 @@ function removeItem(idx) {
 
 // Carregar itens existentes
 document.addEventListener('DOMContentLoaded', function() {
-    const existingItems = <?= json_encode(array_map(function($item) {
+    const existingItems = <?= json_encode(array_map(function($item) use ($materials) {
+        // Buscar nome atualizado da tabela materials (caso tenha sido renomeado)
+        $freshName = $item['material_name'];
+        $freshSpec = $item['specification'] ?? '';
+        $freshClass = $item['classification'] ?? '';
+        $freshUnit = $item['unit'] ?? '';
+        if (!empty($item['material_id'])) {
+            foreach ($materials as $mat) {
+                if ((int)$mat['id'] === (int)$item['material_id']) {
+                    $freshName = $mat['name'];
+                    $freshSpec = $mat['specification'] ?? $freshSpec;
+                    $freshClass = $mat['classification'] ?? $freshClass;
+                    $freshUnit = $mat['unit_abbr'] ?? $mat['unit_name'] ?? $freshUnit;
+                    break;
+                }
+            }
+        }
         return [
             'id' => $item['material_id'],
-            'name' => $item['material_name'],
-            'specification' => $item['specification'] ?? '',
-            'classification' => $item['classification'] ?? '',
-            'unit' => $item['unit'] ?? '',
+            'name' => $freshName,
+            'specification' => $freshSpec,
+            'classification' => $freshClass,
+            'unit' => $freshUnit,
             'quantity' => (float) $item['quantity'],
         ];
     }, $items)) ?>;
@@ -208,9 +224,32 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============ VERIFICAÇÃO DE ESTOQUE ============
 
 function checkStockBeforeSubmit() {
+    const rows = document.querySelectorAll('#itemsBody tr');
+
+    // Validar que todos os itens têm material selecionado
+    let invalidItems = [];
+    let itemIndex = 0;
+    rows.forEach(row => {
+        itemIndex++;
+        const mname = row.querySelector('[id^="mname-"]')?.value || '';
+        const mid = row.querySelector('[id^="mid-"]')?.value || '';
+        if (!mname.trim() && !mid.trim()) {
+            invalidItems.push(itemIndex);
+        }
+    });
+
+    if (invalidItems.length > 0) {
+        alert('Existem ' + invalidItems.length + ' item(ns) sem material selecionado (linha(s): ' + invalidItems.join(', ') + '). Selecione o material ou remova o item antes de salvar.');
+        return;
+    }
+
+    if (rows.length === 0) {
+        alert('Adicione pelo menos um item ao pedido.');
+        return;
+    }
+
     if (!confirm('Confirma a edição dos itens? Notificações serão reenviadas.')) return;
 
-    const rows = document.querySelectorAll('#itemsBody tr');
     let hasMaterialIds = false;
     rows.forEach(row => {
         const mid = row.querySelector('[id^="mid-"]')?.value;
