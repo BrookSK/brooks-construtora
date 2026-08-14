@@ -156,6 +156,7 @@ class Router
             'orders/quote-logs' => ['PurchaseOrderController', 'quoteLogs'],
             'orders/quote-logs/view' => ['PurchaseOrderController', 'quoteLogView'],
             'orders/split-order' => ['PurchaseOrderController', 'splitOrder'],
+            'orders/split-pre-quote' => ['PurchaseOrderController', 'splitPreQuote'],
 
             // Obras
             'obras' => ['ConstructionSiteController', 'index'],

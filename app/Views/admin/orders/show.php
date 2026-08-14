@@ -109,8 +109,27 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <small class="text-muted d-block">Data de Criação</small>
                         <?= date('d/m/Y H:i', strtotime($order['created_at'])) ?>
                     </div>
-                    <?php if ($order['total_estimated'] > 0): ?>
+                    <?php
+                    // Calcular valor dos itens de estoque para o cabeçalho
+                    $headerStockTotal = 0;
+                    $headerHasPurchase = false;
+                    $displayTotal = (float)($order['total_estimated'] ?? 0);
+                    foreach ($items as $it) {
+                        if (!empty($it['source_type']) && $it['source_type'] !== 'purchase' && !empty($it['total_price'])) {
+                            $headerStockTotal += (float) $it['total_price'];
+                        }
+                        if (empty($it['source_type']) || $it['source_type'] === 'purchase') {
+                            $headerHasPurchase = true;
+                        }
+                    }
+                    $showHeaderTotal = $order['total_estimated'] > 0 || $headerStockTotal > 0;
+                    ?>
+                    <?php if ($showHeaderTotal): ?>
                     <div class="col-sm-6 mb-2">
+                        <?php if (!$headerHasPurchase && $headerStockTotal > 0): ?>
+                        <small class="text-muted d-block"><i class="bi bi-box-seam"></i> Valor Itens de Estoque</small>
+                        <strong style="color:#6f42c1;" class="fs-5">R$ <?= number_format($headerStockTotal, 2, ',', '.') ?></strong>
+                        <?php else: ?>
                         <small class="text-muted d-block">Valor Total</small>
                         <?php
                         // Usar subtotal_final do fornecedor aprovado se disponível (mais preciso)
@@ -125,6 +144,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         }
                         ?>
                         <strong class="text-success fs-5">R$ <?= number_format($displayTotal, 2, ',', '.') ?></strong>
+                        <?php endif; ?>
                         <?php
                         $nfTotal = 0;
                         if (!empty($payments)) {
@@ -254,11 +274,6 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         </tr>
                         <?php endforeach; ?>
                         <?php if ($showPriceColumns): ?>
-                        <tr class="table-light">
-                            <td colspan="7" class="text-end fw-bold">TOTAL:</td>
-                            <td class="text-end fw-bold text-success">R$ <?= number_format($displayTotal, 2, ',', '.') ?></td>
-                        </tr>
-                        <?php endif; ?>
                         <?php
                         // Calcular total de estoque (itens de transferência com valor)
                         $totalEstoque = 0;
@@ -267,10 +282,26 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                                 $totalEstoque += (float) $it['total_price'];
                             }
                         }
+                        // Verificar se é 100% estoque (sem itens de compra com valor)
+                        $hasPurchaseItems = !empty(array_filter($items, fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase'));
                         ?>
+
+                        <?php if (!$hasPurchaseItems && $totalEstoque > 0): ?>
+                        <!-- Pedido 100% estoque -->
+                        <tr class="table-light">
+                            <td colspan="7" class="text-end fw-bold"><i class="bi bi-box-seam"></i> Valor Itens de Estoque:</td>
+                            <td class="text-end fw-bold" style="color:#6f42c1;">R$ <?= number_format($totalEstoque, 2, ',', '.') ?></td>
+                        </tr>
+                        <?php else: ?>
+                        <?php if ($displayTotal > 0): ?>
+                        <tr class="table-light">
+                            <td colspan="7" class="text-end fw-bold">TOTAL:</td>
+                            <td class="text-end fw-bold text-success">R$ <?= number_format($displayTotal, 2, ',', '.') ?></td>
+                        </tr>
+                        <?php endif; ?>
                         <?php if ($totalEstoque > 0): ?>
                         <tr class="table-light">
-                            <td colspan="7" class="text-end">Total Estoque:</td>
+                            <td colspan="7" class="text-end"><i class="bi bi-box-seam"></i> Valor Itens de Estoque:</td>
                             <td class="text-end fw-bold" style="color:#6f42c1;">R$ <?= number_format($totalEstoque, 2, ',', '.') ?></td>
                         </tr>
                         <?php if ($displayTotal > 0): ?>
@@ -278,6 +309,8 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <td colspan="7" class="text-end fw-bold">TOTAL GERAL:</td>
                             <td class="text-end fw-bold" style="color:#3a3b4e;">R$ <?= number_format($displayTotal + $totalEstoque, 2, ',', '.') ?></td>
                         </tr>
+                        <?php endif; ?>
+                        <?php endif; ?>
                         <?php endif; ?>
                         <?php endif; ?>
                     </tbody>
@@ -1121,6 +1154,16 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     <br><small class="text-muted"><?= date('d/m/Y H:i', strtotime($order['quote_started_at'])) ?></small>
                 </div>
                 <?php endif; ?>
+
+                <?php
+                // Mostrar botão de Split pré-cotação se tem mais de 1 item de compra
+                $preSplitItems = array_filter($items, fn($i) => empty($i['source_type']) || $i['source_type'] === 'purchase');
+                if (count($preSplitItems) > 1): ?>
+                <button type="button" class="btn btn-outline-secondary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#splitPreQuoteModal">
+                    <i class="bi bi-scissors"></i> Dividir Itens (Split)
+                </button>
+                <?php endif; ?>
+
                 <form method="POST" action="/admin/orders/resend-quote">
                     <input type="hidden" name="id" value="<?= $order['id'] ?>">
                     <button type="submit" class="btn btn-outline-warning w-100">
@@ -1630,6 +1673,103 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<?php if ($order['status'] === 'pending_quote' && isset($preSplitItems) && count($preSplitItems) > 1): ?>
+<!-- Modal Split Pré-Cotação -->
+<div class="modal fade" id="splitPreQuoteModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary bg-opacity-10">
+                <h5 class="modal-title"><i class="bi bi-scissors"></i> Dividir Itens (Pré-Cotação)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info small">
+                    <i class="bi bi-info-circle"></i> Divida os itens em grupos. Cada grupo será um novo pedido separado para cotação independente.
+                    O pedido original (<strong><?= htmlspecialchars($order['code']) ?></strong>) será cancelado.
+                </div>
+
+                <form method="POST" action="/admin/orders/split-pre-quote" id="splitPreQuoteForm">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+
+                    <p class="small text-muted mb-2">Selecione o grupo (pedido) para cada item:</p>
+
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="min-width:200px;">Material</th>
+                                <th class="text-center" style="width:60px;">Qtd</th>
+                                <th style="width:140px;">Pedido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($preSplitItems as $psi): ?>
+                            <tr>
+                                <td>
+                                    <strong style="font-size:0.8rem;"><?= htmlspecialchars($psi['material_name']) ?></strong>
+                                    <?php if (!empty($psi['specification'])): ?>
+                                    <br><small class="text-muted"><?= htmlspecialchars($psi['specification']) ?></small>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-center"><?= number_format($psi['quantity'], $psi['quantity'] == (int)$psi['quantity'] ? 0 : 2) ?></td>
+                                <td>
+                                    <select name="item_groups[<?= $psi['id'] ?>]" class="form-select form-select-sm split-group-select">
+                                        <option value="1">Pedido 1</option>
+                                        <option value="2">Pedido 2</option>
+                                        <option value="3">Pedido 3</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+
+                            <?php 
+                            // Mostrar itens de estoque (não editáveis, vão junto com o Pedido 1)
+                            $preSplitStockItems = array_filter($items, fn($i) => !empty($i['source_type']) && $i['source_type'] !== 'purchase');
+                            foreach ($preSplitStockItems as $ssi): ?>
+                            <tr class="table-success">
+                                <td>
+                                    <?= htmlspecialchars($ssi['material_name']) ?>
+                                    <span class="badge bg-success" style="font-size:0.6rem;">Estoque</span>
+                                </td>
+                                <td class="text-center"><?= number_format($ssi['quantity'], $ssi['quantity'] == (int)$ssi['quantity'] ? 0 : 2) ?></td>
+                                <td><small class="text-muted">Segue com os itens</small>
+                                    <input type="hidden" name="item_groups[<?= $ssi['id'] ?>]" value="1">
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+
+                    <div class="alert alert-warning small mt-2">
+                        <i class="bi bi-exclamation-triangle"></i> Distribua os itens em pelo menos 2 grupos diferentes. Grupos vazios serão ignorados.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-secondary" onclick="submitPreQuoteSplit()">
+                    <i class="bi bi-scissors"></i> Confirmar Divisão
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function submitPreQuoteSplit() {
+    // Verificar que há pelo menos 2 grupos diferentes
+    const selects = document.querySelectorAll('.split-group-select');
+    const groups = new Set();
+    selects.forEach(s => groups.add(s.value));
+    if (groups.size < 2) {
+        alert('Distribua os itens em pelo menos 2 pedidos diferentes para fazer a divisão.');
+        return;
+    }
+    if (confirm('Confirma a divisão? O pedido original será cancelado e novos pedidos serão criados.')) {
+        document.getElementById('splitPreQuoteForm').submit();
+    }
+}
+</script>
+<?php endif; ?>
 
 <?php if (isset($canSplit) && $canSplit): ?>
 <!-- Modal Split Order -->
