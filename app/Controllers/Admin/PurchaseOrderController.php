@@ -2353,7 +2353,7 @@ class PurchaseOrderController extends Controller
              ORDER BY po.created_at DESC"
         );
 
-        // Buscar todos os itens desses pedidos
+        // Buscar todos os itens de COMPRA desses pedidos (excluir estoque)
         $orderIds = array_column($orders, 'id');
         $items = [];
         if (!empty($orderIds)) {
@@ -2365,6 +2365,7 @@ class PurchaseOrderController extends Controller
                  JOIN purchase_orders po ON poi.order_id = po.id
                  LEFT JOIN construction_sites cs ON po.construction_site_id = cs.id
                  WHERE poi.order_id IN ({$placeholders})
+                   AND (poi.source_type IS NULL OR poi.source_type = 'purchase')
                  ORDER BY poi.specification ASC, poi.material_name ASC",
                 $orderIds
             );
