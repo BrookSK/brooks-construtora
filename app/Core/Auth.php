@@ -119,7 +119,7 @@ class Auth
             'admin' => [
                 'dashboard', 'settings', 'newsletter', 'users', 
                 'magazines', 'magazines.edit', 'magazines.publish',
-                'orders', 'orders.create', 'orders.approve', 'orders.quote',
+                'orders', 'orders.create', 'orders.approve', 'orders.quote', 'orders.payment',
                 'suppliers', 'materials', 'orders.settings', 'obras', 'stock', 'transport'
             ],
             'designer' => ['dashboard', 'magazines', 'magazines.edit'],
