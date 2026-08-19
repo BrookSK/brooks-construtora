@@ -150,6 +150,121 @@ JSON puro sem markdown:
         return null;
     }
 
+    // ---------------------------------------------------------------
+    // Transcrição de áudio via Whisper-1
+    // ---------------------------------------------------------------
+
+    /**
+     * Envia um arquivo de áudio para a API Whisper e retorna a transcrição.
+     *
+     * @param  string $filePath  Caminho absoluto para o arquivo de áudio no servidor
+     * @param  string $language  Código ISO do idioma (default: 'pt')
+     * @return string            Texto transcrito
+     * @throws \Exception        Em caso de erro de API ou arquivo inválido
+     */
+    public function transcribeAudio(string $filePath, string $language = 'pt'): string
+    {
+        if (!file_exists($filePath)) {
+            throw new \Exception("Arquivo de áudio não encontrado: {$filePath}");
+        }
+
+        $url = 'https://api.openai.com/v1/audio/transcriptions';
+
+        $ch = curl_init($url);
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => [
+                'file'     => new \CURLFile($filePath),
+                'model'    => 'whisper-1',
+                'language' => $language,
+                'response_format' => 'json',
+            ],
+            CURLOPT_HTTPHEADER     => [
+                'Authorization: Bearer ' . $this->apiKey,
+            ],
+            CURLOPT_TIMEOUT        => 60,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if (curl_errno($ch)) {
+            $error = curl_error($ch);
+            curl_close($ch);
+            throw new \Exception("Erro de comunicação com Whisper: {$error}");
+        }
+
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            $errorData = json_decode($response, true);
+            $message = $errorData['error']['message'] ?? 'Erro desconhecido';
+            throw new \Exception("Erro Whisper (HTTP {$httpCode}): {$message}");
+        }
+
+        $result = json_decode($response, true);
+
+        if (!isset($result['text'])) {
+            throw new \Exception('Resposta inesperada da API Whisper: ' . $response);
+        }
+
+        return trim($result['text']);
+    }
+
+    // ---------------------------------------------------------------
+    // Geração do Objeto do Contrato
+    // ---------------------------------------------------------------
+
+    /**
+     * Substitui variáveis no template e envia para o modelo de texto,
+     * retornando o texto redigido do Objeto do Contrato.
+     *
+     * @param  string $promptTemplate  Template com variáveis {{...}}
+     * @param  array  $variables       Mapa ['cliente_nome' => 'João', ...]
+     * @return array  ['text' => string, 'prompt_used' => string]
+     */
+    public function generateContractObject(string $promptTemplate, array $variables): array
+    {
+        // Substitui todas as variáveis {{chave}} pelos valores reais
+        $prompt = $promptTemplate;
+        foreach ($variables as $key => $value) {
+            $prompt = str_replace('{{' . $key . '}}', (string) ($value ?? ''), $prompt);
+        }
+
+        // Remove variáveis que não foram substituídas (campos vazios)
+        $prompt = preg_replace('/\{\{[^}]+\}\}/', '(não informado)', $prompt);
+
+        $data = [
+            'model'    => $this->model,
+            'messages' => [
+                [
+                    'role'    => 'system',
+                    'content' => 'Você é um advogado especialista em contratos de construção civil no Brasil. Redija de forma clara, técnica e juridicamente sólida. Responda apenas com o texto da cláusula, sem comentários adicionais.',
+                ],
+                [
+                    'role'    => 'user',
+                    'content' => $prompt,
+                ],
+            ],
+            'temperature' => 0.4,
+            'max_tokens'  => 2048,
+        ];
+
+        $response = $this->request('https://api.openai.com/v1/chat/completions', $data);
+        $result   = json_decode($response, true);
+
+        if (!isset($result['choices'][0]['message']['content'])) {
+            throw new \Exception('Resposta inválida da IA ao gerar objeto do contrato.');
+        }
+
+        return [
+            'text'        => trim($result['choices'][0]['message']['content']),
+            'prompt_used' => $prompt,
+        ];
+    }
+
     private function downloadImage(string $url): ?string
     {
         $imageContent = file_get_contents($url);

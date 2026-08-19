@@ -165,6 +165,19 @@ class Router
             'orders/mark-stock-dispatched' => ['PurchaseOrderController', 'markStockDispatched'],
             'orders/unmark-stock-dispatched' => ['PurchaseOrderController', 'unmarkStockDispatched'],
 
+            // Briefing & Contratos
+            'briefing' => ['BriefingController', 'index'],
+            'briefing/create' => ['BriefingController', 'create'],
+            'briefing/store' => ['BriefingController', 'store'],
+            'briefing/edit' => ['BriefingController', 'edit'],
+            'briefing/update' => ['BriefingController', 'update'],
+            'briefing/delete' => ['BriefingController', 'delete'],
+            'briefing/transcribe-audio' => ['BriefingController', 'transcribeAudio'],
+            'briefing/generate-object' => ['BriefingController', 'generateObject'],
+            'briefing/approve-object' => ['BriefingController', 'approveObject'],
+            'briefing/store-template' => ['BriefingController', 'storeTemplate'],
+            'briefing/update-template' => ['BriefingController', 'updateTemplate'],
+
             // Obras
             'obras' => ['ConstructionSiteController', 'index'],
             'obras/create' => ['ConstructionSiteController', 'create'],
