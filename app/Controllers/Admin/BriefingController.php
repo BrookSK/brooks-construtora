@@ -22,12 +22,98 @@ class BriefingController extends Controller
     }
 
     // ---------------------------------------------------------------
+    // Executa a migration 033 via PDO caso as tabelas não existam.
+    // Usa CREATE TABLE IF NOT EXISTS, então é seguro rodar múltiplas vezes.
+    // ---------------------------------------------------------------
+    private function ensureTables(): void
+    {
+        $sqlFile = ROOT_PATH . '/database/migrations/033_create_briefing_contracts.sql';
+        if (!file_exists($sqlFile)) {
+            return;
+        }
+
+        $raw = file_get_contents($sqlFile);
+
+        // Remove comentários -- e /* */
+        $raw = preg_replace('/--[^\n]*/', '', $raw);
+        $raw = preg_replace('/\/\*.*?\*\//s', '', $raw);
+
+        // Divide em statements respeitando strings delimitadas por ' e "
+        $statements = [];
+        $current    = '';
+        $inString   = false;
+        $strChar    = '';
+
+        for ($i = 0, $len = strlen($raw); $i < $len; $i++) {
+            $ch = $raw[$i];
+            if (!$inString && ($ch === "'" || $ch === '"')) {
+                $inString = true;
+                $strChar  = $ch;
+                $current .= $ch;
+                continue;
+            }
+            if ($inString) {
+                if ($ch === '\\' && $i + 1 < $len) {
+                    $current .= $ch . $raw[++$i];
+                    continue;
+                }
+                if ($ch === $strChar) {
+                    $inString = false;
+                }
+                $current .= $ch;
+                continue;
+            }
+            if ($ch === ';') {
+                $stmt = trim($current);
+                if ($stmt !== '') {
+                    $statements[] = $stmt;
+                }
+                $current = '';
+                continue;
+            }
+            $current .= $ch;
+        }
+        if (trim($current) !== '') {
+            $statements[] = trim($current);
+        }
+
+        $pdo = Database::getConnection();
+        foreach ($statements as $stmt) {
+            if (trim($stmt) === '') {
+                continue;
+            }
+            try {
+                $pdo->exec($stmt);
+            } catch (\PDOException $e) {
+                // Ignora "already exists" e "Duplicate entry" — idempotente
+                if (stripos($e->getMessage(), 'already exists') === false
+                    && stripos($e->getMessage(), 'Duplicate entry') === false) {
+                    // Loga silenciosamente; não interrompe o fluxo
+                    error_log('[BriefingController] ensureTables error: ' . $e->getMessage());
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
     // Listagem principal
     // ---------------------------------------------------------------
 
     public function index(): void
     {
-        $projects = ClientProject::allWithBriefing(100);
+        try {
+            $projects = ClientProject::allWithBriefing(100);
+        } catch (\PDOException $e) {
+            if (stripos($e->getMessage(), "doesn't exist") !== false
+                || stripos($e->getMessage(), 'exist') !== false) {
+                // Tabelas ausentes — aplica a migration automaticamente
+                $this->ensureTables();
+                // Tenta de novo após criar as tabelas
+                $projects = ClientProject::allWithBriefing(100);
+            } else {
+                throw $e;
+            }
+        }
 
         $this->view('admin.briefing.index', [
             'user'     => Auth::user(),
