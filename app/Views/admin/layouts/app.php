@@ -159,6 +159,11 @@
                     <i class="bi bi-grid-1x2-fill"></i> Dashboard
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'welcome' ? 'active' : '' ?>" href="/admin/welcome">
+                    <i class="bi bi-hand-wave"></i> Boas-vindas
+                </a>
+            </li>
             <?php if (\App\Core\Auth::hasPermission('magazines')): ?>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'magazines' ? 'active' : '' ?>" href="/admin/magazines">

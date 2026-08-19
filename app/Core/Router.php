@@ -55,6 +55,7 @@ class Router
             'login/authenticate' => ['AuthController', 'authenticate'],
             'logout' => ['AuthController', 'logout'],
             'dashboard' => ['DashboardController', 'index'],
+            'welcome' => ['WelcomeController', 'index'],
             'settings' => ['SettingsController', 'index'],
             'settings/update' => ['SettingsController', 'update'],
             'settings/upload-magazine-logo' => ['SettingsController', 'uploadMagazineLogo'],
