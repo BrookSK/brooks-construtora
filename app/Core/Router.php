@@ -172,6 +172,7 @@ class Router
             'briefing/edit' => ['BriefingController', 'edit'],
             'briefing/update' => ['BriefingController', 'update'],
             'briefing/delete' => ['BriefingController', 'delete'],
+            'briefing/save-ajax' => ['BriefingController', 'saveAjax'],
             'briefing/transcribe-audio' => ['BriefingController', 'transcribeAudio'],
             'briefing/generate-object' => ['BriefingController', 'generateObject'],
             'briefing/approve-object' => ['BriefingController', 'approveObject'],

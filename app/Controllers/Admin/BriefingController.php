@@ -540,8 +540,106 @@ class BriefingController extends Controller
     }
 
     // ---------------------------------------------------------------
-    // Templates: Salvar novo modelo
-    // POST /admin/briefing/store-template
+    // API AJAX: Salva projeto + briefing, retorna IDs (usado pelo front
+    // para "Salvar Rascunho" e "Salvar e Continuar" sem full page reload)
+    // POST /admin/briefing/save-ajax
+    // ---------------------------------------------------------------
+
+    public function saveAjax(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $userId     = (int) Auth::id();
+        $projectId  = (int) $this->input('project_id', 0);
+        $briefingId = (int) $this->input('briefing_id', 0);
+
+        // Higienização
+        $clientDocument = preg_replace('/\D/', '', $this->input('client_document', ''));
+        $clientPhone    = preg_replace('/\D/', '', $this->input('client_phone', ''));
+        $projectCep     = preg_replace('/\D/', '', $this->input('project_cep', ''));
+        $clientEmail    = trim($this->input('client_email', ''));
+
+        if (!empty($clientEmail) && !filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
+            $this->json(['error' => 'E-mail inválido.'], 422);
+            return;
+        }
+
+        $clientName = trim($this->input('client_name', ''));
+        if (empty($clientName)) {
+            $this->json(['error' => 'O nome do cliente é obrigatório.'], 422);
+            return;
+        }
+
+        $projectData = [
+            'client_name'     => $clientName,
+            'client_document' => $clientDocument,
+            'client_phone'    => $clientPhone,
+            'client_email'    => $clientEmail,
+            'project_type'    => trim($this->input('project_type', '')),
+            'project_address' => trim($this->input('project_address', '')),
+            'project_cep'     => $projectCep,
+            'project_city'    => trim($this->input('project_city', '')),
+            'project_goal'    => trim($this->input('project_goal', '')),
+            'project_area'    => $this->input('project_area') ?: null,
+        ];
+
+        $briefingData = [
+            'preferences'         => trim($this->input('preferences', '')),
+            'priorities'          => trim($this->input('priorities', '')),
+            'needs'               => trim($this->input('needs', '')),
+            'restrictions'        => trim($this->input('restrictions', '')),
+            'briefing_summary'    => trim($this->input('briefing_summary', '')),
+            'negotiation_details' => trim($this->input('negotiation_details', '')),
+            'contract_value'      => $this->input('contract_value') ?: null,
+            'payment_installments'=> $this->input('payment_installments') ?: null,
+            'payment_details'     => trim($this->input('payment_details', '')),
+            'start_date'          => $this->input('start_date') ?: null,
+            'end_date'            => $this->input('end_date') ?: null,
+            'deadline_days'       => $this->input('deadline_days') ?: null,
+            'clauses'             => trim($this->input('clauses', '')),
+        ];
+
+        if ($projectId > 0 && ClientProject::find($projectId)) {
+            // Atualiza existente
+            ClientProject::updateById($projectId, array_merge($projectData, [
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]));
+
+            if ($briefingId > 0) {
+                Briefing::updateById($briefingId, array_merge($briefingData, [
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]));
+            } else {
+                $briefingId = Briefing::create(array_merge($briefingData, [
+                    'client_project_id' => $projectId,
+                    'created_by'        => $userId,
+                    'created_at'        => date('Y-m-d H:i:s'),
+                ]));
+            }
+        } else {
+            // Cria novo
+            $projectId = ClientProject::create(array_merge($projectData, [
+                'created_by' => $userId,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]));
+
+            $briefingId = Briefing::create(array_merge($briefingData, [
+                'client_project_id' => $projectId,
+                'created_by'        => $userId,
+                'created_at'        => date('Y-m-d H:i:s'),
+            ]));
+        }
+
+        $this->json([
+            'success'    => true,
+            'project_id' => $projectId,
+            'briefing_id'=> $briefingId,
+            'edit_url'   => '/admin/briefing/edit/' . $projectId,
+        ]);
+    }
     // ---------------------------------------------------------------
 
     public function storeTemplate(): void
