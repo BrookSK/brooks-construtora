@@ -507,7 +507,7 @@ var _templateId = <?= $templateId ?>;
                     <button class="ql-clean" title="Limpar formatação"></button>
                 </span>
             </div>
-            <div id="prompt-editor" style="min-height:250px;font-size:.85rem;line-height:1.7;"><?= htmlspecialchars($defaultTemplate['prompt_template'] ?? '', ENT_QUOTES) ?></div>
+            <div id="prompt-editor" style="min-height:250px;font-size:.85rem;line-height:1.7;"><?= nl2br(htmlspecialchars($defaultTemplate['prompt_template'] ?? '', ENT_QUOTES)) ?></div>
             <!-- Campo hidden que sincroniza o conteúdo para envio -->
             <textarea id="prompt-template-field" class="d-none" name="prompt_template"><?= bval($defaultTemplate['prompt_template'] ?? '') ?></textarea>
         </div>
@@ -1522,11 +1522,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Sincroniza o conteúdo do editor com o textarea hidden
     _quillEditor.on('text-change', function() {
-        document.getElementById('prompt-template-field').value = _quillEditor.root.innerHTML;
+        // Envia texto puro para o servidor (a IA não precisa de HTML)
+        document.getElementById('prompt-template-field').value = _quillEditor.getText();
     });
 
-    // Inicializa o textarea hidden com o conteúdo inicial
-    document.getElementById('prompt-template-field').value = _quillEditor.root.innerHTML;
+    // Inicializa o textarea hidden com o conteúdo inicial (texto puro)
+    document.getElementById('prompt-template-field').value = _quillEditor.getText();
 });
 </script>
 <script>
