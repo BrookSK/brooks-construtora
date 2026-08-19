@@ -101,25 +101,28 @@ class BriefingController extends Controller
 
     public function index(): void
     {
+        $statusFilter = trim($this->input('status', ''));
+
         try {
-            $projects = ClientProject::allWithBriefing(100);
+            $projects = ClientProject::allWithBriefing(100, $statusFilter);
         } catch (\PDOException $e) {
             if (stripos($e->getMessage(), "doesn't exist") !== false
                 || stripos($e->getMessage(), 'exist') !== false) {
                 // Tabelas ausentes — aplica a migration automaticamente
                 $this->ensureTables();
                 // Tenta de novo após criar as tabelas
-                $projects = ClientProject::allWithBriefing(100);
+                $projects = ClientProject::allWithBriefing(100, $statusFilter);
             } else {
                 throw $e;
             }
         }
 
         $this->view('admin.briefing.index', [
-            'user'     => Auth::user(),
-            'flash'    => $this->getFlash(),
-            'projects' => $projects,
-            'mode'     => 'list',
+            'user'         => Auth::user(),
+            'flash'        => $this->getFlash(),
+            'projects'     => $projects,
+            'mode'         => 'list',
+            'statusFilter' => $statusFilter,
         ]);
     }
 
@@ -194,6 +197,9 @@ class BriefingController extends Controller
             'briefing_summary'   => trim($this->input('briefing_summary', '')),
             'negotiation_details'=> trim($this->input('negotiation_details', '')),
             'contract_value'     => $this->input('contract_value') ?: null,
+            'down_payment'       => $this->input('down_payment') ?: null,
+            'discount_value'     => $this->input('discount_value') ?: null,
+            'discount_percent'   => $this->input('discount_percent') ?: null,
             'payment_installments'=> $this->input('payment_installments') ?: null,
             'payment_details'    => trim($this->input('payment_details', '')),
             'start_date'         => $this->input('start_date') ?: null,
@@ -294,6 +300,9 @@ class BriefingController extends Controller
             'briefing_summary'    => trim($this->input('briefing_summary', '')),
             'negotiation_details' => trim($this->input('negotiation_details', '')),
             'contract_value'      => $this->input('contract_value') ?: null,
+            'down_payment'        => $this->input('down_payment') ?: null,
+            'discount_value'      => $this->input('discount_value') ?: null,
+            'discount_percent'    => $this->input('discount_percent') ?: null,
             'payment_installments'=> $this->input('payment_installments') ?: null,
             'payment_details'     => trim($this->input('payment_details', '')),
             'start_date'          => $this->input('start_date') ?: null,
@@ -410,6 +419,44 @@ class BriefingController extends Controller
     }
 
     // ---------------------------------------------------------------
+    // API: Polimento de texto ditado por voz
+    // POST /admin/briefing/polish-text
+    // ---------------------------------------------------------------
+
+    public function polishText(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $text = trim($this->input('text', ''));
+
+        if (empty($text)) {
+            $this->json(['error' => 'Texto vazio.'], 400);
+            return;
+        }
+
+        // Textos muito curtos (menos de 5 palavras) não precisam de IA
+        if (str_word_count($text) < 3) {
+            // Apenas capitaliza e remove espaços duplos
+            $text = preg_replace('/\s{2,}/', ' ', $text);
+            $text = mb_strtoupper(mb_substr($text, 0, 1)) . mb_substr($text, 1);
+            $this->json(['success' => true, 'text' => $text]);
+            return;
+        }
+
+        try {
+            $ai      = new OpenAIService();
+            $polished = $ai->polishText($text);
+            $this->json(['success' => true, 'text' => $polished]);
+        } catch (\Exception $e) {
+            // Em caso de erro, retorna o texto original sem travar o fluxo
+            $this->json(['success' => true, 'text' => $text]);
+        }
+    }
+
+    // ---------------------------------------------------------------
     // API: Geração do Objeto do Contrato
     // POST /admin/briefing/generate-object
     // ---------------------------------------------------------------
@@ -481,6 +528,13 @@ class BriefingController extends Controller
                 $briefing['negotiation_details'] ? "Negociação: "   . $briefing['negotiation_details'] : '',
             ])),
             'valor_contrato'    => $contractValue,
+            'entrada'           => !empty($briefing['down_payment'])
+                ? number_format((float) $briefing['down_payment'], 2, ',', '.')
+                : '',
+            'desconto'          => !empty($briefing['discount_value'])
+                ? number_format((float) $briefing['discount_value'], 2, ',', '.')
+                : (!empty($briefing['discount_percent']) ? $briefing['discount_percent'] . '%' : ''),
+            'parcelas'          => $briefing['payment_installments'] ?? '',
             'parcelamento'      => $briefing['payment_installments']
                 ? $briefing['payment_installments'] . 'x - ' . ($briefing['payment_details'] ?? '')
                 : ($briefing['payment_details'] ?? ''),
@@ -594,6 +648,9 @@ class BriefingController extends Controller
             'briefing_summary'    => trim($this->input('briefing_summary', '')),
             'negotiation_details' => trim($this->input('negotiation_details', '')),
             'contract_value'      => $this->input('contract_value') ?: null,
+            'down_payment'        => $this->input('down_payment') ?: null,
+            'discount_value'      => $this->input('discount_value') ?: null,
+            'discount_percent'    => $this->input('discount_percent') ?: null,
             'payment_installments'=> $this->input('payment_installments') ?: null,
             'payment_details'     => trim($this->input('payment_details', '')),
             'start_date'          => $this->input('start_date') ?: null,

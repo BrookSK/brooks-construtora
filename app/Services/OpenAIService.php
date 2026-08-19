@@ -306,6 +306,53 @@ JSON puro sem markdown:
         throw new \Exception('Resposta inválida da API OpenAI: ' . $response);
     }
 
+    // ---------------------------------------------------------------
+    // Polimento de texto ditado por voz
+    // ---------------------------------------------------------------
+
+    /**
+     * Recebe um texto bruto (ditado por voz) e retorna com gramática corrigida:
+     * pontuação, vírgulas, primeira letra maiúscula, sem alterar o sentido.
+     *
+     * @param  string $rawText  Texto bruto da transcrição
+     * @return string           Texto corrigido
+     */
+    public function polishText(string $rawText): string
+    {
+        $data = [
+            'model'    => $this->model,
+            'messages' => [
+                [
+                    'role'    => 'system',
+                    'content' => 'Você é um corretor gramatical de português brasileiro. '
+                        . 'Receba o texto ditado por voz e devolva APENAS o texto corrigido, sem explicações. '
+                        . 'Regras: '
+                        . '1) Inicie com letra maiúscula. '
+                        . '2) Adicione vírgulas e pontos onde fizer sentido gramaticalmente. '
+                        . '3) Remova espaços duplos ou triplos. '
+                        . '4) NÃO altere o sentido, não adicione palavras novas, não remova informações. '
+                        . '5) Mantenha o mesmo nível de formalidade do texto original. '
+                        . '6) Se o texto já estiver correto, devolva-o sem alterações.',
+                ],
+                [
+                    'role'    => 'user',
+                    'content' => $rawText,
+                ],
+            ],
+            'temperature' => 0.2,
+            'max_tokens'  => 1024,
+        ];
+
+        $response = $this->request('https://api.openai.com/v1/chat/completions', $data);
+        $result   = json_decode($response, true);
+
+        if (!isset($result['choices'][0]['message']['content'])) {
+            return $rawText; // Em caso de falha, retorna o original
+        }
+
+        return trim($result['choices'][0]['message']['content']);
+    }
+
     private function request(string $url, array $data): string
     {
         $ch = curl_init($url);

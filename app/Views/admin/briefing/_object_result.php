@@ -27,24 +27,27 @@ $statusInfo = $statusLabels[$contractObject['status'] ?? 'generated'] ?? $status
                     onclick="copyObjectText()" title="Copiar texto">
                 <i class="bi bi-clipboard"></i>
             </button>
-            <button type="button" class="btn btn-sm btn-outline-primary"
-                    onclick="showTab('tab-modelo-btn')">
-                <i class="bi bi-arrow-repeat me-1"></i> Re-gerar
+            <button type="button" class="btn btn-sm btn-outline-danger"
+                    onclick="downloadObjectPdf()" title="Baixar PDF">
+                <i class="bi bi-file-earmark-pdf"></i>
             </button>
             <?php if (($contractObject['status'] ?? '') !== 'approved'): ?>
-            <button type="button" id="btn-approve" class="btn btn-sm btn-success"
-                    onclick="approveObject(<?= (int)$contractObject['id'] ?>)">
-                <i class="bi bi-check2-circle me-1"></i> Aprovar
+            <button type="button" class="btn btn-sm btn-outline-primary"
+                    onclick="goToStep(2)">
+                <i class="bi bi-arrow-repeat me-1"></i> Re-gerar
             </button>
-            <?php else: ?>
-            <button type="button" class="btn btn-sm btn-success" disabled>
-                <i class="bi bi-check2-circle me-1"></i> Aprovado
+            <button type="button" id="btn-approve" class="btn btn-sm btn-success"
+                    onclick="approveObject()">
+                <i class="bi bi-check2-circle me-1"></i> Aprovar
             </button>
             <?php endif; ?>
         </div>
     </div>
     <div class="card-body">
         <div id="object-text-display"><?= htmlspecialchars($contractObject['generated_text'] ?? '', ENT_QUOTES) ?></div>
+        <span class="expand-toggle" id="expand-object-btn" onclick="toggleExpandObject()">
+            <i class="bi bi-chevron-down me-1"></i> Ver contrato completo
+        </span>
     </div>
 </div>
 
