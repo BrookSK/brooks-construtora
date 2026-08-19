@@ -718,7 +718,6 @@ var _templateId = <?= $templateId ?>;
 
 /* Objeto gerado */
 #object-text-display {
-    white-space: pre-wrap;
     line-height: 1.8;
     font-size: .95rem;
     background: #fafafa;
@@ -728,6 +727,15 @@ var _templateId = <?= $templateId ?>;
     max-height: 500px;
     overflow-y: auto;
     transition: max-height .3s ease;
+}
+#object-text-display p {
+    margin-bottom: 0.8rem;
+    text-align: justify;
+}
+#object-text-display p:last-child { margin-bottom: 0; }
+#object-text-display strong {
+    font-weight: 700;
+    color: #2c2c2c;
 }
 #object-text-display.expanded {
     max-height: none;
@@ -1172,6 +1180,20 @@ function resetGenerateButtons() {
     if (btnR) { btnR.disabled = false; btnR.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Gerar Novamente'; }
 }
 
+function formatContractText(text) {
+    // Converte markdown básico para HTML
+    var html = escHtml(text);
+    // Negrito: **texto** → <strong>texto</strong>
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Itálico: *texto* → <em>texto</em>
+    html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+    // Parágrafos: dupla quebra de linha
+    html = html.replace(/\n\n/g, '</p><p>');
+    // Quebras simples
+    html = html.replace(/\n/g, '<br>');
+    return '<p>' + html + '</p>';
+}
+
 function renderObjectResult(text, objectId) {
     var wrapper = document.getElementById('object-result-wrapper');
     wrapper.innerHTML = '<div class="card mb-3">'
@@ -1184,7 +1206,7 @@ function renderObjectResult(text, objectId) {
         + '<button type="button" class="btn btn-sm btn-outline-danger" onclick="downloadObjectPdf()" title="Baixar PDF">'
         + '<i class="bi bi-file-earmark-pdf"></i></button>'
         + '</div></div>'
-        + '<div class="card-body"><div id="object-text-display">' + escHtml(text) + '</div>'
+        + '<div class="card-body"><div id="object-text-display">' + formatContractText(text) + '</div>'
         + '<span class="expand-toggle" id="expand-object-btn" onclick="toggleExpandObject()">'
         + '<i class="bi bi-chevron-down me-1"></i> Ver contrato completo</span></div>'
         + '</div>';

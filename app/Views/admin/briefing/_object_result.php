@@ -44,7 +44,22 @@ $statusInfo = $statusLabels[$contractObject['status'] ?? 'generated'] ?? $status
         </div>
     </div>
     <div class="card-body">
-        <div id="object-text-display"><?= htmlspecialchars($contractObject['generated_text'] ?? '', ENT_QUOTES) ?></div>
+        <div id="object-text-display"><?php
+            $rawText = $contractObject['generated_text'] ?? '';
+            // Converte markdown básico para HTML formatado
+            $html = htmlspecialchars($rawText, ENT_QUOTES);
+            // Negrito: **texto** → <strong>texto</strong>
+            $html = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $html);
+            // Itálico: *texto* → <em>texto</em>  (somente se não for negrito)
+            $html = preg_replace('/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/', '<em>$1</em>', $html);
+            // Parágrafos: linha dupla vira separação visual
+            $html = str_replace("\n\n", '</p><p>', $html);
+            // Quebras simples viram <br>
+            $html = str_replace("\n", '<br>', $html);
+            // Envolve em parágrafo
+            $html = '<p>' . $html . '</p>';
+            echo $html;
+        ?></div>
         <span class="expand-toggle" id="expand-object-btn" onclick="toggleExpandObject()">
             <i class="bi bi-chevron-down me-1"></i> Ver contrato completo
         </span>
