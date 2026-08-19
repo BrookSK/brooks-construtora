@@ -5,6 +5,7 @@ namespace App\Controllers\Admin;
 use App\Core\Controller;
 use App\Core\Auth;
 use App\Models\Setting;
+use App\Models\User;
 
 class SettingsController extends Controller
 {
@@ -77,8 +78,9 @@ class SettingsController extends Controller
 
         $this->view('admin.settings.index', [
             'settings' => $settings,
-            'user' => Auth::user(),
-            'flash' => $this->getFlash(),
+            'user'     => Auth::user(),
+            'profile'  => User::find((int) Auth::id()),
+            'flash'    => $this->getFlash(),
         ]);
     }
 
@@ -235,6 +237,115 @@ class SettingsController extends Controller
         }
 
         Setting::set('magazine_default_cover', '');
+        $this->json(['success' => true]);
+    }
+
+    // ---------------------------------------------------------------
+    // Perfil do usuário logado
+    // ---------------------------------------------------------------
+
+    public function updateProfile(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/settings');
+            return;
+        }
+
+        $userId = (int) Auth::id();
+        $name   = trim($this->input('profile_name', ''));
+
+        if (empty($name)) {
+            $this->setFlash('error', 'O nome não pode ser vazio.');
+            $this->redirect('/admin/settings');
+            return;
+        }
+
+        User::updateById($userId, [
+            'name'       => $name,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        // Atualiza o nome na sessão para refletir imediatamente no layout
+        $_SESSION['user_name'] = $name;
+
+        $this->setFlash('success', 'Perfil atualizado com sucesso!');
+        $this->redirect('/admin/settings');
+    }
+
+    public function uploadAvatar(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        if (!isset($_FILES['avatar']) || $_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
+            $this->json(['error' => 'Erro no upload do arquivo.'], 400);
+            return;
+        }
+
+        $file         = $_FILES['avatar'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+        if (!in_array($file['type'], $allowedTypes)) {
+            $this->json(['error' => 'Tipo não permitido. Use JPG, PNG, WEBP ou GIF.'], 400);
+            return;
+        }
+
+        if ($file['size'] > 5 * 1024 * 1024) {
+            $this->json(['error' => 'Arquivo muito grande. Máximo 5 MB.'], 400);
+            return;
+        }
+
+        $userId    = (int) Auth::id();
+        $ext       = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $filename  = 'avatar_' . $userId . '_' . time() . '.' . $ext;
+        $uploadDir = ROOT_PATH . '/public/uploads/avatars/';
+
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $destination = $uploadDir . $filename;
+
+        if (move_uploaded_file($file['tmp_name'], $destination)) {
+            // Remove foto anterior se existir
+            $current = User::find($userId);
+            if (!empty($current['photo']) && file_exists(ROOT_PATH . '/public' . $current['photo'])) {
+                unlink(ROOT_PATH . '/public' . $current['photo']);
+            }
+
+            $photoUrl = '/uploads/avatars/' . $filename;
+            User::updateById($userId, [
+                'photo'      => $photoUrl,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            $this->json(['success' => true, 'url' => $photoUrl]);
+        } else {
+            $this->json(['error' => 'Erro ao salvar arquivo.'], 500);
+        }
+    }
+
+    public function removeAvatar(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $userId  = (int) Auth::id();
+        $current = User::find($userId);
+
+        if (!empty($current['photo']) && file_exists(ROOT_PATH . '/public' . $current['photo'])) {
+            unlink(ROOT_PATH . '/public' . $current['photo']);
+        }
+
+        User::updateById($userId, [
+            'photo'      => null,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
         $this->json(['success' => true]);
     }
 }
