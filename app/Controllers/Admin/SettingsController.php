@@ -316,10 +316,34 @@ class SettingsController extends Controller
             }
 
             $photoUrl = '/uploads/avatars/' . $filename;
-            User::updateById($userId, [
-                'photo'      => $photoUrl,
-                'updated_at' => date('Y-m-d H:i:s'),
-            ]);
+
+            try {
+                User::updateById($userId, [
+                    'photo'      => $photoUrl,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+            } catch (\PDOException $e) {
+                // Coluna photo pode não existir — executa a migration 032
+                if (stripos($e->getMessage(), 'Unknown column') !== false
+                    || stripos($e->getMessage(), "doesn't exist") !== false) {
+                    $migrationFile = ROOT_PATH . '/database/migrations/032_add_photo_to_users.sql';
+                    if (file_exists($migrationFile)) {
+                        $sql = file_get_contents($migrationFile);
+                        $sql = preg_replace('/--[^\n]*/', '', $sql);
+                        $pdo = \App\Core\Database::getConnection();
+                        foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
+                            try { $pdo->exec($stmt); } catch (\PDOException $ignore) {}
+                        }
+                    }
+                    // Tenta novamente após criar a coluna
+                    User::updateById($userId, [
+                        'photo'      => $photoUrl,
+                        'updated_at' => date('Y-m-d H:i:s'),
+                    ]);
+                } else {
+                    throw $e;
+                }
+            }
 
             $this->json(['success' => true, 'url' => $photoUrl]);
         } else {
@@ -341,10 +365,18 @@ class SettingsController extends Controller
             unlink(ROOT_PATH . '/public' . $current['photo']);
         }
 
-        User::updateById($userId, [
-            'photo'      => null,
-            'updated_at' => date('Y-m-d H:i:s'),
-        ]);
+        try {
+            User::updateById($userId, [
+                'photo'      => null,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\PDOException $e) {
+            if (stripos($e->getMessage(), 'Unknown column') !== false) {
+                // Coluna photo não existe — ignora silenciosamente
+            } else {
+                throw $e;
+            }
+        }
 
         $this->json(['success' => true]);
     }
