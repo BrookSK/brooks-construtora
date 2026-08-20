@@ -11,6 +11,7 @@
     <style>
         :root {
             --sidebar-width: 260px;
+            --sidebar-collapsed-width: 70px;
             --color-primary: #3a3b4e;
             --color-primary-hover: #446084;
             --color-accent: #dd3333;
@@ -26,16 +27,23 @@
             background-color: var(--color-primary);
             color: #fff;
             overflow-y: auto;
+            overflow-x: hidden;
             z-index: 1000;
-            transition: all 0.3s;
+            transition: width 0.3s ease;
         }
         .sidebar .brand {
             padding: 1.25rem 1rem;
             text-align: center;
             border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-        .sidebar .brand img { max-width: 160px; }
-        .sidebar .brand p { margin: 0.5rem 0 0; font-size: 0.75rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+        .sidebar .brand img { max-width: 160px; transition: all 0.3s; }
+        .sidebar .brand p { margin: 0.5rem 0 0; font-size: 0.75rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; transition: opacity 0.2s; }
         .sidebar .nav-link {
             color: rgba(255,255,255,0.75);
             padding: 0.75rem 1.25rem;
@@ -45,6 +53,8 @@
             transition: all 0.2s;
             border-left: 3px solid transparent;
             font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
         }
         .sidebar .nav-link:hover,
         .sidebar .nav-link.active {
@@ -52,11 +62,103 @@
             background-color: rgba(255,255,255,0.08);
             border-left-color: var(--color-accent);
         }
-        .sidebar .nav-link i { font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar .nav-link i { font-size: 1.1rem; min-width: 20px; text-align: center; flex-shrink: 0; }
+        .sidebar .nav-link .link-text { transition: opacity 0.2s; }
+        .sidebar .nav-section-label { transition: opacity 0.2s; }
+
+        /* Botão de toggle na sidebar */
+        .sidebar-toggle-btn {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: rgba(255,255,255,0.6);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+        .sidebar-toggle-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+        }
+
+        /* Estado colapsado */
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+        .sidebar.collapsed .brand img {
+            max-width: 36px;
+        }
+        .sidebar.collapsed .brand p {
+            opacity: 0;
+            height: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+        .sidebar.collapsed .nav-link {
+            padding: 0.75rem;
+            justify-content: center;
+            gap: 0;
+            border-left-width: 2px;
+        }
+        .sidebar.collapsed .nav-link .link-text {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+        }
+        .sidebar.collapsed .nav-section-label {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .sidebar.collapsed .sidebar-toggle-btn {
+            right: 50%;
+            transform: translate(50%, -50%);
+        }
+        .sidebar.collapsed .nav-link i {
+            font-size: 1.2rem;
+        }
+
+        /* Tooltip no estado colapsado (desktop) */
+        @media (min-width: 769px) {
+            .sidebar.collapsed .nav-link {
+                position: relative;
+            }
+            .sidebar.collapsed .nav-link:hover::after {
+                content: attr(data-title);
+                position: absolute;
+                left: calc(var(--sidebar-collapsed-width) - 5px);
+                top: 50%;
+                transform: translateY(-50%);
+                background: #333;
+                color: #fff;
+                padding: 0.4rem 0.75rem;
+                border-radius: 4px;
+                font-size: 0.8rem;
+                white-space: nowrap;
+                z-index: 1100;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            }
+        }
+
         .main-content {
             margin-left: var(--sidebar-width);
             padding: 1.5rem;
             min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+        body.sidebar-collapsed .main-content {
+            margin-left: var(--sidebar-collapsed-width);
         }
         .top-bar {
             background: #fff;
@@ -101,10 +203,22 @@
         .badge.bg-primary { background-color: var(--color-primary) !important; }
         .badge.bg-success { background-color: #28a745 !important; }
         .badge.bg-danger { background-color: var(--color-accent) !important; }
+
+        /* Mobile */
         @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); }
+            .sidebar {
+                transform: translateX(-100%);
+                width: var(--sidebar-width) !important;
+            }
             .sidebar.show { transform: translateX(0); }
-            .main-content { margin-left: 0; padding: 0.75rem; }
+            .sidebar.collapsed { width: var(--sidebar-width) !important; }
+            .sidebar .nav-link .link-text { opacity: 1 !important; width: auto !important; }
+            .sidebar .nav-section-label { opacity: 1 !important; height: auto !important; overflow: visible !important; }
+            .sidebar .brand img { max-width: 160px !important; }
+            .sidebar .brand p { opacity: 0.6 !important; height: auto !important; }
+            .sidebar .nav-link { justify-content: flex-start !important; gap: 0.75rem !important; padding: 0.75rem 1.25rem !important; }
+            .sidebar-toggle-btn { display: none !important; }
+            .main-content { margin-left: 0 !important; padding: 0.75rem; }
             .top-bar { 
                 padding: 0.75rem 1rem; 
                 margin-bottom: 1rem;
@@ -152,193 +266,196 @@
         <div class="brand">
             <img src="/assets/images/wp/2024/11/logo-brooks-1400x396.webp" alt="Brooks Construtora">
             <p>Painel Admin</p>
+            <button class="sidebar-toggle-btn" id="sidebarCollapseBtn" title="Recolher menu">
+                <i class="bi bi-chevron-left" id="collapseIcon"></i>
+            </button>
         </div>
         <ul class="nav flex-column mt-3">
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'dashboard' ? 'active' : '' ?>" href="/admin/dashboard">
-                    <i class="bi bi-grid-1x2-fill"></i> Dashboard
+                <a class="nav-link <?= ($currentPage ?? '') === 'dashboard' ? 'active' : '' ?>" href="/admin/dashboard" data-title="Dashboard">
+                    <i class="bi bi-grid-1x2-fill"></i> <span class="link-text">Dashboard</span>
                 </a>
             </li>
             <?php if (\App\Core\Auth::hasPermission('magazines')): ?>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'magazines' ? 'active' : '' ?>" href="/admin/magazines">
-                    <i class="bi bi-journal-richtext"></i> Revistas
+                <a class="nav-link <?= ($currentPage ?? '') === 'magazines' ? 'active' : '' ?>" href="/admin/magazines" data-title="Revistas">
+                    <i class="bi bi-journal-richtext"></i> <span class="link-text">Revistas</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'topics' ? 'active' : '' ?>" href="/admin/magazines/topics">
-                    <i class="bi bi-lightbulb"></i> Temas
+                <a class="nav-link <?= ($currentPage ?? '') === 'topics' ? 'active' : '' ?>" href="/admin/magazines/topics" data-title="Temas">
+                    <i class="bi bi-lightbulb"></i> <span class="link-text">Temas</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'schedule' ? 'active' : '' ?>" href="/admin/magazines/schedule">
-                    <i class="bi bi-calendar-event"></i> Agendamento
+                <a class="nav-link <?= ($currentPage ?? '') === 'schedule' ? 'active' : '' ?>" href="/admin/magazines/schedule" data-title="Agendamento">
+                    <i class="bi bi-calendar-event"></i> <span class="link-text">Agendamento</span>
                 </a>
             </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('newsletter')): ?>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'newsletter' ? 'active' : '' ?>" href="/admin/newsletter">
-                    <i class="bi bi-envelope-paper"></i> Newsletter
+                <a class="nav-link <?= ($currentPage ?? '') === 'newsletter' ? 'active' : '' ?>" href="/admin/newsletter" data-title="Newsletter">
+                    <i class="bi bi-envelope-paper"></i> <span class="link-text">Newsletter</span>
                 </a>
             </li>
             <?php endif; ?>
 
             <?php if (\App\Core\Auth::hasPermission('orders')): ?>
             <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
-                <small class="text-uppercase px-3 opacity-50" style="font-size:0.65rem; letter-spacing:1px;">Pedidos</small>
+                <small class="text-uppercase px-3 opacity-50 nav-section-label" style="font-size:0.65rem; letter-spacing:1px;">Pedidos</small>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'orders' ? 'active' : '' ?>" href="/admin/orders">
-                    <i class="bi bi-cart3"></i> Pedidos
+                <a class="nav-link <?= ($currentPage ?? '') === 'orders' ? 'active' : '' ?>" href="/admin/orders" data-title="Pedidos">
+                    <i class="bi bi-cart3"></i> <span class="link-text">Pedidos</span>
                 </a>
             </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('obras')): ?>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'obras' ? 'active' : '' ?>" href="/admin/obras">
-                    <i class="bi bi-buildings"></i> Obras
+                <a class="nav-link <?= ($currentPage ?? '') === 'obras' ? 'active' : '' ?>" href="/admin/obras" data-title="Obras">
+                    <i class="bi bi-buildings"></i> <span class="link-text">Obras</span>
                 </a>
             </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('suppliers')): ?>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'suppliers' ? 'active' : '' ?>" href="/admin/suppliers">
-                    <i class="bi bi-building"></i> Fornecedores
+                <a class="nav-link <?= ($currentPage ?? '') === 'suppliers' ? 'active' : '' ?>" href="/admin/suppliers" data-title="Fornecedores">
+                    <i class="bi bi-building"></i> <span class="link-text">Fornecedores</span>
                 </a>
             </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('materials')): ?>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'materials' ? 'active' : '' ?>" href="/admin/materials">
-                    <i class="bi bi-box-seam"></i> Materiais
+                <a class="nav-link <?= ($currentPage ?? '') === 'materials' ? 'active' : '' ?>" href="/admin/materials" data-title="Materiais">
+                    <i class="bi bi-box-seam"></i> <span class="link-text">Materiais</span>
                 </a>
             </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('orders.settings')): ?>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'orders_settings' ? 'active' : '' ?>" href="/admin/orders/settings">
-                    <i class="bi bi-sliders"></i> Config. Pedidos
+                <a class="nav-link <?= ($currentPage ?? '') === 'orders_settings' ? 'active' : '' ?>" href="/admin/orders/settings" data-title="Config. Pedidos">
+                    <i class="bi bi-sliders"></i> <span class="link-text">Config. Pedidos</span>
                 </a>
             </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('transport')): ?>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'transport' ? 'active' : '' ?>" href="/admin/transport">
-                    <i class="bi bi-truck"></i> Transporte
+                <a class="nav-link <?= ($currentPage ?? '') === 'transport' ? 'active' : '' ?>" href="/admin/transport" data-title="Transporte">
+                    <i class="bi bi-truck"></i> <span class="link-text">Transporte</span>
                 </a>
             </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('stock')): ?>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'stock' ? 'active' : '' ?>" href="/admin/stock">
-                    <i class="bi bi-boxes"></i> Estoque
+                <a class="nav-link <?= ($currentPage ?? '') === 'stock' ? 'active' : '' ?>" href="/admin/stock" data-title="Estoque">
+                    <i class="bi bi-boxes"></i> <span class="link-text">Estoque</span>
                 </a>
             </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('orders')): ?>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'price_history' ? 'active' : '' ?>" href="/admin/orders/price-history">
-                    <i class="bi bi-graph-up"></i> Histórico Preços
+                <a class="nav-link <?= ($currentPage ?? '') === 'price_history' ? 'active' : '' ?>" href="/admin/orders/price-history" data-title="Histórico Preços">
+                    <i class="bi bi-graph-up"></i> <span class="link-text">Histórico Preços</span>
                 </a>
             </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('orders.payment') || \App\Core\Auth::isAdmin()): ?>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'payments' ? 'active' : '' ?>" href="/admin/orders/payments">
-                    <i class="bi bi-receipt"></i> NF / Boletos
+                <a class="nav-link <?= ($currentPage ?? '') === 'payments' ? 'active' : '' ?>" href="/admin/orders/payments" data-title="NF / Boletos">
+                    <i class="bi bi-receipt"></i> <span class="link-text">NF / Boletos</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'quote_logs' ? 'active' : '' ?>" href="/admin/orders/quote-logs">
-                    <i class="bi bi-bug"></i> Logs Cotação
+                <a class="nav-link <?= ($currentPage ?? '') === 'quote_logs' ? 'active' : '' ?>" href="/admin/orders/quote-logs" data-title="Logs Cotação">
+                    <i class="bi bi-bug"></i> <span class="link-text">Logs Cotação</span>
                 </a>
             </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('epi')): ?>
             <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
-                <small class="text-uppercase px-3 opacity-50" style="font-size:0.65rem; letter-spacing:1px;">EPIs</small>
+                <small class="text-uppercase px-3 opacity-50 nav-section-label" style="font-size:0.65rem; letter-spacing:1px;">EPIs</small>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'epi_delivery' ? 'active' : '' ?>" href="/registro-de-entrega">
-                    <i class="bi bi-box-seam"></i> Registro de Entrega
+                <a class="nav-link <?= ($currentPage ?? '') === 'epi_delivery' ? 'active' : '' ?>" href="/registro-de-entrega" data-title="Registro de Entrega">
+                    <i class="bi bi-box-seam"></i> <span class="link-text">Registro de Entrega</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'epi_replacement' ? 'active' : '' ?>" href="/substituicao-de-epi">
-                    <i class="bi bi-arrow-repeat"></i> Devoluções e Substituições
+                <a class="nav-link <?= ($currentPage ?? '') === 'epi_replacement' ? 'active' : '' ?>" href="/substituicao-de-epi" data-title="Devoluções e Substituições">
+                    <i class="bi bi-arrow-repeat"></i> <span class="link-text">Devoluções e Substituições</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'epi_thirdparty' ? 'active' : '' ?>" href="/distribuicao-terceiros">
-                    <i class="bi bi-people-fill"></i> Distribuição para Terceiros
+                <a class="nav-link <?= ($currentPage ?? '') === 'epi_thirdparty' ? 'active' : '' ?>" href="/distribuicao-terceiros" data-title="Distribuição para Terceiros">
+                    <i class="bi bi-people-fill"></i> <span class="link-text">Distribuição para Terceiros</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'epi_catalog' ? 'active' : '' ?>" href="/cadastro-de-epi">
-                    <i class="bi bi-shield-check"></i> Cadastro de EPI
+                <a class="nav-link <?= ($currentPage ?? '') === 'epi_catalog' ? 'active' : '' ?>" href="/cadastro-de-epi" data-title="Cadastro de EPI">
+                    <i class="bi bi-shield-check"></i> <span class="link-text">Cadastro de EPI</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'epi_history' ? 'active' : '' ?>" href="/historico-de-epi">
-                    <i class="bi bi-clock-history"></i> Histórico de EPI
+                <a class="nav-link <?= ($currentPage ?? '') === 'epi_history' ? 'active' : '' ?>" href="/historico-de-epi" data-title="Histórico de EPI">
+                    <i class="bi bi-clock-history"></i> <span class="link-text">Histórico de EPI</span>
                 </a>
             </li>
             <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
-                <small class="text-uppercase px-3 opacity-50" style="font-size:0.65rem; letter-spacing:1px;">Limpeza</small>
+                <small class="text-uppercase px-3 opacity-50 nav-section-label" style="font-size:0.65rem; letter-spacing:1px;">Limpeza</small>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= in_array($currentPage ?? '', ['cleaning_index', 'cleaning_create']) ? 'active' : '' ?>" href="/checklist-limpeza">
-                    <i class="bi bi-clipboard2-check"></i> Checklist de Limpeza
+                <a class="nav-link <?= in_array($currentPage ?? '', ['cleaning_index', 'cleaning_create']) ? 'active' : '' ?>" href="/checklist-limpeza" data-title="Checklist de Limpeza">
+                    <i class="bi bi-clipboard2-check"></i> <span class="link-text">Checklist de Limpeza</span>
                 </a>
             </li>
             <?php endif; ?>
 
             <?php if (\App\Core\Auth::hasPermission('epi') || \App\Core\Auth::isAdmin()): ?>
             <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
-                <small class="text-uppercase px-3 opacity-50" style="font-size:0.65rem; letter-spacing:1px;">Presença</small>
+                <small class="text-uppercase px-3 opacity-50 nav-section-label" style="font-size:0.65rem; letter-spacing:1px;">Presença</small>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'presence' ? 'active' : '' ?>" href="/lista-de-presenca">
-                    <i class="bi bi-clipboard-check"></i> Lista de Presença
+                <a class="nav-link <?= ($currentPage ?? '') === 'presence' ? 'active' : '' ?>" href="/lista-de-presenca" data-title="Lista de Presença">
+                    <i class="bi bi-clipboard-check"></i> <span class="link-text">Lista de Presença</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'presence_history' ? 'active' : '' ?>" href="/historico-presenca">
-                    <i class="bi bi-calendar2-week"></i> Histórico de Presença
+                <a class="nav-link <?= ($currentPage ?? '') === 'presence_history' ? 'active' : '' ?>" href="/historico-presenca" data-title="Histórico de Presença">
+                    <i class="bi bi-calendar2-week"></i> <span class="link-text">Histórico de Presença</span>
                 </a>
             </li>
             <?php endif; ?>
 
             <?php if (\App\Core\Auth::hasPermission('users')): ?>
             <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
-                <a class="nav-link <?= ($currentPage ?? '') === 'users' ? 'active' : '' ?>" href="/admin/users">
-                    <i class="bi bi-people"></i> Usuários
+                <a class="nav-link <?= ($currentPage ?? '') === 'users' ? 'active' : '' ?>" href="/admin/users" data-title="Usuários">
+                    <i class="bi bi-people"></i> <span class="link-text">Usuários</span>
                 </a>
             </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('settings')): ?>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'settings' ? 'active' : '' ?>" href="/admin/settings">
-                    <i class="bi bi-gear"></i> Configurações
+                <a class="nav-link <?= ($currentPage ?? '') === 'settings' ? 'active' : '' ?>" href="/admin/settings" data-title="Configurações">
+                    <i class="bi bi-gear"></i> <span class="link-text">Configurações</span>
                 </a>
             </li>
             <?php endif; ?>
             <li class="nav-item mt-3" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
-                <a class="nav-link" href="/" target="_blank">
-                    <i class="bi bi-box-arrow-up-right"></i> Ver Site
+                <a class="nav-link" href="/" target="_blank" data-title="Ver Site">
+                    <i class="bi bi-box-arrow-up-right"></i> <span class="link-text">Ver Site</span>
                 </a>
             </li>
             <?php if (!empty($_SESSION['pin_auth'])): ?>
             <li class="nav-item">
-                <a class="nav-link" href="/pin/minha-conta">
-                    <i class="bi bi-person-circle"></i> Minha Conta
+                <a class="nav-link" href="/pin/minha-conta" data-title="Minha Conta">
+                    <i class="bi bi-person-circle"></i> <span class="link-text">Minha Conta</span>
                 </a>
             </li>
             <?php endif; ?>
             <li class="nav-item">
-                <a class="nav-link" href="/admin/logout" style="color: var(--color-accent);">
-                    <i class="bi bi-box-arrow-left"></i> Sair
+                <a class="nav-link" href="/admin/logout" style="color: var(--color-accent);" data-title="Sair">
+                    <i class="bi bi-box-arrow-left"></i> <span class="link-text">Sair</span>
                 </a>
             </li>
         </ul>
@@ -374,16 +491,66 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    function toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('show');
-        document.getElementById('sidebarOverlay').classList.toggle('show');
-    }
-    // Fechar sidebar ao clicar em link no mobile
-    if (window.innerWidth <= 768) {
-        document.querySelectorAll('.sidebar .nav-link').forEach(link => {
-            link.addEventListener('click', () => { toggleSidebar(); });
+    (function() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const collapseBtn = document.getElementById('sidebarCollapseBtn');
+        const collapseIcon = document.getElementById('collapseIcon');
+        const STORAGE_KEY = 'sidebar_collapsed';
+
+        // Restaurar estado salvo (apenas desktop)
+        function isDesktop() { return window.innerWidth > 768; }
+
+        function applySavedState() {
+            if (isDesktop() && localStorage.getItem(STORAGE_KEY) === '1') {
+                sidebar.classList.add('collapsed');
+                document.body.classList.add('sidebar-collapsed');
+                collapseIcon.className = 'bi bi-chevron-right';
+            }
+        }
+        applySavedState();
+
+        // Toggle mobile (hamburger)
+        window.toggleSidebar = function() {
+            sidebar.classList.toggle('show');
+            overlay.classList.toggle('show');
+        };
+
+        // Toggle collapse (desktop)
+        if (collapseBtn) {
+            collapseBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (!isDesktop()) return;
+
+                const isCollapsed = sidebar.classList.toggle('collapsed');
+                document.body.classList.toggle('sidebar-collapsed', isCollapsed);
+                collapseIcon.className = isCollapsed ? 'bi bi-chevron-right' : 'bi bi-chevron-left';
+                localStorage.setItem(STORAGE_KEY, isCollapsed ? '1' : '0');
+            });
+        }
+
+        // Fechar sidebar ao clicar em link no mobile
+        if (!isDesktop()) {
+            document.querySelectorAll('.sidebar .nav-link').forEach(function(link) {
+                link.addEventListener('click', function() { 
+                    sidebar.classList.remove('show');
+                    overlay.classList.remove('show');
+                });
+            });
+        }
+
+        // Ajustar ao redimensionar
+        window.addEventListener('resize', function() {
+            if (isDesktop()) {
+                sidebar.classList.remove('show');
+                overlay.classList.remove('show');
+                applySavedState();
+            } else {
+                sidebar.classList.remove('collapsed');
+                document.body.classList.remove('sidebar-collapsed');
+            }
         });
-    }
+    })();
     </script>
 
     <!-- Indicador global de geração em background -->
