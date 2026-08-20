@@ -105,6 +105,7 @@
                 <div class="card-header"><i class="bi bi-chat-left-text"></i> Observações</div>
                 <div class="card-body">
                     <textarea class="form-control" name="description" rows="3" placeholder="Observações adicionais sobre o pedido..."></textarea>
+                    <small class="text-muted d-block mt-2"><i class="bi bi-mic"></i> Após criar o pedido, você poderá gravar áudios de observação nos detalhes do pedido.</small>
                 </div>
             </div>
         </div>

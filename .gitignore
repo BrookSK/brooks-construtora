@@ -1,6 +1,6 @@
 # Uploads (mantém a estrutura, ignora arquivos)
-/public/uploads/*
-!/public/uploads/.gitkeep
+/public/uploads/**/*
+!/public/uploads/**/.gitkeep
 
 # IDE
 .idea/

@@ -1,5 +1,6 @@
 <?php $pageTitle = 'Pedido ' . $order['code']; $currentPage = 'orders'; ?>
 <?php ob_start(); ?>
+<link rel="stylesheet" href="/assets/css/audio-recorder.css">
 
 <?php
 $statusLabels = [
@@ -200,6 +201,11 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                 <small class="text-muted d-block"><i class="bi bi-cash-stack"></i> Observações do Financeiro</small>
                 <p class="mb-0"><?= nl2br(htmlspecialchars($order['financial_notes'])) ?></p>
                 <?php endif; ?>
+
+                <!-- Áudios do Pedido -->
+                <hr>
+                <small class="text-muted d-block mb-2"><i class="bi bi-mic-fill"></i> Áudios de Observação</small>
+                <div id="audio-recorder-show"></div>
             </div>
         </div>
 
@@ -1752,6 +1758,25 @@ document.addEventListener('DOMContentLoaded', function() {
                         <small class="text-muted"><span id="splitSelectedCount">0</span> item(ns) selecionado(s) para o novo pedido</small>
                         <small class="text-muted"><span id="splitRemainingCount"><?= count($preSplitItems) ?></span> ficam neste pedido</small>
                     </div>
+
+                    <hr>
+                    <h6 class="fw-bold mb-2"><i class="bi bi-chat-text"></i> Observações</h6>
+                    <p class="text-muted small mb-2">Defina a observação para cada pedido resultante da divisão.</p>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="splitPreQuoteObsCurrent" class="form-label small fw-semibold">
+                                <i class="bi bi-file-earmark"></i> Pedido atual (itens que ficam)
+                            </label>
+                            <textarea name="observations_current" id="splitPreQuoteObsCurrent" class="form-control form-control-sm" rows="3" placeholder="Observação para o pedido atual..."><?= htmlspecialchars($order['description'] ?? '') ?></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="splitPreQuoteObsNew" class="form-label small fw-semibold">
+                                <i class="bi bi-file-earmark-plus"></i> Novo pedido (itens separados)
+                            </label>
+                            <textarea name="observations_new" id="splitPreQuoteObsNew" class="form-control form-control-sm" rows="3" placeholder="Observação para o novo pedido..."><?= htmlspecialchars($order['description'] ?? '') ?></textarea>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -1927,6 +1952,40 @@ function submitPreQuoteSplit() {
                 </form>
                 <?php endif; ?>
 
+                <!-- Observações por grupo do Split Order -->
+                <hr>
+                <h6 class="fw-bold mb-2"><i class="bi bi-chat-text"></i> Observações por Pedido</h6>
+                <p class="text-muted small mb-2">Defina a observação para cada pedido que será criado. A observação atual está preenchida como referência.</p>
+
+                <div class="row g-3">
+                    <?php if (!empty($splitStockItems)): ?>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">
+                            <i class="bi bi-box-seam text-success"></i> Pedido de Estoque
+                        </label>
+                        <textarea name="split_observations[stock]" class="form-control form-control-sm split-order-obs" rows="3" placeholder="Observação para o pedido de estoque..." form="splitOrderForm"><?= htmlspecialchars($order['description'] ?? '') ?></textarea>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($splitPurchaseItems) && count($orderSuppliers) >= 2): ?>
+                        <?php foreach ($orderSuppliers as $os): ?>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">
+                                <i class="bi bi-building text-primary"></i> <?= htmlspecialchars($os['supplier_name']) ?>
+                            </label>
+                            <textarea name="split_observations[supplier_<?= $os['supplier_id'] ?>]" class="form-control form-control-sm split-order-obs" rows="3" placeholder="Observação para pedido de <?= htmlspecialchars($os['supplier_name']) ?>..." form="splitOrderForm"><?= htmlspecialchars($order['description'] ?? '') ?></textarea>
+                        </div>
+                        <?php endforeach; ?>
+                    <?php elseif (!empty($splitPurchaseItems) && count($orderSuppliers) === 1): ?>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">
+                                <i class="bi bi-building text-primary"></i> <?= htmlspecialchars($orderSuppliers[0]['supplier_name'] ?? 'Compra') ?>
+                            </label>
+                            <textarea name="split_observations[purchase]" class="form-control form-control-sm split-order-obs" rows="3" placeholder="Observação para o pedido de compra..." form="splitOrderForm"><?= htmlspecialchars($order['description'] ?? '') ?></textarea>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
                 <div class="alert alert-warning small mt-3">
                     <i class="bi bi-exclamation-triangle"></i> <strong>Atenção:</strong> Ao confirmar, o pedido <strong><?= htmlspecialchars($order['code']) ?></strong> será cancelado e novos pedidos serão criados por fornecedor. Esta ação não pode ser desfeita.
                 </div>
@@ -1941,6 +2000,23 @@ function submitPreQuoteSplit() {
     </div>
 </div>
 <?php endif; ?>
+
+<script src="/assets/js/audio-recorder.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    AudioRecorder.init({
+        container: '#audio-recorder-show',
+        uploadUrl: '/admin/orders/upload-audio',
+        deleteUrl: '/admin/orders/delete-audio',
+        listUrl: '/admin/orders/list-audios',
+        stage: 'create',
+        orderId: <?= (int)$order['id'] ?>,
+        recordedBy: '<?= addslashes(htmlspecialchars($user['name'] ?? 'Usuário')) ?>',
+        readOnly: false,
+        showAllStages: true,
+    });
+});
+</script>
 
 <?php $content = ob_get_clean(); ?>
 <?php require ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>

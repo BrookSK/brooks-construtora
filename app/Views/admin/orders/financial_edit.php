@@ -1,5 +1,6 @@
 <?php $pageTitle = 'Edição Financeira - ' . $order['code']; $currentPage = 'orders'; ?>
 <?php ob_start(); ?>
+<link rel="stylesheet" href="/assets/css/audio-recorder.css">
 
 <style>
 .financial-edit-table input[type="number"],
@@ -321,6 +322,16 @@
         </div>
     </div>
 
+    <!-- Áudio do Financeiro -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <i class="bi bi-mic-fill"></i> Áudios do Financeiro
+        </div>
+        <div class="card-body">
+            <div id="audio-recorder-financial"></div>
+        </div>
+    </div>
+
     <!-- Hidden field para modo de preço -->
     <input type="hidden" name="price_mode" id="priceModeField" value="unit">
 
@@ -494,6 +505,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Calcular ao carregar
     recalculate();
+});
+</script>
+
+<script src="/assets/js/audio-recorder.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    AudioRecorder.init({
+        container: '#audio-recorder-financial',
+        uploadUrl: '/admin/orders/upload-audio',
+        deleteUrl: '/admin/orders/delete-audio',
+        listUrl: '/admin/orders/list-audios',
+        stage: 'financial',
+        orderId: <?= (int)$order['id'] ?>,
+        recordedBy: '<?= addslashes(htmlspecialchars($user['name'] ?? 'Financeiro')) ?>',
+        readOnly: false,
+    });
 });
 </script>
 

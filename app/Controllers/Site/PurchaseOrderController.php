@@ -3102,4 +3102,175 @@ class PurchaseOrderController extends Controller
             echo '<h1>404 - Página não encontrada</h1>';
         }
     }
+
+    // ─── ÁUDIOS (público - via token) ──────────────────────────────────────────
+
+    /**
+     * Upload de áudio na página pública (cotação / aprovação)
+     */
+    public function uploadAudioPublic(): void
+    {
+        header('Content-Type: application/json');
+
+        if (!$this->isPost()) {
+            echo json_encode(['success' => false, 'error' => 'Método inválido.']);
+            exit;
+        }
+
+        $token = $this->input('token', '');
+        $stage = $this->input('stage', '');
+
+        if (!$token || !in_array($stage, ['quote', 'approval'])) {
+            echo json_encode(['success' => false, 'error' => 'Parâmetros inválidos.']);
+            exit;
+        }
+
+        // Buscar pedido pelo token da etapa correspondente
+        if ($stage === 'quote') {
+            $order = PurchaseOrder::whereFirst('quote_token', $token);
+        } else {
+            $order = PurchaseOrder::whereFirst('approval_token', $token);
+        }
+
+        if (!$order) {
+            echo json_encode(['success' => false, 'error' => 'Pedido não encontrado.']);
+            exit;
+        }
+
+        if (empty($_FILES['audio']) || $_FILES['audio']['error'] !== UPLOAD_ERR_OK) {
+            echo json_encode(['success' => false, 'error' => 'Nenhum arquivo de áudio enviado.']);
+            exit;
+        }
+
+        $file = $_FILES['audio'];
+        $allowedMimes = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/mp3', 'video/webm'];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        if (!in_array($mime, $allowedMimes)) {
+            echo json_encode(['success' => false, 'error' => 'Tipo de arquivo não permitido.']);
+            exit;
+        }
+
+        $ext = 'webm';
+        if (str_contains($mime, 'ogg')) $ext = 'ogg';
+        elseif (str_contains($mime, 'mp4')) $ext = 'mp4';
+        elseif (str_contains($mime, 'mpeg') || str_contains($mime, 'mp3')) $ext = 'mp3';
+        elseif (str_contains($mime, 'wav')) $ext = 'wav';
+
+        $uploadDir = ROOT_PATH . '/public/uploads/orders/audio/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
+        $filename = 'audio_' . $order['id'] . '_' . $stage . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $destination = $uploadDir . $filename;
+
+        if (!move_uploaded_file($file['tmp_name'], $destination)) {
+            echo json_encode(['success' => false, 'error' => 'Erro ao salvar o arquivo.']);
+            exit;
+        }
+
+        $duration = (int) $this->input('duration', 0);
+        $recordedBy = trim($this->input('recorded_by', 'Usuário'));
+
+        $audioId = \App\Models\PurchaseOrderAudio::store([
+            'order_id' => $order['id'],
+            'stage' => $stage,
+            'filename' => $filename,
+            'original_name' => $file['name'] ?? $filename,
+            'duration_seconds' => $duration > 0 ? $duration : null,
+            'recorded_by' => $recordedBy,
+            'recorded_by_user_id' => null,
+        ]);
+
+        echo json_encode([
+            'success' => true,
+            'audio' => [
+                'id' => $audioId,
+                'filename' => $filename,
+                'url' => '/uploads/orders/audio/' . $filename,
+                'duration_seconds' => $duration,
+                'recorded_by' => $recordedBy,
+                'created_at' => date('Y-m-d H:i:s'),
+            ],
+        ]);
+        exit;
+    }
+
+    /**
+     * Excluir áudio na página pública
+     */
+    public function deleteAudioPublic(): void
+    {
+        header('Content-Type: application/json');
+
+        if (!$this->isPost()) {
+            echo json_encode(['success' => false, 'error' => 'Método inválido.']);
+            exit;
+        }
+
+        $token = $this->input('token', '');
+        $audioId = (int) $this->input('audio_id', 0);
+
+        if (!$token || !$audioId) {
+            echo json_encode(['success' => false, 'error' => 'Parâmetros inválidos.']);
+            exit;
+        }
+
+        // Validar que o áudio pertence a um pedido que esse token pode acessar
+        $audio = \App\Models\PurchaseOrderAudio::find($audioId);
+        if (!$audio) {
+            echo json_encode(['success' => false, 'error' => 'Áudio não encontrado.']);
+            exit;
+        }
+
+        $order = PurchaseOrder::find($audio['order_id']);
+        if (!$order || ($order['quote_token'] !== $token && $order['approval_token'] !== $token)) {
+            echo json_encode(['success' => false, 'error' => 'Sem permissão.']);
+            exit;
+        }
+
+        $deleted = \App\Models\PurchaseOrderAudio::deleteWithFile($audioId);
+        echo json_encode(['success' => $deleted]);
+        exit;
+    }
+
+    /**
+     * Listar áudios na página pública (via token)
+     */
+    public function listAudiosPublic(): void
+    {
+        header('Content-Type: application/json');
+
+        $token = $_GET['token'] ?? '';
+        $stage = $_GET['stage'] ?? null;
+
+        if (!$token) {
+            echo json_encode(['success' => false, 'error' => 'Token não informado.']);
+            exit;
+        }
+
+        // Buscar pedido por qualquer token
+        $order = PurchaseOrder::whereFirst('quote_token', $token);
+        if (!$order) {
+            $order = PurchaseOrder::whereFirst('approval_token', $token);
+        }
+        if (!$order) {
+            echo json_encode(['success' => false, 'error' => 'Pedido não encontrado.']);
+            exit;
+        }
+
+        if ($stage && in_array($stage, ['create', 'quote', 'approval', 'financial'])) {
+            $audios = \App\Models\PurchaseOrderAudio::getByOrderAndStage($order['id'], $stage);
+        } else {
+            $audios = \App\Models\PurchaseOrderAudio::getByOrder($order['id']);
+        }
+
+        foreach ($audios as &$audio) {
+            $audio['url'] = '/uploads/orders/audio/' . $audio['filename'];
+        }
+
+        echo json_encode(['success' => true, 'audios' => $audios]);
+        exit;
+    }
 }

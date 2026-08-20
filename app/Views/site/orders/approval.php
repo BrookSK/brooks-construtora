@@ -6,6 +6,7 @@
     <title>Aprovação - Pedido <?= htmlspecialchars($order['code']) ?> | Brooks Construtora</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/assets/css/audio-recorder.css" rel="stylesheet">
     <style>
         body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
         .page-header { background: #3a3b4e; color: #fff; padding: 1rem 0; }
@@ -543,6 +544,16 @@
                         <textarea class="form-control" name="approval_notes" rows="2" placeholder="Observações (obrigatório em caso de rejeição)"></textarea>
                     </div>
 
+                    <!-- Áudio de Observações -->
+                    <div class="mb-3">
+                        <label class="form-label"><i class="bi bi-headphones"></i> Áudios do Pedido</label>
+                        <div id="audio-recorder-previous-readonly"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="bi bi-mic-fill"></i> Gravar Áudio (Aprovação)</label>
+                        <div id="audio-recorder-approval"></div>
+                    </div>
+
                     <div class="d-grid gap-2 d-md-flex justify-content-md-center pt-3">
                         <button type="submit" name="action" value="approve" class="btn btn-success btn-lg px-4 px-md-5" onclick="return confirmApproval()">
                             <i class="bi bi-check-circle"></i> Aprovar
@@ -809,5 +820,30 @@
         }
     });
     </script>
+<script src="/assets/js/audio-recorder.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Áudios anteriores (solicitante + cotação) read-only
+    AudioRecorder.init({
+        container: '#audio-recorder-previous-readonly',
+        listUrl: '/pedido/list-audios',
+        stage: 'create',
+        token: '<?= htmlspecialchars($token) ?>',
+        readOnly: true,
+        showAllStages: true,
+    });
+
+    // Gravador da aprovação
+    AudioRecorder.init({
+        container: '#audio-recorder-approval',
+        uploadUrl: '/pedido/upload-audio',
+        deleteUrl: '/pedido/delete-audio',
+        listUrl: '/pedido/list-audios',
+        stage: 'approval',
+        token: '<?= htmlspecialchars($token) ?>',
+        recordedBy: (document.querySelector('[name="person_name"]')?.value || 'Aprovador'),
+    });
+});
+</script>
 </body>
 </html>

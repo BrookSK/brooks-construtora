@@ -161,6 +161,11 @@ class Router
             'orders/mark-stock-dispatched' => ['PurchaseOrderController', 'markStockDispatched'],
             'orders/unmark-stock-dispatched' => ['PurchaseOrderController', 'unmarkStockDispatched'],
 
+            // Áudios de pedidos
+            'orders/upload-audio' => ['PurchaseOrderController', 'uploadAudio'],
+            'orders/delete-audio' => ['PurchaseOrderController', 'deleteAudio'],
+            'orders/list-audios' => ['PurchaseOrderController', 'listAudios'],
+
             // Obras
             'obras' => ['ConstructionSiteController', 'index'],
             'obras/create' => ['ConstructionSiteController', 'create'],
@@ -376,6 +381,9 @@ class Router
             'pedido/cotacao/parse-ai-quote' => ['PurchaseOrderController', 'parseAiQuote'],
             'pedido/cotacao/get-contacts' => ['PurchaseOrderController', 'getSupplierContacts'],
             'pedido/cotacao/log' => ['PurchaseOrderController', 'logQuoteFrontend'],
+            'pedido/upload-audio' => ['PurchaseOrderController', 'uploadAudioPublic'],
+            'pedido/delete-audio' => ['PurchaseOrderController', 'deleteAudioPublic'],
+            'pedido/list-audios' => ['PurchaseOrderController', 'listAudiosPublic'],
 
             // PIN Auth
             'pin/login' => ['PinAuthController', 'login'],

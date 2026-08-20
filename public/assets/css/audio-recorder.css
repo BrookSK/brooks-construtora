@@ -1,0 +1,81 @@
+/* Audio Recorder Component Styles */
+.audio-recorder-widget {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 0.75rem;
+    background: #f8f9fa;
+}
+
+.audio-item {
+    background: #fff;
+    transition: background 0.15s;
+}
+
+.audio-item:hover {
+    background: #f0f4f8;
+}
+
+.audio-controls {
+    border-top: 1px solid #e9ecef;
+    padding-top: 0.75rem;
+}
+
+/* Indicador de gravação */
+.recording-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.6rem;
+    background: #fff0f0;
+    border: 1px solid #ffcdd2;
+    border-radius: 20px;
+    font-size: 0.8rem;
+}
+
+.recording-dot {
+    width: 10px;
+    height: 10px;
+    background: #dc3545;
+    border-radius: 50%;
+    animation: pulse-recording 1s infinite;
+}
+
+@keyframes pulse-recording {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.recording-timer {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #dc3545;
+}
+
+/* Progress bar do playback */
+.audio-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.audio-progress-wrap .progress {
+    flex-grow: 1;
+    border-radius: 3px;
+    background: #e0e0e0;
+}
+
+/* Mobile adjustments */
+@media (max-width: 576px) {
+    .audio-recorder-widget {
+        padding: 0.5rem;
+    }
+
+    .audio-item {
+        padding: 0.5rem !important;
+        flex-wrap: wrap;
+    }
+
+    .audio-info {
+        font-size: 0.7rem !important;
+    }
+}

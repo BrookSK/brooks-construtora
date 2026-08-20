@@ -5530,12 +5530,19 @@ class PurchaseOrderController extends Controller
         $quoteToken = PurchaseOrder::generateToken();
         $approvalToken = PurchaseOrder::generateToken();
 
+        // Observações editáveis do formulário
+        $observationsNew = trim($_POST['observations_new'] ?? '');
+        $observationsCurrent = trim($_POST['observations_current'] ?? '');
+
+        // Se o usuário não preencheu, manter comportamento anterior
+        $newDescription = $observationsNew !== '' ? $observationsNew : (($order['description'] ? $order['description'] . ' ' : '') . '[Split de ' . $order['code'] . ']');
+
         $newOrderData = [
             'code' => $code,
             'order_type' => $order['order_type'] ?? 'material',
             'supplier_id' => null,
             'status' => 'pending_quote',
-            'description' => ($order['description'] ? $order['description'] . ' ' : '') . '[Split de ' . $order['code'] . ']',
+            'description' => $newDescription,
             'created_by' => $order['created_by'],
             'created_by_name' => $order['created_by_name'],
             'quote_token' => $quoteToken,
@@ -5548,6 +5555,11 @@ class PurchaseOrderController extends Controller
         }
 
         $newOrderId = PurchaseOrder::create($newOrderData);
+
+        // Atualizar observação do pedido atual se foi editada
+        if ($observationsCurrent !== '' || isset($_POST['observations_current'])) {
+            PurchaseOrder::updateById($id, ['description' => $observationsCurrent]);
+        }
 
         // Mover itens marcados para o novo pedido (atualizar order_id)
         foreach ($itemsForNewOrder as $item) {
@@ -5702,17 +5714,25 @@ class PurchaseOrderController extends Controller
             "SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_orders' AND COLUMN_NAME = 'construction_site_id' LIMIT 1"
         );
 
+        // Observações editáveis por grupo (do formulário)
+        $splitObservations = $_POST['split_observations'] ?? [];
+
         foreach ($splitGroups as $gKey => $group) {
             $code = PurchaseOrder::generateCode();
             $quoteToken = PurchaseOrder::generateToken();
             $approvalToken = PurchaseOrder::generateToken();
+
+            // Usar observação específica do grupo se disponível, senão fallback
+            $groupDescription = isset($splitObservations[$gKey]) && trim($splitObservations[$gKey]) !== ''
+                ? trim($splitObservations[$gKey])
+                : (($order['description'] ? $order['description'] . ' ' : '') . '[Split de ' . $order['code'] . ']');
 
             $newOrderData = [
                 'code' => $code,
                 'order_type' => $order['order_type'] ?? 'material',
                 'supplier_id' => $group['supplier_id'],
                 'status' => 'pending_approval',
-                'description' => ($order['description'] ? $order['description'] . ' ' : '') . '[Split de ' . $order['code'] . ']',
+                'description' => $groupDescription,
                 'created_by' => $order['created_by'],
                 'created_by_name' => $order['created_by_name'],
                 'quote_token' => $quoteToken,
@@ -5916,5 +5936,147 @@ class PurchaseOrderController extends Controller
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);
+    }
+
+    // ─── ÁUDIOS ────────────────────────────────────────────────────────────────
+
+    /**
+     * Upload de áudio para um pedido (admin)
+     */
+    public function uploadAudio(): void
+    {
+        header('Content-Type: application/json');
+
+        if (!$this->isPost()) {
+            echo json_encode(['success' => false, 'error' => 'Método inválido.']);
+            exit;
+        }
+
+        $orderId = (int) $this->input('order_id', 0);
+        $stage = $this->input('stage', 'create');
+
+        if (!$orderId || !in_array($stage, ['create', 'quote', 'approval', 'financial'])) {
+            echo json_encode(['success' => false, 'error' => 'Parâmetros inválidos.']);
+            exit;
+        }
+
+        $order = PurchaseOrder::find($orderId);
+        if (!$order) {
+            echo json_encode(['success' => false, 'error' => 'Pedido não encontrado.']);
+            exit;
+        }
+
+        if (empty($_FILES['audio']) || $_FILES['audio']['error'] !== UPLOAD_ERR_OK) {
+            echo json_encode(['success' => false, 'error' => 'Nenhum arquivo de áudio enviado.']);
+            exit;
+        }
+
+        $file = $_FILES['audio'];
+        $allowedMimes = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/mp3', 'video/webm'];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        if (!in_array($mime, $allowedMimes)) {
+            echo json_encode(['success' => false, 'error' => 'Tipo de arquivo não permitido: ' . $mime]);
+            exit;
+        }
+
+        // Determinar extensão
+        $ext = 'webm';
+        if (str_contains($mime, 'ogg')) $ext = 'ogg';
+        elseif (str_contains($mime, 'mp4')) $ext = 'mp4';
+        elseif (str_contains($mime, 'mpeg') || str_contains($mime, 'mp3')) $ext = 'mp3';
+        elseif (str_contains($mime, 'wav')) $ext = 'wav';
+
+        $uploadDir = ROOT_PATH . '/public/uploads/orders/audio/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
+        $filename = 'audio_' . $orderId . '_' . $stage . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $destination = $uploadDir . $filename;
+
+        if (!move_uploaded_file($file['tmp_name'], $destination)) {
+            echo json_encode(['success' => false, 'error' => 'Erro ao salvar o arquivo.']);
+            exit;
+        }
+
+        $duration = (int) $this->input('duration', 0);
+        $userName = Auth::user()['name'] ?? 'Usuário';
+
+        $audioId = \App\Models\PurchaseOrderAudio::store([
+            'order_id' => $orderId,
+            'stage' => $stage,
+            'filename' => $filename,
+            'original_name' => $file['name'] ?? $filename,
+            'duration_seconds' => $duration > 0 ? $duration : null,
+            'recorded_by' => $userName,
+            'recorded_by_user_id' => Auth::id(),
+        ]);
+
+        echo json_encode([
+            'success' => true,
+            'audio' => [
+                'id' => $audioId,
+                'filename' => $filename,
+                'url' => '/uploads/orders/audio/' . $filename,
+                'duration_seconds' => $duration,
+                'recorded_by' => $userName,
+                'created_at' => date('Y-m-d H:i:s'),
+            ],
+        ]);
+        exit;
+    }
+
+    /**
+     * Excluir áudio (admin)
+     */
+    public function deleteAudio(): void
+    {
+        header('Content-Type: application/json');
+
+        if (!$this->isPost()) {
+            echo json_encode(['success' => false, 'error' => 'Método inválido.']);
+            exit;
+        }
+
+        $audioId = (int) $this->input('audio_id', 0);
+        if (!$audioId) {
+            echo json_encode(['success' => false, 'error' => 'ID do áudio inválido.']);
+            exit;
+        }
+
+        $deleted = \App\Models\PurchaseOrderAudio::deleteWithFile($audioId);
+        echo json_encode(['success' => $deleted]);
+        exit;
+    }
+
+    /**
+     * Listar áudios de um pedido (admin, JSON)
+     */
+    public function listAudios(): void
+    {
+        header('Content-Type: application/json');
+
+        $orderId = (int) ($_GET['order_id'] ?? 0);
+        $stage = $_GET['stage'] ?? null;
+
+        if (!$orderId) {
+            echo json_encode(['success' => false, 'error' => 'Pedido não informado.']);
+            exit;
+        }
+
+        if ($stage && in_array($stage, ['create', 'quote', 'approval', 'financial'])) {
+            $audios = \App\Models\PurchaseOrderAudio::getByOrderAndStage($orderId, $stage);
+        } else {
+            $audios = \App\Models\PurchaseOrderAudio::getByOrder($orderId);
+        }
+
+        // Adicionar URL de acesso
+        foreach ($audios as &$audio) {
+            $audio['url'] = '/uploads/orders/audio/' . $audio['filename'];
+        }
+
+        echo json_encode(['success' => true, 'audios' => $audios]);
+        exit;
     }
 }

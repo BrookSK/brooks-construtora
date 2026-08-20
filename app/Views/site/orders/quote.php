@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="/assets/css/searchable-select.css" rel="stylesheet">
+    <link href="/assets/css/audio-recorder.css" rel="stylesheet">
     <style>
         body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
         .page-header { background: #3a3b4e; color: #fff; padding: 1rem 0; }
@@ -427,6 +428,16 @@
                     <div class="mt-3">
                         <label class="form-label">Observações da Cotação</label>
                         <textarea class="form-control" name="quote_notes" rows="2" placeholder="Observações sobre preços, prazos, condições de pagamento, etc."></textarea>
+                    </div>
+
+                    <!-- Áudio de Observações -->
+                    <div class="mt-3">
+                        <label class="form-label"><i class="bi bi-headphones"></i> Áudios do Solicitante</label>
+                        <div id="audio-recorder-create-readonly"></div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label"><i class="bi bi-mic-fill"></i> Gravar Áudio (Cotação)</label>
+                        <div id="audio-recorder-quote"></div>
                     </div>
                 </div>
 
@@ -3445,6 +3456,30 @@ async function parseAiForSupplierMap(sid) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+</script>
+<script src="/assets/js/audio-recorder.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Áudios do solicitante (read-only)
+    AudioRecorder.init({
+        container: '#audio-recorder-create-readonly',
+        listUrl: '/pedido/list-audios',
+        stage: 'create',
+        token: '<?= htmlspecialchars($token) ?>',
+        readOnly: true,
+    });
+
+    // Gravador da cotação
+    AudioRecorder.init({
+        container: '#audio-recorder-quote',
+        uploadUrl: '/pedido/upload-audio',
+        deleteUrl: '/pedido/delete-audio',
+        listUrl: '/pedido/list-audios',
+        stage: 'quote',
+        token: '<?= htmlspecialchars($token) ?>',
+        recordedBy: (document.querySelector('[name="quoted_by_name"]')?.value || 'Cotador'),
+    });
+});
 </script>
 </body>
 </html>
