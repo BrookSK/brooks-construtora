@@ -69,21 +69,20 @@
         /* Botão de toggle na sidebar */
         .sidebar-toggle-btn {
             position: absolute;
-            top: 50%;
+            top: 10px;
             right: 10px;
-            transform: translateY(-50%);
             background: rgba(255,255,255,0.1);
             border: none;
             color: rgba(255,255,255,0.6);
-            width: 28px;
-            height: 28px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
         }
         .sidebar-toggle-btn:hover {
             background: rgba(255,255,255,0.2);
@@ -123,7 +122,8 @@
         }
         .sidebar.collapsed .sidebar-toggle-btn {
             right: 50%;
-            transform: translate(50%, -50%);
+            transform: translateX(50%);
+            top: 10px;
         }
         .sidebar.collapsed .nav-link i {
             font-size: 1.2rem;
