@@ -39,15 +39,3 @@ ALTER TABLE `clients_projects`
     ADD COLUMN IF NOT EXISTS `project_complement`     VARCHAR(100) DEFAULT NULL COMMENT 'Complemento' AFTER `project_address_number`,
     ADD COLUMN IF NOT EXISTS `project_neighborhood`   VARCHAR(100) DEFAULT NULL COMMENT 'Bairro' AFTER `project_complement`,
     ADD COLUMN IF NOT EXISTS `project_state`          VARCHAR(2)   DEFAULT NULL COMMENT 'UF obra' AFTER `project_city`;
-
--- =====================================================
--- Atualiza o template padrão para incluir cabeçalho da contratada
--- =====================================================
-UPDATE `contract_templates`
-SET `prompt_template` = CONCAT(
-'{{contratada_razao_social}}\nCNPJ: {{contratada_cnpj}}\n{{contratada_endereco}}, {{contratada_numero}} {{contratada_complemento}}\n{{contratada_bairro}} - {{contratada_cidade}}/{{contratada_estado}} - CEP: {{contratada_cep}}\nTel: {{contratada_telefone}} | E-mail: {{contratada_email}}\nRepresentante Legal: {{contratada_representante}} - {{contratada_representante_cargo}}\n\n---\n\n',
-`prompt_template`
-),
-`updated_at` = NOW()
-WHERE `is_default` = 1
-LIMIT 1;

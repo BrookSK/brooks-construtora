@@ -65,19 +65,32 @@ class BriefingController extends Controller
     }
 
     // =================================================================
-    // INDEX
+    // INDEX (mesclado: suporta statusFilter do remoto + ensureTables do local)
     // =================================================================
 
     public function index(): void
     {
-        try { $projects = ClientProject::allWithBriefing(100); }
-        catch (\PDOException $e) {
-            if (stripos($e->getMessage(),"doesn't exist")!==false || stripos($e->getMessage(),'exist')!==false) {
+        $statusFilter = trim($this->input('status', ''));
+
+        try {
+            $projects = ClientProject::allWithBriefing(100, $statusFilter);
+        } catch (\PDOException $e) {
+            if (stripos($e->getMessage(), "doesn't exist") !== false
+                || stripos($e->getMessage(), 'exist') !== false) {
                 $this->ensureTables();
-                $projects = ClientProject::allWithBriefing(100);
-            } else throw $e;
+                $projects = ClientProject::allWithBriefing(100, $statusFilter);
+            } else {
+                throw $e;
+            }
         }
-        $this->view('admin.briefing.index', ['user'=>Auth::user(),'flash'=>$this->getFlash(),'projects'=>$projects,'mode'=>'list']);
+
+        $this->view('admin.briefing.index', [
+            'user'         => Auth::user(),
+            'flash'        => $this->getFlash(),
+            'projects'     => $projects,
+            'mode'         => 'list',
+            'statusFilter' => $statusFilter,
+        ]);
     }
 
     // =================================================================
@@ -109,7 +122,7 @@ class BriefingController extends Controller
         }
         $pid = ClientProject::create($this->collectProject($email, $userId));
         Briefing::create($this->collectBriefing($pid, $userId));
-        $this->setFlash('success','Briefing salvo!');
+        $this->setFlash('success','Briefing salvo com sucesso!');
         $this->redirect('/admin/briefing/edit/' . $pid);
     }
 
@@ -162,7 +175,7 @@ class BriefingController extends Controller
         if ($bid > 0) Briefing::updateById($bid, $bd);
         else { $bd['client_project_id']=$pid; $bd['created_by']=(int)Auth::id(); $bd['created_at']=date('Y-m-d H:i:s'); Briefing::create($bd); }
 
-        $this->setFlash('success','Briefing atualizado!');
+        $this->setFlash('success','Briefing atualizado com sucesso!');
         $this->redirect('/admin/briefing/edit/'.$pid);
     }
 
@@ -200,11 +213,11 @@ class BriefingController extends Controller
     {
         if (!$this->isPost()) { $this->redirect('/admin/briefing'); return; }
         ClientProject::deleteById((int)$this->input('id'));
-        $this->setFlash('success','Excluído.'); $this->redirect('/admin/briefing');
+        $this->setFlash('success','Projeto excluído com sucesso.'); $this->redirect('/admin/briefing');
     }
 
     // =================================================================
-    // TRANSCRIÇÃO ÁUDIO
+    // TRANSCRIÇÃO ÁUDIO (Whisper)
     // =================================================================
 
     public function transcribeAudio(): void
@@ -219,6 +232,32 @@ class BriefingController extends Controller
         if(!move_uploaded_file($file['tmp_name'],$tmp)){$this->json(['error'=>'Erro ao salvar.'],500);return;}
         try{$ai=new OpenAIService();$t=$ai->transcribeAudio($tmp,'pt');if(file_exists($tmp))unlink($tmp);$this->json(['success'=>true,'text'=>$t]);}
         catch(\Exception $e){if(file_exists($tmp))unlink($tmp);$this->json(['error'=>$e->getMessage()],500);}
+    }
+
+    // =================================================================
+    // POLIMENTO DE TEXTO (do remoto)
+    // =================================================================
+
+    public function polishText(): void
+    {
+        if (!$this->isPost()) { $this->json(['error'=>'Método inválido.'],400); return; }
+        $text = trim($this->input('text', ''));
+        if (empty($text)) { $this->json(['error'=>'Texto vazio.'],400); return; }
+
+        if (str_word_count($text) < 3) {
+            $text = preg_replace('/\s{2,}/', ' ', $text);
+            $text = mb_strtoupper(mb_substr($text, 0, 1)) . mb_substr($text, 1);
+            $this->json(['success'=>true,'text'=>$text]);
+            return;
+        }
+
+        try {
+            $ai = new OpenAIService();
+            $polished = $ai->polishText($text);
+            $this->json(['success'=>true,'text'=>$polished]);
+        } catch (\Exception $e) {
+            $this->json(['success'=>true,'text'=>$text]);
+        }
     }
 
     // =================================================================
@@ -324,7 +363,7 @@ class BriefingController extends Controller
         if(empty($name)){$this->json(['error'=>'Razão social obrigatória.'],422);return;}
         $id=ContractorCompany::create([
             'company_name'=>$name,'trade_name'=>trim($this->input('trade_name','')),
-            'cnpj'=>preg_replace('/\D/','',  $this->input('contractor_cnpj','')),
+            'cnpj'=>preg_replace('/\D/','',$this->input('contractor_cnpj','')),
             'address'=>trim($this->input('contractor_address','')),
             'address_number'=>trim($this->input('contractor_address_number','')),
             'complement'=>trim($this->input('contractor_complement','')),
@@ -379,6 +418,7 @@ class BriefingController extends Controller
             'briefing_summary'=>trim($this->input('briefing_summary','')),
             'negotiation_details'=>trim($this->input('negotiation_details','')),
             'contract_value'=>$this->input('contract_value')?:null,
+            'down_payment'=>$this->input('down_payment')?:null,
             'discount_value'=>$this->input('discount_value')?:null,
             'discount_percent'=>$this->input('discount_percent')?:null,
             'payment_installments'=>$this->input('payment_installments')?:null,
@@ -395,10 +435,6 @@ class BriefingController extends Controller
         ];
     }
 
-    /**
-     * Mapa completo de variáveis — cada variável puxa diretamente de uma coluna.
-     * Desconto R$ e Desconto % são variáveis independentes.
-     */
     private function buildVariablesMap(array $project, array $briefing, ?array $contractor): array
     {
         $fDoc=function(?string $v):string{$d=preg_replace('/\D/','',$v??'');if(strlen($d)===11)return preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/','$1.$2.$3-$4',$d);if(strlen($d)===14)return preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/','$1.$2.$3/$4-$5',$d);return $d;};
@@ -409,14 +445,12 @@ class BriefingController extends Controller
         $fPct=function($v):string{if(empty($v)||(float)$v==0)return '';return number_format((float)$v,2,',','.').'%';};
 
         $v=[
-            // Contratante
             'cliente_nome'=>$project['client_name']??'',
             'cliente_documento'=>$fDoc($project['client_document']??''),
             'cliente_cpf'=>$fDoc($project['client_document']??''),
             'cliente_cnpj'=>$fDoc($project['client_document']??''),
             'cliente_telefone'=>$fPhone($project['client_phone']??''),
             'cliente_email'=>$project['client_email']??'',
-            // Obra
             'tipo_obra'=>$project['project_type']??'',
             'endereco_obra'=>$project['project_address']??'',
             'numero_obra'=>$project['project_address_number']??'',
@@ -427,17 +461,14 @@ class BriefingController extends Controller
             'cep_obra'=>$fCep($project['project_cep']??''),
             'objetivo'=>$project['project_goal']??'',
             'area_m2'=>$project['project_area']??'',
-            // Retro-compat
             'endereco'=>$project['project_address']??'',
             'cidade'=>$project['project_city']??'',
-            // Briefing narrativo (individuais)
             'preferencias'=>$briefing['preferences']??'',
             'prioridades'=>$briefing['priorities']??'',
             'necessidades'=>$briefing['needs']??'',
             'restricoes'=>$briefing['restrictions']??'',
             'resumo_briefing'=>$briefing['briefing_summary']??'',
             'detalhes_negociacao'=>$briefing['negotiation_details']??'',
-            // Composição legada
             'briefing'=>implode("\n\n",array_filter([
                 !empty($briefing['preferences'])?"Preferências: ".$briefing['preferences']:'',
                 !empty($briefing['priorities'])?"Prioridades: ".$briefing['priorities']:'',
@@ -446,8 +477,8 @@ class BriefingController extends Controller
                 !empty($briefing['briefing_summary'])?"Resumo: ".$briefing['briefing_summary']:'',
                 !empty($briefing['negotiation_details'])?"Negociação: ".$briefing['negotiation_details']:'',
             ])),
-            // Comerciais
             'valor_contrato'=>$fMoney($briefing['contract_value']??null),
+            'entrada'=>$fMoney($briefing['down_payment']??null),
             'desconto_valor'=>$fMoney($briefing['discount_value']??null),
             'desconto_percentual'=>$fPct($briefing['discount_percent']??null),
             'forma_pagamento'=>$briefing['payment_method']??'',
@@ -461,7 +492,6 @@ class BriefingController extends Controller
             'clausulas'=>$briefing['clauses']??'',
             'responsavel_nome'=>$briefing['responsible_name']??'',
             'responsavel_cargo'=>$briefing['responsible_role']??'',
-            // Contratada
             'contratada_razao_social'=>$contractor['company_name']??'',
             'contratada_nome_fantasia'=>$contractor['trade_name']??'',
             'contratada_cnpj'=>$fDoc($contractor['cnpj']??''),
