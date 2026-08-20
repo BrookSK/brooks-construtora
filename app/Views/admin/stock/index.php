@@ -97,8 +97,19 @@ ob_start();
 
     <div class="card">
         <div class="card-body p-0">
+            <!-- Filtro de busca -->
+            <div class="p-3 border-bottom">
+                <div class="input-group input-group-sm" style="max-width:400px;">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="stockSearchFilter" class="form-control" placeholder="Buscar por nome, especificação, depósito...">
+                    <button type="button" class="btn btn-outline-secondary d-none" id="stockSearchClear" title="Limpar busca">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <small class="text-muted mt-1 d-none" id="stockSearchCount"></small>
+            </div>
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0" id="stockTable">
                     <thead class="table-light">
                         <tr>
                             <th>Material</th>
@@ -168,6 +179,50 @@ ob_start();
         </div>
     </div>
 <?php endif; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('stockSearchFilter');
+    const clearBtn = document.getElementById('stockSearchClear');
+    const countLabel = document.getElementById('stockSearchCount');
+    const table = document.getElementById('stockTable');
+
+    if (!searchInput || !table) return;
+
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    searchInput.addEventListener('input', function() {
+        const term = this.value.toLowerCase().trim();
+
+        clearBtn.classList.toggle('d-none', term === '');
+
+        let visibleCount = 0;
+
+        rows.forEach(function(row) {
+            const text = row.textContent.toLowerCase();
+            const match = term === '' || text.includes(term);
+            row.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
+        });
+
+        if (term !== '') {
+            countLabel.classList.remove('d-none');
+            countLabel.textContent = visibleCount + ' de ' + rows.length + ' itens encontrados';
+        } else {
+            countLabel.classList.add('d-none');
+        }
+    });
+
+    clearBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        searchInput.dispatchEvent(new Event('input'));
+        searchInput.focus();
+    });
+});
+</script>
 
 <?php
 $content = ob_get_clean();
