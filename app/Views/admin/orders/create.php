@@ -2,6 +2,7 @@
 <?php ob_start(); ?>
 
 <link rel="stylesheet" href="/assets/css/searchable-select.css">
+<link rel="stylesheet" href="/assets/css/audio-recorder.css">
 
 <form method="POST" action="/admin/orders/store" id="orderForm">
     <div class="row">
@@ -105,7 +106,16 @@
                 <div class="card-header"><i class="bi bi-chat-left-text"></i> Observações</div>
                 <div class="card-body">
                     <textarea class="form-control" name="description" rows="3" placeholder="Observações adicionais sobre o pedido..."></textarea>
-                    <small class="text-muted d-block mt-2"><i class="bi bi-mic"></i> Após criar o pedido, você poderá gravar áudios de observação nos detalhes do pedido.</small>
+                </div>
+            </div>
+
+            <!-- Áudio de Observações -->
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-mic-fill"></i> Observações em Áudio</div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">Grave um áudio para explicar algo que não cabe em texto. Quem fizer a cotação e aprovação vai poder ouvir.</p>
+                    <input type="hidden" name="audio_temp_key" id="audioTempKey" value="">
+                    <div id="audio-recorder-create"></div>
                 </div>
             </div>
         </div>
@@ -685,6 +695,26 @@ if (reviewModal && mobileBtn) {
 </script>
 
 <?php require ROOT_PATH . '/app/Views/admin/orders/partials/stock_check_modal.php'; ?>
+
+<script src="/assets/js/audio-recorder.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gerar temp_key única para esta sessão de criação
+    const tempKey = 'tmp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+    document.getElementById('audioTempKey').value = tempKey;
+
+    AudioRecorder.init({
+        container: '#audio-recorder-create',
+        uploadUrl: '/admin/orders/upload-audio',
+        deleteUrl: '/admin/orders/delete-audio',
+        listUrl: '/admin/orders/list-audios',
+        stage: 'create',
+        tempKey: tempKey,
+        recordedBy: '<?= addslashes(htmlspecialchars($user['name'] ?? 'Usuário')) ?>',
+        readOnly: false,
+    });
+});
+</script>
 
 <?php $content = ob_get_clean(); ?>
 <?php require ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>

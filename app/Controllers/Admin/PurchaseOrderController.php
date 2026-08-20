@@ -164,6 +164,12 @@ class PurchaseOrderController extends Controller
 
         $orderId = PurchaseOrder::create($orderData);
 
+        // Associar áudios gravados durante a criação (via temp_key)
+        $audioTempKey = $this->input('audio_temp_key', '');
+        if (!empty($audioTempKey)) {
+            \App\Models\PurchaseOrderAudio::assignTempToOrder($audioTempKey, $orderId);
+        }
+
         // Decisões de estoque (se vieram do modal de verificação)
         $stockDecisions = $_POST['stock_decisions'] ?? [];
 
@@ -5953,17 +5959,25 @@ class PurchaseOrderController extends Controller
         }
 
         $orderId = (int) $this->input('order_id', 0);
+        $tempKey = $this->input('temp_key', '');
         $stage = $this->input('stage', 'create');
 
-        if (!$orderId || !in_array($stage, ['create', 'quote', 'approval', 'financial'])) {
-            echo json_encode(['success' => false, 'error' => 'Parâmetros inválidos.']);
+        if (!$orderId && !$tempKey) {
+            echo json_encode(['success' => false, 'error' => 'Parâmetros inválidos (order_id ou temp_key necessário).']);
             exit;
         }
 
-        $order = PurchaseOrder::find($orderId);
-        if (!$order) {
-            echo json_encode(['success' => false, 'error' => 'Pedido não encontrado.']);
+        if (!in_array($stage, ['create', 'quote', 'approval', 'financial'])) {
+            echo json_encode(['success' => false, 'error' => 'Etapa inválida.']);
             exit;
+        }
+
+        if ($orderId) {
+            $order = PurchaseOrder::find($orderId);
+            if (!$order) {
+                echo json_encode(['success' => false, 'error' => 'Pedido não encontrado.']);
+                exit;
+            }
         }
 
         if (empty($_FILES['audio']) || $_FILES['audio']['error'] !== UPLOAD_ERR_OK) {
@@ -6004,13 +6018,14 @@ class PurchaseOrderController extends Controller
         $userName = Auth::user()['name'] ?? 'Usuário';
 
         $audioId = \App\Models\PurchaseOrderAudio::store([
-            'order_id' => $orderId,
+            'order_id' => $orderId ?: null,
             'stage' => $stage,
             'filename' => $filename,
             'original_name' => $file['name'] ?? $filename,
             'duration_seconds' => $duration > 0 ? $duration : null,
             'recorded_by' => $userName,
             'recorded_by_user_id' => Auth::id(),
+            'temp_key' => $tempKey ?: null,
         ]);
 
         echo json_encode([
@@ -6058,14 +6073,21 @@ class PurchaseOrderController extends Controller
         header('Content-Type: application/json');
 
         $orderId = (int) ($_GET['order_id'] ?? 0);
+        $tempKey = $_GET['temp_key'] ?? '';
         $stage = $_GET['stage'] ?? null;
 
-        if (!$orderId) {
-            echo json_encode(['success' => false, 'error' => 'Pedido não informado.']);
+        if (!$orderId && !$tempKey) {
+            echo json_encode(['success' => false, 'error' => 'Pedido ou temp_key não informado.']);
             exit;
         }
 
-        if ($stage && in_array($stage, ['create', 'quote', 'approval', 'financial'])) {
+        if ($tempKey) {
+            // Buscar por temp_key (durante criação)
+            $audios = Database::fetchAll(
+                "SELECT * FROM purchase_order_audios WHERE temp_key = ? ORDER BY created_at ASC",
+                [$tempKey]
+            );
+        } elseif ($stage && in_array($stage, ['create', 'quote', 'approval', 'financial'])) {
             $audios = \App\Models\PurchaseOrderAudio::getByOrderAndStage($orderId, $stage);
         } else {
             $audios = \App\Models\PurchaseOrderAudio::getByOrder($orderId);

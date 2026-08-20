@@ -2006,13 +2006,10 @@ function submitPreQuoteSplit() {
 document.addEventListener('DOMContentLoaded', function() {
     AudioRecorder.init({
         container: '#audio-recorder-show',
-        uploadUrl: '/admin/orders/upload-audio',
-        deleteUrl: '/admin/orders/delete-audio',
         listUrl: '/admin/orders/list-audios',
         stage: 'create',
         orderId: <?= (int)$order['id'] ?>,
-        recordedBy: '<?= addslashes(htmlspecialchars($user['name'] ?? 'Usuário')) ?>',
-        readOnly: false,
+        readOnly: true,
         showAllStages: true,
     });
 });

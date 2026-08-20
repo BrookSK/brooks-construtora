@@ -64,15 +64,29 @@ class PurchaseOrderAudio extends Model
     public static function store(array $data): int
     {
         return self::create([
-            'order_id' => $data['order_id'],
+            'order_id' => $data['order_id'] ?? null,
             'stage' => $data['stage'],
             'filename' => $data['filename'],
             'original_name' => $data['original_name'] ?? $data['filename'],
             'duration_seconds' => $data['duration_seconds'] ?? null,
             'recorded_by' => $data['recorded_by'] ?? null,
             'recorded_by_user_id' => $data['recorded_by_user_id'] ?? null,
+            'temp_key' => $data['temp_key'] ?? null,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
+    }
+
+    /**
+     * Associar áudios temporários a um pedido recém-criado
+     */
+    public static function assignTempToOrder(string $tempKey, int $orderId): void
+    {
+        Database::update(
+            self::$table,
+            ['order_id' => $orderId, 'temp_key' => null],
+            "temp_key = ?",
+            [$tempKey]
+        );
     }
 
     /**

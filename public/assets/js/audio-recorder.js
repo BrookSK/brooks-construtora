@@ -29,6 +29,7 @@ const AudioRecorder = (function () {
             listUrl: '/admin/orders/list-audios',
             stage: 'create',
             orderId: null,
+            tempKey: null,
             token: null,
             recordedBy: 'Usuário',
             readOnly: false,
@@ -223,6 +224,7 @@ const AudioRecorder = (function () {
             formData.append('duration', Math.round((Date.now() - recordingStartTime) / 1000));
 
             if (config.orderId) formData.append('order_id', config.orderId);
+            if (config.tempKey) formData.append('temp_key', config.tempKey);
             if (config.token) {
                 formData.append('token', config.token);
                 formData.append('recorded_by', config.recordedBy);
@@ -359,6 +361,7 @@ const AudioRecorder = (function () {
                 url += 'stage=' + config.stage + '&';
             }
             if (config.orderId) url += 'order_id=' + config.orderId + '&';
+            if (config.tempKey) url += 'temp_key=' + config.tempKey + '&';
             if (config.token) url += 'token=' + config.token + '&';
 
             try {
