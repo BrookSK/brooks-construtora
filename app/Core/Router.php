@@ -178,6 +178,8 @@ class Router
             'briefing/approve-object' => ['BriefingController', 'approveObject'],
             'briefing/store-template' => ['BriefingController', 'storeTemplate'],
             'briefing/update-template' => ['BriefingController', 'updateTemplate'],
+            'briefing/import-pdf' => ['BriefingController', 'importPdf'],
+            'briefing/store-contractor' => ['BriefingController', 'storeContractor'],
 
             // Obras
             'obras' => ['ConstructionSiteController', 'index'],

@@ -265,6 +265,162 @@ JSON puro sem markdown:
         ];
     }
 
+    // ---------------------------------------------------------------
+    // Extração de dados do briefing a partir de PDF (Demanda #61)
+    // ---------------------------------------------------------------
+
+    public function extractBriefingFromPdf(string $filePath, string $fileName): array
+    {
+        if (!file_exists($filePath)) {
+            throw new \Exception("Arquivo PDF não encontrado: {$filePath}");
+        }
+
+        // Upload para OpenAI Files API
+        $fileId = $this->uploadPdfToOpenAI($filePath, $fileName);
+
+        // Processar com Responses API
+        $prompt = $this->buildPdfExtractionPrompt();
+
+        $data = [
+            'model' => $this->model,
+            'input' => [
+                [
+                    'role' => 'user',
+                    'content' => [
+                        ['type' => 'file', 'file' => ['file_id' => $fileId]],
+                        ['type' => 'text', 'text' => $prompt],
+                    ],
+                ],
+            ],
+            'temperature' => 0.1,
+        ];
+
+        $ch = curl_init('https://api.openai.com/v1/responses');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($data),
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $this->apiKey,
+            ],
+            CURLOPT_TIMEOUT => 120,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if (curl_errno($ch)) {
+            $error = curl_error($ch);
+            curl_close($ch);
+            throw new \Exception("Erro ao processar PDF: {$error}");
+        }
+        curl_close($ch);
+
+        // Se Responses API falhar, tenta fallback via chat/completions
+        if ($httpCode !== 200) {
+            return $this->extractPdfFallback($filePath);
+        }
+
+        $result = json_decode($response, true);
+        $text = '';
+        if (isset($result['output'])) {
+            foreach ($result['output'] as $block) {
+                if (isset($block['content'])) {
+                    foreach ($block['content'] as $c) {
+                        if (($c['type'] ?? '') === 'output_text') $text = $c['text'] ?? '';
+                    }
+                }
+            }
+        }
+
+        if (empty($text)) {
+            throw new \Exception('A IA não retornou dados do PDF.');
+        }
+
+        return $this->parsePdfResponse($text);
+    }
+
+    private function uploadPdfToOpenAI(string $filePath, string $fileName): string
+    {
+        $ch = curl_init('https://api.openai.com/v1/files');
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => [
+                'purpose' => 'user_data',
+                'file'    => new \CURLFile($filePath, 'application/pdf', $fileName),
+            ],
+            CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $this->apiKey],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 60,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if (curl_errno($ch)) { $e = curl_error($ch); curl_close($ch); throw new \Exception("Upload PDF: {$e}"); }
+        curl_close($ch);
+        if ($httpCode !== 200) {
+            $err = json_decode($response, true);
+            throw new \Exception('Upload PDF: ' . ($err['error']['message'] ?? "HTTP {$httpCode}"));
+        }
+        $data = json_decode($response, true);
+        if (empty($data['id'])) throw new \Exception('Upload PDF: resposta inválida.');
+        return $data['id'];
+    }
+
+    private function extractPdfFallback(string $filePath): array
+    {
+        $base64 = base64_encode(file_get_contents($filePath));
+        $prompt = $this->buildPdfExtractionPrompt();
+
+        $data = [
+            'model'    => $this->model,
+            'messages' => [
+                ['role' => 'system', 'content' => 'Extraia dados de briefing do PDF. Responda APENAS com JSON válido.'],
+                ['role' => 'user', 'content' => [
+                    ['type' => 'text', 'text' => $prompt],
+                    ['type' => 'file', 'file' => ['filename' => 'briefing.pdf', 'file_data' => 'data:application/pdf;base64,' . $base64]],
+                ]],
+            ],
+            'temperature' => 0.1,
+            'max_tokens'  => 4096,
+        ];
+
+        $response = $this->request('https://api.openai.com/v1/chat/completions', $data);
+        $result = json_decode($response, true);
+        $text = $result['choices'][0]['message']['content'] ?? '';
+        return $this->parsePdfResponse($text);
+    }
+
+    private function parsePdfResponse(string $text): array
+    {
+        $text = preg_replace('/^```json\s*/i', '', trim($text));
+        $text = preg_replace('/\s*```$/i', '', $text);
+        $fields = json_decode($text, true);
+        if (!is_array($fields)) throw new \Exception('Resposta da IA não é JSON válido.');
+        return array_map(fn($v) => ($v === null || $v === 'null' || $v === 'N/A') ? '' : (string)$v, $fields);
+    }
+
+    private function buildPdfExtractionPrompt(): string
+    {
+        return 'Analise o PDF anexado (briefing de obra/construção civil). Extraia as informações e retorne APENAS JSON com estas chaves (string vazia "" se não encontrado — NUNCA invente dados):
+
+{
+  "client_name":"","client_document":"","client_phone":"","client_email":"",
+  "project_type":"","project_address":"","project_address_number":"","project_complement":"",
+  "project_neighborhood":"","project_city":"","project_state":"","project_cep":"",
+  "project_goal":"","project_area":"",
+  "preferences":"","priorities":"","needs":"","restrictions":"",
+  "briefing_summary":"","negotiation_details":"",
+  "contract_value":"","discount_value":"","discount_percent":"",
+  "payment_method":"","payment_installments":"","payment_details":"",
+  "project_number":"","start_date":"","end_date":"","deadline_days":"",
+  "clauses":"","responsible_name":"","responsible_role":"",
+  "contractor_company_name":"","contractor_cnpj":"","contractor_address":"",
+  "contractor_city":"","contractor_state":"","contractor_cep":""
+}
+
+Regras: datas em YYYY-MM-DD, valores numéricos sem R$/%, documentos somente números.';
+    }
+
     private function downloadImage(string $url): ?string
     {
         $imageContent = file_get_contents($url);
