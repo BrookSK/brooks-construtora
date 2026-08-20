@@ -202,7 +202,8 @@ document.addEventListener('DOMContentLoaded', function() {
         let visibleCount = 0;
 
         rows.forEach(function(row) {
-            const text = row.textContent.toLowerCase();
+            // Normaliza espaços/quebras de linha para busca funcionar com múltiplas palavras
+            const text = row.textContent.replace(/\s+/g, ' ').toLowerCase();
             const match = term === '' || text.includes(term);
             row.style.display = match ? '' : 'none';
             if (match) visibleCount++;
