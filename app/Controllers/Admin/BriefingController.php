@@ -99,11 +99,22 @@ class BriefingController extends Controller
 
     public function create(): void
     {
+        try {
+            $contractors = ContractorCompany::allActive();
+        } catch (\PDOException $e) {
+            if (stripos($e->getMessage(), "doesn't exist") !== false || stripos($e->getMessage(), 'exist') !== false) {
+                $this->ensureTables();
+                $contractors = ContractorCompany::allActive();
+            } else {
+                $contractors = [];
+            }
+        }
+
         $this->view('admin.briefing.index', [
             'user'=>Auth::user(), 'flash'=>$this->getFlash(), 'mode'=>'create',
             'templates'=>ContractTemplate::all('is_default DESC, id ASC'),
             'defaultTemplate'=>ContractTemplate::getDefault(),
-            'contractors'=>ContractorCompany::allActive(),
+            'contractors'=>$contractors,
             'projects'=>ClientProject::allWithBriefing(100),
         ]);
     }
@@ -137,7 +148,21 @@ class BriefingController extends Controller
         if (!$project) { $this->setFlash('error','Projeto não encontrado.'); $this->redirect('/admin/briefing'); return; }
 
         $briefing = Briefing::findByProject($pid);
-        $contractor = (!empty($briefing['contractor_company_id'])) ? ContractorCompany::find((int)$briefing['contractor_company_id']) : null;
+
+        try {
+            $contractor = (!empty($briefing['contractor_company_id'])) ? ContractorCompany::find((int)$briefing['contractor_company_id']) : null;
+            $contractors = ContractorCompany::allActive();
+        } catch (\PDOException $e) {
+            if (stripos($e->getMessage(), "doesn't exist") !== false || stripos($e->getMessage(), 'exist') !== false) {
+                $this->ensureTables();
+                $contractor = (!empty($briefing['contractor_company_id'])) ? ContractorCompany::find((int)$briefing['contractor_company_id']) : null;
+                $contractors = ContractorCompany::allActive();
+            } else {
+                $contractor = null;
+                $contractors = [];
+            }
+        }
+
         $contractObject = $briefing ? ContractObject::latestByBriefing((int)$briefing['id']) : null;
 
         $this->view('admin.briefing.index', [
@@ -145,7 +170,7 @@ class BriefingController extends Controller
             'project'=>$project, 'briefing'=>$briefing,
             'templates'=>ContractTemplate::all('is_default DESC, id ASC'),
             'defaultTemplate'=>ContractTemplate::getDefault(),
-            'contractors'=>ContractorCompany::allActive(),
+            'contractors'=>$contractors,
             'selectedContractor'=>$contractor,
             'contractObject'=>$contractObject,
             'projects'=>ClientProject::allWithBriefing(100),
