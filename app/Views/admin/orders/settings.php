@@ -701,11 +701,25 @@ async function testWebhook(type) {
             phone: document.querySelector('[name="orders_quote_send_phone"]')?.value || '',
             phone_name: document.querySelector('[name="orders_quote_send_phone_name"]')?.value || '',
             message: 'Olá! Bom dia, tudo bem?\n\nPrecisamos de cotação para os seguintes itens:\n\n1. Cano PVC 100mm - Qtd: 10 un\n2. Joelho 40mm - Qtd: 20 un\n3. Cimento 50kg - Qtd: 30 sc\n\nObra: Obra Teste\nPedido: PED-TESTE-001\n\nPoderia nos enviar o orçamento?\n\nObrigado!'
+        },
+        weekly: {
+            event: 'weekly_material_request',
+            test: true,
+            phone: document.querySelector('[name="orders_weekly_materials_admin_phone"]')?.value || '',
+            name: document.querySelector('[name="orders_weekly_materials_admin_name"]')?.value || 'Gerente',
+            message: 'Olá Gerente! 📋\n\nPreciso que você envie a lista de materiais que vai precisar na semana de ' + new Date().toLocaleDateString('pt-BR') + '.\n\nAcesse o link abaixo e preencha:\nhttps://brooksconstrutora.com.br/lista-semanal/token-de-teste\n\nObrigado!'
+        },
+        weekly_admin: {
+            event: 'weekly_material_admin_alert',
+            test: true,
+            phone: document.querySelector('[name="orders_weekly_materials_admin_phone"]')?.value || '',
+            name: document.querySelector('[name="orders_weekly_materials_admin_name"]')?.value || 'Admin',
+            message: '📋 Lista Semanal — 2 gerente(s) NÃO preencheram:\n\n❌ Gerente Teste 1\n❌ Gerente Teste 2\n\nSemana: ' + new Date().toLocaleDateString('pt-BR')
         }
     };
 
     const payload = payloads[type];
-    const labels = { quote: 'Cotação', approval: 'Aprovação', completed: 'Conclusão', payment: 'Pagamento/NF', delivery: 'Entrega', spare: 'Sobressalentes', transport: 'Transporte', quote_send: 'Envio de Cotação' };
+    const labels = { quote: 'Cotação', approval: 'Aprovação', completed: 'Conclusão', payment: 'Pagamento/NF', delivery: 'Entrega', spare: 'Sobressalentes', transport: 'Transporte', quote_send: 'Envio de Cotação', weekly: 'Lista Semanal', weekly_admin: 'Lista Semanal (Admin)' };
 
     // Mostrar modal
     document.getElementById('testResultTitle').textContent = 'Teste Webhook - ' + labels[type];
