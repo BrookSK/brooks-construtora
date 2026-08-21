@@ -22,24 +22,6 @@ $weeklyManagers = \App\Core\Database::fetchAll("SELECT id, name, phone, email FR
     </div>
 </div>
 
-<!-- Gerentes atuais -->
-<?php if (!empty($weeklyManagers)): ?>
-<div class="card mb-4">
-    <div class="card-header"><i class="bi bi-people"></i> Gerentes Semanais (marcados em <a href="/admin/orders/pin-users">Usuários PIN</a>)</div>
-    <div class="card-body py-2">
-        <div class="d-flex flex-wrap gap-2">
-            <?php foreach ($weeklyManagers as $m): ?>
-            <span class="badge bg-primary bg-opacity-75 p-2"><?= htmlspecialchars($m['name']) ?> <?= !empty($m['phone']) ? '(' . $m['phone'] . ')' : '' ?></span>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</div>
-<?php else: ?>
-<div class="alert alert-info small mb-4">
-    <i class="bi bi-info-circle"></i> Nenhum gerente semanal marcado. Acesse <a href="/admin/orders/pin-users"><strong>Gerenciar Usuários PIN</strong></a> e marque os gerentes na coluna "Gerente".
-</div>
-<?php endif; ?>
-
 <!-- Histórico de Semanas -->
 <div class="card">
     <div class="card-header"><i class="bi bi-calendar-week"></i> Histórico por Semana</div>
