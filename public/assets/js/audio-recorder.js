@@ -127,7 +127,7 @@ const AudioRecorder = (function () {
                     + stageTag + '<span class="fw-medium">' + escapeHtml(audio.recorded_by || 'Usuário') + '</span>'
                     + (duration ? ' &middot; ' + duration : '')
                     + (date ? ' &middot; ' + date : '') + '</div>'
-                    + (!config.readOnly ? '<button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0 audio-delete-btn" data-id="' + audio.id + '" title="Excluir"><i class="bi bi-trash"></i></button>' : '')
+                    + (!config.readOnly && (!config.showAllStages || audio.stage === config.stage) ? '<button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0 audio-delete-btn" data-id="' + audio.id + '" title="Excluir"><i class="bi bi-trash"></i></button>' : '')
                     + '</div>';
             });
 

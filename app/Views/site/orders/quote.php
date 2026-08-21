@@ -109,23 +109,8 @@
 
             <!-- Áudios (posição topo - visível imediatamente) -->
             <div class="card-body py-3 border-bottom">
-                <div class="d-flex align-items-center gap-3 mb-2">
-                    <div class="bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:40px; height:40px;">
-                        <i class="bi bi-mic-fill text-danger" style="font-size:1.1rem;"></i>
-                    </div>
-                    <div>
-                        <strong class="d-block" style="font-size:0.9rem;">Áudios de Observação</strong>
-                        <small class="text-muted">Ouça os áudios do solicitante e grave o seu.</small>
-                    </div>
-                </div>
-                <div class="mb-2">
-                    <small class="text-muted fw-bold d-block mb-1"><i class="bi bi-headphones"></i> Do solicitante</small>
-                    <div id="audio-recorder-create-top"></div>
-                </div>
-                <div>
-                    <small class="text-muted fw-bold d-block mb-1"><i class="bi bi-mic-fill"></i> Gravar seu áudio (cotação)</small>
-                    <div id="audio-recorder-quote-top"></div>
-                </div>
+                <h6 class="mb-2"><i class="bi bi-mic-fill text-danger"></i> Áudios do Pedido</h6>
+                <div id="audio-recorder-quote-unified"></div>
             </div>
 
             <?php if (empty($order['quote_started_at'])): ?>
@@ -3471,24 +3456,16 @@ async function parseAiForSupplierMap(sid) {
 <script src="/assets/js/audio-recorder.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Áudios do solicitante (read-only)
+    // Componente unificado: mostra todos os áudios + permite gravar na etapa quote
     AudioRecorder.init({
-        container: '#audio-recorder-create-top',
-        listUrl: '/pedido/list-audios',
-        stage: 'create',
-        token: '<?= htmlspecialchars($token) ?>',
-        readOnly: true,
-    });
-
-    // Gravador da cotação
-    AudioRecorder.init({
-        container: '#audio-recorder-quote-top',
+        container: '#audio-recorder-quote-unified',
         uploadUrl: '/pedido/upload-audio',
         deleteUrl: '/pedido/delete-audio',
         listUrl: '/pedido/list-audios',
         stage: 'quote',
         token: '<?= htmlspecialchars($token) ?>',
         recordedBy: (document.querySelector('[name="quoted_by_name"]')?.value || 'Cotador'),
+        showAllStages: true,
     });
 });
 </script>

@@ -107,25 +107,10 @@
                 <?php endif; ?>
 
                 <!-- Áudios (posição principal - visível logo no topo) -->
-                <div class="card mb-3 border-danger border-opacity-50" id="audioCardApproval">
+                <div class="card mb-3 border-0 bg-light" id="audioCardApproval">
                     <div class="card-body py-3">
-                        <div class="d-flex align-items-center gap-3 mb-2">
-                            <div class="bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:44px; height:44px;">
-                                <i class="bi bi-mic-fill text-danger" style="font-size:1.3rem;"></i>
-                            </div>
-                            <div>
-                                <strong class="d-block" style="font-size:0.95rem;">Áudios de Observação</strong>
-                                <small class="text-muted">Ouça os áudios do pedido e grave o seu se precisar.</small>
-                            </div>
-                        </div>
-                        <div class="mb-2">
-                            <small class="text-muted fw-bold d-block mb-1"><i class="bi bi-headphones"></i> Áudios anteriores</small>
-                            <div id="audio-recorder-previous-top"></div>
-                        </div>
-                        <div>
-                            <small class="text-muted fw-bold d-block mb-1"><i class="bi bi-mic-fill"></i> Gravar seu áudio</small>
-                            <div id="audio-recorder-approval-top"></div>
-                        </div>
+                        <h6 class="mb-2"><i class="bi bi-mic-fill text-danger"></i> Áudios do Pedido</h6>
+                        <div id="audio-recorder-approval-unified"></div>
                     </div>
                 </div>
 
@@ -836,25 +821,16 @@
 <script src="/assets/js/audio-recorder.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Áudios anteriores (solicitante + cotação) read-only
+    // Componente unificado: mostra todos os áudios + permite gravar na etapa approval
     AudioRecorder.init({
-        container: '#audio-recorder-previous-top',
-        listUrl: '/pedido/list-audios',
-        stage: 'create',
-        token: '<?= htmlspecialchars($token) ?>',
-        readOnly: true,
-        showAllStages: true,
-    });
-
-    // Gravador da aprovação
-    AudioRecorder.init({
-        container: '#audio-recorder-approval-top',
+        container: '#audio-recorder-approval-unified',
         uploadUrl: '/pedido/upload-audio',
         deleteUrl: '/pedido/delete-audio',
         listUrl: '/pedido/list-audios',
         stage: 'approval',
         token: '<?= htmlspecialchars($token) ?>',
         recordedBy: (document.querySelector('[name="person_name"]')?.value || 'Aprovador'),
+        showAllStages: true,
     });
 });
 </script>
