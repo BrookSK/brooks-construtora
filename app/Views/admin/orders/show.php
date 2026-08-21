@@ -1343,6 +1343,40 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     </button>
                 </form>
                 <?php endif; ?>
+
+                <?php if (in_array($order['status'], ['rejected', 'cancelled'])): ?>
+                <hr>
+                <form method="POST" action="/admin/orders/reactivate" onsubmit="return confirm('Reativar este pedido? Ele voltará para a fase de cotação.')">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reativar Pedido (Voltar p/ Cotação)
+                    </button>
+                </form>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <?php if ($order['status'] === 'cancelled'): ?>
+        <!-- Ações para pedido cancelado -->
+        <div class="card mb-3">
+            <div class="card-header">Ações</div>
+            <div class="card-body">
+                <form method="POST" action="/admin/orders/reactivate" onsubmit="return confirm('Reativar este pedido? Ele voltará para a fase de cotação.')">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reativar Pedido (Voltar p/ Cotação)
+                    </button>
+                </form>
+                <?php if (\App\Core\Auth::isSuperAdmin()): ?>
+                <hr>
+                <form method="POST" action="/admin/orders/delete" onsubmit="return confirm('ATENÇÃO: Isso vai DELETAR permanentemente este pedido. Confirma?')">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-trash"></i> Deletar Pedido
+                    </button>
+                </form>
+                <?php endif; ?>
             </div>
         </div>
         <?php endif; ?>

@@ -158,6 +158,7 @@ class Router
             'orders/split-order' => ['PurchaseOrderController', 'splitOrder'],
             'orders/split-pre-quote' => ['PurchaseOrderController', 'splitPreQuote'],
             'orders/revert-to-quote' => ['PurchaseOrderController', 'revertToQuote'],
+            'orders/reactivate' => ['PurchaseOrderController', 'reactivate'],
             'orders/mark-stock-dispatched' => ['PurchaseOrderController', 'markStockDispatched'],
             'orders/unmark-stock-dispatched' => ['PurchaseOrderController', 'unmarkStockDispatched'],
 

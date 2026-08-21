@@ -5517,6 +5517,56 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Reativar pedido cancelado ou rejeitado — volta para cotação
+     */
+    public function reactivate(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::findFull($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if (!in_array($order['status'], ['rejected', 'cancelled'])) {
+            $this->setFlash('error', 'Apenas pedidos rejeitados ou cancelados podem ser reativados.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        $previousStatus = $order['status'];
+
+        // Voltar status para pending_quote
+        PurchaseOrder::updateById($id, [
+            'status' => 'pending_quote',
+        ]);
+
+        $statusLabel = $previousStatus === 'rejected' ? 'rejeitado' : 'cancelado';
+        PurchaseOrderHistory::log(
+            $id,
+            'reactivated',
+            "Pedido reativado (estava {$statusLabel}). Devolvido para cotação por " . Auth::user()['name'] . '.',
+            Auth::user()['name'],
+            Auth::id()
+        );
+
+        // Reenviar notificação de cotação
+        if (!empty($order['quote_token'])) {
+            $this->sendQuoteNotifications($id, $order['quote_token']);
+        }
+
+        $this->setFlash('success', "Pedido reativado com sucesso! Voltou para cotação.");
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
      * Split Pré-Cotação — Dividir itens de um pedido pending_quote em múltiplos pedidos
      */
     public function splitPreQuote(): void
