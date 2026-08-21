@@ -130,15 +130,13 @@ class WeeklyMaterialController extends Controller
             }
 
             if (!empty($req['manager_email'])) {
-                try {
-                    \App\Services\MailService::send(
-                        $req['manager_email'],
-                        'Lista Semanal de Materiais - Semana ' . date('d/m', strtotime($nextWeek)),
-                        "<p>Olá <strong>{$req['manager_name']}</strong>!</p>"
-                        . "<p>Precisamos que você envie a lista de materiais da semana de " . date('d/m/Y', strtotime($nextWeek)) . ".</p>"
-                        . "<p><a href=\"{$formUrl}\" style=\"background:#3a3b4e; color:#fff; padding:10px 20px; border-radius:5px; text-decoration:none;\">Preencher Lista</a></p>"
-                    );
-                } catch (\Exception $e) {}
+                \App\Services\NotificationService::queueEmails(
+                    $req['manager_email'],
+                    'Lista Semanal de Materiais - Semana ' . date('d/m', strtotime($nextWeek)),
+                    "<p>Olá <strong>{$req['manager_name']}</strong>!</p>"
+                    . "<p>Precisamos que você envie a lista de materiais da semana de " . date('d/m/Y', strtotime($nextWeek)) . ".</p>"
+                    . "<p><a href=\"{$formUrl}\" style=\"background:#3a3b4e; color:#fff; padding:10px 20px; border-radius:5px; text-decoration:none;\">Preencher Lista</a></p>"
+                );
             }
 
             WeeklyMaterialRequest::updateById($req['id'], ['notified_at' => date('Y-m-d H:i:s')]);
