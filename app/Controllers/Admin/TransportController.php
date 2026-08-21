@@ -187,6 +187,67 @@ class TransportController extends Controller
     }
 
     /**
+     * Desfazer entrega — volta para pendente e reverte estoque
+     */
+    public function undoDelivered(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/transport');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $movement = StockMovement::find($id);
+
+        if (!$movement || $movement['status'] !== 'delivered') {
+            $this->setFlash('error', 'Movimentação não encontrada ou não está entregue.');
+            $this->redirect('/admin/transport');
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Transporte';
+
+        // Reverter estoque: creditar de volta na origem e debitar do destino
+        $alreadyDebited = !empty($movement['notes']) && str_contains($movement['notes'], 'Estoque baixado');
+
+        if (!$alreadyDebited) {
+            // Creditar de volta na origem
+            if ($movement['from_location_id']) {
+                $stockItem = \App\Models\StockItem::findByMaterialAndLocation($movement['material_id'], $movement['from_location_id']);
+                if ($stockItem) {
+                    \App\Models\StockItem::credit($stockItem['id'], $movement['quantity']);
+                }
+            } elseif ($movement['from_site_id']) {
+                $stockItem = \App\Models\StockItem::findByMaterialAndSite($movement['material_id'], $movement['from_site_id']);
+                if ($stockItem) {
+                    \App\Models\StockItem::credit($stockItem['id'], $movement['quantity']);
+                }
+            }
+
+            // Debitar do destino (se foi transferência e creditou no destino)
+            if ($movement['to_site_id'] && $movement['type'] === 'transfer' && empty($movement['order_id'])) {
+                $destStock = \App\Models\StockItem::findByMaterialAndSite($movement['material_id'], $movement['to_site_id']);
+                if ($destStock && $destStock['quantity'] >= $movement['quantity']) {
+                    \App\Models\StockItem::debit($destStock['id'], $movement['quantity']);
+                }
+            }
+        }
+
+        // Voltar status para pendente
+        StockMovement::updateById($id, [
+            'status' => 'pending',
+            'delivered_by' => null,
+            'delivered_at' => null,
+        ]);
+
+        // Notificar sobre a reversão
+        $this->notifyDeliveryRecipient($movement, 'undo_delivered', $userName);
+
+        $this->setFlash('success', 'Entrega desfeita! Estoque revertido. Movimentação voltou para pendente.');
+        $this->redirect('/admin/transport');
+    }
+
+    /**
      * Visualização de pedidos (somente leitura para o Wilton)
      */
     public function orders(): void

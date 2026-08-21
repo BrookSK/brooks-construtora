@@ -235,6 +235,7 @@ class Router
             'transport/bulk-delivered' => ['TransportController', 'bulkDelivered'],
             'transport/detail' => ['TransportController', 'detail'],
             'transport/orders' => ['TransportController', 'orders'],
+            'transport/undo-delivered' => ['TransportController', 'undoDelivered'],
 
             // Controle do Veículo (Saveiro)
             'vehicle' => ['VehicleController', 'index'],

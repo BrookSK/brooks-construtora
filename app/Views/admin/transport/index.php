@@ -209,6 +209,14 @@ ob_start();
                                 <?= $mov['type'] === 'transfer' ? 'Transferência' : 'Saída' ?>
                             </span>
                         </div>
+                        <div class="mt-2">
+                            <form method="POST" action="/admin/transport/undo-delivered" onsubmit="return confirm('Desfazer entrega? O estoque será revertido.')">
+                                <input type="hidden" name="id" value="<?= $mov['id'] ?>">
+                                <button type="submit" class="btn btn-outline-warning btn-sm w-100" style="font-size:0.7rem;">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Desfazer Entrega
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
