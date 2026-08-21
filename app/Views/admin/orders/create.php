@@ -39,6 +39,32 @@
                 </div>
             </div>
 
+            <!-- Urgência e Prazo -->
+            <div class="card mb-3">
+                <div class="card-header"><i class="bi bi-exclamation-triangle"></i> Urgência e Prazo</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label">Urgência *</label>
+                            <select class="form-select" name="urgency" id="urgencySelect" required>
+                                <option value="low">🟢 Baixa</option>
+                                <option value="medium" selected>🟡 Média</option>
+                                <option value="high">🟠 Alta</option>
+                                <option value="critical">🔴 Crítica</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">Prazo (preciso até) *</label>
+                            <input type="date" class="form-control" name="deadline" id="deadlineInput" required min="<?= date('Y-m-d') ?>">
+                            <small class="text-muted d-block mt-1">Data em que você precisa deste material.</small>
+                        </div>
+                    </div>
+                    <div id="deadlineWarning" class="alert alert-warning small mt-2 d-none">
+                        <i class="bi bi-exclamation-triangle-fill"></i> <span id="deadlineWarningText"></span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Upload PDF com IA -->
             <div class="card mb-3">
                 <div class="card-header"><i class="bi bi-file-earmark-pdf"></i> Importar Materiais (opcional)</div>
@@ -721,6 +747,63 @@ document.addEventListener('DOMContentLoaded', function() {
         readOnly: false,
     });
 });
+
+// ─── Validação de Antecedência Mínima ────────────────────────────────────
+<?php if ($minDaysEnabled): ?>
+(function() {
+    const minDays = <?= (int)$minDaysCount ?>;
+    const mode = '<?= $minDaysMode ?>';
+    const message = '<?= addslashes($minDaysMessage) ?>'.replace('{days}', minDays);
+    const deadlineInput = document.getElementById('deadlineInput');
+    const warningDiv = document.getElementById('deadlineWarning');
+    const warningText = document.getElementById('deadlineWarningText');
+
+    function validateDeadline() {
+        if (!deadlineInput || !deadlineInput.value) {
+            warningDiv.classList.add('d-none');
+            return true;
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const deadline = new Date(deadlineInput.value + 'T00:00:00');
+        const diffDays = Math.floor((deadline - today) / 86400000);
+
+        if (diffDays < minDays) {
+            warningDiv.classList.remove('d-none');
+            if (mode === 'block') {
+                warningDiv.className = 'alert alert-danger small mt-2';
+                warningText.textContent = '⛔ ' + message + ' O prazo informado é de apenas ' + diffDays + ' dia(s). Pedido bloqueado.';
+            } else {
+                warningDiv.className = 'alert alert-warning small mt-2';
+                warningText.textContent = '⚠️ ' + message + ' O prazo informado é de apenas ' + diffDays + ' dia(s).';
+            }
+            return mode !== 'block';
+        } else {
+            warningDiv.classList.add('d-none');
+            return true;
+        }
+    }
+
+    if (deadlineInput) {
+        deadlineInput.addEventListener('change', validateDeadline);
+    }
+
+    // Interceptar submit do form
+    const form = document.getElementById('orderForm');
+    if (form) {
+        const originalSubmit = form.onsubmit;
+        form.addEventListener('submit', function(e) {
+            if (!validateDeadline()) {
+                e.preventDefault();
+                e.stopPropagation();
+                deadlineInput.focus();
+                return false;
+            }
+        });
+    }
+})();
+<?php endif; ?>
 </script>
 
 <?php $content = ob_get_clean(); ?>

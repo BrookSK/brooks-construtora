@@ -427,6 +427,27 @@
             </li>
             <?php endif; ?>
 
+            <?php if (\App\Core\Auth::hasPermission('orders')): ?>
+            <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
+                <small class="text-uppercase px-3 opacity-50 nav-section-label" style="font-size:0.65rem; letter-spacing:1px;">Planejamento</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'weekly_materials' ? 'active' : '' ?>" href="/admin/weekly-materials" data-title="Lista Semanal">
+                    <i class="bi bi-calendar-week"></i> <span class="link-text">Lista Semanal</span>
+                </a>
+            </li>
+            <?php endif; ?>
+
+            <?php // Veículo - qualquer usuário logado pode acessar ?>
+            <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
+                <small class="text-uppercase px-3 opacity-50 nav-section-label" style="font-size:0.65rem; letter-spacing:1px;">Veículo</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'vehicle' ? 'active' : '' ?>" href="/admin/vehicle" data-title="Saveiro">
+                    <i class="bi bi-truck-front"></i> <span class="link-text">Saveiro</span>
+                </a>
+            </li>
+
             <?php if (\App\Core\Auth::hasPermission('users')): ?>
             <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
                 <a class="nav-link <?= ($currentPage ?? '') === 'users' ? 'active' : '' ?>" href="/admin/users" data-title="Usuários">

@@ -44,6 +44,12 @@
     <button class="btn btn-sm btn-outline-success filter-btn" data-status="approved">Aprovados</button>
     <button class="btn btn-sm btn-outline-danger filter-btn" data-status="rejected">Rejeitados</button>
     <button class="btn btn-sm btn-outline-dark filter-btn" data-status="cancelled">Cancelados</button>
+    <span class="ms-2 border-start ps-2 d-flex align-items-center gap-1">
+        <small class="text-muted">Ordenar:</small>
+        <button class="btn btn-sm btn-outline-primary sort-btn" data-sort="deadline" title="Ordenar por prazo (mais urgente primeiro)"><i class="bi bi-calendar-event"></i> Prazo</button>
+        <button class="btn btn-sm btn-outline-danger sort-btn" data-sort="urgency" title="Ordenar por urgência (crítica primeiro)"><i class="bi bi-exclamation-triangle"></i> Urgência</button>
+        <button class="btn btn-sm btn-outline-secondary sort-btn" data-sort="date" title="Ordenar por data (mais recente primeiro)"><i class="bi bi-clock"></i> Data</button>
+    </span>
 </div>
 
 <!-- Painel de Filtros Avançados -->
@@ -144,6 +150,16 @@
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <!-- Urgência -->
+                <div class="col-6 col-md-2">
+                    <select id="filterUrgency" class="form-select form-select-sm">
+                        <option value="">Urgência</option>
+                        <option value="critical">🔴 Crítica</option>
+                        <option value="high">🟠 Alta</option>
+                        <option value="medium">🟡 Média</option>
+                        <option value="low">🟢 Baixa</option>
+                    </select>
+                </div>
                 <!-- Limpar -->
                 <div class="col-6 col-md-2 col-lg-1 d-flex align-items-end">
                     <button type="button" id="clearFilters" class="btn btn-sm btn-outline-secondary w-100">
@@ -180,6 +196,8 @@
                         <th>Obra</th>
                         <th>Fornecedor</th>
                         <th>Status</th>
+                        <th>Urgência</th>
+                        <th>Prazo</th>
                         <th>Valor</th>
                         <th>Solicitante</th>
                         <th>Data</th>
@@ -213,6 +231,8 @@
                         data-stock-dispatched="<?= !empty($order['stock_dispatched_at']) ? 'dispatched' : 'not_dispatched' ?>"
                         data-date="<?= date('Y-m-d', strtotime($order['created_at'])) ?>"
                         data-requester="<?= htmlspecialchars($order['created_by_name'] ?? '') ?>"
+                        data-urgency="<?= htmlspecialchars($order['urgency'] ?? 'medium') ?>"
+                        data-deadline="<?= !empty($order['deadline']) ? $order['deadline'] : '' ?>"
                         data-items="<?= htmlspecialchars(strtolower($order['items_names'] ?? '')) ?>"
                         data-search="<?= htmlspecialchars(strtolower(($order['code'] ?? '') . ' ' . ($order['supplier_name'] ?? '') . ' ' . $siteName . ' ' . ($order['created_by_name'] ?? '') . ' ' . ($order['description'] ?? ''))) ?>">
                         <td>
@@ -243,6 +263,32 @@
                             <?php endif; ?>
                             <?php if (!empty($order['stock_dispatched_at'])): ?>
                             <span class="badge ms-1" style="font-size:0.6rem; background-color:#607d8b;" title="Saiu do estoque — <?= htmlspecialchars($order['stock_dispatched_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['stock_dispatched_at'])) ?>"><i class="bi bi-box-arrow-right"></i> Saiu Estoque</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php
+                            $urgencyLabels = ['low' => ['Baixa','success'], 'medium' => ['Média','warning'], 'high' => ['Alta','orange'], 'critical' => ['Crítica','danger']];
+                            $urg = $urgencyLabels[$order['urgency'] ?? 'medium'] ?? ['Média','warning'];
+                            ?>
+                            <span class="badge bg-<?= $urg[1] ?>"><?= $urg[0] ?></span>
+                        </td>
+                        <td>
+                            <?php if (!empty($order['deadline'])): ?>
+                            <?php
+                            $deadlineDate = $order['deadline'];
+                            $daysLeft = (int) ((strtotime($deadlineDate) - strtotime('today')) / 86400);
+                            $deadlineClass = $daysLeft < 0 ? 'text-danger fw-bold' : ($daysLeft <= 2 ? 'text-warning fw-bold' : 'text-muted');
+                            ?>
+                            <small class="<?= $deadlineClass ?>"><?= date('d/m/Y', strtotime($deadlineDate)) ?></small>
+                            <?php if ($daysLeft < 0): ?>
+                            <br><span class="badge bg-danger" style="font-size:0.6rem;">Atrasado</span>
+                            <?php elseif ($daysLeft === 0): ?>
+                            <br><span class="badge bg-warning text-dark" style="font-size:0.6rem;">Hoje</span>
+                            <?php elseif ($daysLeft <= 2): ?>
+                            <br><span class="badge bg-warning text-dark" style="font-size:0.6rem;"><?= $daysLeft ?>d</span>
+                            <?php endif; ?>
+                            <?php else: ?>
+                            <small class="text-muted">-</small>
                             <?php endif; ?>
                         </td>
                         <td>
@@ -292,6 +338,8 @@
        data-stock-dispatched="<?= !empty($order['stock_dispatched_at']) ? 'dispatched' : 'not_dispatched' ?>"
        data-date="<?= date('Y-m-d', strtotime($order['created_at'])) ?>"
        data-requester="<?= htmlspecialchars($order['created_by_name'] ?? '') ?>"
+       data-urgency="<?= htmlspecialchars($order['urgency'] ?? 'medium') ?>"
+       data-deadline="<?= !empty($order['deadline']) ? $order['deadline'] : '' ?>"
        data-items="<?= htmlspecialchars(strtolower($order['items_names'] ?? '')) ?>"
        data-search="<?= htmlspecialchars(strtolower(($order['code'] ?? '') . ' ' . ($order['supplier_name'] ?? '') . ' ' . $siteName . ' ' . ($order['created_by_name'] ?? '') . ' ' . ($order['description'] ?? ''))) ?>">
         <div class="card mb-2">
@@ -339,6 +387,20 @@
                     <span class="text-muted" style="font-size:0.7rem;"><?= htmlspecialchars($order['created_by_name'] ?? '') ?></span>
                     <span class="text-muted" style="font-size:0.7rem;"><?= date('d/m/Y', strtotime($order['created_at'])) ?></span>
                 </div>
+                <div class="d-flex justify-content-between align-items-center mt-1">
+                    <?php
+                    $urgencyLabels = ['low' => ['🟢 Baixa','success'], 'medium' => ['🟡 Média','warning'], 'high' => ['🟠 Alta','orange'], 'critical' => ['🔴 Crítica','danger']];
+                    $urg = $urgencyLabels[$order['urgency'] ?? 'medium'] ?? ['🟡 Média','warning'];
+                    ?>
+                    <span class="badge bg-<?= $urg[1] ?>" style="font-size:0.65rem;"><?= $urg[0] ?></span>
+                    <?php if (!empty($order['deadline'])): ?>
+                    <?php $daysLeft = (int) ((strtotime($order['deadline']) - strtotime('today')) / 86400); ?>
+                    <span style="font-size:0.7rem;" class="<?= $daysLeft < 0 ? 'text-danger fw-bold' : ($daysLeft <= 2 ? 'text-warning fw-bold' : 'text-muted') ?>">
+                        <i class="bi bi-calendar-event"></i> <?= date('d/m', strtotime($order['deadline'])) ?>
+                        <?= $daysLeft < 0 ? '(atrasado)' : ($daysLeft === 0 ? '(hoje)' : ($daysLeft <= 2 ? '(' . $daysLeft . 'd)' : '')) ?>
+                    </span>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </a>
@@ -363,6 +425,7 @@
     const dateFrom = document.getElementById('filterDateFrom');
     const dateTo = document.getElementById('filterDateTo');
     const requesterSelect = document.getElementById('filterRequester');
+    const urgencySelect = document.getElementById('filterUrgency');
     const clearBtn = document.getElementById('clearFilters');
     const countEl = document.getElementById('filteredCount');
 
@@ -386,7 +449,8 @@
                 purchased: params.get('purchased') || '',
                 from: params.get('from') || '',
                 to: params.get('to') || '',
-                requester: params.get('requester') || ''
+                requester: params.get('requester') || '',
+                urgency: params.get('urgency') || ''
             };
         }
 
@@ -415,9 +479,10 @@
         if (data.from && dateFrom) dateFrom.value = data.from;
         if (data.to && dateTo) dateTo.value = data.to;
         if (data.requester && requesterSelect) requesterSelect.value = data.requester;
+        if (data.urgency && urgencySelect) urgencySelect.value = data.urgency;
 
         // Abrir painel se algum filtro avançado estiver ativo
-        if (data.q || data.material || data.supplier || data.site || data.type || data.financial || data.purchased || data.stockDispatched || data.from || data.to || data.requester) {
+        if (data.q || data.material || data.supplier || data.site || data.type || data.financial || data.purchased || data.stockDispatched || data.from || data.to || data.requester || data.urgency) {
             const panel = document.getElementById('advancedFilters');
             if (panel && typeof bootstrap !== 'undefined') {
                 new bootstrap.Collapse(panel, { show: true });
@@ -441,7 +506,8 @@
             stockDispatched: stockDispatchedSelect ? stockDispatchedSelect.value : '',
             from: dateFrom ? dateFrom.value : '',
             to: dateTo ? dateTo.value : '',
-            requester: requesterSelect ? requesterSelect.value : ''
+            requester: requesterSelect ? requesterSelect.value : '',
+            urgency: urgencySelect ? urgencySelect.value : ''
         };
 
         // Salvar no sessionStorage
@@ -460,6 +526,7 @@
         if (data.from) params.set('from', data.from);
         if (data.to) params.set('to', data.to);
         if (data.requester) params.set('requester', data.requester);
+        if (data.urgency) params.set('urgency', data.urgency);
 
         const qs = params.toString();
         const newUrl = window.location.pathname + (qs ? '?' + qs : '');
@@ -498,6 +565,8 @@
             if (show && from && row.dataset.date < from) show = false;
             if (show && to && row.dataset.date > to) show = false;
             if (show && requester && row.dataset.requester !== requester) show = false;
+            const urgency = urgencySelect ? urgencySelect.value : '';
+            if (show && urgency && row.dataset.urgency !== urgency) show = false;
 
             const el = row.closest('tr') || row;
             el.style.display = show ? '' : 'none';
@@ -530,6 +599,7 @@
     if (dateFrom) dateFrom.addEventListener('change', applyFilters);
     if (dateTo) dateTo.addEventListener('change', applyFilters);
     if (requesterSelect) requesterSelect.addEventListener('change', applyFilters);
+    if (urgencySelect) urgencySelect.addEventListener('change', applyFilters);
 
     // Clear
     if (clearBtn) {
@@ -545,6 +615,7 @@
             if (dateFrom) dateFrom.value = '';
             if (dateTo) dateTo.value = '';
             if (requesterSelect) requesterSelect.value = '';
+            if (urgencySelect) urgencySelect.value = '';
             statusBtns.forEach(b => b.classList.remove('active'));
             statusBtns[0].classList.add('active');
             activeStatus = 'all';
@@ -561,6 +632,48 @@
             collapseEl.addEventListener('hide.bs.collapse', () => toggle.classList.add('collapsed'));
             toggle.classList.add('collapsed');
         }
+    }
+
+    // Ordenação
+    const urgencyOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    const sortBtns = document.querySelectorAll('.sort-btn');
+    let currentSort = '';
+
+    sortBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const sort = this.dataset.sort;
+            sortBtns.forEach(b => b.classList.remove('active'));
+            if (currentSort === sort) {
+                currentSort = '';
+            } else {
+                currentSort = sort;
+                this.classList.add('active');
+            }
+            sortRows();
+        });
+    });
+
+    function sortRows() {
+        const tbody = document.querySelector('.table tbody');
+        if (!tbody) return;
+        const trs = Array.from(tbody.querySelectorAll('tr.order-row'));
+
+        if (!currentSort) {
+            // Reset: ordem original (por data desc)
+            trs.sort((a, b) => (b.dataset.date || '').localeCompare(a.dataset.date || ''));
+        } else if (currentSort === 'urgency') {
+            trs.sort((a, b) => (urgencyOrder[a.dataset.urgency] ?? 2) - (urgencyOrder[b.dataset.urgency] ?? 2));
+        } else if (currentSort === 'deadline') {
+            trs.sort((a, b) => {
+                const da = a.dataset.deadline || '9999-99-99';
+                const db = b.dataset.deadline || '9999-99-99';
+                return da.localeCompare(db);
+            });
+        } else if (currentSort === 'date') {
+            trs.sort((a, b) => (b.dataset.date || '').localeCompare(a.dataset.date || ''));
+        }
+
+        trs.forEach(tr => tbody.appendChild(tr));
     }
 
     // Inicializar

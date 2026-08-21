@@ -181,6 +181,33 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     </div>
                     <?php endif; ?>
                 </div>
+                <?php
+                $urgencyLabels = ['low' => ['🟢 Baixa','success'], 'medium' => ['🟡 Média','warning'], 'high' => ['🟠 Alta','orange'], 'critical' => ['🔴 Crítica','danger']];
+                $urg = $urgencyLabels[$order['urgency'] ?? 'medium'] ?? ['🟡 Média','warning'];
+                ?>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-6 mb-2">
+                        <small class="text-muted d-block"><i class="bi bi-exclamation-triangle"></i> Urgência</small>
+                        <span class="badge bg-<?= $urg[1] ?>"><?= $urg[0] ?></span>
+                    </div>
+                    <div class="col-sm-6 mb-2">
+                        <small class="text-muted d-block"><i class="bi bi-calendar-event"></i> Prazo</small>
+                        <?php if (!empty($order['deadline'])): ?>
+                        <?php $daysLeft = (int) ((strtotime($order['deadline']) - strtotime('today')) / 86400); ?>
+                        <strong class="<?= $daysLeft < 0 ? 'text-danger' : ($daysLeft <= 2 ? 'text-warning' : '') ?>"><?= date('d/m/Y', strtotime($order['deadline'])) ?></strong>
+                        <?php if ($daysLeft < 0): ?>
+                        <span class="badge bg-danger ms-1">Atrasado</span>
+                        <?php elseif ($daysLeft === 0): ?>
+                        <span class="badge bg-warning text-dark ms-1">Hoje</span>
+                        <?php elseif ($daysLeft <= 2): ?>
+                        <span class="badge bg-warning text-dark ms-1"><?= $daysLeft ?> dia(s)</span>
+                        <?php endif; ?>
+                        <?php else: ?>
+                        <span class="text-muted">Não definido</span>
+                        <?php endif; ?>
+                    </div>
+                </div>
                 <?php if (!empty($order['description'])): ?>
                 <hr>
                 <small class="text-muted d-block"><i class="bi bi-chat-text"></i> Observações do Pedido</small>

@@ -65,6 +65,26 @@
                     <strong class="text-success fs-5">R$ <?= number_format($order['total_estimated'] ?? 0, 2, ',', '.') ?></strong>
                 </div>
             </div>
+            <?php
+            $urgencyLabels = ['low' => ['🟢 Baixa','success'], 'medium' => ['🟡 Média','warning'], 'high' => ['🟠 Alta','orange'], 'critical' => ['🔴 Crítica','danger']];
+            $urg = $urgencyLabels[$order['urgency'] ?? 'medium'] ?? ['🟡 Média','warning'];
+            ?>
+            <div class="row mt-2">
+                <div class="col-md-3">
+                    <small class="text-muted d-block">Urgência</small>
+                    <span class="badge bg-<?= $urg[1] ?>"><?= $urg[0] ?></span>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted d-block">Prazo</small>
+                    <?php if (!empty($order['deadline'])): ?>
+                    <?php $daysLeft = (int) ((strtotime($order['deadline']) - strtotime('today')) / 86400); ?>
+                    <strong class="<?= $daysLeft < 0 ? 'text-danger' : ($daysLeft <= 2 ? 'text-warning' : '') ?>"><?= date('d/m/Y', strtotime($order['deadline'])) ?></strong>
+                    <?php if ($daysLeft < 0): ?><span class="badge bg-danger ms-1">Atrasado</span><?php endif; ?>
+                    <?php else: ?>
+                    <span class="text-muted">-</span>
+                    <?php endif; ?>
+                </div>
+            </div>
             <hr class="my-3">
             <div class="row">
                 <div class="col-md-6">

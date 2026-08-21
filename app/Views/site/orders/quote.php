@@ -107,6 +107,22 @@
                 <?php endif; ?>
             </div>
 
+            <?php if (!empty($order['urgency']) || !empty($order['deadline'])): ?>
+            <div class="card-body py-2 border-bottom bg-light">
+                <div class="d-flex flex-wrap gap-3 align-items-center small">
+                    <?php
+                    $urgencyLabels = ['low' => ['🟢 Baixa','success'], 'medium' => ['🟡 Média','warning'], 'high' => ['🟠 Alta','orange'], 'critical' => ['🔴 Crítica','danger']];
+                    $urg = $urgencyLabels[$order['urgency'] ?? 'medium'] ?? ['🟡 Média','warning'];
+                    ?>
+                    <span><i class="bi bi-exclamation-triangle"></i> <strong>Urgência:</strong> <span class="badge bg-<?= $urg[1] ?>"><?= $urg[0] ?></span></span>
+                    <?php if (!empty($order['deadline'])): ?>
+                    <?php $daysLeft = (int) ((strtotime($order['deadline']) - strtotime('today')) / 86400); ?>
+                    <span><i class="bi bi-calendar-event"></i> <strong>Prazo:</strong> <span class="<?= $daysLeft < 0 ? 'text-danger fw-bold' : ($daysLeft <= 2 ? 'text-warning fw-bold' : '') ?>"><?= date('d/m/Y', strtotime($order['deadline'])) ?><?= $daysLeft < 0 ? ' (atrasado)' : ($daysLeft === 0 ? ' (hoje)' : ($daysLeft <= 2 ? ' (' . $daysLeft . 'd)' : '')) ?></span></span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Áudios (posição topo - visível imediatamente) -->
             <div class="card-body py-3 border-bottom">
                 <h6 class="mb-2"><i class="bi bi-mic-fill text-danger"></i> Áudios do Pedido</h6>

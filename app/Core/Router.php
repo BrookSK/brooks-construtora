@@ -234,6 +234,19 @@ class Router
             'transport/bulk-delivered' => ['TransportController', 'bulkDelivered'],
             'transport/detail' => ['TransportController', 'detail'],
             'transport/orders' => ['TransportController', 'orders'],
+
+            // Controle do Veículo (Saveiro)
+            'vehicle' => ['VehicleController', 'index'],
+            'vehicle/pickup' => ['VehicleController', 'pickup'],
+            'vehicle/return' => ['VehicleController', 'returnVehicle'],
+
+            // Lista Semanal de Materiais
+            'weekly-materials' => ['WeeklyMaterialController', 'index'],
+            'weekly-materials/week' => ['WeeklyMaterialController', 'week'],
+            'weekly-materials/generate' => ['WeeklyMaterialController', 'generate'],
+            'weekly-materials/store-manager' => ['WeeklyMaterialController', 'storeManager'],
+            'weekly-materials/toggle-manager' => ['WeeklyMaterialController', 'toggleManager'],
+            'weekly-materials/delete-manager' => ['WeeklyMaterialController', 'deleteManager'],
         ];
 
         $path = implode('/', $segments);
@@ -384,6 +397,10 @@ class Router
             'pedido/upload-audio' => ['PurchaseOrderController', 'uploadAudioPublic'],
             'pedido/delete-audio' => ['PurchaseOrderController', 'deleteAudioPublic'],
             'pedido/list-audios' => ['PurchaseOrderController', 'listAudiosPublic'],
+
+            // Lista Semanal de Materiais (público)
+            'lista-semanal' => ['WeeklyMaterialController', 'form'],
+            'lista-semanal/enviar' => ['WeeklyMaterialController', 'submit'],
 
             // PIN Auth
             'pin/login' => ['PinAuthController', 'login'],

@@ -104,6 +104,43 @@
         </div>
     </div>
 
+    <!-- Antecedência Mínima -->
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-calendar-check"></i> <strong>Antecedência Mínima (Prazo)</strong></div>
+        <div class="card-body">
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" name="orders_min_days_enabled" value="1" id="minDaysEnabled" <?= ($settings['orders_min_days_enabled'] ?? '0') === '1' ? 'checked' : '' ?>>
+                <label class="form-check-label fw-bold" for="minDaysEnabled">Ativar validação de antecedência mínima</label>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <label class="form-label small">Dias mínimos de antecedência</label>
+                    <input type="number" class="form-control form-control-sm" name="orders_min_days_count" value="<?= htmlspecialchars($settings['orders_min_days_count'] ?? '3') ?>" min="1" max="60">
+                    <small class="text-muted">Ex: 3 = pedido precisa ter prazo de no mínimo 3 dias a partir de hoje</small>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Modo</label>
+                    <select class="form-select form-select-sm" name="orders_min_days_mode">
+                        <option value="warn" <?= ($settings['orders_min_days_mode'] ?? 'warn') === 'warn' ? 'selected' : '' ?>>Apenas avisar</option>
+                        <option value="block" <?= ($settings['orders_min_days_mode'] ?? 'warn') === 'block' ? 'selected' : '' ?>>Bloquear pedido</option>
+                    </select>
+                    <small class="text-muted"><strong>Avisar:</strong> mostra alerta mas deixa criar. <strong>Bloquear:</strong> impede a criação.</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small">Mensagem personalizada</label>
+                    <input type="text" class="form-control form-control-sm" name="orders_min_days_message" value="<?= htmlspecialchars($settings['orders_min_days_message'] ?? 'Certifique-se de fazer pedidos com antecedência mínima de {days} dias.') ?>" placeholder="Certifique-se de fazer pedidos com antecedência mínima de {days} dias.">
+                    <small class="text-muted">Use <code>{days}</code> para inserir o número de dias configurado.</small>
+                </div>
+            </div>
+
+            <p class="text-muted small mb-0">
+                <strong>Avisar:</strong> O solicitante verá um alerta amarelo ao criar o pedido se o prazo for menor que o mínimo, mas poderá continuar.<br>
+                <strong>Bloquear:</strong> Se o prazo for menor que o mínimo, o pedido não poderá ser criado. O botão de envio ficará desabilitado.
+            </p>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Fase 1: Cotação -->
         <div class="col-12 col-lg-3 mb-3">

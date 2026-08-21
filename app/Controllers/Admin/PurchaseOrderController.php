@@ -97,6 +97,10 @@ class PurchaseOrderController extends Controller
             'constructionSites' => $constructionSites,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
+            'minDaysEnabled' => Setting::get('orders_min_days_enabled', '0') === '1',
+            'minDaysCount' => (int) Setting::get('orders_min_days_count', '3'),
+            'minDaysMode' => Setting::get('orders_min_days_mode', 'warn'),
+            'minDaysMessage' => Setting::get('orders_min_days_message', 'Certifique-se de fazer pedidos com antecedência mínima de {days} dias.'),
         ]);
     }
 
@@ -119,6 +123,22 @@ class PurchaseOrderController extends Controller
             $this->setFlash('error', 'Adicione pelo menos um item ao pedido.');
             $this->redirect('/admin/orders/create');
             return;
+        }
+
+        // Validar antecedência mínima (modo block)
+        $minDaysEnabled = Setting::get('orders_min_days_enabled', '0') === '1';
+        $minDaysMode = Setting::get('orders_min_days_mode', 'warn');
+        if ($minDaysEnabled && $minDaysMode === 'block') {
+            $minDaysCount = (int) Setting::get('orders_min_days_count', '3');
+            $deadline = $this->input('deadline', '');
+            if (!empty($deadline)) {
+                $daysLeft = (int) ((strtotime($deadline) - strtotime('today')) / 86400);
+                if ($daysLeft < $minDaysCount) {
+                    $this->setFlash('error', "Prazo insuficiente. O pedido precisa ter antecedência mínima de {$minDaysCount} dias. Prazo informado: {$daysLeft} dia(s).");
+                    $this->redirect('/admin/orders/create');
+                    return;
+                }
+            }
         }
 
         // Validar quantidade mínima de cada item (>= 0.01)
@@ -145,6 +165,8 @@ class PurchaseOrderController extends Controller
             'supplier_id' => null,
             'status' => 'pending_quote',
             'description' => $description,
+            'urgency' => in_array($this->input('urgency'), ['low', 'medium', 'high', 'critical']) ? $this->input('urgency') : 'medium',
+            'deadline' => !empty($this->input('deadline')) ? $this->input('deadline') : null,
             'created_by' => Auth::id(),
             'created_by_name' => Auth::user()['name'],
             'quote_token' => $quoteToken,
@@ -2317,6 +2339,15 @@ class PurchaseOrderController extends Controller
             'orders_require_pin_login',
             'orders_require_transfer_approval',
             'orders_notify_requester_delivery',
+            'orders_min_days_enabled',
+            'orders_min_days_count',
+            'orders_min_days_mode',
+            'orders_min_days_message',
+            'orders_weekly_materials_webhook',
+            'orders_weekly_materials_emails',
+            'orders_weekly_materials_admin_webhook',
+            'orders_weekly_materials_admin_phone',
+            'orders_weekly_materials_admin_name',
             'spare_items_weekly_budget',
         ];
 
@@ -2339,6 +2370,9 @@ class PurchaseOrderController extends Controller
         }
         if (!isset($_POST['orders_notify_requester_delivery'])) {
             $data['orders_notify_requester_delivery'] = '0';
+        }
+        if (!isset($_POST['orders_min_days_enabled'])) {
+            $data['orders_min_days_enabled'] = '0';
         }
 
         Setting::setMultiple($data);
