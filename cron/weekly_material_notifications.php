@@ -68,7 +68,7 @@ if ($action === 'notify') {
 
         // Enviar via webhook (WhatsApp)
         if ($webhookUrl && !empty($req['manager_phone'])) {
-            NotificationService::sendWebhook($webhookUrl, [
+            NotificationService::queueWebhook($webhookUrl, [
                 'phone' => $req['manager_phone'],
                 'name' => $req['manager_name'],
                 'message' => $message,
@@ -123,7 +123,7 @@ if ($action === 'notify') {
 
         // Webhook pro gerente
         if ($webhookUrl && !empty($req['manager_phone'])) {
-            NotificationService::sendWebhook($webhookUrl, [
+            NotificationService::queueWebhook($webhookUrl, [
                 'phone' => $req['manager_phone'],
                 'name' => $req['manager_name'],
                 'message' => $message,
@@ -154,7 +154,7 @@ if ($action === 'notify') {
             . implode("\n", array_map(fn($n) => "❌ {$n}", $pendingNames))
             . "\n\nSemana: " . date('d/m/Y', strtotime($nextWeek));
 
-        NotificationService::sendWebhook($adminWebhook, [
+        NotificationService::queueWebhook($adminWebhook, [
             'phone' => $adminPhone,
             'name' => $adminName ?: 'Admin',
             'message' => $adminMessage,

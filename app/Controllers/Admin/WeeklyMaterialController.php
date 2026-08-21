@@ -120,7 +120,7 @@ class WeeklyMaterialController extends Controller
                 . "Obrigado!";
 
             if ($webhookUrl && !empty($req['manager_phone'])) {
-                \App\Services\NotificationService::sendWebhook($webhookUrl, [
+                \App\Services\NotificationService::queueWebhook($webhookUrl, [
                     'phone' => $req['manager_phone'],
                     'name' => $req['manager_name'],
                     'message' => $message,
@@ -179,7 +179,7 @@ class WeeklyMaterialController extends Controller
                 . "Por favor, preencha o mais rápido possível:\n{$formUrl}";
 
             if ($webhookUrl && !empty($req['manager_phone'])) {
-                \App\Services\NotificationService::sendWebhook($webhookUrl, [
+                \App\Services\NotificationService::queueWebhook($webhookUrl, [
                     'phone' => $req['manager_phone'],
                     'name' => $req['manager_name'],
                     'message' => $message,
@@ -197,7 +197,7 @@ class WeeklyMaterialController extends Controller
                 . implode("\n", array_map(fn($n) => "❌ {$n}", $pendingNames))
                 . "\n\nSemana: " . date('d/m/Y', strtotime($nextWeek));
 
-            \App\Services\NotificationService::sendWebhook($adminWebhook, [
+            \App\Services\NotificationService::queueWebhook($adminWebhook, [
                 'phone' => $adminPhone,
                 'name' => $adminName ?: 'Admin',
                 'message' => $adminMessage,
