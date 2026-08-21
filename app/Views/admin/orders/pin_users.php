@@ -98,7 +98,7 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
             <div class="table-responsive">
                 <table class="table table-sm mb-0" style="font-size:0.8rem;">
                     <thead class="table-light">
-                        <tr><th>Nome</th><th>PIN</th><th>Permissão</th><th>Telefone</th><th>E-mail</th><th>Último login</th><th></th></tr>
+                        <tr><th>Nome</th><th>PIN</th><th>Permissão</th><th>Telefone</th><th>E-mail</th><th class="text-center">Gerente</th><th>Último login</th><th></th></tr>
                     </thead>
                     <tbody>
                     <?php foreach ($users as $u): ?>
@@ -138,6 +138,16 @@ $roleColors = ['buyer'=>'primary','quoter'=>'warning','approver'=>'info','paymen
                                     <button type="submit" class="btn btn-outline-danger p-0 px-1" title="Remover e-mail" onclick="this.form.querySelector('input[name=email]').value=''"><i class="bi bi-x-lg"></i></button>
                                     <?php endif; ?>
                                 </div>
+                            </form>
+                        </td>
+                        <td class="text-center">
+                            <form method="POST" action="/admin/orders/update-pin-user" class="d-inline">
+                                <input type="hidden" name="id" value="<?= $u['id'] ?>">
+                                <input type="hidden" name="field" value="is_weekly_manager">
+                                <input type="hidden" name="is_weekly_manager" value="<?= empty($u['is_weekly_manager']) ? '1' : '0' ?>">
+                                <button type="submit" class="btn btn-sm p-0 px-1 <?= !empty($u['is_weekly_manager']) ? 'btn-success' : 'btn-outline-secondary' ?>" title="<?= !empty($u['is_weekly_manager']) ? 'É gerente semanal' : 'Marcar como gerente' ?>">
+                                    <i class="bi bi-<?= !empty($u['is_weekly_manager']) ? 'check-circle-fill' : 'circle' ?>"></i>
+                                </button>
                             </form>
                         </td>
                         <td><small><?= $u['last_login_at'] ? date('d/m/Y H:i', strtotime($u['last_login_at'])) : 'Nunca' ?></small></td>

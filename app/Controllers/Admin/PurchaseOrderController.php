@@ -4178,6 +4178,16 @@ class PurchaseOrderController extends Controller
     {
         if (!$this->isPost()) { $this->redirect('/admin/orders/pin-users'); return; }
         $id = (int) $this->input('id');
+        $field = $this->input('field', 'role');
+
+        if ($field === 'is_weekly_manager') {
+            $value = (int) $this->input('is_weekly_manager', 0);
+            Database::update('pin_users', ['is_weekly_manager' => $value], 'id = ?', [$id]);
+            $this->setFlash('success', $value ? 'Marcado como gerente semanal.' : 'Removido de gerente semanal.');
+            $this->redirect('/admin/orders/pin-users');
+            return;
+        }
+
         $role = $this->input('role', 'all');
         $validRoles = ['buyer', 'quoter', 'approver', 'payment', 'delivery', 'epi', 'stock', 'all'];
         if (!in_array($role, $validRoles)) $role = 'all';

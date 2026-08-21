@@ -23,11 +23,9 @@ class WeeklyMaterialRequest extends Model
     public static function findByToken(string $token): ?array
     {
         return Database::fetch(
-            "SELECT wmr.*, wm.name as manager_name, wm.phone as manager_phone, wm.email as manager_email,
-                    cs.name as construction_site_name
+            "SELECT wmr.*, pu.name as manager_name, pu.phone as manager_phone, pu.email as manager_email
              FROM weekly_material_requests wmr
-             JOIN weekly_material_managers wm ON wmr.manager_id = wm.id
-             LEFT JOIN construction_sites cs ON wm.construction_site_id = cs.id
+             JOIN pin_users pu ON wmr.manager_id = pu.id
              WHERE wmr.token = ?",
             [$token]
         );
@@ -39,13 +37,11 @@ class WeeklyMaterialRequest extends Model
     public static function getByWeek(string $weekStart): array
     {
         return Database::fetchAll(
-            "SELECT wmr.*, wm.name as manager_name, wm.phone as manager_phone, wm.email as manager_email,
-                    cs.name as construction_site_name, cs.code as construction_site_code
+            "SELECT wmr.*, pu.name as manager_name, pu.phone as manager_phone, pu.email as manager_email
              FROM weekly_material_requests wmr
-             JOIN weekly_material_managers wm ON wmr.manager_id = wm.id
-             LEFT JOIN construction_sites cs ON wm.construction_site_id = cs.id
+             JOIN pin_users pu ON wmr.manager_id = pu.id
              WHERE wmr.week_start = ?
-             ORDER BY wm.name ASC",
+             ORDER BY pu.name ASC",
             [$weekStart]
         );
     }
@@ -68,15 +64,17 @@ class WeeklyMaterialRequest extends Model
     }
 
     /**
-     * Criar registros da semana para todos os gerentes ativos
+     * Criar registros da semana para todos os gerentes ativos (pin_users com is_weekly_manager=1)
      */
     public static function createWeekRecords(string $weekStart): int
     {
-        $managers = WeeklyMaterialManager::allActive();
+        $managers = Database::fetchAll(
+            "SELECT id, name, phone, email FROM pin_users WHERE active = 1 AND is_weekly_manager = 1 ORDER BY name ASC"
+        );
         $created = 0;
 
         foreach ($managers as $manager) {
-            // Verificar se já existe
+            // Verificar se já existe (usando manager_id = pin_user.id)
             $existing = Database::fetch(
                 "SELECT id FROM weekly_material_requests WHERE manager_id = ? AND week_start = ?",
                 [$manager['id'], $weekStart]
