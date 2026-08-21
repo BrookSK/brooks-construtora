@@ -122,21 +122,39 @@
         <div class="modal-content">
             <form method="POST" action="/admin/weekly-materials/store-manager">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-person-plus"></i> Cadastrar Gerente</h5>
+                    <h5 class="modal-title"><i class="bi bi-person-plus"></i> Adicionar Gerente</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- Selecionar de usuários PIN existentes -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Selecionar usuário cadastrado</label>
+                        <select class="form-select" id="pinUserSelect" onchange="fillFromPinUser(this)">
+                            <option value="">-- Selecione um usuário PIN ou preencha manualmente --</option>
+                            <?php
+                            $pinUsers = \App\Models\PinUser::all('name ASC');
+                            foreach ($pinUsers as $pu):
+                                if (empty($pu['active'])) continue;
+                            ?>
+                            <option value="<?= $pu['id'] ?>" data-name="<?= htmlspecialchars($pu['name']) ?>" data-phone="<?= htmlspecialchars($pu['phone'] ?? '') ?>" data-email="<?= htmlspecialchars($pu['email'] ?? '') ?>">
+                                <?= htmlspecialchars($pu['name']) ?> <?= !empty($pu['phone']) ? '(' . $pu['phone'] . ')' : '' ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted">Selecione para preencher automaticamente os dados abaixo.</small>
+                    </div>
+                    <hr>
                     <div class="mb-3">
                         <label class="form-label">Nome *</label>
-                        <input type="text" class="form-control" name="name" required placeholder="Nome completo">
+                        <input type="text" class="form-control" name="name" id="managerName" required placeholder="Nome completo">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Telefone</label>
-                        <input type="text" class="form-control" name="phone" placeholder="5511999999999">
+                        <input type="text" class="form-control" name="phone" id="managerPhone" placeholder="5511999999999">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Email</label>
-                        <input type="email" class="form-control" name="email" placeholder="email@empresa.com">
+                        <input type="email" class="form-control" name="email" id="managerEmail" placeholder="email@empresa.com">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Obra (opcional)</label>
@@ -160,6 +178,16 @@
         </div>
     </div>
 </div>
+
+<script>
+function fillFromPinUser(select) {
+    const opt = select.options[select.selectedIndex];
+    if (!opt.value) return;
+    document.getElementById('managerName').value = opt.dataset.name || '';
+    document.getElementById('managerPhone').value = opt.dataset.phone || '';
+    document.getElementById('managerEmail').value = opt.dataset.email || '';
+}
+</script>
 
 <?php $content = ob_get_clean(); ?>
 <?php require ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>
