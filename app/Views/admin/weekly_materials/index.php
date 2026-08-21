@@ -9,7 +9,7 @@ $weeklyManagers = \App\Core\Database::fetchAll("SELECT id, name, phone, email FR
     <div>
         <span class="badge bg-secondary"><?= count($weeklyManagers) ?> gerente(s) ativo(s)</span>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
         <a href="/admin/orders/pin-users" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-people"></i> Gerenciar Gerentes
         </a>
@@ -17,6 +17,16 @@ $weeklyManagers = \App\Core\Database::fetchAll("SELECT id, name, phone, email FR
             <input type="hidden" name="week_start" value="<?= \App\Models\WeeklyMaterialRequest::nextWeekStart() ?>">
             <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Gerar registros para a semana de <?= date('d/m/Y', strtotime(\App\Models\WeeklyMaterialRequest::nextWeekStart())) ?>?')">
                 <i class="bi bi-plus-lg"></i> Gerar Semana
+            </button>
+        </form>
+        <form method="POST" action="/admin/weekly-materials/send-now" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Enviar notificação AGORA para todos os gerentes pendentes?')">
+                <i class="bi bi-send"></i> Enviar Agora
+            </button>
+        </form>
+        <form method="POST" action="/admin/weekly-materials/send-reminder" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('Enviar COBRANÇA para quem não preencheu?')">
+                <i class="bi bi-bell"></i> Cobrar Pendentes
             </button>
         </form>
     </div>

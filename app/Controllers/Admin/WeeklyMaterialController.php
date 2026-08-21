@@ -90,6 +90,129 @@ class WeeklyMaterialController extends Controller
         $this->redirect('/admin/weekly-materials');
     }
 
+    /**
+     * Enviar notificações manualmente (mesma lógica do cron terça)
+     */
+    public function sendNow(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/weekly-materials');
+            return;
+        }
+
+        // Gerar registros primeiro (se não existem)
+        $nextWeek = WeeklyMaterialRequest::nextWeekStart();
+        WeeklyMaterialRequest::createWeekRecords($nextWeek);
+
+        $requests = WeeklyMaterialRequest::getByWeek($nextWeek);
+        $webhookUrl = Setting::get('orders_weekly_materials_webhook', '');
+        $baseUrl = Setting::get('site_url', ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? ''));
+        $sent = 0;
+
+        foreach ($requests as $req) {
+            if ($req['status'] !== 'pending') continue;
+
+            $formUrl = $baseUrl . '/lista-semanal/' . $req['token'];
+            $message = "Olá {$req['manager_name']}! 📋\n\n"
+                . "Preciso que você envie a lista de materiais que vai precisar na semana de "
+                . date('d/m/Y', strtotime($nextWeek)) . ".\n\n"
+                . "Acesse o link abaixo e preencha:\n{$formUrl}\n\n"
+                . "Obrigado!";
+
+            if ($webhookUrl && !empty($req['manager_phone'])) {
+                \App\Services\NotificationService::sendWebhook($webhookUrl, [
+                    'phone' => $req['manager_phone'],
+                    'name' => $req['manager_name'],
+                    'message' => $message,
+                    'type' => 'weekly_material_request',
+                ]);
+                $sent++;
+            }
+
+            if (!empty($req['manager_email'])) {
+                try {
+                    \App\Services\MailService::send(
+                        $req['manager_email'],
+                        'Lista Semanal de Materiais - Semana ' . date('d/m', strtotime($nextWeek)),
+                        "<p>Olá <strong>{$req['manager_name']}</strong>!</p>"
+                        . "<p>Precisamos que você envie a lista de materiais da semana de " . date('d/m/Y', strtotime($nextWeek)) . ".</p>"
+                        . "<p><a href=\"{$formUrl}\" style=\"background:#3a3b4e; color:#fff; padding:10px 20px; border-radius:5px; text-decoration:none;\">Preencher Lista</a></p>"
+                    );
+                } catch (\Exception $e) {}
+            }
+
+            WeeklyMaterialRequest::updateById($req['id'], ['notified_at' => date('Y-m-d H:i:s')]);
+        }
+
+        $this->setFlash('success', "Notificações enviadas para {$sent} gerente(s).");
+        $this->redirect('/admin/weekly-materials');
+    }
+
+    /**
+     * Enviar cobrança manual (mesma lógica do cron quinta)
+     */
+    public function sendReminder(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/weekly-materials');
+            return;
+        }
+
+        $nextWeek = WeeklyMaterialRequest::nextWeekStart();
+        $requests = WeeklyMaterialRequest::getByWeek($nextWeek);
+        $webhookUrl = Setting::get('orders_weekly_materials_webhook', '');
+        $adminWebhook = Setting::get('orders_weekly_materials_admin_webhook', '');
+        $adminPhone = Setting::get('orders_weekly_materials_admin_phone', '');
+        $adminName = Setting::get('orders_weekly_materials_admin_name', '');
+        $baseUrl = Setting::get('site_url', ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? ''));
+        $pendingNames = [];
+        $sent = 0;
+
+        foreach ($requests as $req) {
+            if ($req['status'] !== 'pending') continue;
+
+            $formUrl = $baseUrl . '/lista-semanal/' . $req['token'];
+            $pendingNames[] = $req['manager_name'];
+
+            $message = "⚠️ {$req['manager_name']}, você ainda NÃO preencheu a lista de materiais da semana de "
+                . date('d/m/Y', strtotime($nextWeek)) . "!\n\n"
+                . "Por favor, preencha o mais rápido possível:\n{$formUrl}";
+
+            if ($webhookUrl && !empty($req['manager_phone'])) {
+                \App\Services\NotificationService::sendWebhook($webhookUrl, [
+                    'phone' => $req['manager_phone'],
+                    'name' => $req['manager_name'],
+                    'message' => $message,
+                    'type' => 'weekly_material_reminder',
+                ]);
+                $sent++;
+            }
+
+            WeeklyMaterialRequest::updateById($req['id'], ['reminder_sent_at' => date('Y-m-d H:i:s')]);
+        }
+
+        // Notificar admin
+        if (!empty($pendingNames) && $adminWebhook && $adminPhone) {
+            $adminMessage = "📋 Lista Semanal — " . count($pendingNames) . " gerente(s) NÃO preencheram:\n\n"
+                . implode("\n", array_map(fn($n) => "❌ {$n}", $pendingNames))
+                . "\n\nSemana: " . date('d/m/Y', strtotime($nextWeek));
+
+            \App\Services\NotificationService::sendWebhook($adminWebhook, [
+                'phone' => $adminPhone,
+                'name' => $adminName ?: 'Admin',
+                'message' => $adminMessage,
+                'type' => 'weekly_material_admin_alert',
+            ]);
+        }
+
+        if (empty($pendingNames)) {
+            $this->setFlash('success', 'Todos os gerentes já preencheram! Nenhuma cobrança necessária.');
+        } else {
+            $this->setFlash('success', "Cobrança enviada para {$sent} gerente(s): " . implode(', ', $pendingNames));
+        }
+        $this->redirect('/admin/weekly-materials');
+    }
+
     // ─── Gerentes ────────────────────────────────────────────────────────────
 
     /**

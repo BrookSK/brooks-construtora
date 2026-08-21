@@ -457,6 +457,46 @@
                 </div>
             </div>
         </div>
+        <!-- Lista Semanal de Materiais -->
+        <div class="col-12 col-lg-3 mb-3">
+            <div class="card h-100 border-primary">
+                <div class="card-header bg-primary bg-opacity-10">
+                    <i class="bi bi-calendar-week text-primary"></i> <strong>Lista Semanal</strong>
+                    <p class="small text-muted mb-0 mt-1">Notificação para gerentes preencherem lista de materiais</p>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label small">E-mails (admin - recebe alertas de quem não preencheu)</label>
+                        <textarea class="form-control form-control-sm" name="orders_weekly_materials_emails" rows="2" placeholder="admin@empresa.com"><?= htmlspecialchars($settings['orders_weekly_materials_emails'] ?? '') ?></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Nome (Admin Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_weekly_materials_admin_name" placeholder="Ex: Gestor" value="<?= htmlspecialchars($settings['orders_weekly_materials_admin_name'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Telefone (Admin Webhook)</label>
+                        <input type="text" class="form-control form-control-sm" name="orders_weekly_materials_admin_phone" placeholder="5511999999999" value="<?= htmlspecialchars($settings['orders_weekly_materials_admin_phone'] ?? '') ?>">
+                        <small class="text-muted">Quem recebe alerta de quem NÃO preencheu</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">URL Webhook (envio para gerentes)</label>
+                        <div class="input-group input-group-sm">
+                            <input type="url" class="form-control" name="orders_weekly_materials_webhook" id="webhook_weekly" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_weekly_materials_webhook'] ?? '') ?>">
+                            <button type="button" class="btn btn-outline-primary" onclick="testWebhook('weekly')" title="Testar"><i class="bi bi-lightning"></i></button>
+                        </div>
+                        <small class="text-muted">Mesmo webhook do WhatsApp. Usado para enviar link de preenchimento + cobranças.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">URL Webhook (admin - alertas)</label>
+                        <div class="input-group input-group-sm">
+                            <input type="url" class="form-control" name="orders_weekly_materials_admin_webhook" id="webhook_weekly_admin" placeholder="https://..." value="<?= htmlspecialchars($settings['orders_weekly_materials_admin_webhook'] ?? '') ?>">
+                            <button type="button" class="btn btn-outline-primary" onclick="testWebhook('weekly_admin')" title="Testar"><i class="bi bi-lightning"></i></button>
+                        </div>
+                        <small class="text-muted">Recebe alerta de quem não preencheu (quinta-feira).</small>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="text-end">

@@ -30,6 +30,9 @@ class WeeklyMaterialController extends Controller
             return;
         }
 
+        // Carregar materiais para autocomplete
+        $materials = \App\Models\Material::allActive();
+
         require ROOT_PATH . '/app/Views/site/weekly_materials/form.php';
     }
 
