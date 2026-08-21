@@ -106,6 +106,29 @@
                 <div class="alert alert-warning small mb-2"><strong>Obs cotação:</strong> <?= nl2br(htmlspecialchars($order['quote_notes'])) ?></div>
                 <?php endif; ?>
 
+                <!-- Áudios (posição principal - visível logo no topo) -->
+                <div class="card mb-3 border-danger border-opacity-50" id="audioCardApproval">
+                    <div class="card-body py-3">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <div class="bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:44px; height:44px;">
+                                <i class="bi bi-mic-fill text-danger" style="font-size:1.3rem;"></i>
+                            </div>
+                            <div>
+                                <strong class="d-block" style="font-size:0.95rem;">Áudios de Observação</strong>
+                                <small class="text-muted">Ouça os áudios do pedido e grave o seu se precisar.</small>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted fw-bold d-block mb-1"><i class="bi bi-headphones"></i> Áudios anteriores</small>
+                            <div id="audio-recorder-previous-top"></div>
+                        </div>
+                        <div>
+                            <small class="text-muted fw-bold d-block mb-1"><i class="bi bi-mic-fill"></i> Gravar seu áudio</small>
+                            <div id="audio-recorder-approval-top"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <?php if (!empty($orderSuppliers)): ?>
                 <!-- Resumo dos fornecedores com detalhes financeiros -->
                 <div class="mb-3">
@@ -544,16 +567,6 @@
                         <textarea class="form-control" name="approval_notes" rows="2" placeholder="Observações (obrigatório em caso de rejeição)"></textarea>
                     </div>
 
-                    <!-- Áudio de Observações -->
-                    <div class="mb-3">
-                        <label class="form-label"><i class="bi bi-headphones"></i> Áudios do Pedido</label>
-                        <div id="audio-recorder-previous-readonly"></div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label"><i class="bi bi-mic-fill"></i> Gravar Áudio (Aprovação)</label>
-                        <div id="audio-recorder-approval"></div>
-                    </div>
-
                     <div class="d-grid gap-2 d-md-flex justify-content-md-center pt-3">
                         <button type="submit" name="action" value="approve" class="btn btn-success btn-lg px-4 px-md-5" onclick="return confirmApproval()">
                             <i class="bi bi-check-circle"></i> Aprovar
@@ -825,7 +838,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Áudios anteriores (solicitante + cotação) read-only
     AudioRecorder.init({
-        container: '#audio-recorder-previous-readonly',
+        container: '#audio-recorder-previous-top',
         listUrl: '/pedido/list-audios',
         stage: 'create',
         token: '<?= htmlspecialchars($token) ?>',
@@ -835,7 +848,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Gravador da aprovação
     AudioRecorder.init({
-        container: '#audio-recorder-approval',
+        container: '#audio-recorder-approval-top',
         uploadUrl: '/pedido/upload-audio',
         deleteUrl: '/pedido/delete-audio',
         listUrl: '/pedido/list-audios',

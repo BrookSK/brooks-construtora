@@ -54,6 +54,23 @@
                 </div>
             </div>
 
+            <!-- Áudio de Observações -->
+            <div class="card mb-3 border-danger border-opacity-50" id="audioCard">
+                <div class="card-body py-3">
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <div class="bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:44px; height:44px;">
+                            <i class="bi bi-mic-fill text-danger" style="font-size:1.3rem;"></i>
+                        </div>
+                        <div>
+                            <strong class="d-block" style="font-size:0.95rem;">Gravar Observação em Áudio</strong>
+                            <small class="text-muted">Toque para gravar. Quem cotar e aprovar vai ouvir.</small>
+                        </div>
+                    </div>
+                    <input type="hidden" name="audio_temp_key" id="audioTempKey" value="">
+                    <div id="audio-recorder-create"></div>
+                </div>
+            </div>
+
             <!-- Itens do pedido -->
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -106,16 +123,6 @@
                 <div class="card-header"><i class="bi bi-chat-left-text"></i> Observações</div>
                 <div class="card-body">
                     <textarea class="form-control" name="description" rows="3" placeholder="Observações adicionais sobre o pedido..."></textarea>
-                </div>
-            </div>
-
-            <!-- Áudio de Observações -->
-            <div class="card mb-3">
-                <div class="card-header"><i class="bi bi-mic-fill"></i> Observações em Áudio</div>
-                <div class="card-body">
-                    <p class="text-muted small mb-2">Grave um áudio para explicar algo que não cabe em texto. Quem fizer a cotação e aprovação vai poder ouvir.</p>
-                    <input type="hidden" name="audio_temp_key" id="audioTempKey" value="">
-                    <div id="audio-recorder-create"></div>
                 </div>
             </div>
         </div>

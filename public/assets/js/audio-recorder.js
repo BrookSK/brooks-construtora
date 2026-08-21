@@ -70,7 +70,7 @@ const AudioRecorder = (function () {
                     <div class="audio-controls mt-2">
                         <div class="d-flex align-items-center gap-2" id="audioRecordArea-${uid}">
                             <button type="button" class="btn btn-outline-danger btn-sm audio-start-btn" title="Gravar áudio">
-                                <i class="bi bi-mic-fill"></i> <span class="d-none d-sm-inline">Gravar Áudio</span>
+                                <i class="bi bi-mic-fill"></i> Toque aqui para gravar áudio
                             </button>
                         </div>
                         <div class="d-none align-items-center gap-2" id="audioRecordingArea-${uid}">

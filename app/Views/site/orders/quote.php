@@ -107,6 +107,27 @@
                 <?php endif; ?>
             </div>
 
+            <!-- Áudios (posição topo - visível imediatamente) -->
+            <div class="card-body py-3 border-bottom">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <div class="bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:40px; height:40px;">
+                        <i class="bi bi-mic-fill text-danger" style="font-size:1.1rem;"></i>
+                    </div>
+                    <div>
+                        <strong class="d-block" style="font-size:0.9rem;">Áudios de Observação</strong>
+                        <small class="text-muted">Ouça os áudios do solicitante e grave o seu.</small>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted fw-bold d-block mb-1"><i class="bi bi-headphones"></i> Do solicitante</small>
+                    <div id="audio-recorder-create-top"></div>
+                </div>
+                <div>
+                    <small class="text-muted fw-bold d-block mb-1"><i class="bi bi-mic-fill"></i> Gravar seu áudio (cotação)</small>
+                    <div id="audio-recorder-quote-top"></div>
+                </div>
+            </div>
+
             <?php if (empty($order['quote_started_at'])): ?>
             <!-- Botão para iniciar cotação (trava edição de itens) -->
             <div class="card-body py-3 border-bottom">
@@ -428,16 +449,6 @@
                     <div class="mt-3">
                         <label class="form-label">Observações da Cotação</label>
                         <textarea class="form-control" name="quote_notes" rows="2" placeholder="Observações sobre preços, prazos, condições de pagamento, etc."></textarea>
-                    </div>
-
-                    <!-- Áudio de Observações -->
-                    <div class="mt-3">
-                        <label class="form-label"><i class="bi bi-headphones"></i> Áudios do Solicitante</label>
-                        <div id="audio-recorder-create-readonly"></div>
-                    </div>
-                    <div class="mt-3">
-                        <label class="form-label"><i class="bi bi-mic-fill"></i> Gravar Áudio (Cotação)</label>
-                        <div id="audio-recorder-quote"></div>
                     </div>
                 </div>
 
@@ -3462,7 +3473,7 @@ async function parseAiForSupplierMap(sid) {
 document.addEventListener('DOMContentLoaded', function() {
     // Áudios do solicitante (read-only)
     AudioRecorder.init({
-        container: '#audio-recorder-create-readonly',
+        container: '#audio-recorder-create-top',
         listUrl: '/pedido/list-audios',
         stage: 'create',
         token: '<?= htmlspecialchars($token) ?>',
@@ -3471,7 +3482,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Gravador da cotação
     AudioRecorder.init({
-        container: '#audio-recorder-quote',
+        container: '#audio-recorder-quote-top',
         uploadUrl: '/pedido/upload-audio',
         deleteUrl: '/pedido/delete-audio',
         listUrl: '/pedido/list-audios',
