@@ -92,7 +92,8 @@ $currentUsage = $stats['current_usage'];
             <p class="mt-2 mb-0">Nenhum registro de uso.</p>
         </div>
         <?php else: ?>
-        <div class="table-responsive">
+        <!-- Desktop: Tabela -->
+        <div class="table-responsive d-none d-md-block">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
@@ -154,6 +155,41 @@ $currentUsage = $stats['current_usage'];
                 </tbody>
             </table>
         </div>
+
+        <!-- Mobile: Cards -->
+        <div class="d-md-none p-2">
+            <?php foreach ($records as $rec): ?>
+            <div class="card mb-2 <?= empty($rec['return_date']) ? 'border-warning' : '' ?>">
+                <div class="card-body py-2 px-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong><?= htmlspecialchars($rec['driver_name']) ?></strong>
+                        <?php if (!empty($rec['return_date'])): ?>
+                        <span class="badge bg-success">Devolvido</span>
+                        <?php else: ?>
+                        <span class="badge bg-warning text-dark">Em uso</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-1" style="font-size:0.75rem;">
+                        <span><i class="bi bi-calendar"></i> <?= date('d/m/Y', strtotime($rec['pickup_date'])) ?> <?= substr($rec['pickup_time'], 0, 5) ?></span>
+                        <span><i class="bi bi-geo-alt"></i> <?= htmlspecialchars($rec['pickup_location']) ?> → <?= htmlspecialchars($rec['destination']) ?></span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-3 mt-1" style="font-size:0.75rem;">
+                        <span><strong>Saída:</strong> <?= number_format($rec['pickup_km'], 0, ',', '.') ?> km</span>
+                        <?php if (!empty($rec['return_km'])): ?>
+                        <span><strong>Devol:</strong> <?= number_format($rec['return_km'], 0, ',', '.') ?> km</span>
+                        <span class="text-success fw-bold"><?= number_format($rec['return_km'] - $rec['pickup_km'], 0, ',', '.') ?> km rodados</span>
+                        <?php endif; ?>
+                    </div>
+                    <?php if (!empty($rec['return_date'])): ?>
+                    <div class="mt-1" style="font-size:0.7rem; color:#6c757d;">
+                        Devolvido <?= date('d/m/Y', strtotime($rec['return_date'])) ?> <?= substr($rec['return_time'], 0, 5) ?> por <?= htmlspecialchars($rec['returned_by'] ?? '') ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
         <?php endif; ?>
     </div>
 </div>

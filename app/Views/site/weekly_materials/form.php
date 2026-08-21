@@ -14,6 +14,11 @@
         .item-row { position: relative; }
         @media (max-width: 576px) {
             .item-row .remove-btn { position: absolute; top: 4px; right: 4px; }
+            .card-body { padding: 0.75rem !important; }
+            .card-header { padding: 0.75rem !important; }
+            .card-header h5 { font-size: 1.1rem; }
+            .form-control, .form-select, .ss-input { font-size: 16px !important; }
+            .btn-lg { font-size: 1rem; padding: 0.75rem 1.5rem; }
         }
     </style>
 </head>
