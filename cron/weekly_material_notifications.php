@@ -43,19 +43,57 @@ $baseUrl = Setting::get('site_url', 'https://brooksconstrutora.com.br');
 echo "[$action] Iniciando às " . date('Y-m-d H:i:s') . "\n";
 
 if ($action === 'notify') {
+    // Permite forçar o disparo (ex.: botão "Enviar Agora" ou teste manual),
+    // ignorando as travas de dia/horário: ?force=1 ou --force
+    $force = false;
+    if (php_sapi_name() === 'cli') {
+        foreach ($argv ?? [] as $arg) { if ($arg === '--force') $force = true; }
+    } else {
+        $force = !empty($_GET['force']);
+    }
+
+    // ─── TRAVA DE DIA DA SEMANA (send_day) ───────────────────────────────
+    // Só aplica quando o ciclo NÃO é diário. 1=Seg ... 7=Dom (ISO-8601).
+    $interval = WeeklyMaterialRequest::cycleIntervalDays();
+    if (!$force && $interval > 1) {
+        $sendDay = (int) Setting::get('weekly_send_day', '1');
+        $todayDow = (int) date('N');
+        if ($sendDay > 0 && $todayDow !== $sendDay) {
+            echo "Hoje não é o dia de envio (configurado: {$sendDay}, hoje: {$todayDow}).\n";
+            echo "Finalizado às " . date('Y-m-d H:i:s') . "\n";
+            return;
+        }
+    }
+
+    // ─── TRAVA DE HORÁRIO (send_time) ────────────────────────────────────
+    // Só envia se a hora atual já alcançou o horário configurado. Assim o
+    // cron do servidor pode rodar de hora em hora (ou a cada X min).
+    if (!$force) {
+        $sendTime = Setting::get('weekly_send_time', '08:00');
+        $sendMinutes = 0;
+        if (preg_match('/^(\d{1,2}):(\d{2})$/', trim($sendTime), $m)) {
+            $sendMinutes = ((int) $m[1]) * 60 + (int) $m[2];
+        }
+        $nowMinutes = ((int) date('H')) * 60 + (int) date('i');
+        if ($nowMinutes < $sendMinutes) {
+            echo "Ainda não chegou o horário de envio (configurado: {$sendTime}, agora: " . date('H:i') . ").\n";
+            echo "Finalizado às " . date('Y-m-d H:i:s') . "\n";
+            return;
+        }
+    }
+
     // Gera e envia respeitando o INTERVALO (X) e a ANTECEDÊNCIA DE ENVIO (Y).
     //  - X = frequência do ciclo (a cada X dias)
     //  - Y = envia o link Y dias ANTES do próximo ciclo
     // Ex.: X=15 e Y=5 → o link é enviado no dia 10 após o último ciclo
     // (5 dias antes do próximo ciclo, que cai no dia 15).
-    $interval = WeeklyMaterialRequest::cycleIntervalDays();
     $notifyAdvance = (int) Setting::get('weekly_notify_advance_days', '5');
     // A antecedência de envio não pode ser maior que o intervalo
     $notifyAdvance = max(0, min($notifyAdvance, $interval));
     $latest = WeeklyMaterialRequest::latestCycleStart();
     $today = strtotime(date('Y-m-d'));
 
-    if ($latest) {
+    if ($latest && !$force) {
         // Dia de envio = último ciclo + (intervalo - antecedência de envio)
         $sendOffset = max(0, $interval - $notifyAdvance);
         $due = strtotime($latest . ' +' . $sendOffset . ' days');
