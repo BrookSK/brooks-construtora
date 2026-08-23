@@ -40,12 +40,8 @@ class WeeklyMaterialController extends Controller
         // Cards de indicadores (PARTE 22)
         $stats = WeeklyMaterialRequest::getWeekStats($selectedWeek);
 
-        // Controle por responsável (PARTE 23) + últimos 4 ciclos
-        $managerControl = WeeklyMaterialRequest::getManagerControl($selectedWeek);
-        foreach ($managerControl as &$mc) {
-            $mc['recent_cycles'] = WeeklyMaterialRequest::getRecentCyclesForManager((int) $mc['manager_id'], 4);
-        }
-        unset($mc);
+        // Controle por responsável (PARTE 23) — AGRUPADO por responsável
+        $managerControl = self::buildGroupedControl($selectedWeek);
 
         // Lista de compras consolidada (PARTE 26)
         $sortMode = $this->input('sort', Setting::get('weekly_purchase_sort', 'urgency_date'));
@@ -214,12 +210,8 @@ class WeeklyMaterialController extends Controller
 
         $stats = WeeklyMaterialRequest::getWeekStats($weekStart);
 
-        // Controle por responsável (PARTE 23): status + últimos 4 ciclos
-        $managerControl = WeeklyMaterialRequest::getManagerControl($weekStart);
-        foreach ($managerControl as &$mc) {
-            $mc['recent_cycles'] = WeeklyMaterialRequest::getRecentCyclesForManager((int) $mc['manager_id'], 4);
-        }
-        unset($mc);
+        // Controle por responsável (PARTE 23): AGRUPADO por responsável.
+        $managerControl = self::buildGroupedControl($weekStart);
 
         $this->view('admin.weekly_materials.week', [
             'requests' => $requests,
@@ -441,63 +433,209 @@ class WeeklyMaterialController extends Controller
         $requests = WeeklyMaterialRequest::getByWeek($nextWeek);
         $webhookUrl = Setting::get('orders_weekly_materials_webhook', '');
         $baseUrl = Setting::get('site_url', ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? ''));
-        $sent = 0;
 
+        // AGRUPAR por responsável: uma ÚNICA mensagem com todos os links (obra + link).
+        $grouped = self::groupPendingByManager($requests);
+        $sent = self::dispatchGroupedLinks($grouped, $nextWeek, $webhookUrl, $baseUrl);
+
+        $this->setFlash('success', "Notificações enviadas para {$sent} responsável(is), uma mensagem por pessoa com todos os links.");
+        $this->redirect('/admin/weekly-materials');
+    }
+
+    /**
+     * Controle de preenchimento AGRUPADO por responsável para um ciclo.
+     * Cada item traz: nome, telefone, últimos 4 ciclos, a lista de obras
+     * (sites) e o resumo de status (filled/pending/overdue/not_sent).
+     */
+    private static function buildGroupedControl(string $weekStart): array
+    {
+        $control = WeeklyMaterialRequest::getManagerControl($weekStart);
+        $managers = [];
+        foreach ($control as $row) {
+            $mid = (int) $row['manager_id'];
+            if (!isset($managers[$mid])) {
+                $managers[$mid] = [
+                    'manager_id' => $mid,
+                    'manager_name' => $row['manager_name'],
+                    'manager_phone' => $row['manager_phone'] ?? '',
+                    'recent_cycles' => WeeklyMaterialRequest::getRecentCyclesForManager($mid, 4),
+                    'sites' => [],
+                    'total' => 0, 'filled' => 0, 'pending' => 0, 'overdue' => 0, 'not_sent' => 0,
+                ];
+            }
+            $managers[$mid]['sites'][] = $row;
+            $managers[$mid]['total']++;
+            if ($row['status'] === 'filled') $managers[$mid]['filled']++;
+            elseif ($row['status'] === 'overdue') $managers[$mid]['overdue']++;
+            elseif (empty($row['notified_at'])) $managers[$mid]['not_sent']++;
+            else $managers[$mid]['pending']++;
+        }
+        return array_values($managers);
+    }
+
+    /**
+     * Agrupa solicitações PENDENTES por responsável.
+     * Retorna [manager_id => ['name','phone','email','items'=>[['site'=>..,'token'=>..,'req_id'=>..],...]]]
+     */
+    private static function groupPendingByManager(array $requests): array
+    {
+        $grouped = [];
         foreach ($requests as $req) {
             if ($req['status'] !== 'pending') continue;
-
-            // Identifica a obra no link/mensagem (um link por obra)
+            $mid = (int) $req['manager_id'];
+            if (!isset($grouped[$mid])) {
+                $grouped[$mid] = [
+                    'name' => $req['manager_name'],
+                    'phone' => $req['manager_phone'] ?? '',
+                    'email' => $req['manager_email'] ?? '',
+                    'items' => [],
+                ];
+            }
             $siteLabel = !empty($req['construction_site_name'])
                 ? (($req['construction_site_code'] ? $req['construction_site_code'] . ' - ' : '') . $req['construction_site_name'])
-                : '';
+                : 'Obra não especificada';
+            $grouped[$mid]['items'][] = [
+                'site' => $siteLabel,
+                'token' => $req['token'],
+                'req_id' => (int) $req['id'],
+                'has_phone' => !empty($req['manager_phone']),
+                'has_email' => !empty($req['manager_email']),
+            ];
+        }
+        return $grouped;
+    }
 
-            $formUrl = $baseUrl . '/lista-semanal/' . $req['token'];
-            $obraLinha = $siteLabel ? "*Obra:* {$siteLabel}\n" : '';
-            $message = "Olá {$req['manager_name']}! 📋\n\n"
-                . $obraLinha
-                . "Preciso que você envie a lista de materiais que vai precisar no ciclo de "
-                . date('d/m/Y', strtotime($nextWeek)) . ".\n\n"
-                . "Acesse o link abaixo e preencha:\n{$formUrl}\n\n"
-                . "Obrigado!";
+    /**
+     * Monta e envia UMA mensagem por responsável com todos os links (obra + link),
+     * e marca cada solicitação como notificada. Retorna o nº de responsáveis notificados.
+     */
+    private static function dispatchGroupedLinks(array $grouped, string $weekStart, string $webhookUrl, string $baseUrl): int
+    {
+        $sent = 0;
+        $dataFmt = date('d/m/Y', strtotime($weekStart));
 
-            if ($webhookUrl && !empty($req['manager_phone'])) {
-                \App\Services\NotificationService::queueWebhook($webhookUrl, [
-                    'phone' => $req['manager_phone'],
-                    'name' => $req['manager_name'],
-                    'message' => $message,
-                    'type' => 'weekly_material_request',
-                    'construction_site' => $siteLabel,
-                ]);
-                $sent++;
+        foreach ($grouped as $mid => $g) {
+            // Corpo WhatsApp
+            $linhas = '';
+            $linhasHtml = '';
+            foreach ($g['items'] as $it) {
+                $url = $baseUrl . '/lista-semanal/' . $it['token'];
+                $linhas .= "🏗️ *{$it['site']}*\n{$url}\n\n";
+                $linhasHtml .= "<p style=\"margin:0 0 4px;\"><strong>🏗️ " . htmlspecialchars($it['site']) . "</strong><br>"
+                    . "<a href=\"{$url}\">{$url}</a></p>";
             }
 
-            if (!empty($req['manager_email'])) {
-                $obraHtml = $siteLabel ? "<p><strong>Obra:</strong> " . htmlspecialchars($siteLabel) . "</p>" : '';
+            $totalObras = count($g['items']);
+            $message = "Olá {$g['name']}! 📋\n\n"
+                . "Envie a lista de materiais do ciclo de {$dataFmt}.\n"
+                . ($totalObras > 1 ? "Você é responsável por {$totalObras} obras. Preencha uma solicitação para cada:\n\n" : "\n")
+                . $linhas
+                . "Obrigado!";
+
+            if ($webhookUrl && !empty($g['phone'])) {
+                \App\Services\NotificationService::queueWebhook($webhookUrl, [
+                    'phone' => $g['phone'],
+                    'name' => $g['name'],
+                    'message' => $message,
+                    'type' => 'weekly_material_request',
+                ]);
+            }
+
+            if (!empty($g['email'])) {
                 \App\Services\NotificationService::queueEmails(
-                    $req['manager_email'],
-                    'Lista Semanal de Materiais' . ($siteLabel ? ' - ' . $siteLabel : '') . ' - ' . date('d/m', strtotime($nextWeek)),
-                    "<p>Olá <strong>{$req['manager_name']}</strong>!</p>"
-                    . $obraHtml
-                    . "<p>Precisamos que você envie a lista de materiais do ciclo de " . date('d/m/Y', strtotime($nextWeek)) . ".</p>"
-                    . "<p><a href=\"{$formUrl}\" style=\"background:#3a3b4e; color:#fff; padding:10px 20px; border-radius:5px; text-decoration:none;\">Preencher Lista</a></p>"
+                    $g['email'],
+                    'Lista Semanal de Materiais - Ciclo ' . date('d/m', strtotime($weekStart)),
+                    "<p>Olá <strong>" . htmlspecialchars($g['name']) . "</strong>!</p>"
+                    . "<p>Envie a lista de materiais do ciclo de {$dataFmt}."
+                    . ($totalObras > 1 ? " Você é responsável por {$totalObras} obras — preencha uma solicitação para cada:" : "") . "</p>"
+                    . $linhasHtml
                 );
             }
 
-            WeeklyMaterialRequest::updateById($req['id'], [
-                'notified_at' => date('Y-m-d H:i:s'),
-                'link_channel' => !empty($req['manager_phone']) ? 'whatsapp' : (!empty($req['manager_email']) ? 'email' : null),
-            ]);
-
-            \App\Models\WeeklyMaterialLog::record(
-                \App\Models\WeeklyMaterialLog::ACTION_LINK_SENT,
-                (int) $req['id'],
-                "Link enviado para {$req['manager_name']}" . ($siteLabel ? " ({$siteLabel})" : ''),
-                $nextWeek
-            );
+            // Marca todas as solicitações do responsável como notificadas
+            foreach ($g['items'] as $it) {
+                WeeklyMaterialRequest::updateById($it['req_id'], [
+                    'notified_at' => date('Y-m-d H:i:s'),
+                    'link_channel' => $it['has_phone'] ? 'whatsapp' : ($it['has_email'] ? 'email' : null),
+                ]);
+                \App\Models\WeeklyMaterialLog::record(
+                    \App\Models\WeeklyMaterialLog::ACTION_LINK_SENT,
+                    $it['req_id'],
+                    "Link enviado para {$g['name']} ({$it['site']}) — mensagem única com {$totalObras} obra(s)",
+                    $weekStart
+                );
+            }
+            $sent++;
         }
 
-        $this->setFlash('success', "Notificações enviadas para {$sent} gerente(s).");
-        $this->redirect('/admin/weekly-materials');
+        return $sent;
+    }
+
+    /**
+     * Notificar TODOS os responsáveis de um ciclo já existente (a partir da
+     * tela da semana). Uma mensagem única por responsável.
+     */
+    public function notifyAll(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/weekly-materials');
+            return;
+        }
+
+        $weekStart = $this->input('week_start', '');
+        if (!$weekStart) {
+            $this->setFlash('error', 'Ciclo não informado.');
+            $this->redirect('/admin/weekly-materials');
+            return;
+        }
+
+        $requests = WeeklyMaterialRequest::getByWeek($weekStart);
+        $webhookUrl = Setting::get('orders_weekly_materials_webhook', '');
+        $baseUrl = Setting::get('site_url', ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? ''));
+
+        $grouped = self::groupPendingByManager($requests);
+        $sent = self::dispatchGroupedLinks($grouped, $weekStart, $webhookUrl, $baseUrl);
+
+        $this->setFlash('success', "Notificações enviadas para {$sent} responsável(is), uma mensagem por pessoa com todos os links.");
+        $this->redirect('/admin/weekly-materials/week/' . $weekStart);
+    }
+
+    /**
+     * Notificar UM responsável específico de um ciclo (mensagem única com
+     * todos os links das obras dele).
+     */
+    public function notifyManager(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/weekly-materials');
+            return;
+        }
+
+        $managerId = (int) $this->input('manager_id', 0);
+        $weekStart = $this->input('week_start', '');
+        if (!$managerId || !$weekStart) {
+            $this->setFlash('error', 'Parâmetros inválidos.');
+            $this->redirect('/admin/weekly-materials/week/' . $weekStart);
+            return;
+        }
+
+        $requests = array_values(array_filter(
+            WeeklyMaterialRequest::getByWeek($weekStart),
+            fn($r) => (int) $r['manager_id'] === $managerId
+        ));
+
+        $webhookUrl = Setting::get('orders_weekly_materials_webhook', '');
+        $baseUrl = Setting::get('site_url', ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? ''));
+
+        $grouped = self::groupPendingByManager($requests);
+        $sent = self::dispatchGroupedLinks($grouped, $weekStart, $webhookUrl, $baseUrl);
+
+        if ($sent > 0) {
+            $this->setFlash('success', 'Notificação enviada ao responsável (mensagem única com todos os links).');
+        } else {
+            $this->setFlash('success', 'Nenhuma solicitação pendente para notificar este responsável.');
+        }
+        $this->redirect('/admin/weekly-materials/week/' . $weekStart);
     }
 
     /**
@@ -521,34 +659,43 @@ class WeeklyMaterialController extends Controller
         $pendingNames = [];
         $sent = 0;
 
-        foreach ($requests as $req) {
-            if ($req['status'] !== 'pending') continue;
+        // Agrupar pendentes por responsável → UMA cobrança com todos os links
+        $grouped = self::groupPendingByManager($requests);
+        $dataFmt = date('d/m/Y', strtotime($nextWeek));
 
-            $formUrl = $baseUrl . '/lista-semanal/' . $req['token'];
-            $pendingNames[] = $req['manager_name'];
+        foreach ($grouped as $g) {
+            $pendingNames[] = $g['name'];
 
-            $message = "⚠️ {$req['manager_name']}, você ainda NÃO preencheu a lista de materiais da semana de "
-                . date('d/m/Y', strtotime($nextWeek)) . "!\n\n"
-                . "Por favor, preencha o mais rápido possível:\n{$formUrl}";
+            $linhas = '';
+            foreach ($g['items'] as $it) {
+                $url = $baseUrl . '/lista-semanal/' . $it['token'];
+                $linhas .= "🏗️ *{$it['site']}*\n{$url}\n\n";
+            }
+            $totalObras = count($g['items']);
+            $message = "⚠️ {$g['name']}, você ainda NÃO preencheu a lista de materiais do ciclo de {$dataFmt}!\n\n"
+                . ($totalObras > 1 ? "Pendentes ({$totalObras} obras):\n\n" : "")
+                . $linhas
+                . "Por favor, preencha o quanto antes.";
 
-            if ($webhookUrl && !empty($req['manager_phone'])) {
+            if ($webhookUrl && !empty($g['phone'])) {
                 \App\Services\NotificationService::queueWebhook($webhookUrl, [
-                    'phone' => $req['manager_phone'],
-                    'name' => $req['manager_name'],
+                    'phone' => $g['phone'],
+                    'name' => $g['name'],
                     'message' => $message,
                     'type' => 'weekly_material_reminder',
                 ]);
                 $sent++;
             }
 
-            WeeklyMaterialRequest::updateById($req['id'], ['reminder_sent_at' => date('Y-m-d H:i:s')]);
-
-            \App\Models\WeeklyMaterialLog::record(
-                \App\Models\WeeklyMaterialLog::ACTION_REMINDER_SENT,
-                (int) $req['id'],
-                "Cobrança enviada para {$req['manager_name']}",
-                $nextWeek
-            );
+            foreach ($g['items'] as $it) {
+                WeeklyMaterialRequest::updateById($it['req_id'], ['reminder_sent_at' => date('Y-m-d H:i:s')]);
+                \App\Models\WeeklyMaterialLog::record(
+                    \App\Models\WeeklyMaterialLog::ACTION_REMINDER_SENT,
+                    $it['req_id'],
+                    "Cobrança enviada para {$g['name']} ({$it['site']}) — mensagem única",
+                    $nextWeek
+                );
+            }
         }
 
         // Notificar admin

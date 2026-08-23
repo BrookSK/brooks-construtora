@@ -72,21 +72,27 @@
     </div>
 </div>
 
-<!-- Controle por Responsável (PARTE 23) -->
+<!-- Controle por Responsável (PARTE 23) — agrupado por responsável -->
 <?php if (!empty($managerControl)): ?>
 <div class="card mb-3">
-    <div class="card-header"><i class="bi bi-people"></i> Controle por Responsável</div>
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span><i class="bi bi-people"></i> Controle de preenchimento por responsável</span>
+        <form method="POST" action="/admin/weekly-materials/notify-all" class="d-inline">
+            <input type="hidden" name="week_start" value="<?= htmlspecialchars($weekStart) ?>">
+            <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Notificar TODOS os responsáveis deste ciclo? Cada um recebe uma única mensagem com todos os links.')">
+                <i class="bi bi-send"></i> Notificar Todos
+            </button>
+        </form>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-sm table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
+                        <th style="width:40px;"></th>
                         <th>Responsável</th>
-                        <th>Obra</th>
-                        <th class="text-center">Link enviado</th>
+                        <th class="text-center">Obras</th>
                         <th class="text-center">Status</th>
-                        <th>Último pedido</th>
-                        <th>Próxima necessidade</th>
                         <th class="text-center">Últimos 4 ciclos</th>
                         <th class="text-end">Ações</th>
                     </tr>
@@ -94,36 +100,88 @@
                 <tbody>
                     <?php foreach ($managerControl as $mc): ?>
                     <?php
-                    $statusBadge = $mc['status'] === 'filled'
-                        ? '<span class="badge bg-success">Preenchido</span>'
-                        : ($mc['status'] === 'overdue'
-                            ? '<span class="badge bg-danger">Atrasado</span>'
-                            : (empty($mc['notified_at']) ? '<span class="badge bg-secondary">Não enviado</span>' : '<span class="badge bg-warning text-dark">Pendente</span>'));
+                    // Resumo de status do responsável no ciclo
+                    $resumo = [];
+                    if ($mc['filled'] > 0)   $resumo[] = '<span class="badge bg-success">' . $mc['filled'] . ' preench.</span>';
+                    if ($mc['pending'] > 0)  $resumo[] = '<span class="badge bg-warning text-dark">' . $mc['pending'] . ' pend.</span>';
+                    if ($mc['overdue'] > 0)  $resumo[] = '<span class="badge bg-danger">' . $mc['overdue'] . ' atras.</span>';
+                    if ($mc['not_sent'] > 0) $resumo[] = '<span class="badge bg-secondary">' . $mc['not_sent'] . ' não env.</span>';
                     ?>
-                    <tr>
+                    <tr role="button" data-bs-toggle="collapse" data-bs-target="#mgr<?= (int) $mc['manager_id'] ?>" style="cursor:pointer;">
+                        <td class="text-center"><i class="bi bi-chevron-down text-muted"></i></td>
                         <td><strong><?= htmlspecialchars($mc['manager_name']) ?></strong></td>
-                        <td><small><?= htmlspecialchars($mc['construction_site_name'] ?? '—') ?></small></td>
-                        <td class="text-center"><small><?= !empty($mc['notified_at']) ? date('d/m H:i', strtotime($mc['notified_at'])) : '—' ?></small></td>
-                        <td class="text-center"><?= $statusBadge ?></td>
-                        <td>
-                            <?php if (!empty($mc['order_code'])): ?>
-                            <a href="/admin/orders/show/<?= (int) $mc['po_id'] ?>" class="text-decoration-none">#<?= htmlspecialchars($mc['order_code']) ?></a>
-                            <small class="text-muted d-block"><?= !empty($mc['order_created_at']) ? date('d/m/Y', strtotime($mc['order_created_at'])) : '' ?></small>
-                            <?php else: ?>—<?php endif; ?>
-                        </td>
-                        <td><small><?= !empty($mc['needed_date']) ? date('d/m/Y', strtotime($mc['needed_date'])) : '—' ?></small></td>
+                        <td class="text-center"><span class="badge bg-light text-dark border"><?= (int) $mc['total'] ?></span></td>
+                        <td class="text-center"><?= implode(' ', $resumo) ?: '—' ?></td>
                         <td class="text-center">
                             <?php foreach (array_reverse($mc['recent_cycles']) as $c): ?>
-                            <?php
-                            $dot = $c['status'] === 'filled' ? 'text-success' : ($c['status'] === 'overdue' ? 'text-danger' : 'text-warning');
-                            ?>
+                            <?php $dot = $c['status'] === 'filled' ? 'text-success' : ($c['status'] === 'overdue' ? 'text-danger' : 'text-warning'); ?>
                             <i class="bi bi-circle-fill <?= $dot ?>" style="font-size:.6rem;" title="<?= date('d/m', strtotime($c['week_start'])) ?>: <?= $c['status'] ?>"></i>
                             <?php endforeach; ?>
                         </td>
-                        <td class="text-end">
-                            <a href="/admin/weekly-materials/manager/<?= (int) $mc['manager_id'] ?>" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> Ver detalhes
+                        <td class="text-end" onclick="event.stopPropagation();">
+                            <form method="POST" action="/admin/weekly-materials/notify-manager" class="d-inline">
+                                <input type="hidden" name="week_start" value="<?= htmlspecialchars($weekStart) ?>">
+                                <input type="hidden" name="manager_id" value="<?= (int) $mc['manager_id'] ?>">
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Notificar este responsável"
+                                    onclick="return confirm('Notificar <?= htmlspecialchars($mc['manager_name']) ?> com uma única mensagem contendo todos os links?')">
+                                    <i class="bi bi-send"></i>
+                                </button>
+                            </form>
+                            <a href="/admin/weekly-materials/manager/<?= (int) $mc['manager_id'] ?>" class="btn btn-sm btn-outline-primary" title="Ver detalhes">
+                                <i class="bi bi-eye"></i>
                             </a>
+                        </td>
+                    </tr>
+                    <!-- Detalhes expandíveis: todas as obras/listas do responsável -->
+                    <tr class="collapse" id="mgr<?= (int) $mc['manager_id'] ?>">
+                        <td colspan="6" class="p-0">
+                            <div class="p-2 bg-light">
+                                <table class="table table-sm mb-0 align-middle bg-white">
+                                    <thead>
+                                        <tr class="small text-muted">
+                                            <th>Obra</th>
+                                            <th class="text-center">Link enviado</th>
+                                            <th class="text-center">Status</th>
+                                            <th>Último pedido</th>
+                                            <th>Próxima necessidade</th>
+                                            <th class="text-end">Link</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php
+                                        $baseUrlCtrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '');
+                                        foreach ($mc['sites'] as $s):
+                                            $sBadge = $s['status'] === 'filled'
+                                                ? '<span class="badge bg-success">Preenchido</span>'
+                                                : ($s['status'] === 'overdue'
+                                                    ? '<span class="badge bg-danger">Atrasado</span>'
+                                                    : (empty($s['notified_at']) ? '<span class="badge bg-secondary">Não enviado</span>' : '<span class="badge bg-warning text-dark">Pendente</span>'));
+                                            $formUrl = $baseUrlCtrl . '/lista-semanal/' . $s['token'];
+                                        ?>
+                                        <tr>
+                                            <td><small><strong><?= htmlspecialchars($s['construction_site_name'] ?? 'Sem obra') ?></strong></small></td>
+                                            <td class="text-center"><small><?= !empty($s['notified_at']) ? date('d/m H:i', strtotime($s['notified_at'])) : '—' ?></small></td>
+                                            <td class="text-center"><?= $sBadge ?></td>
+                                            <td>
+                                                <?php if (!empty($s['order_code'])): ?>
+                                                <a href="/admin/orders/show/<?= (int) $s['po_id'] ?>" class="text-decoration-none small">#<?= htmlspecialchars($s['order_code']) ?></a>
+                                                <?php else: ?><span class="text-muted">—</span><?php endif; ?>
+                                            </td>
+                                            <td><small><?= !empty($s['needed_date']) ? date('d/m/Y', strtotime($s['needed_date'])) : '—' ?></small></td>
+                                            <td class="text-end">
+                                                <div class="input-group input-group-sm justify-content-end" style="max-width:240px; margin-left:auto;">
+                                                    <button type="button" class="btn btn-outline-secondary" title="Copiar link"
+                                                        onclick="navigator.clipboard.writeText('<?= htmlspecialchars($formUrl) ?>'); this.innerHTML='<i class=\'bi bi-check\'></i>'; setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i>',1500)">
+                                                        <i class="bi bi-clipboard"></i>
+                                                    </button>
+                                                    <a href="<?= htmlspecialchars($formUrl) ?>" target="_blank" class="btn btn-outline-primary" title="Abrir formulário"><i class="bi bi-box-arrow-up-right"></i></a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>

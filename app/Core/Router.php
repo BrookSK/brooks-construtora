@@ -255,6 +255,8 @@ class Router
             'weekly-materials/export-control' => ['WeeklyMaterialController', 'exportControl'],
             'weekly-materials/generate' => ['WeeklyMaterialController', 'generate'],
             'weekly-materials/send-now' => ['WeeklyMaterialController', 'sendNow'],
+            'weekly-materials/notify-manager' => ['WeeklyMaterialController', 'notifyManager'],
+            'weekly-materials/notify-all' => ['WeeklyMaterialController', 'notifyAll'],
             'weekly-materials/send-reminder' => ['WeeklyMaterialController', 'sendReminder'],
             'weekly-materials/store-manager' => ['WeeklyMaterialController', 'storeManager'],
             'weekly-materials/toggle-manager' => ['WeeklyMaterialController', 'toggleManager'],

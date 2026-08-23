@@ -78,54 +78,69 @@ if ($action === 'notify') {
     // Buscar registros pendentes da semana
     $requests = WeeklyMaterialRequest::getByWeek($nextWeek);
     $webhookUrl = Setting::get('orders_weekly_materials_webhook', '');
-    $sent = 0;
+    $dataFmt = date('d/m/Y', strtotime($nextWeek));
 
+    // AGRUPAR por responsável → uma ÚNICA mensagem com todos os links (obra + link)
+    $grouped = [];
     foreach ($requests as $req) {
         if ($req['status'] !== 'pending') continue;
         if (!empty($req['notified_at'])) continue;
-
+        $mid = (int) $req['manager_id'];
+        if (!isset($grouped[$mid])) {
+            $grouped[$mid] = [
+                'name' => $req['manager_name'],
+                'phone' => $req['manager_phone'] ?? '',
+                'email' => $req['manager_email'] ?? '',
+                'items' => [],
+            ];
+        }
         $siteLabel = !empty($req['construction_site_name'])
             ? ((!empty($req['construction_site_code']) ? $req['construction_site_code'] . ' - ' : '') . $req['construction_site_name'])
-            : '';
-        $obraLinha = $siteLabel ? "*Obra:* {$siteLabel}\n" : '';
+            : 'Obra não especificada';
+        $grouped[$mid]['items'][] = ['site' => $siteLabel, 'token' => $req['token'], 'req_id' => (int) $req['id']];
+    }
 
-        $formUrl = $baseUrl . '/lista-semanal/' . $req['token'];
-        $message = "Olá {$req['manager_name']}! 📋\n\n"
-            . $obraLinha
-            . "Preciso que você envie a lista de materiais que vai precisar no ciclo de "
-            . date('d/m/Y', strtotime($nextWeek)) . ".\n\n"
-            . "Acesse o link abaixo e preencha:\n{$formUrl}\n\n"
+    $sent = 0;
+    foreach ($grouped as $g) {
+        $linhas = ''; $linhasHtml = '';
+        foreach ($g['items'] as $it) {
+            $url = $baseUrl . '/lista-semanal/' . $it['token'];
+            $linhas .= "🏗️ *{$it['site']}*\n{$url}\n\n";
+            $linhasHtml .= "<p style=\"margin:0 0 4px;\"><strong>🏗️ " . htmlspecialchars($it['site']) . "</strong><br><a href=\"{$url}\">{$url}</a></p>";
+        }
+        $totalObras = count($g['items']);
+        $message = "Olá {$g['name']}! 📋\n\n"
+            . "Envie a lista de materiais do ciclo de {$dataFmt}.\n"
+            . ($totalObras > 1 ? "Você é responsável por {$totalObras} obras. Preencha uma solicitação para cada:\n\n" : "\n")
+            . $linhas
             . "Obrigado!";
 
-        // Enviar via webhook (WhatsApp)
-        if ($webhookUrl && !empty($req['manager_phone'])) {
+        if ($webhookUrl && !empty($g['phone'])) {
             NotificationService::queueWebhook($webhookUrl, [
-                'phone' => $req['manager_phone'],
-                'name' => $req['manager_name'],
+                'phone' => $g['phone'],
+                'name' => $g['name'],
                 'message' => $message,
                 'type' => 'weekly_material_request',
-                'construction_site' => $siteLabel,
             ]);
         }
-
-        // Enviar via email
-        if (!empty($req['manager_email'])) {
+        if (!empty($g['email'])) {
             NotificationService::queueEmails(
-                $req['manager_email'],
-                'Lista Semanal de Materiais - Semana ' . date('d/m', strtotime($nextWeek)),
-                "<p>Olá <strong>{$req['manager_name']}</strong>!</p>"
-                . "<p>Precisamos que você envie a lista de materiais da semana de " . date('d/m/Y', strtotime($nextWeek)) . ".</p>"
-                . "<p><a href=\"{$formUrl}\" style=\"background:#3a3b4e; color:#fff; padding:10px 20px; border-radius:5px; text-decoration:none;\">Preencher Lista</a></p>"
-                . "<p>Obrigado!</p>"
+                $g['email'],
+                'Lista Semanal de Materiais - Ciclo ' . date('d/m', strtotime($nextWeek)),
+                "<p>Olá <strong>" . htmlspecialchars($g['name']) . "</strong>!</p>"
+                . "<p>Envie a lista de materiais do ciclo de {$dataFmt}."
+                . ($totalObras > 1 ? " Você é responsável por {$totalObras} obras — preencha uma para cada:" : "") . "</p>"
+                . $linhasHtml
             );
         }
 
-        // Marcar como notificado
-        WeeklyMaterialRequest::updateById($req['id'], ['notified_at' => date('Y-m-d H:i:s')]);
+        foreach ($g['items'] as $it) {
+            WeeklyMaterialRequest::updateById($it['req_id'], ['notified_at' => date('Y-m-d H:i:s')]);
+        }
         $sent++;
     }
 
-    echo "Notificações enviadas: {$sent}\n";
+    echo "Notificações enviadas: {$sent} responsável(is) (mensagem única com todos os links)\n";
 
 } elseif ($action === 'remind') {
     // Cobrança sobre o ciclo ativo mais recente

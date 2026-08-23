@@ -111,83 +111,139 @@ $critical = (int) ($stats['critical_count'] ?? 0);
         <div class="card mb-3">
             <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <span><i class="bi bi-people"></i> Controle de preenchimento por responsável</span>
-                <a href="/admin/weekly-materials/export-control/<?= htmlspecialchars($selectedWeek) ?>" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-download"></i> Exportar CSV
-                </a>
+                <div class="d-flex gap-2">
+                    <form method="POST" action="/admin/weekly-materials/notify-all" class="d-inline">
+                        <input type="hidden" name="week_start" value="<?= htmlspecialchars($selectedWeek) ?>">
+                        <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Notificar TODOS os responsáveis deste ciclo? Cada um recebe uma única mensagem com todos os links.')">
+                            <i class="bi bi-send"></i> Notificar Todos
+                        </button>
+                    </form>
+                    <a href="/admin/weekly-materials/export-control/<?= htmlspecialchars($selectedWeek) ?>" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-download"></i> Exportar CSV
+                    </a>
+                </div>
             </div>
             <div class="card-body">
                 <!-- Filtros -->
                 <div class="row g-2 mb-3">
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-6">
                         <input type="text" id="mgrSearch" class="form-control form-control-sm" placeholder="Buscar responsável...">
                     </div>
-                    <div class="col-6 col-md-4">
+                    <div class="col-12 col-md-6">
                         <select id="mgrStatusFilter" class="form-select form-select-sm">
                             <option value="">Todos os status</option>
-                            <option value="filled">Preenchido</option>
-                            <option value="pending">Pendente</option>
-                            <option value="overdue">Atrasado</option>
-                        </select>
-                    </div>
-                    <div class="col-6 col-md-4">
-                        <select id="mgrSiteFilter" class="form-select form-select-sm">
-                            <option value="">Todas as obras</option>
-                            <?php foreach ($sites as $s): ?>
-                            <option value="<?= htmlspecialchars($s['name']) ?>"><?= htmlspecialchars($s['name']) ?></option>
-                            <?php endforeach; ?>
+                            <option value="filled">Com preenchidas</option>
+                            <option value="pending">Com pendentes</option>
+                            <option value="overdue">Com atrasadas</option>
                         </select>
                     </div>
                 </div>
 
                 <?php if (empty($managerControl)): ?>
                 <div class="text-center py-4 text-muted">
-                    <p class="mb-0">Nenhum responsável nesta semana. Clique em "Gerar Semana" para criar as solicitações.</p>
+                    <p class="mb-0">Nenhum responsável nesta semana. Clique em "Gerar Ciclo" para criar as solicitações.</p>
                 </div>
                 <?php else: ?>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover align-middle mb-0" id="mgrTable">
                         <thead class="table-light">
                             <tr>
+                                <th style="width:32px;"></th>
                                 <th>Responsável</th>
-                                <th>Obra</th>
-                                <th class="text-center">Link enviado</th>
+                                <th class="text-center">Obras</th>
                                 <th class="text-center">Status</th>
-                                <th>Último pedido</th>
-                                <th>Próxima necessidade</th>
                                 <th class="text-center">Últimos 4 ciclos</th>
-                                <th class="text-end">Ação</th>
+                                <th class="text-end">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($managerControl as $mc): ?>
                             <?php
-                            $statusKey = $mc['status'];
-                            $statusBadge = $statusKey === 'filled'
-                                ? '<span class="badge bg-success">Preenchido</span>'
-                                : ($statusKey === 'overdue'
-                                    ? '<span class="badge bg-danger">Atrasado</span>'
-                                    : (empty($mc['notified_at']) ? '<span class="badge bg-secondary">Não enviado</span>' : '<span class="badge bg-warning text-dark">Pendente</span>'));
+                            // Chave de status agregada para o filtro
+                            $statusFlags = [];
+                            if ($mc['filled'] > 0) $statusFlags[] = 'filled';
+                            if ($mc['pending'] > 0) $statusFlags[] = 'pending';
+                            if ($mc['overdue'] > 0) $statusFlags[] = 'overdue';
+                            $resumo = [];
+                            if ($mc['filled'] > 0)   $resumo[] = '<span class="badge bg-success">' . $mc['filled'] . ' preench.</span>';
+                            if ($mc['pending'] > 0)  $resumo[] = '<span class="badge bg-warning text-dark">' . $mc['pending'] . ' pend.</span>';
+                            if ($mc['overdue'] > 0)  $resumo[] = '<span class="badge bg-danger">' . $mc['overdue'] . ' atras.</span>';
+                            if ($mc['not_sent'] > 0) $resumo[] = '<span class="badge bg-secondary">' . $mc['not_sent'] . ' não env.</span>';
+                            $baseUrlCtrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '');
                             ?>
-                            <tr data-status="<?= $statusKey ?>" data-name="<?= htmlspecialchars(strtolower($mc['manager_name'])) ?>" data-site="<?= htmlspecialchars($mc['construction_site_name'] ?? '') ?>">
+                            <tr class="mgr-row" data-status="<?= implode(' ', $statusFlags) ?>" data-name="<?= htmlspecialchars(strtolower($mc['manager_name'])) ?>"
+                                role="button" data-bs-toggle="collapse" data-bs-target="#imgr<?= (int) $mc['manager_id'] ?>" style="cursor:pointer;">
+                                <td class="text-center"><i class="bi bi-chevron-down text-muted"></i></td>
                                 <td><strong><?= htmlspecialchars($mc['manager_name']) ?></strong></td>
-                                <td><small><?= htmlspecialchars($mc['construction_site_name'] ?? '—') ?></small></td>
-                                <td class="text-center"><small><?= !empty($mc['notified_at']) ? date('d/m H:i', strtotime($mc['notified_at'])) : '—' ?></small></td>
-                                <td class="text-center"><?= $statusBadge ?></td>
-                                <td>
-                                    <?php if (!empty($mc['order_code'])): ?>
-                                    <a href="/admin/orders/show/<?= (int) $mc['po_id'] ?>" class="text-decoration-none small">#<?= htmlspecialchars($mc['order_code']) ?></a>
-                                    <small class="text-muted d-block"><?= !empty($mc['order_created_at']) ? date('d/m/Y', strtotime($mc['order_created_at'])) : '' ?></small>
-                                    <?php else: ?><span class="text-muted">—</span><?php endif; ?>
-                                </td>
-                                <td><small><?= !empty($mc['needed_date']) ? date('d/m/Y', strtotime($mc['needed_date'])) : '—' ?></small></td>
+                                <td class="text-center"><span class="badge bg-light text-dark border"><?= (int) $mc['total'] ?></span></td>
+                                <td class="text-center"><?= implode(' ', $resumo) ?: '—' ?></td>
                                 <td class="text-center" style="white-space:nowrap;">
                                     <?php foreach (array_reverse($mc['recent_cycles']) as $c): ?>
                                     <?php $dot = $c['status'] === 'filled' ? 'text-success' : ($c['status'] === 'overdue' ? 'text-danger' : 'text-warning'); ?>
                                     <i class="bi bi-circle-fill <?= $dot ?>" style="font-size:.6rem;" title="<?= date('d/m', strtotime($c['week_start'])) ?>: <?= $c['status'] ?>"></i>
                                     <?php endforeach; ?>
                                 </td>
-                                <td class="text-end">
-                                    <a href="/admin/weekly-materials/manager/<?= (int) $mc['manager_id'] ?>" class="btn btn-sm btn-outline-primary">Ver detalhes</a>
+                                <td class="text-end" onclick="event.stopPropagation();">
+                                    <form method="POST" action="/admin/weekly-materials/notify-manager" class="d-inline">
+                                        <input type="hidden" name="week_start" value="<?= htmlspecialchars($selectedWeek) ?>">
+                                        <input type="hidden" name="manager_id" value="<?= (int) $mc['manager_id'] ?>">
+                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Notificar este responsável"
+                                            onclick="return confirm('Notificar <?= htmlspecialchars($mc['manager_name']) ?> com uma única mensagem contendo todos os links?')">
+                                            <i class="bi bi-send"></i>
+                                        </button>
+                                    </form>
+                                    <a href="/admin/weekly-materials/manager/<?= (int) $mc['manager_id'] ?>" class="btn btn-sm btn-outline-primary" title="Ver detalhes">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr class="collapse" id="imgr<?= (int) $mc['manager_id'] ?>">
+                                <td colspan="6" class="p-0">
+                                    <div class="p-2 bg-light">
+                                        <table class="table table-sm mb-0 align-middle bg-white">
+                                            <thead>
+                                                <tr class="small text-muted">
+                                                    <th>Obra</th>
+                                                    <th class="text-center">Link enviado</th>
+                                                    <th class="text-center">Status</th>
+                                                    <th>Último pedido</th>
+                                                    <th>Próxima necessidade</th>
+                                                    <th class="text-end">Link</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($mc['sites'] as $s):
+                                                    $sBadge = $s['status'] === 'filled'
+                                                        ? '<span class="badge bg-success">Preenchido</span>'
+                                                        : ($s['status'] === 'overdue'
+                                                            ? '<span class="badge bg-danger">Atrasado</span>'
+                                                            : (empty($s['notified_at']) ? '<span class="badge bg-secondary">Não enviado</span>' : '<span class="badge bg-warning text-dark">Pendente</span>'));
+                                                    $formUrl = $baseUrlCtrl . '/lista-semanal/' . $s['token'];
+                                                ?>
+                                                <tr>
+                                                    <td><small><strong><?= htmlspecialchars($s['construction_site_name'] ?? 'Sem obra') ?></strong></small></td>
+                                                    <td class="text-center"><small><?= !empty($s['notified_at']) ? date('d/m H:i', strtotime($s['notified_at'])) : '—' ?></small></td>
+                                                    <td class="text-center"><?= $sBadge ?></td>
+                                                    <td>
+                                                        <?php if (!empty($s['order_code'])): ?>
+                                                        <a href="/admin/orders/show/<?= (int) $s['po_id'] ?>" class="text-decoration-none small">#<?= htmlspecialchars($s['order_code']) ?></a>
+                                                        <?php else: ?><span class="text-muted">—</span><?php endif; ?>
+                                                    </td>
+                                                    <td><small><?= !empty($s['needed_date']) ? date('d/m/Y', strtotime($s['needed_date'])) : '—' ?></small></td>
+                                                    <td class="text-end">
+                                                        <div class="input-group input-group-sm justify-content-end" style="max-width:220px; margin-left:auto;">
+                                                            <button type="button" class="btn btn-outline-secondary" title="Copiar link"
+                                                                onclick="navigator.clipboard.writeText('<?= htmlspecialchars($formUrl) ?>'); this.innerHTML='<i class=\'bi bi-check\'></i>'; setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i>',1500)">
+                                                                <i class="bi bi-clipboard"></i>
+                                                            </button>
+                                                            <a href="<?= htmlspecialchars($formUrl) ?>" target="_blank" class="btn btn-outline-primary" title="Abrir formulário"><i class="bi bi-box-arrow-up-right"></i></a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -557,27 +613,34 @@ $critical = (int) ($stats['critical_count'] ?? 0);
 </div>
 
 <script>
-// Filtros locais da tabela de controle por responsável
+// Filtros locais da tabela de controle por responsável (linhas agrupadas)
 (function() {
     const search = document.getElementById('mgrSearch');
     const statusF = document.getElementById('mgrStatusFilter');
-    const siteF = document.getElementById('mgrSiteFilter');
     const table = document.getElementById('mgrTable');
     if (!table) return;
-    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    // Filtra apenas as linhas-resumo (.mgr-row); as linhas de detalhe seguem o collapse
+    const rows = Array.from(table.querySelectorAll('tbody tr.mgr-row'));
 
     function apply() {
         const q = (search.value || '').toLowerCase();
         const st = statusF.value;
-        const site = siteF.value;
         rows.forEach(r => {
             const okName = !q || (r.dataset.name || '').includes(q);
-            const okStatus = !st || r.dataset.status === st;
-            const okSite = !site || r.dataset.site === site;
-            r.style.display = (okName && okStatus && okSite) ? '' : 'none';
+            const okStatus = !st || (r.dataset.status || '').split(' ').includes(st);
+            const show = okName && okStatus;
+            r.style.display = show ? '' : 'none';
+            // Esconde/mostra a linha de detalhe associada (próxima irmã)
+            const detail = r.nextElementSibling;
+            if (detail && !show) {
+                detail.style.display = 'none';
+                detail.classList.remove('show');
+            } else if (detail) {
+                detail.style.display = '';
+            }
         });
     }
-    [search, statusF, siteF].forEach(el => {
+    [search, statusF].forEach(el => {
         el.addEventListener('input', apply);
         el.addEventListener('change', apply);
     });
