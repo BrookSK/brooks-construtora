@@ -208,6 +208,27 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <?php endif; ?>
                     </div>
                 </div>
+                <?php
+                // Justificativa de urgência (pedidos Alta/Crítica)
+                $hasUrgencyJustif = in_array($order['urgency'] ?? '', ['high', 'critical'])
+                    && (!empty($order['urgency_reason_no_advance']) || !empty($order['urgency_reason_site_occurrence']) || !empty($order['urgency_description']));
+                if ($hasUrgencyJustif):
+                ?>
+                <hr>
+                <div class="alert alert-danger bg-danger bg-opacity-10 border-danger border-opacity-25 mb-0">
+                    <small class="text-danger fw-bold d-block mb-1"><i class="bi bi-exclamation-triangle-fill"></i> Motivo da urgência</small>
+                    <?php
+                    $motivos = [];
+                    if (!empty($order['urgency_reason_site_occurrence'])) $motivos[] = 'Ocorrência em obra';
+                    if (!empty($order['urgency_reason_no_advance'])) $motivos[] = 'Não previsto / sem antecedência';
+                    ?>
+                    <?php if ($motivos): ?><div class="mb-1"><?php foreach ($motivos as $mv): ?><span class="badge bg-danger me-1"><?= htmlspecialchars($mv) ?></span><?php endforeach; ?></div><?php endif; ?>
+                    <?php if (!empty($order['urgency_description'])): ?>
+                    <p class="mb-0 small"><?= nl2br(htmlspecialchars($order['urgency_description'])) ?></p>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+
                 <?php if (!empty($order['description'])): ?>
                 <hr>
                 <small class="text-muted d-block"><i class="bi bi-chat-text"></i> Observações do Pedido</small>

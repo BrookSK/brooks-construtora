@@ -65,6 +65,31 @@
                     <div id="deadlineWarning" class="alert alert-warning small mt-2 d-none">
                         <i class="bi bi-exclamation-triangle-fill"></i> <span id="deadlineWarningText"></span>
                     </div>
+
+                    <!-- Justificativa de urgência (Alta / Crítica) -->
+                    <div class="mt-3 d-none" id="urgencyReasonBlock">
+                        <div class="border border-danger border-opacity-50 rounded p-3 bg-danger bg-opacity-10">
+                            <label class="form-label fw-bold text-danger mb-2">
+                                <i class="bi bi-exclamation-triangle-fill"></i> Motivo da urgência (obrigatório)
+                            </label>
+                            <div class="form-check">
+                                <input class="form-check-input urgency-reason" type="checkbox" name="urgency_reason_site_occurrence" value="1" id="reasonOccurrence">
+                                <label class="form-check-label" for="reasonOccurrence">
+                                    Ocorrência em obra
+                                    <small class="text-muted d-block">Situação não prevista durante a execução (dano, alteração, emergência).</small>
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input urgency-reason" type="checkbox" name="urgency_reason_no_advance" value="1" id="reasonNoAdvance">
+                                <label class="form-check-label" for="reasonNoAdvance">
+                                    Não previsto / sem antecedência
+                                    <small class="text-muted d-block">Poderia ter sido solicitado antes, mas não foi.</small>
+                                </label>
+                            </div>
+                            <label class="form-label small mb-1">Descrição da ocorrência / justificativa *</label>
+                            <textarea class="form-control" name="urgency_description" id="urgencyDescription" rows="2" placeholder="Explique o motivo desta urgência..."></textarea>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -291,6 +316,7 @@ document.getElementById('addItemBtn').addEventListener('click', () => addItem())
     const urgencyValue = document.getElementById('urgencyValue');
     const urgencyDisplay = document.getElementById('urgencyDisplay');
     const urgencyHint = document.getElementById('urgencyHint');
+    const reasonBlock = document.getElementById('urgencyReasonBlock');
     if (!deadlineInput || !urgencyValue) return;
 
     function classify(days) {
@@ -304,6 +330,7 @@ document.getElementById('addItemBtn').addEventListener('click', () => addItem())
             urgencyValue.value = 'medium';
             if (urgencyDisplay) urgencyDisplay.value = 'medium';
             if (urgencyHint) urgencyHint.textContent = 'Selecione um prazo para calcular a urgência.';
+            if (reasonBlock) reasonBlock.classList.add('d-none');
             return;
         }
         const today = new Date(); today.setHours(0,0,0,0);
@@ -313,9 +340,22 @@ document.getElementById('addItemBtn').addEventListener('click', () => addItem())
         urgencyValue.value = c[0];
         if (urgencyDisplay) urgencyDisplay.value = c[0];
         if (urgencyHint) urgencyHint.textContent = 'Classificada como ' + c[1] + ' (' + days + ' dia(s) de antecedência).';
+        // Mostra o bloco de justificativa quando Alta/Crítica
+        if (reasonBlock) reasonBlock.classList.toggle('d-none', !(c[0] === 'high' || c[0] === 'critical'));
     }
     deadlineInput.addEventListener('change', recalc);
     recalc();
+
+    // Exposto para a validação de revisão/envio
+    window.isHighUrgency = function() {
+        return urgencyValue.value === 'high' || urgencyValue.value === 'critical';
+    };
+    window.validateUrgencyReason = function() {
+        if (!window.isHighUrgency()) return true;
+        const anyReason = document.getElementById('reasonOccurrence').checked || document.getElementById('reasonNoAdvance').checked;
+        const desc = (document.getElementById('urgencyDescription').value || '').trim();
+        return anyReason && desc.length > 0;
+    };
 })();
 
 function updateItemCount() {
@@ -477,7 +517,15 @@ document.getElementById('orderForm').addEventListener('submit', function(e) {
     document.querySelectorAll('[id^="mname-"]').forEach(input => {
         if (!input.value) { valid = false; }
     });
-    if (!valid) { e.preventDefault(); alert('Selecione um material para cada item.'); }
+    if (!valid) { e.preventDefault(); alert('Selecione um material para cada item.'); return; }
+
+    // Justificativa obrigatória quando urgência Alta/Crítica
+    if (typeof window.validateUrgencyReason === 'function' && !window.validateUrgencyReason()) {
+        e.preventDefault();
+        alert('Pedidos com urgência Alta ou Crítica precisam informar o motivo (ocorrência em obra ou não previsto) e a descrição.');
+        const rb = document.getElementById('urgencyReasonBlock');
+        if (rb) rb.scrollIntoView({ behavior: 'smooth' });
+    }
 });
 
 // Botão inline de adicionar item (mobile)
@@ -675,6 +723,14 @@ function showReview() {
         }
     });
     if (!qtyValid) { alert('A quantidade de "' + invalidItemName + '" deve ser no mínimo 0,01.'); return; }
+
+    // Validar justificativa quando urgência Alta/Crítica
+    if (typeof window.validateUrgencyReason === 'function' && !window.validateUrgencyReason()) {
+        alert('Pedidos com urgência Alta ou Crítica precisam informar o motivo (ocorrência em obra ou não previsto) e a descrição.');
+        const rb = document.getElementById('urgencyReasonBlock');
+        if (rb) rb.scrollIntoView({ behavior: 'smooth' });
+        return;
+    }
 
     // Montar resumo
     let html = '<h6 class="mb-3">Itens do pedido:</h6>';

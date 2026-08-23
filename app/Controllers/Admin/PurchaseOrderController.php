@@ -152,6 +152,19 @@ class PurchaseOrderController extends Controller
             }
         }
 
+        // Urgência é derivada do prazo; se Alta/Crítica exige justificativa.
+        $derivedUrgency = self::classifyUrgencyByDeadline(!empty($this->input('deadline')) ? $this->input('deadline') : null);
+        $reasonNoAdvance = !empty($_POST['urgency_reason_no_advance']) ? 1 : 0;
+        $reasonOccurrence = !empty($_POST['urgency_reason_site_occurrence']) ? 1 : 0;
+        $urgencyDescription = trim($this->input('urgency_description', ''));
+        if (in_array($derivedUrgency, ['high', 'critical'])) {
+            if ((!$reasonNoAdvance && !$reasonOccurrence) || $urgencyDescription === '') {
+                $this->setFlash('error', 'Pedidos com urgência Alta ou Crítica precisam informar o motivo (ocorrência em obra ou não previsto) e a descrição.');
+                $this->redirect('/admin/orders/create');
+                return;
+            }
+        }
+
         $code = PurchaseOrder::generateCode();
         $quoteToken = PurchaseOrder::generateToken();
         $approvalToken = PurchaseOrder::generateToken();
@@ -165,7 +178,7 @@ class PurchaseOrderController extends Controller
             'supplier_id' => null,
             'status' => 'pending_quote',
             'description' => $description,
-            'urgency' => self::classifyUrgencyByDeadline(!empty($this->input('deadline')) ? $this->input('deadline') : null),
+            'urgency' => $derivedUrgency,
             'deadline' => !empty($this->input('deadline')) ? $this->input('deadline') : null,
             'created_by' => Auth::id(),
             'created_by_name' => Auth::user()['name'],
@@ -187,6 +200,13 @@ class PurchaseOrderController extends Controller
         // Origem do pedido manual (distingue de pedidos da Lista Semanal)
         if (PurchaseOrder::hasColumn('origin')) {
             $orderData['origin'] = 'manual';
+        }
+
+        // Justificativa de urgência (Alta/Crítica) — só grava se as colunas existirem
+        if (PurchaseOrder::hasColumn('urgency_description')) {
+            $orderData['urgency_reason_no_advance'] = $reasonNoAdvance;
+            $orderData['urgency_reason_site_occurrence'] = $reasonOccurrence;
+            $orderData['urgency_description'] = $urgencyDescription ?: null;
         }
 
         $orderId = PurchaseOrder::create($orderData);

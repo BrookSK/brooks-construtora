@@ -36,30 +36,39 @@ class WeeklyMaterialController extends Controller
             return;
         }
 
-        // Registrar abertura do formulário (uma vez)
-        WeeklyMaterialRequest::markOpened((int) $request['id']);
-        WeeklyMaterialLog::record(
-            WeeklyMaterialLog::ACTION_FORM_OPENED,
-            (int) $request['id'],
-            'Formulário aberto pelo responsável',
-            $request['week_start'] ?? null
-        );
+        // Registrar abertura do formulário (uma vez). Não deve quebrar a
+        // página caso a estrutura de log/colunas ainda não exista.
+        try {
+            WeeklyMaterialRequest::markOpened((int) $request['id']);
+            WeeklyMaterialLog::record(
+                WeeklyMaterialLog::ACTION_FORM_OPENED,
+                (int) $request['id'],
+                'Formulário aberto pelo responsável',
+                $request['week_start'] ?? null
+            );
+        } catch (\Throwable $e) {
+            error_log('[WEEKLY_MATERIAL] Falha ao registrar abertura: ' . $e->getMessage());
+        }
 
         // Materiais para autocomplete (mesma base do Novo Pedido)
         $materials = Material::allActive();
 
         // EPIs também disponíveis (itens não vinculados, material_id nulo)
-        foreach (\App\Models\Epi::allActive() as $epi) {
-            $materials[] = [
-                'id' => 'epi-' . $epi['id'],
-                'name' => $epi['name'],
-                'specification' => $epi['category'] ?? 'EPI',
-                'category_name' => $epi['category'] ?? 'EPI',
-                'classification' => $epi['ca'] ? 'CA ' . $epi['ca'] : '',
-                'unit_abbr' => 'un',
-                'unit_name' => 'Unidade',
-                'is_epi' => true,
-            ];
+        try {
+            foreach (\App\Models\Epi::allActive() as $epi) {
+                $materials[] = [
+                    'id' => 'epi-' . $epi['id'],
+                    'name' => $epi['name'],
+                    'specification' => $epi['category'] ?? 'EPI',
+                    'category_name' => $epi['category'] ?? 'EPI',
+                    'classification' => !empty($epi['ca']) ? 'CA ' . $epi['ca'] : '',
+                    'unit_abbr' => 'un',
+                    'unit_name' => 'Unidade',
+                    'is_epi' => true,
+                ];
+            }
+        } catch (\Throwable $e) {
+            error_log('[WEEKLY_MATERIAL] Falha ao carregar EPIs: ' . $e->getMessage());
         }
 
         // Categorias e unidades para o modal "Novo Material"
