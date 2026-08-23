@@ -137,6 +137,10 @@ class WeeklyMaterialController extends Controller
         // Rótulo do ciclo (número, semana do mês e intervalo de datas)
         $cycleLabel = WeeklyMaterialRequest::cycleLabel($request['week_start']);
 
+        // Janela do ciclo (Y-m-d) para limitar a data opcional por item.
+        // O máximo é o fim do ciclo; o mínimo é a data mínima da necessidade.
+        $cycleEndDate = WeeklyMaterialRequest::cycleEnd($request['week_start']);
+
         require ROOT_PATH . '/app/Views/site/weekly_materials/form.php';
     }
 

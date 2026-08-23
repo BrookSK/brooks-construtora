@@ -104,7 +104,10 @@ $statusMap = [
                     <?php
                     [$uLabel, $uClass] = $urgencyMap[$it['urgency']] ?? ['—', 'bg-light text-dark'];
                     [$sLabel, $sClass] = $statusMap[$it['order_status']] ?? [$it['order_status'], 'bg-light text-dark'];
-                    $antec = \App\Models\WeeklyMaterialRequest::calcAntecedence($it['needed_date'], $it['filled_at']);
+                    // Prioriza a data específica do item, quando informada
+                    $effNeeded = !empty($it['item_needed_date']) ? $it['item_needed_date'] : $it['needed_date'];
+                    $isItemDate = !empty($it['item_needed_date']);
+                    $antec = \App\Models\WeeklyMaterialRequest::calcAntecedence($effNeeded, $it['filled_at']);
                     $isCritical = in_array($it['urgency'], ['high', 'critical']);
                     ?>
                     <tr>
@@ -123,7 +126,10 @@ $statusMap = [
                                 #<?= htmlspecialchars($it['order_code']) ?>
                             </a>
                         </td>
-                        <td><small><?= !empty($it['needed_date']) ? date('d/m/Y', strtotime($it['needed_date'])) : '—' ?></small></td>
+                        <td>
+                            <small><?= !empty($effNeeded) ? date('d/m/Y', strtotime($effNeeded)) : '—' ?></small>
+                            <?php if ($isItemDate): ?><span class="badge bg-info text-dark ms-1" title="Data específica deste item">item</span><?php endif; ?>
+                        </td>
                         <td class="text-center">
                             <?php if ($antec !== null): ?>
                             <span class="badge <?= $antec >= 15 ? 'bg-success' : 'bg-warning text-dark' ?>"><?= $antec ?>d</span>

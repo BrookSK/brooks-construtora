@@ -197,6 +197,25 @@ class PurchaseOrder extends Model
     }
 
     /**
+     * Verifica se purchase_order_items tem a coluna needed_date (migration 035).
+     */
+    private static ?bool $orderItemsNeededDate = null;
+    public static function orderItemsHaveNeededDate(): bool
+    {
+        if (self::$orderItemsNeededDate === null) {
+            try {
+                $r = Database::fetch(
+                    "SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_order_items' AND COLUMN_NAME = 'needed_date' LIMIT 1"
+                );
+                self::$orderItemsNeededDate = !empty($r);
+            } catch (\Exception $e) {
+                self::$orderItemsNeededDate = false;
+            }
+        }
+        return self::$orderItemsNeededDate;
+    }
+
+    /**
      * PONTO ÚNICO DE CRIAÇÃO DE PEDIDO (fonte única da verdade).
      *
      * Cria um pedido de material real no sistema existente + seus itens,
@@ -253,9 +272,10 @@ class PurchaseOrder extends Model
         $orderId = self::create($orderData);
 
         // Itens do pedido (fluxo padrão de cotação: source_type = null)
+        $itemHasNeededDate = self::orderItemsHaveNeededDate();
         foreach ($items as $item) {
             if (empty(trim($item['material_name'] ?? ''))) continue;
-            \App\Models\PurchaseOrderItem::create([
+            $itemData = [
                 'order_id' => $orderId,
                 'material_id' => !empty($item['material_id']) ? (int) $item['material_id'] : null,
                 'material_name' => trim($item['material_name']),
@@ -267,7 +287,11 @@ class PurchaseOrder extends Model
                 'stock_from_site_id' => null,
                 'stock_movement_id' => null,
                 'created_at' => date('Y-m-d H:i:s'),
-            ]);
+            ];
+            if ($itemHasNeededDate && !empty($item['needed_date'])) {
+                $itemData['needed_date'] = $item['needed_date'];
+            }
+            \App\Models\PurchaseOrderItem::create($itemData);
         }
 
         return [

@@ -600,6 +600,26 @@ class WeeklyMaterialRequest extends Model
     }
 
     /**
+     * Verifica se a coluna needed_date existe em weekly_material_request_items
+     * (compat. com bancos sem a migration 035).
+     */
+    private static ?bool $itemsNeededDateCol = null;
+    public static function itemsHaveNeededDateColumn(): bool
+    {
+        if (self::$itemsNeededDateCol === null) {
+            try {
+                $r = Database::fetch(
+                    "SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'weekly_material_request_items' AND COLUMN_NAME = 'needed_date' LIMIT 1"
+                );
+                self::$itemsNeededDateCol = !empty($r);
+            } catch (\Exception $e) {
+                self::$itemsNeededDateCol = false;
+            }
+        }
+        return self::$itemsNeededDateCol;
+    }
+
+    /**
      * Salvar itens de uma lista
      */
     public static function saveItems(int $requestId, array $items): void
@@ -607,18 +627,25 @@ class WeeklyMaterialRequest extends Model
         // Limpar itens existentes
         Database::delete('weekly_material_request_items', 'request_id = ?', [$requestId]);
 
+        $hasNeededDate = self::itemsHaveNeededDateColumn();
+
         // Inserir novos
         $count = 0;
         foreach ($items as $item) {
             if (empty(trim($item['material_name'] ?? ''))) continue;
-            Database::insert('weekly_material_request_items', [
+            $data = [
                 'request_id' => $requestId,
                 'material_name' => trim($item['material_name']),
                 'quantity' => (float) ($item['quantity'] ?? 1),
                 'unit' => trim($item['unit'] ?? ''),
                 'notes' => trim($item['notes'] ?? '') ?: null,
                 'created_at' => date('Y-m-d H:i:s'),
-            ]);
+            ];
+            if ($hasNeededDate) {
+                $d = trim($item['needed_date'] ?? '');
+                $data['needed_date'] = $d !== '' ? $d : null;
+            }
+            Database::insert('weekly_material_request_items', $data);
             $count++;
         }
 
@@ -751,22 +778,29 @@ class WeeklyMaterialRequest extends Model
             $params[] = $filters['order_status'];
         }
 
-        // Ordenação (PARTE 27)
+        // Coluna de data por item (migration 035). Se existir, priorizamos
+        // a data específica do item; senão, caímos na data da solicitação.
+        $hasItemDate = \App\Models\PurchaseOrder::orderItemsHaveNeededDate();
+        $itemDateSelect = $hasItemDate ? "poi.needed_date as item_needed_date," : "NULL as item_needed_date,";
+        $effectiveDate = $hasItemDate ? "COALESCE(poi.needed_date, wmr.needed_date)" : "wmr.needed_date";
+
+        // Ordenação (PARTE 27) — usa a data efetiva (item ou solicitação)
         switch ($filters['sort'] ?? 'urgency_date') {
-            case 'date':       // Data da solicitação: mais antigos primeiro
-                $orderBy = "wmr.filled_at ASC";
+            case 'date':       // Data da necessidade: mais próximos primeiro
+                $orderBy = "{$effectiveDate} ASC, wmr.filled_at ASC";
                 break;
             case 'urgency':    // Urgência: crítico → baixo
                 $orderBy = "FIELD(wmr.urgency,'critical','high','medium','low')";
                 break;
-            case 'urgency_date': // Urgência, depois necessidade, depois solicitação
+            case 'urgency_date': // Urgência, depois necessidade (item), depois solicitação
             default:
-                $orderBy = "FIELD(wmr.urgency,'critical','high','medium','low'), wmr.needed_date ASC, wmr.filled_at ASC";
+                $orderBy = "FIELD(wmr.urgency,'critical','high','medium','low'), {$effectiveDate} ASC, wmr.filled_at ASC";
                 break;
         }
 
         return Database::fetchAll(
             "SELECT poi.material_name, poi.specification, poi.classification, poi.unit, poi.quantity,
+                    {$itemDateSelect}
                     wmr.id as request_id, wmr.urgency, wmr.needed_date, wmr.filled_at,
                     wmr.urgency_reason_no_advance, wmr.urgency_reason_site_occurrence, wmr.urgency_description,
                     cs.name as construction_site_name, cs.code as construction_site_code,

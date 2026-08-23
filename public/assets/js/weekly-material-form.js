@@ -11,6 +11,7 @@
     const TOKEN = window.WEEKLY_TOKEN;
     const MIN_ADVANCE = parseInt(window.WEEKLY_MIN_ADVANCE || 15, 10);
     const MIN_DATE = window.WEEKLY_MIN_DATE || '';
+    const CYCLE_END = window.WEEKLY_CYCLE_END || '';
     const materials = window.WEEKLY_MATERIALS || [];
     let itemCount = 0;
     let audioBlob = null;
@@ -66,6 +67,7 @@
             '<td><input type="text" class="form-control form-control-sm" name="items[' + idx + '][classification]" id="class-' + idx + '" value="' + (prefill && prefill.classification || '') + '" readonly></td>' +
             '<input type="hidden" name="items[' + idx + '][unit]" id="unit-' + idx + '" value="' + (prefill && prefill.unit || '') + '">' +
             '<td><input type="number" class="form-control form-control-sm" name="items[' + idx + '][quantity]" min="0.01" step="0.01" value="' + (prefill && prefill.quantity || 1) + '" required></td>' +
+            '<td><input type="date" class="form-control form-control-sm item-date" name="items[' + idx + '][needed_date]" id="idate-' + idx + '"' + (MIN_DATE ? ' min="' + MIN_DATE + '"' : '') + (CYCLE_END ? ' max="' + CYCLE_END + '"' : '') + ' title="Data específica (opcional, dentro da janela)"></td>' +
             '<td><button type="button" class="btn btn-sm btn-outline-danger" data-remove="' + idx + '"><i class="bi bi-trash"></i></button></td>';
         document.getElementById('itemsBodyDesktop').appendChild(tr);
 
@@ -98,6 +100,10 @@
             '<div class="d-flex align-items-center gap-2 mt-2">' +
                 '<label class="form-label mb-0 small fw-bold">Qtd:</label>' +
                 '<input type="number" class="form-control form-control-sm qty-mobile" style="max-width:100px;" data-idx="' + idx + '" min="0.01" step="0.01" value="' + (prefill && prefill.quantity || 1) + '">' +
+            '</div>' +
+            '<div class="d-flex align-items-center gap-2 mt-2">' +
+                '<label class="form-label mb-0 small fw-bold">Data (opc.):</label>' +
+                '<input type="date" class="form-control form-control-sm date-mobile" style="max-width:170px;" data-idx="' + idx + '"' + (MIN_DATE ? ' min="' + MIN_DATE + '"' : '') + (CYCLE_END ? ' max="' + CYCLE_END + '"' : '') + '>' +
             '</div>';
         document.getElementById('itemsBodyMobile').appendChild(card);
 
@@ -117,6 +123,16 @@
         card.querySelector('.qty-mobile').addEventListener('input', function () {
             const d = document.querySelector('#item-row-' + idx + ' [name="items[' + idx + '][quantity]"]');
             if (d) d.value = this.value;
+        });
+        // Sincroniza data (mobile → desktop, que é o campo submetido)
+        const dm = card.querySelector('.date-mobile');
+        if (dm) dm.addEventListener('input', function () {
+            const di = document.getElementById('idate-' + idx);
+            if (di) di.value = this.value;
+        });
+        const di = document.getElementById('idate-' + idx);
+        if (di) di.addEventListener('input', function () {
+            if (dm) dm.value = this.value;
         });
         tr.querySelector('[name="items[' + idx + '][quantity]"]').addEventListener('input', function () {
             const m = card.querySelector('.qty-mobile');
@@ -399,7 +415,7 @@
         }
         html += '<div class="alert alert-light py-2 mb-2"><i class="bi bi-calendar-check"></i> <strong>Necessário até:</strong> ' + new Date(neededDate.value + 'T00:00:00').toLocaleDateString('pt-BR') + '</div>';
 
-        html += '<table class="table table-sm table-bordered"><thead><tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th class="text-center">Qtd</th></tr></thead><tbody>';
+        html += '<table class="table table-sm table-bordered"><thead><tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th class="text-center">Qtd</th><th>Data</th></tr></thead><tbody>';
         let count = 0;
         rows.forEach(function (row) {
             count++;
@@ -407,7 +423,9 @@
             const spec = (row.querySelector('[id^="spec-"]') || {}).value || '-';
             const cls = (row.querySelector('[id^="class-"]') || {}).value || '-';
             const qty = (row.querySelector('[name*="[quantity]"]') || {}).value || '1';
-            html += '<tr><td>' + count + '</td><td><strong>' + name + '</strong></td><td>' + spec + '</td><td>' + cls + '</td><td class="text-center">' + qty + '</td></tr>';
+            const idate = (row.querySelector('[name*="[needed_date]"]') || {}).value || '';
+            const idateFmt = idate ? new Date(idate + 'T00:00:00').toLocaleDateString('pt-BR') : '<span class="text-muted">—</span>';
+            html += '<tr><td>' + count + '</td><td><strong>' + name + '</strong></td><td>' + spec + '</td><td>' + cls + '</td><td class="text-center">' + qty + '</td><td>' + idateFmt + '</td></tr>';
         });
         html += '</tbody></table>';
 

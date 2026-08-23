@@ -134,6 +134,7 @@
                                     <th style="min-width:120px;">Especificação</th>
                                     <th style="min-width:100px;">Classificação</th>
                                     <th style="width:90px;">Qtd</th>
+                                    <th style="width:150px;">Data (opcional)</th>
                                     <th style="width:50px;"></th>
                                 </tr>
                             </thead>
@@ -237,6 +238,7 @@
     window.WEEKLY_TOKEN = <?= json_encode($token) ?>;
     window.WEEKLY_MIN_ADVANCE = <?= (int) ($minAdvanceDays ?? 15) ?>;
     window.WEEKLY_MIN_DATE = <?= json_encode($minNeededDate ?? '') ?>;
+    window.WEEKLY_CYCLE_END = <?= json_encode($cycleEndDate ?? '') ?>;
     window.WEEKLY_MATERIALS = <?= json_encode(array_values($materials)) ?>;
     </script>
     <script src="/assets/js/weekly-material-form.js"></script>
