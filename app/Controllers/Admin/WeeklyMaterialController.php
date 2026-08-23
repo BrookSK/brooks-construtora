@@ -24,23 +24,153 @@ class WeeklyMaterialController extends Controller
     }
 
     /**
-     * Painel principal: semanas + status
+     * Painel principal (dashboard consolidado): stats, controle por
+     * responsável, lista de compras, automação e organização.
      */
     public function index(): void
     {
         $weeks = WeeklyMaterialRequest::getWeeks();
-        $managers = WeeklyMaterialManager::allWithSite();
-        $currentWeek = WeeklyMaterialRequest::currentWeekStart();
+
+        // Semana selecionada (via filtro) ou a semana mais recente com registros
+        $selectedWeek = $this->input('week', '');
+        if (!$selectedWeek) {
+            $selectedWeek = !empty($weeks) ? $weeks[0]['week_start'] : WeeklyMaterialRequest::currentWeekStart();
+        }
+
+        // Cards de indicadores (PARTE 22)
+        $stats = WeeklyMaterialRequest::getWeekStats($selectedWeek);
+
+        // Controle por responsável (PARTE 23) + últimos 4 ciclos
+        $managerControl = WeeklyMaterialRequest::getManagerControl($selectedWeek);
+        foreach ($managerControl as &$mc) {
+            $mc['recent_cycles'] = WeeklyMaterialRequest::getRecentCyclesForManager((int) $mc['manager_id'], 4);
+        }
+        unset($mc);
+
+        // Lista de compras consolidada (PARTE 26)
+        $sortMode = $this->input('sort', Setting::get('weekly_purchase_sort', 'urgency_date'));
+        $purchaseItems = WeeklyMaterialRequest::getConsolidatedPurchaseItems($selectedWeek, [
+            'construction_site_id' => $this->input('purchase_site') ? (int) $this->input('purchase_site') : null,
+            'urgency' => $this->input('purchase_urgency') ?: null,
+            'order_status' => $this->input('purchase_status') ?: null,
+            'sort' => $sortMode,
+        ]);
+
+        // Log de notificações da semana (PARTE 31)
+        $logs = \App\Models\WeeklyMaterialLog::getByWeek($selectedWeek);
+
+        // Configuração de automação (PARTE 17)
+        $automation = [
+            'send_day' => Setting::get('weekly_send_day', '1'),
+            'send_time' => Setting::get('weekly_send_time', '08:00'),
+            'response_deadline' => Setting::get('weekly_response_deadline', 'same_day_18'),
+            'min_advance_days' => Setting::get('weekly_min_advance_days', '15'),
+            'auto_reminder' => Setting::get('weekly_auto_reminder', '1'),
+            'auto_overdue' => Setting::get('weekly_auto_overdue', '1'),
+            'notify_supervisor' => Setting::get('weekly_notify_supervisor', '0'),
+            'channel' => Setting::get('weekly_channel', 'whatsapp'),
+        ];
+
+        // Organização da lista de compras (PARTE 27)
+        $organization = [
+            'sort' => Setting::get('weekly_purchase_sort', 'urgency_date'),
+            'group_by' => Setting::get('weekly_purchase_group', 'site_category'),
+            'flag_outside_15' => Setting::get('weekly_flag_outside_15', '1'),
+        ];
+
+        $sites = \App\Models\ConstructionSite::allActive();
 
         $this->view('admin.weekly_materials.index', [
             'weeks' => $weeks,
-            'managers' => $managers,
-            'currentWeek' => $currentWeek,
+            'selectedWeek' => $selectedWeek,
+            'stats' => $stats,
+            'managerControl' => $managerControl,
+            'purchaseItems' => $purchaseItems,
+            'logs' => $logs,
+            'automation' => $automation,
+            'organization' => $organization,
+            'sites' => $sites,
+            'currentWeek' => WeeklyMaterialRequest::currentWeekStart(),
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
             'pageTitle' => 'Lista Semanal de Materiais',
             'currentPage' => 'weekly_materials',
         ]);
+    }
+
+    /**
+     * Salvar configuração de automação semanal e organização (PARTE 17/27).
+     */
+    public function saveAutomation(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/weekly-materials');
+            return;
+        }
+
+        Setting::setMultiple([
+            'weekly_send_day' => $this->input('send_day', '1'),
+            'weekly_send_time' => $this->input('send_time', '08:00'),
+            'weekly_response_deadline' => $this->input('response_deadline', 'same_day_18'),
+            'weekly_min_advance_days' => (string) (int) $this->input('min_advance_days', '15'),
+            'weekly_auto_reminder' => $this->input('auto_reminder') ? '1' : '0',
+            'weekly_auto_overdue' => $this->input('auto_overdue') ? '1' : '0',
+            'weekly_notify_supervisor' => $this->input('notify_supervisor') ? '1' : '0',
+            'weekly_channel' => $this->input('channel', 'whatsapp'),
+        ]);
+
+        $this->setFlash('success', 'Automação semanal salva com sucesso.');
+        $this->redirect('/admin/weekly-materials');
+    }
+
+    /**
+     * Salvar configuração de organização da lista de compras (PARTE 27).
+     */
+    public function saveOrganization(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/weekly-materials');
+            return;
+        }
+
+        Setting::setMultiple([
+            'weekly_purchase_sort' => $this->input('sort', 'urgency_date'),
+            'weekly_purchase_group' => $this->input('group_by', 'site_category'),
+            'weekly_flag_outside_15' => $this->input('flag_outside_15') ? '1' : '0',
+        ]);
+
+        $this->setFlash('success', 'Organização da lista de compras salva.');
+        $this->redirect('/admin/weekly-materials');
+    }
+
+    /**
+     * Exportar controle por responsável da semana em CSV (PARTE 23).
+     */
+    public function exportControl(string $weekStart = ''): void
+    {
+        if (!$weekStart) {
+            $weekStart = $this->input('week', WeeklyMaterialRequest::currentWeekStart());
+        }
+
+        $rows = WeeklyMaterialRequest::getManagerControl($weekStart);
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="controle-semana-' . $weekStart . '.csv"');
+        $out = fopen('php://output', 'w');
+        fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM UTF-8
+        fputcsv($out, ['Responsável', 'Obra', 'Link enviado', 'Status', 'Último pedido', 'Próxima necessidade'], ';');
+        foreach ($rows as $r) {
+            fputcsv($out, [
+                $r['manager_name'],
+                $r['construction_site_name'] ?? '',
+                !empty($r['notified_at']) ? date('d/m/Y H:i', strtotime($r['notified_at'])) : '',
+                $r['status'],
+                !empty($r['order_code']) ? '#' . $r['order_code'] : '',
+                !empty($r['needed_date']) ? date('d/m/Y', strtotime($r['needed_date'])) : '',
+            ], ';');
+        }
+        fclose($out);
+        exit;
     }
 
     /**
