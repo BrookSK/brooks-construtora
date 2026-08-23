@@ -126,6 +126,12 @@
                     </div>
                 </div>
                 <div class="card-body" style="overflow:visible;">
+                    <div class="alert alert-light border small mb-3">
+                        <i class="bi bi-info-circle text-primary"></i>
+                        A <strong>Data (opcional)</strong> é para materiais que precisam de <strong>maior antecedência</strong>:
+                        informe uma data específica de entrega, sempre <strong>até a data máxima informada acima</strong>
+                        (campo "Preciso deste material até"). Se deixar em branco, será usada essa data máxima.
+                    </div>
                     <div class="d-none d-md-block">
                         <table class="table table-sm mb-0">
                             <thead>

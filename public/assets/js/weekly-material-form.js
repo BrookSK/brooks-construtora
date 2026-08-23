@@ -19,11 +19,26 @@
     // ─── Data da necessidade: mínimo obrigatório (15 dias à frente) ──────
     // O responsável não pode escolher uma data anterior ao mínimo.
     const neededDate = document.getElementById('neededDate');
+    // Data máxima dos itens = valor de "Preciso até" (a pessoa pode antecipar,
+    // mas nunca ultrapassar a data máxima informada).
+    function currentMaxDate() {
+        return (neededDate && neededDate.value) ? neededDate.value : (CYCLE_END || '');
+    }
+    function syncItemDateBounds() {
+        const max = currentMaxDate();
+        document.querySelectorAll('.item-date, .date-mobile').forEach(function (el) {
+            if (max) el.max = max;
+            if (MIN_DATE) el.min = MIN_DATE;
+            // Se a data do item ficou acima da nova máxima, ajusta para a máxima
+            if (max && el.value && el.value > max) el.value = max;
+        });
+    }
     function enforceMinDate() {
         if (!neededDate || !MIN_DATE) return;
         if (!neededDate.value || neededDate.value < MIN_DATE) {
             neededDate.value = MIN_DATE;
         }
+        syncItemDateBounds();
     }
     if (neededDate) {
         neededDate.addEventListener('change', enforceMinDate);
@@ -67,7 +82,7 @@
             '<td><input type="text" class="form-control form-control-sm" name="items[' + idx + '][classification]" id="class-' + idx + '" value="' + (prefill && prefill.classification || '') + '" readonly></td>' +
             '<input type="hidden" name="items[' + idx + '][unit]" id="unit-' + idx + '" value="' + (prefill && prefill.unit || '') + '">' +
             '<td><input type="number" class="form-control form-control-sm" name="items[' + idx + '][quantity]" min="0.01" step="0.01" value="' + (prefill && prefill.quantity || 1) + '" required></td>' +
-            '<td><input type="date" class="form-control form-control-sm item-date" name="items[' + idx + '][needed_date]" id="idate-' + idx + '"' + (MIN_DATE ? ' min="' + MIN_DATE + '"' : '') + (CYCLE_END ? ' max="' + CYCLE_END + '"' : '') + ' title="Data específica (opcional, dentro da janela)"></td>' +
+            '<td><input type="date" class="form-control form-control-sm item-date" name="items[' + idx + '][needed_date]" id="idate-' + idx + '"' + (MIN_DATE ? ' min="' + MIN_DATE + '"' : '') + (currentMaxDate() ? ' max="' + currentMaxDate() + '"' : '') + ' title="Data específica (opcional) — até a data máxima informada acima"></td>' +
             '<td><button type="button" class="btn btn-sm btn-outline-danger" data-remove="' + idx + '"><i class="bi bi-trash"></i></button></td>';
         document.getElementById('itemsBodyDesktop').appendChild(tr);
 
@@ -103,7 +118,7 @@
             '</div>' +
             '<div class="d-flex align-items-center gap-2 mt-2">' +
                 '<label class="form-label mb-0 small fw-bold">Data (opc.):</label>' +
-                '<input type="date" class="form-control form-control-sm date-mobile" style="max-width:170px;" data-idx="' + idx + '"' + (MIN_DATE ? ' min="' + MIN_DATE + '"' : '') + (CYCLE_END ? ' max="' + CYCLE_END + '"' : '') + '>' +
+                '<input type="date" class="form-control form-control-sm date-mobile" style="max-width:170px;" data-idx="' + idx + '"' + (MIN_DATE ? ' min="' + MIN_DATE + '"' : '') + (currentMaxDate() ? ' max="' + currentMaxDate() + '"' : '') + '>' +
             '</div>';
         document.getElementById('itemsBodyMobile').appendChild(card);
 
