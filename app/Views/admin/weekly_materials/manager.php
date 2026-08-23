@@ -61,6 +61,9 @@ $rate = $totalSent > 0 ? round($totalResp / $totalSent * 100) : 0;
 <div class="card">
     <div class="card-header"><i class="bi bi-clock-history"></i> Últimas Semanas</div>
     <div class="card-body p-0">
+        <?php
+        $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '');
+        ?>
         <?php if (empty($requests)): ?>
         <div class="text-center py-4 text-muted"><p class="mb-0">Nenhuma solicitação registrada para este responsável.</p></div>
         <?php else: ?>
@@ -75,6 +78,7 @@ $rate = $totalSent > 0 ? round($totalResp / $totalSent * 100) : 0;
                         <th class="text-center">Itens</th>
                         <th>Necessário em</th>
                         <th>Pedido gerado</th>
+                        <th>Link de solicitação</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -100,6 +104,17 @@ $rate = $totalSent > 0 ? round($totalResp / $totalSent * 100) : 0;
                                 <i class="bi bi-receipt"></i> Pedido #<?= htmlspecialchars($req['order_code']) ?>
                             </a>
                             <?php else: ?><span class="text-muted">—</span><?php endif; ?>
+                        </td>
+                        <td>
+                            <?php $formUrl = $baseUrl . '/lista-semanal/' . $req['token']; ?>
+                            <div class="input-group input-group-sm" style="min-width:260px;">
+                                <input type="text" class="form-control" value="<?= htmlspecialchars($formUrl) ?>" readonly onclick="this.select()">
+                                <button type="button" class="btn btn-outline-secondary" title="Copiar link"
+                                    onclick="navigator.clipboard.writeText('<?= htmlspecialchars($formUrl) ?>'); this.innerHTML='<i class=\'bi bi-check\'></i>'; setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i>',2000)">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                                <a href="<?= htmlspecialchars($formUrl) ?>" target="_blank" class="btn btn-outline-primary" title="Abrir formulário"><i class="bi bi-box-arrow-up-right"></i></a>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>

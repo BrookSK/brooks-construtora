@@ -35,11 +35,13 @@ $critical = (int) ($stats['critical_count'] ?? 0);
         </select>
     </form>
     <div class="d-flex gap-2 flex-wrap">
+        <a href="/admin/weekly-materials/monitoring" class="btn btn-sm btn-outline-info"><i class="bi bi-graph-up"></i> Monitoramento</a>
         <a href="/admin/orders/pin-users" class="btn btn-sm btn-outline-secondary"><i class="bi bi-people"></i> Gerenciar Responsáveis</a>
         <form method="POST" action="/admin/weekly-materials/generate" class="d-inline">
-            <input type="hidden" name="week_start" value="<?= \App\Models\WeeklyMaterialRequest::nextWeekStart() ?>">
-            <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Gerar registros para a semana de <?= date('d/m/Y', strtotime(\App\Models\WeeklyMaterialRequest::nextWeekStart())) ?>?')">
-                <i class="bi bi-plus-lg"></i> Gerar Semana
+            <?php $nextCycle = \App\Models\WeeklyMaterialRequest::nextCycleStart(); $cycleDays = \App\Models\WeeklyMaterialRequest::cycleIntervalDays(); ?>
+            <input type="hidden" name="week_start" value="<?= $nextCycle ?>">
+            <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Gerar ciclo de <?= $cycleDays ?> dias iniciando em <?= date('d/m/Y', strtotime($nextCycle)) ?>?')">
+                <i class="bi bi-plus-lg"></i> Gerar Ciclo
             </button>
         </form>
         <form method="POST" action="/admin/weekly-materials/send-now" class="d-inline">
@@ -397,7 +399,20 @@ $critical = (int) ($stats['critical_count'] ?? 0);
             </div>
             <form method="POST" action="/admin/weekly-materials/save-automation">
                 <div class="card-body">
-                    <p class="text-muted small mb-3">Configure quando os responsáveis recebem o formulário.</p>
+                    <p class="text-muted small mb-3">Configure a frequência e quando os responsáveis recebem o formulário.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label small mb-1">Frequência do ciclo (intervalo entre envios)</label>
+                        <select name="cycle_interval_days" class="form-select form-select-sm">
+                            <?php
+                            $intervals = [7=>'A cada 7 dias (semanal)', 10=>'A cada 10 dias', 14=>'A cada 14 dias (quinzenal)', 15=>'A cada 15 dias', 21=>'A cada 21 dias', 30=>'A cada 30 dias (mensal)'];
+                            $curInterval = (int) $automation['cycle_interval_days'];
+                            foreach ($intervals as $d => $lbl): ?>
+                            <option value="<?= $d ?>" <?= $curInterval === $d ? 'selected' : '' ?>><?= $lbl ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted d-block mt-1">Ex.: se a previsão é de 15 dias, envie a cada 15 dias — não semanalmente.</small>
+                    </div>
 
                     <div class="row g-2 mb-3">
                         <div class="col-7">

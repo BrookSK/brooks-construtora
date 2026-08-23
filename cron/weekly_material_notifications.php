@@ -43,12 +43,29 @@ $baseUrl = Setting::get('site_url', 'https://brooksconstrutora.com.br');
 echo "[$action] Iniciando às " . date('Y-m-d H:i:s') . "\n";
 
 if ($action === 'notify') {
-    // Terça: gerar registros da semana e enviar link para gerentes
-    $nextWeek = WeeklyMaterialRequest::nextWeekStart();
-    
+    // Gera e envia respeitando o INTERVALO configurado (ex.: a cada 15 dias).
+    // O cron pode rodar diariamente; só dispara quando o ciclo está vencido.
+    $interval = WeeklyMaterialRequest::cycleIntervalDays();
+    $latest = WeeklyMaterialRequest::latestCycleStart();
+    $today = strtotime(date('Y-m-d'));
+
+    if ($latest) {
+        $due = strtotime($latest . ' +' . $interval . ' days');
+        if ($today < $due) {
+            echo "Ciclo ainda não vencido. Último ciclo: {$latest}, intervalo: {$interval} dias. Próximo em " . date('Y-m-d', $due) . ".\n";
+            echo "Finalizado às " . date('Y-m-d H:i:s') . "\n";
+            return;
+        }
+    }
+
+    $nextWeek = WeeklyMaterialRequest::nextCycleStart();
+
+    // Marca ciclos anteriores pendentes como atrasados antes de abrir o novo
+    WeeklyMaterialRequest::markOverduePastWeeks($nextWeek);
+
     // Criar registros se não existem
     $created = WeeklyMaterialRequest::createWeekRecords($nextWeek);
-    echo "Registros criados: {$created}\n";
+    echo "Registros criados: {$created} (ciclo {$nextWeek}, intervalo {$interval} dias)\n";
 
     // Buscar registros pendentes da semana
     $requests = WeeklyMaterialRequest::getByWeek($nextWeek);
@@ -96,8 +113,8 @@ if ($action === 'notify') {
     echo "Notificações enviadas: {$sent}\n";
 
 } elseif ($action === 'remind') {
-    // Quinta: cobrar quem não preencheu
-    $nextWeek = WeeklyMaterialRequest::nextWeekStart();
+    // Cobrança sobre o ciclo ativo mais recente
+    $nextWeek = WeeklyMaterialRequest::latestCycleStart() ?: WeeklyMaterialRequest::nextCycleStart();
     $requests = WeeklyMaterialRequest::getByWeek($nextWeek);
     $webhookUrl = Setting::get('orders_weekly_materials_webhook', '');
     $adminWebhook = Setting::get('orders_weekly_materials_admin_webhook', '');

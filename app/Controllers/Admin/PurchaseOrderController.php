@@ -165,7 +165,7 @@ class PurchaseOrderController extends Controller
             'supplier_id' => null,
             'status' => 'pending_quote',
             'description' => $description,
-            'urgency' => in_array($this->input('urgency'), ['low', 'medium', 'high', 'critical']) ? $this->input('urgency') : 'medium',
+            'urgency' => self::classifyUrgencyByDeadline(!empty($this->input('deadline')) ? $this->input('deadline') : null),
             'deadline' => !empty($this->input('deadline')) ? $this->input('deadline') : null,
             'created_by' => Auth::id(),
             'created_by_name' => Auth::user()['name'],
@@ -481,6 +481,25 @@ class PurchaseOrderController extends Controller
     /**
      * Parsear PDF de materiais via IA (AJAX)
      */
+    /**
+     * Classifica a urgência do pedido automaticamente pela antecedência
+     * entre hoje (data do pedido) e o prazo de necessidade. Mesma regra
+     * usada na Lista Semanal, garantindo consistência.
+     */
+    public static function classifyUrgencyByDeadline(?string $deadline): string
+    {
+        if (empty($deadline)) return 'medium';
+        $minAdvance = (int) Setting::get('weekly_min_advance_days', '15');
+        $today = strtotime(date('Y-m-d'));
+        $need = strtotime(date('Y-m-d', strtotime($deadline)));
+        if ($need === false) return 'medium';
+        $days = (int) floor(($need - $today) / 86400);
+        if ($days <= 3) return 'critical';
+        if ($days < $minAdvance) return 'high';
+        if ($days <= $minAdvance + 7) return 'medium';
+        return 'low';
+    }
+
     public function parsePdf(): void
     {
         if (!$this->isPost()) {
@@ -493,103 +512,10 @@ class PurchaseOrderController extends Controller
             return;
         }
 
-        $file = $_FILES['pdf'];
-        $allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
-        
-        if (!in_array($file['type'], $allowedTypes)) {
-            $this->json(['error' => 'Tipo não permitido. Use PDF, JPG, PNG ou WEBP.'], 400);
-            return;
-        }
-
-        // Extrair conteúdo para enviar à IA
         try {
-            $openaiKey = Setting::get('openai_api_key', '');
-            $model = Setting::get('openai_model', 'gpt-4o');
-
-            if (empty($openaiKey)) {
-                $this->json(['error' => 'Chave API OpenAI não configurada.'], 400);
-                return;
-            }
-
-            $content = '';
-            $mediaType = '';
-        
-        if ($file['type'] === 'application/pdf') {
-            // PDF: Upload via Files API e usar Responses API
-            $result = $this->parsePdfViaResponsesApi($file['tmp_name'], $file['name'], $openaiKey, $model);
-            if ($result !== null) {
-                $this->json($result);
-                return;
-            }
-            $this->json(['error' => 'Falha ao processar PDF. Tente novamente.'], 500);
-            return;
-        } else {
-            // Para imagens: enviar como base64
-            $content = base64_encode(file_get_contents($file['tmp_name']));
-            $mediaType = $file['type'];
-
-            $messages = [
-                ['role' => 'system', 'content' => 'Você é um assistente que analisa documentos de listagem de materiais de construção. Extraia todos os materiais listados e retorne APENAS um JSON array. Cada item deve ter: name (nome do material), specification (tipo/especificação como "mat. Hidraulica", "mat. Civil", "madeira", etc), classification (medida como "100mm", "3/4", "50x40", etc), unit (unidade de medida como "unid", "mts", "m²", "kg", etc), quantity (quantidade numérica, use 1 se não especificado). Se não conseguir identificar algum campo, use string vazia. Retorne APENAS o JSON, sem markdown, sem explicação.'],
-                ['role' => 'user', 'content' => [
-                    ['type' => 'text', 'text' => 'Analise este documento e extraia a lista de materiais com quantidades:'],
-                    ['type' => 'image_url', 'image_url' => ['url' => "data:{$mediaType};base64,{$content}"]]
-                ]]
-            ];
-        }
-
-            $ch = curl_init('https://api.openai.com/v1/chat/completions');
-            curl_setopt_array($ch, [
-                CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => json_encode([
-                    'model' => $model,
-                    'messages' => $messages,
-                    'max_tokens' => 4000,
-                    'temperature' => 0.1,
-                ]),
-                CURLOPT_HTTPHEADER => [
-                    'Content-Type: application/json',
-                    'Authorization: Bearer ' . $openaiKey,
-                ],
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 90,
-                CURLOPT_SSL_VERIFYPEER => false,
-            ]);
-
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($httpCode !== 200) {
-                // Se falhou com formato file, tentar upload via Responses API
-                if ($file['type'] === 'application/pdf') {
-                    $result = $this->parsePdfViaResponsesApi($file['tmp_name'], $file['name'], $openaiKey, $model);
-                    if ($result !== null) {
-                        $this->json($result);
-                        return;
-                    }
-                }
-                $errorBody = json_decode($response, true);
-                $errorMsg = $errorBody['error']['message'] ?? "HTTP {$httpCode}";
-                $this->json(['error' => 'Erro na API OpenAI: ' . $errorMsg], 500);
-                return;
-            }
-
-            $result = json_decode($response, true);
-            $text = $result['choices'][0]['message']['content'] ?? '';
-
-            // Limpar possível markdown do response
-            $text = preg_replace('/```json\s*/', '', $text);
-            $text = preg_replace('/```\s*/', '', $text);
-            $text = trim($text);
-
-            $materials = json_decode($text, true);
-
-            if (!is_array($materials)) {
-                $this->json(['error' => 'Não foi possível interpretar o documento. Tente uma imagem mais nítida.'], 400);
-                return;
-            }
-
-            $this->json(['success' => true, 'materials' => $materials]);
+            $result = \App\Services\MaterialParserService::parseUploadedFile($_FILES['pdf']);
+            $status = !empty($result['success']) ? 200 : 400;
+            $this->json($result, $status);
         } catch (\Exception $e) {
             $this->json(['error' => 'Erro: ' . $e->getMessage()], 500);
         }

@@ -45,18 +45,21 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-sm-6">
-                            <label class="form-label">Urgência *</label>
-                            <select class="form-select" name="urgency" id="urgencySelect" required>
+                            <label class="form-label">Prazo (preciso até) *</label>
+                            <input type="date" class="form-control" name="deadline" id="deadlineInput" required min="<?= date('Y-m-d') ?>">
+                            <small class="text-muted d-block mt-1">Data em que você precisa deste material.</small>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">Urgência <small class="text-muted">(automática)</small></label>
+                            <!-- A urgência é classificada automaticamente pela data do pedido e a data de necessidade. -->
+                            <input type="hidden" name="urgency" id="urgencyValue" value="medium">
+                            <select class="form-select" id="urgencyDisplay" disabled>
                                 <option value="low">🟢 Baixa</option>
                                 <option value="medium" selected>🟡 Média</option>
                                 <option value="high">🟠 Alta</option>
                                 <option value="critical">🔴 Crítica</option>
                             </select>
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="form-label">Prazo (preciso até) *</label>
-                            <input type="date" class="form-control" name="deadline" id="deadlineInput" required min="<?= date('Y-m-d') ?>">
-                            <small class="text-muted d-block mt-1">Data em que você precisa deste material.</small>
+                            <small class="text-muted d-block mt-1" id="urgencyHint">Selecione um prazo para calcular a urgência.</small>
                         </div>
                     </div>
                     <div id="deadlineWarning" class="alert alert-warning small mt-2 d-none">
@@ -279,6 +282,41 @@ const materials = <?= json_encode($materials) ?>;
 let itemCount = 0;
 
 document.getElementById('addItemBtn').addEventListener('click', () => addItem());
+
+// ─── Urgência automática pela data do pedido x necessidade ───────────────
+// A urgência não é escolhida manualmente: é classificada pela antecedência.
+(function() {
+    const MIN_ADVANCE = <?= (int) \App\Models\Setting::get('weekly_min_advance_days', '15') ?>;
+    const deadlineInput = document.getElementById('deadlineInput');
+    const urgencyValue = document.getElementById('urgencyValue');
+    const urgencyDisplay = document.getElementById('urgencyDisplay');
+    const urgencyHint = document.getElementById('urgencyHint');
+    if (!deadlineInput || !urgencyValue) return;
+
+    function classify(days) {
+        if (days <= 3) return ['critical', 'Crítica'];
+        if (days < MIN_ADVANCE) return ['high', 'Alta'];
+        if (days <= MIN_ADVANCE + 7) return ['medium', 'Média'];
+        return ['low', 'Baixa'];
+    }
+    function recalc() {
+        if (!deadlineInput.value) {
+            urgencyValue.value = 'medium';
+            if (urgencyDisplay) urgencyDisplay.value = 'medium';
+            if (urgencyHint) urgencyHint.textContent = 'Selecione um prazo para calcular a urgência.';
+            return;
+        }
+        const today = new Date(); today.setHours(0,0,0,0);
+        const need = new Date(deadlineInput.value + 'T00:00:00');
+        const days = Math.floor((need - today) / 86400000);
+        const c = classify(days);
+        urgencyValue.value = c[0];
+        if (urgencyDisplay) urgencyDisplay.value = c[0];
+        if (urgencyHint) urgencyHint.textContent = 'Classificada como ' + c[1] + ' (' + days + ' dia(s) de antecedência).';
+    }
+    deadlineInput.addEventListener('change', recalc);
+    recalc();
+})();
 
 function updateItemCount() {
     const count = document.querySelectorAll('#itemsBodyDesktop tr').length;

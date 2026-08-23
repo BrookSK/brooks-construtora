@@ -61,6 +61,7 @@ class WeeklyMaterialController extends Controller
 
         // Configuração de automação (PARTE 17)
         $automation = [
+            'cycle_interval_days' => Setting::get('weekly_cycle_interval_days', Setting::get('weekly_min_advance_days', '15')),
             'send_day' => Setting::get('weekly_send_day', '1'),
             'send_time' => Setting::get('weekly_send_time', '08:00'),
             'response_deadline' => Setting::get('weekly_response_deadline', 'same_day_18'),
@@ -108,11 +109,17 @@ class WeeklyMaterialController extends Controller
             return;
         }
 
+        $minAdvance = (int) $this->input('min_advance_days', '15');
+        // Intervalo do ciclo: se não informado, acompanha a antecedência mínima
+        $cycleInterval = (int) $this->input('cycle_interval_days', 0);
+        if ($cycleInterval <= 0) $cycleInterval = $minAdvance;
+
         Setting::setMultiple([
+            'weekly_cycle_interval_days' => (string) max(1, $cycleInterval),
             'weekly_send_day' => $this->input('send_day', '1'),
             'weekly_send_time' => $this->input('send_time', '08:00'),
             'weekly_response_deadline' => $this->input('response_deadline', 'same_day_18'),
-            'weekly_min_advance_days' => (string) (int) $this->input('min_advance_days', '15'),
+            'weekly_min_advance_days' => (string) max(1, $minAdvance),
             'weekly_auto_reminder' => $this->input('auto_reminder') ? '1' : '0',
             'weekly_auto_overdue' => $this->input('auto_overdue') ? '1' : '0',
             'weekly_notify_supervisor' => $this->input('notify_supervisor') ? '1' : '0',
@@ -289,6 +296,51 @@ class WeeklyMaterialController extends Controller
     }
 
     /**
+     * Monitoramento de pontualidade (rastreamento): quem está em dia, quem
+     * preencheu com atraso e quem não preencheu, com filtros por período e
+     * responsável.
+     */
+    public function monitoring(): void
+    {
+        // Período: presets ou intervalo custom
+        $period = $this->input('period', '8w');
+        $end = WeeklyMaterialRequest::currentWeekStart();
+        $start = $this->input('start', '');
+        $endInput = $this->input('end', '');
+
+        if ($period === 'custom' && $start && $endInput) {
+            $end = $endInput;
+        } else {
+            $weeksBack = ['4w' => 4, '8w' => 8, '12w' => 12, '24w' => 24, '52w' => 52][$period] ?? 8;
+            $start = date('Y-m-d', strtotime($end . " -" . ($weeksBack - 1) . " weeks"));
+        }
+
+        $managerId = $this->input('manager_id') ? (int) $this->input('manager_id') : null;
+
+        $report = WeeklyMaterialRequest::getPunctualityReport($start, $end, $managerId);
+        $totals = WeeklyMaterialRequest::getPunctualityTotals($start, $end, $managerId);
+        $list = WeeklyMaterialRequest::getMonitoringList($start, $end, $managerId);
+        $managers = WeeklyMaterialRequest::managersForFilter();
+
+        $this->view('admin.weekly_materials.monitoring', [
+            'report' => $report,
+            'totals' => $totals,
+            'list' => $list,
+            'managers' => $managers,
+            'filters' => [
+                'period' => $period,
+                'start' => $start,
+                'end' => $end,
+                'manager_id' => $managerId,
+            ],
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+            'pageTitle' => 'Monitoramento de Pontualidade',
+            'currentPage' => 'weekly_materials',
+        ]);
+    }
+
+    /**
      * Gerar registros da semana (manual ou via cron)
      */
     public function generate(): void
@@ -298,7 +350,7 @@ class WeeklyMaterialController extends Controller
             return;
         }
 
-        $weekStart = $this->input('week_start', WeeklyMaterialRequest::nextWeekStart());
+        $weekStart = $this->input('week_start', WeeklyMaterialRequest::nextCycleStart());
 
         // Marcar como atrasadas as pendentes de semanas anteriores (PARTE 20)
         $overdue = WeeklyMaterialRequest::markOverduePastWeeks($weekStart);
@@ -327,8 +379,8 @@ class WeeklyMaterialController extends Controller
             return;
         }
 
-        // Gerar registros primeiro (se não existem)
-        $nextWeek = WeeklyMaterialRequest::nextWeekStart();
+        // Gerar registros do próximo ciclo (respeita o intervalo configurado)
+        $nextWeek = WeeklyMaterialRequest::nextCycleStart();
         WeeklyMaterialRequest::createWeekRecords($nextWeek);
 
         $requests = WeeklyMaterialRequest::getByWeek($nextWeek);
@@ -393,7 +445,8 @@ class WeeklyMaterialController extends Controller
             return;
         }
 
-        $nextWeek = WeeklyMaterialRequest::nextWeekStart();
+        // Cobrança age sobre o ciclo ativo mais recente já gerado
+        $nextWeek = WeeklyMaterialRequest::latestCycleStart() ?: WeeklyMaterialRequest::nextCycleStart();
         $requests = WeeklyMaterialRequest::getByWeek($nextWeek);
         $webhookUrl = Setting::get('orders_weekly_materials_webhook', '');
         $adminWebhook = Setting::get('orders_weekly_materials_admin_webhook', '');

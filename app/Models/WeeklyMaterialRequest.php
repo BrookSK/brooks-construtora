@@ -93,6 +93,8 @@ class WeeklyMaterialRequest extends Model
                     'manager_id' => $manager['id'],
                     'construction_site_id' => $siteId,
                     'week_start' => $weekStart,
+                    // Prazo de resposta = início do ciclo (deve responder antes)
+                    'response_deadline' => $weekStart,
                     'token' => self::generateToken(),
                     'status' => 'pending',
                     'created_at' => date('Y-m-d H:i:s'),
@@ -209,6 +211,170 @@ class WeeklyMaterialRequest extends Model
     }
 
     /**
+     * Prazo efetivo de resposta de uma solicitação. Usa response_deadline
+     * quando existir; caso contrário considera o início da semana (o
+     * responsável deveria responder antes de a semana começar).
+     */
+    public static function effectiveDeadline(array $req): ?string
+    {
+        if (!empty($req['response_deadline'])) return $req['response_deadline'];
+        return $req['week_start'] ?? null;
+    }
+
+    /**
+     * Classificação de PONTUALIDADE do preenchimento (monitoramento).
+     * Retorna: ['on_time'|'late'|'not_filled'|'pending', label, classe-css].
+     *
+     *  - on_time:    preencheu dentro do prazo de resposta
+     *  - late:       preencheu, porém após o prazo (em dia depois do atraso)
+     *  - not_filled: prazo expirou e não preencheu (status overdue)
+     *  - pending:    ainda dentro do prazo, sem resposta
+     */
+    public static function punctuality(array $req): array
+    {
+        $status = $req['status'] ?? 'pending';
+
+        if ($status === 'filled') {
+            $deadline = self::effectiveDeadline($req);
+            $filledAt = $req['filled_at'] ?? null;
+            if ($deadline && $filledAt) {
+                $filledDay = strtotime(date('Y-m-d', strtotime($filledAt)));
+                $deadlineDay = strtotime(date('Y-m-d', strtotime($deadline)));
+                if ($filledDay !== false && $deadlineDay !== false && $filledDay > $deadlineDay) {
+                    return ['late', 'Preencheu com atraso', 'bg-warning text-dark'];
+                }
+            }
+            return ['on_time', 'Em dia', 'bg-success'];
+        }
+
+        if ($status === 'overdue') {
+            return ['not_filled', 'Não preencheu', 'bg-danger'];
+        }
+
+        return ['pending', 'Pendente', 'bg-secondary'];
+    }
+
+    /**
+     * Relatório de pontualidade por responsável dentro de um intervalo de
+     * semanas (monitoramento gerencial). Contabiliza em dia, atrasados que
+     * preencheram e não preenchidos.
+     *
+     * @param string   $start     data inicial (week_start >=)
+     * @param string   $end       data final (week_start <=)
+     * @param int|null $managerId filtra um responsável específico
+     */
+    public static function getPunctualityReport(string $start, string $end, ?int $managerId = null): array
+    {
+        $where = "wmr.week_start BETWEEN ? AND ?";
+        $params = [$start, $end];
+        if ($managerId) {
+            $where .= " AND wmr.manager_id = ?";
+            $params[] = $managerId;
+        }
+
+        $rows = Database::fetchAll(
+            "SELECT wmr.manager_id, pu.name as manager_name,
+                    wmr.status, wmr.week_start, wmr.response_deadline, wmr.filled_at, wmr.notified_at
+             FROM weekly_material_requests wmr
+             JOIN pin_users pu ON wmr.manager_id = pu.id
+             WHERE {$where}",
+            $params
+        );
+
+        $byManager = [];
+        foreach ($rows as $r) {
+            $mid = (int) $r['manager_id'];
+            if (!isset($byManager[$mid])) {
+                $byManager[$mid] = [
+                    'manager_id' => $mid,
+                    'manager_name' => $r['manager_name'],
+                    'total' => 0,
+                    'on_time' => 0,
+                    'late' => 0,
+                    'not_filled' => 0,
+                    'pending' => 0,
+                ];
+            }
+            $byManager[$mid]['total']++;
+            [$key] = self::punctuality($r);
+            $byManager[$mid][$key]++;
+        }
+
+        // Taxa de pontualidade = em dia / (respondidos)
+        foreach ($byManager as &$m) {
+            $responded = $m['on_time'] + $m['late'];
+            $m['response_rate'] = $m['total'] > 0 ? round($responded / $m['total'] * 100) : 0;
+            $m['punctual_rate'] = $responded > 0 ? round($m['on_time'] / $responded * 100) : 0;
+        }
+        unset($m);
+
+        // Ordena por mais atrasos/não preenchimentos primeiro (foco gerencial)
+        usort($byManager, function ($a, $b) {
+            $pa = $a['late'] + $a['not_filled'];
+            $pb = $b['late'] + $b['not_filled'];
+            if ($pa === $pb) return strcmp($a['manager_name'], $b['manager_name']);
+            return $pb <=> $pa;
+        });
+
+        return array_values($byManager);
+    }
+
+    /**
+     * Totais gerais de pontualidade num intervalo (para cards de resumo).
+     */
+    public static function getPunctualityTotals(string $start, string $end, ?int $managerId = null): array
+    {
+        $report = self::getPunctualityReport($start, $end, $managerId);
+        $totals = ['total' => 0, 'on_time' => 0, 'late' => 0, 'not_filled' => 0, 'pending' => 0];
+        foreach ($report as $m) {
+            $totals['total'] += $m['total'];
+            $totals['on_time'] += $m['on_time'];
+            $totals['late'] += $m['late'];
+            $totals['not_filled'] += $m['not_filled'];
+            $totals['pending'] += $m['pending'];
+        }
+        return $totals;
+    }
+
+    /**
+     * Lista detalhada de solicitações num intervalo, com pontualidade,
+     * para rastreamento (monitoramento). Aceita filtros de responsável.
+     */
+    public static function getMonitoringList(string $start, string $end, ?int $managerId = null): array
+    {
+        $where = "wmr.week_start BETWEEN ? AND ?";
+        $params = [$start, $end];
+        if ($managerId) {
+            $where .= " AND wmr.manager_id = ?";
+            $params[] = $managerId;
+        }
+
+        return Database::fetchAll(
+            "SELECT wmr.*, pu.name as manager_name,
+                    cs.name as construction_site_name, cs.code as construction_site_code,
+                    po.code as order_code, po.status as order_status, po.id as po_id
+             FROM weekly_material_requests wmr
+             JOIN pin_users pu ON wmr.manager_id = pu.id
+             LEFT JOIN construction_sites cs ON wmr.construction_site_id = cs.id
+             LEFT JOIN purchase_orders po ON wmr.order_id = po.id
+             WHERE {$where}
+             ORDER BY wmr.week_start DESC, pu.name ASC",
+            $params
+        );
+    }
+
+    /**
+     * Lista de responsáveis (pin_users marcados como gerentes semanais)
+     * para popular seletores de filtro.
+     */
+    public static function managersForFilter(): array
+    {
+        return Database::fetchAll(
+            "SELECT id, name FROM pin_users WHERE is_weekly_manager = 1 ORDER BY name ASC"
+        );
+    }
+
+    /**
      * Marcar pendentes antigos como overdue
      */
     public static function markOverdue(string $weekStart): int
@@ -258,6 +424,69 @@ class WeeklyMaterialRequest extends Model
         $nextMonday = clone $today;
         $nextMonday->modify('+' . (8 - $dayOfWeek) . ' days');
         return $nextMonday->format('Y-m-d');
+    }
+
+    /**
+     * Intervalo (em dias) do ciclo de envio. Segue a antecedência mínima
+     * configurada (ex.: 15 dias). Assim, se a previsão é para 15 dias, o
+     * envio ocorre a cada 15 dias — e não semanalmente.
+     */
+    public static function cycleIntervalDays(): int
+    {
+        $interval = (int) \App\Models\Setting::get('weekly_cycle_interval_days', '');
+        if ($interval <= 0) {
+            // fallback: usa a antecedência mínima configurada (padrão 15)
+            $interval = (int) \App\Models\Setting::get('weekly_min_advance_days', '15');
+        }
+        return max(1, $interval);
+    }
+
+    /**
+     * Início do ciclo mais recente já gerado (a maior week_start existente).
+     */
+    public static function latestCycleStart(): ?string
+    {
+        $row = Database::fetch("SELECT MAX(week_start) as ws FROM weekly_material_requests");
+        return $row && !empty($row['ws']) ? $row['ws'] : null;
+    }
+
+    /**
+     * Início do PRÓXIMO ciclo, respeitando o intervalo configurado.
+     * Se já existe um ciclo, soma o intervalo a ele; senão, começa hoje.
+     */
+    public static function nextCycleStart(): string
+    {
+        $interval = self::cycleIntervalDays();
+        $latest = self::latestCycleStart();
+        if ($latest) {
+            $next = strtotime($latest . ' +' . $interval . ' days');
+            // Se o próximo cálculo ainda está no passado, avança até o futuro/hoje
+            $today = strtotime(date('Y-m-d'));
+            while ($next < $today) {
+                $next = strtotime(date('Y-m-d', $next) . ' +' . $interval . ' days');
+            }
+            return date('Y-m-d', $next);
+        }
+        return date('Y-m-d');
+    }
+
+    /**
+     * Data final (fim) de um ciclo, dado o início.
+     */
+    public static function cycleEnd(string $cycleStart): string
+    {
+        $interval = self::cycleIntervalDays();
+        return date('Y-m-d', strtotime($cycleStart . ' +' . ($interval - 1) . ' days'));
+    }
+
+    /**
+     * Data de necessidade padrão (pré-preenchida) para uma solicitação:
+     * data de preenchimento (hoje) + antecedência mínima configurada.
+     */
+    public static function defaultNeededDate(): string
+    {
+        $minAdvance = (int) \App\Models\Setting::get('weekly_min_advance_days', '15');
+        return date('Y-m-d', strtotime('+' . max(0, $minAdvance) . ' days'));
     }
 
     /**

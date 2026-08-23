@@ -45,14 +45,42 @@ class WeeklyMaterialController extends Controller
             $request['week_start'] ?? null
         );
 
-        // Materiais para autocomplete e obras vinculadas ao responsável
+        // Materiais para autocomplete (mesma base do Novo Pedido)
         $materials = Material::allActive();
+
+        // EPIs também disponíveis (itens não vinculados, material_id nulo)
+        foreach (\App\Models\Epi::allActive() as $epi) {
+            $materials[] = [
+                'id' => 'epi-' . $epi['id'],
+                'name' => $epi['name'],
+                'specification' => $epi['category'] ?? 'EPI',
+                'category_name' => $epi['category'] ?? 'EPI',
+                'classification' => $epi['ca'] ? 'CA ' . $epi['ca'] : '',
+                'unit_abbr' => 'un',
+                'unit_name' => 'Unidade',
+                'is_epi' => true,
+            ];
+        }
+
+        // Categorias e unidades para o modal "Novo Material"
+        $categories = \App\Models\MaterialCategory::all('name ASC');
+        $units = \App\Models\MeasurementUnit::all('name ASC');
+
+        // Obras vinculadas ao responsável
         $sites = WeeklyMaterialRequest::sitesForManager((int) $request['manager_id']);
-        // Se o responsável não tem obras vinculadas, oferece todas as ativas
         if (empty($sites)) {
             $sites = ConstructionSite::allActive();
         }
         $preselectedSite = $request['construction_site_id'] ?? null;
+
+        // Configuração de antecedência mínima (regra dos 15 dias / PARTE 8)
+        $minAdvanceDays = (int) \App\Models\Setting::get('weekly_min_advance_days', '15');
+
+        // Data de necessidade pré-preenchida com base no mínimo (hoje + antecedência).
+        // Se a solicitação já tem needed_date salvo (rascunho), respeita-o.
+        $defaultNeededDate = !empty($request['needed_date'])
+            ? $request['needed_date']
+            : WeeklyMaterialRequest::defaultNeededDate();
 
         require ROOT_PATH . '/app/Views/site/weekly_materials/form.php';
     }
@@ -81,10 +109,12 @@ class WeeklyMaterialController extends Controller
 
         $items = $_POST['items'] ?? [];
         $notes = trim($this->input('notes', ''));
-        $urgency = $this->input('urgency', 'medium');
-        if (!in_array($urgency, ['low', 'medium', 'high', 'critical'])) $urgency = 'medium';
         $neededDate = $this->input('needed_date', '') ?: null;
         $siteId = $this->input('construction_site_id') ? (int) $this->input('construction_site_id') : ($request['construction_site_id'] ?? null);
+
+        // Urgência é DERIVADA da antecedência (autoridade no servidor, PARTE 8/9).
+        // Não confiamos no valor do cliente para evitar manipulação.
+        $urgency = self::deriveUrgency($neededDate);
 
         // Motivos/justificativa de urgência (PARTE 10/13)
         $reasonNoAdvance = !empty($_POST['urgency_reason_no_advance']) ? 1 : 0;
@@ -100,9 +130,14 @@ class WeeklyMaterialController extends Controller
             exit;
         }
 
-        if (in_array($urgency, ['high', 'critical'])) {
+        // Justificativa obrigatória quando a solicitação está fora da
+        // antecedência mínima recomendada (independe de rótulo de urgência).
+        $minAdvance = (int) \App\Models\Setting::get('weekly_min_advance_days', '15');
+        $antecedence = WeeklyMaterialRequest::calcAntecedence($neededDate);
+        $outOfLeadTime = ($antecedence !== null && $antecedence < $minAdvance);
+        if ($outOfLeadTime) {
             if ((!$reasonNoAdvance && !$reasonOccurrence) || empty($urgencyDescription)) {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Solicitações com urgência Alta ou Crítica precisam informar o motivo da urgência e sua descrição.'];
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Esta solicitação está fora da antecedência recomendada. Informe o motivo e a descrição.'];
                 header('Location: /lista-semanal/' . $token);
                 exit;
             }
@@ -173,6 +208,96 @@ class WeeklyMaterialController extends Controller
 
         header('Location: /lista-semanal/' . $token);
         exit;
+    }
+
+    /**
+     * Importar materiais de PDF/imagem via IA (endpoint público via token).
+     * Reutiliza o MaterialParserService (mesma lógica do Novo Pedido).
+     */
+    public function parsePdf(string $token = ''): void
+    {
+        header('Content-Type: application/json');
+
+        if (!$this->isPost() || !$token) {
+            echo json_encode(['error' => 'Requisição inválida.']);
+            exit;
+        }
+
+        $request = WeeklyMaterialRequest::findByToken($token);
+        if (!$request) {
+            echo json_encode(['error' => 'Link inválido.']);
+            exit;
+        }
+
+        if (empty($_FILES['pdf']) || $_FILES['pdf']['error'] !== UPLOAD_ERR_OK) {
+            echo json_encode(['error' => 'Erro no upload do arquivo.']);
+            exit;
+        }
+
+        try {
+            $result = \App\Services\MaterialParserService::parseUploadedFile($_FILES['pdf']);
+        } catch (\Throwable $e) {
+            $result = ['error' => 'Erro: ' . $e->getMessage()];
+        }
+
+        echo json_encode($result);
+        exit;
+    }
+
+    /**
+     * Cadastro rápido de material (endpoint público via token).
+     * Reutiliza o Model Material (mesma tabela do sistema).
+     */
+    public function quickStoreMaterial(string $token = ''): void
+    {
+        header('Content-Type: application/json');
+
+        if (!$this->isPost() || !$token) {
+            echo json_encode(['success' => false, 'error' => 'Requisição inválida.']);
+            exit;
+        }
+
+        $request = WeeklyMaterialRequest::findByToken($token);
+        if (!$request) {
+            echo json_encode(['success' => false, 'error' => 'Link inválido.']);
+            exit;
+        }
+
+        $name = trim($this->input('name', ''));
+        if ($name === '') {
+            echo json_encode(['success' => false, 'error' => 'Nome é obrigatório.']);
+            exit;
+        }
+
+        $id = Material::create([
+            'name' => $name,
+            'specification' => trim($this->input('specification', '')),
+            'category_id' => (int) $this->input('category_id') ?: null,
+            'unit_id' => (int) $this->input('unit_id') ?: null,
+            'classification' => trim($this->input('classification', '')),
+            'active' => 1,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        echo json_encode(['success' => true, 'material' => Material::find($id)]);
+        exit;
+    }
+
+    /**
+     * Deriva a urgência a partir da antecedência (dias até a necessidade),
+     * usando a antecedência mínima configurada (padrão 15 dias).
+     * Mesma regra do cálculo exibido no formulário.
+     */
+    private static function deriveUrgency(?string $neededDate): string
+    {
+        if (empty($neededDate)) return 'medium';
+        $minAdvance = (int) \App\Models\Setting::get('weekly_min_advance_days', '15');
+        $days = \App\Models\WeeklyMaterialRequest::calcAntecedence($neededDate);
+        if ($days === null) return 'medium';
+        if ($days <= 3) return 'critical';
+        if ($days < $minAdvance) return 'high';
+        if ($days <= $minAdvance + 7) return 'medium';
+        return 'low';
     }
 
     /**

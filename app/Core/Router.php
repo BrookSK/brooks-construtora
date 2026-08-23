@@ -247,6 +247,7 @@ class Router
             'weekly-materials/week' => ['WeeklyMaterialController', 'week'],
             'weekly-materials/purchases' => ['WeeklyMaterialController', 'purchases'],
             'weekly-materials/manager' => ['WeeklyMaterialController', 'manager'],
+            'weekly-materials/monitoring' => ['WeeklyMaterialController', 'monitoring'],
             'weekly-materials/save-automation' => ['WeeklyMaterialController', 'saveAutomation'],
             'weekly-materials/save-organization' => ['WeeklyMaterialController', 'saveOrganization'],
             'weekly-materials/export-control' => ['WeeklyMaterialController', 'exportControl'],
@@ -410,6 +411,8 @@ class Router
             // Lista Semanal de Materiais (público)
             'lista-semanal' => ['WeeklyMaterialController', 'form'],
             'lista-semanal/enviar' => ['WeeklyMaterialController', 'submit'],
+            'lista-semanal/parse-pdf' => ['WeeklyMaterialController', 'parsePdf'],
+            'lista-semanal/novo-material' => ['WeeklyMaterialController', 'quickStoreMaterial'],
 
             // PIN Auth
             'pin/login' => ['PinAuthController', 'login'],
