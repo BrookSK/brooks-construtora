@@ -50,6 +50,9 @@ $weeklyManagers = \App\Core\Database::fetchAll("SELECT id, name, phone, email FR
                         <th class="text-center">Preenchidos</th>
                         <th class="text-center">Pendentes</th>
                         <th class="text-center">Atrasados</th>
+                        <th class="text-center">Taxa</th>
+                        <th class="text-center">Pedidos</th>
+                        <th class="text-center">Itens</th>
                         <th class="text-end">Ações</th>
                     </tr>
                 </thead>
@@ -64,6 +67,12 @@ $weeklyManagers = \App\Core\Database::fetchAll("SELECT id, name, phone, email FR
                         <td class="text-center"><span class="badge bg-success"><?= $w['filled_count'] ?></span></td>
                         <td class="text-center"><span class="badge bg-warning text-dark"><?= $w['pending_count'] ?></span></td>
                         <td class="text-center"><span class="badge bg-danger"><?= $w['overdue_count'] ?></span></td>
+                        <td class="text-center">
+                            <?php $rate = $w['total_managers'] > 0 ? round($w['filled_count'] / $w['total_managers'] * 100) : 0; ?>
+                            <small class="fw-bold"><?= $rate ?>%</small>
+                        </td>
+                        <td class="text-center"><span class="badge bg-primary"><?= $w['orders_count'] ?></span></td>
+                        <td class="text-center"><?= $w['items_total'] ?></td>
                         <td class="text-end">
                             <a href="/admin/weekly-materials/week/<?= $w['week_start'] ?>" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-eye"></i> Ver

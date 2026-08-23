@@ -25,12 +25,18 @@
                 <div class="mb-3">
                     <i class="bi bi-check-circle-fill text-success" style="font-size:3rem;"></i>
                 </div>
-                <h5 class="mb-2">Lista já enviada!</h5>
+                <h5 class="mb-2">Solicitação enviada com sucesso!</h5>
                 <p class="text-muted">
                     <?= htmlspecialchars($request['manager_name']) ?>, sua lista da semana de
                     <strong><?= date('d/m/Y', strtotime($request['week_start'])) ?></strong>
                     foi preenchida em <?= date('d/m/Y H:i', strtotime($request['filled_at'])) ?>.
                 </p>
+
+                <?php if (!empty($order)): ?>
+                <div class="alert alert-success d-inline-block">
+                    <i class="bi bi-receipt"></i> Pedido <strong>#<?= htmlspecialchars($order['code']) ?></strong> criado.
+                </div>
+                <?php endif; ?>
 
                 <?php if (!empty($items)): ?>
                 <hr>

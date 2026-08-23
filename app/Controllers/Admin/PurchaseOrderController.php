@@ -184,6 +184,11 @@ class PurchaseOrderController extends Controller
             } catch (\Exception $e) {}
         }
 
+        // Origem do pedido manual (distingue de pedidos da Lista Semanal)
+        if (PurchaseOrder::hasColumn('origin')) {
+            $orderData['origin'] = 'manual';
+        }
+
         $orderId = PurchaseOrder::create($orderData);
 
         // Associar áudios gravados durante a criação (via temp_key)

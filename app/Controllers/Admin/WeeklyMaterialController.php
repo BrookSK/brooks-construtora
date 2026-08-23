@@ -63,12 +63,97 @@ class WeeklyMaterialController extends Controller
             }
         }
 
+        $stats = WeeklyMaterialRequest::getWeekStats($weekStart);
+
+        // Controle por responsável (PARTE 23): status + últimos 4 ciclos
+        $managerControl = WeeklyMaterialRequest::getManagerControl($weekStart);
+        foreach ($managerControl as &$mc) {
+            $mc['recent_cycles'] = WeeklyMaterialRequest::getRecentCyclesForManager((int) $mc['manager_id'], 4);
+        }
+        unset($mc);
+
         $this->view('admin.weekly_materials.week', [
             'requests' => $requests,
+            'stats' => $stats,
+            'managerControl' => $managerControl,
             'weekStart' => $weekStart,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
             'pageTitle' => 'Semana ' . date('d/m/Y', strtotime($weekStart)),
+            'currentPage' => 'weekly_materials',
+        ]);
+    }
+
+    /**
+     * Lista consolidada de compras (PARTE 26-28): itens dos PEDIDOS reais
+     * gerados pela Lista Semanal de uma semana.
+     */
+    public function purchases(string $weekStart = ''): void
+    {
+        if (!$weekStart) {
+            $weekStart = $this->input('week', WeeklyMaterialRequest::currentWeekStart());
+        }
+
+        $filters = [
+            'construction_site_id' => $this->input('construction_site_id') ? (int) $this->input('construction_site_id') : null,
+            'manager_id' => $this->input('manager_id') ? (int) $this->input('manager_id') : null,
+            'urgency' => $this->input('urgency') ?: null,
+            'order_status' => $this->input('order_status') ?: null,
+            'sort' => $this->input('sort') ?: 'urgency_date',
+        ];
+
+        $items = WeeklyMaterialRequest::getConsolidatedPurchaseItems($weekStart, $filters);
+        $sites = \App\Models\ConstructionSite::allActive();
+
+        $this->view('admin.weekly_materials.purchases', [
+            'items' => $items,
+            'weekStart' => $weekStart,
+            'filters' => $filters,
+            'sites' => $sites,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+            'pageTitle' => 'Lista de Compras — Semana ' . date('d/m/Y', strtotime($weekStart)),
+            'currentPage' => 'weekly_materials',
+        ]);
+    }
+
+    /**
+     * Detalhes de um responsável (PARTE 25): total de envios, respostas,
+     * atrasos, materiais e histórico de semanas/pedidos gerados.
+     */
+    public function manager(string $managerId = ''): void
+    {
+        $managerId = (int) ($managerId ?: $this->input('id', 0));
+        if (!$managerId) {
+            $this->redirect('/admin/weekly-materials');
+            return;
+        }
+
+        $manager = \App\Models\PinUser::find($managerId);
+        if (!$manager) {
+            $this->setFlash('error', 'Responsável não encontrado.');
+            $this->redirect('/admin/weekly-materials');
+            return;
+        }
+
+        $summary = WeeklyMaterialRequest::getManagerSummary($managerId);
+        $requests = WeeklyMaterialRequest::getManagerRequests($managerId);
+
+        // Carregar itens de cada solicitação preenchida
+        foreach ($requests as &$req) {
+            $req['items'] = ($req['status'] === 'filled')
+                ? WeeklyMaterialRequest::getItems($req['id'])
+                : [];
+        }
+        unset($req);
+
+        $this->view('admin.weekly_materials.manager', [
+            'manager' => $manager,
+            'summary' => $summary,
+            'requests' => $requests,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+            'pageTitle' => 'Detalhes — ' . $manager['name'],
             'currentPage' => 'weekly_materials',
         ]);
     }
@@ -84,6 +169,18 @@ class WeeklyMaterialController extends Controller
         }
 
         $weekStart = $this->input('week_start', WeeklyMaterialRequest::nextWeekStart());
+
+        // Marcar como atrasadas as pendentes de semanas anteriores (PARTE 20)
+        $overdue = WeeklyMaterialRequest::markOverduePastWeeks($weekStart);
+        if ($overdue > 0) {
+            \App\Models\WeeklyMaterialLog::record(
+                \App\Models\WeeklyMaterialLog::ACTION_MARKED_OVERDUE,
+                null,
+                "{$overdue} solicitação(ões) pendente(s) de semanas anteriores marcadas como atrasadas",
+                $weekStart
+            );
+        }
+
         $created = WeeklyMaterialRequest::createWeekRecords($weekStart);
 
         $this->setFlash('success', "Registros gerados: {$created} gerente(s) para a semana de " . date('d/m/Y', strtotime($weekStart)));
@@ -139,7 +236,17 @@ class WeeklyMaterialController extends Controller
                 );
             }
 
-            WeeklyMaterialRequest::updateById($req['id'], ['notified_at' => date('Y-m-d H:i:s')]);
+            WeeklyMaterialRequest::updateById($req['id'], [
+                'notified_at' => date('Y-m-d H:i:s'),
+                'link_channel' => !empty($req['manager_phone']) ? 'whatsapp' : (!empty($req['manager_email']) ? 'email' : null),
+            ]);
+
+            \App\Models\WeeklyMaterialLog::record(
+                \App\Models\WeeklyMaterialLog::ACTION_LINK_SENT,
+                (int) $req['id'],
+                "Link enviado para {$req['manager_name']}",
+                $nextWeek
+            );
         }
 
         $this->setFlash('success', "Notificações enviadas para {$sent} gerente(s).");
@@ -187,6 +294,13 @@ class WeeklyMaterialController extends Controller
             }
 
             WeeklyMaterialRequest::updateById($req['id'], ['reminder_sent_at' => date('Y-m-d H:i:s')]);
+
+            \App\Models\WeeklyMaterialLog::record(
+                \App\Models\WeeklyMaterialLog::ACTION_REMINDER_SENT,
+                (int) $req['id'],
+                "Cobrança enviada para {$req['manager_name']}",
+                $nextWeek
+            );
         }
 
         // Notificar admin

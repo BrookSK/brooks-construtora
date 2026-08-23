@@ -2080,6 +2080,124 @@ class PurchaseOrderController extends Controller
     // MÉTODOS PRIVADOS
     // ============================
 
+    /**
+     * Notificações de cotação (fluxo existente), exposto publicamente para
+     * ser reutilizado pela Lista Semanal ao gerar o pedido.
+     */
+    public function sendQuoteNotifications(int $orderId, string $token): void
+    {
+        $order = PurchaseOrder::findFull($orderId);
+        if (!$order) return;
+        $items = PurchaseOrderItem::getByOrder($orderId);
+        $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
+        $baseUrl = $this->getBaseUrl();
+        $quoteUrl = "{$baseUrl}/pedido/cotacao/{$token}";
+
+        $constructionSiteId = !empty($order['construction_site_id']) ? (int) $order['construction_site_id'] : null;
+        $quoteMode = Setting::get('orders_quote_notify_mode', 'both');
+        $siteQuoteUsers = [];
+        if (!empty($constructionSiteId)) {
+            $siteQuoteUsers = ConstructionSite::getApprovers($constructionSiteId, 'quote');
+        }
+        $sendGlobal = in_array($quoteMode, ['both', 'global_only']);
+        $sendSite = in_array($quoteMode, ['both', 'site_only']) && !empty($siteQuoteUsers);
+        if ($quoteMode === 'site_only' && empty($siteQuoteUsers)) {
+            $sendGlobal = true;
+        }
+
+        $obraInfo = '';
+        if (!empty($order['construction_site_name'])) {
+            $obraInfo = "*Obra:* {$order['construction_site_code']} - {$order['construction_site_name']}\n";
+        }
+
+        $quoteItems = array_filter($items, function ($item) {
+            return empty($item['source_type']) || $item['source_type'] === 'purchase';
+        });
+        $subject = "Cotação Pendente - Pedido {$order['code']}";
+        if (!empty($order['construction_site_name'])) {
+            $subject .= " - Obra: {$order['construction_site_name']}";
+        }
+        $body = EmailTemplate::purchaseOrderQuote($order, array_values($quoteItems), $quoteUrl, $orderSuppliers);
+
+        if ($sendGlobal) {
+            $emails = Setting::get('orders_quote_emails', '');
+            if (!empty($emails)) {
+                NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'quote_requested');
+            }
+        }
+        if ($sendSite) {
+            $siteEmails = implode(',', array_filter(array_column($siteQuoteUsers, 'email')));
+            if (!empty($siteEmails)) {
+                NotificationService::queueEmails($siteEmails, $subject, $body, $order['id'], 'quote_requested');
+            }
+        }
+
+        $webhookUrl = Setting::get('orders_quote_webhook', '');
+        if (!empty($webhookUrl)) {
+            $itemsList = '';
+            $itemNum = 0;
+            foreach ($items as $item) {
+                if (!empty($item['source_type']) && $item['source_type'] !== 'purchase') continue;
+                $itemNum++;
+                $itemsList .= $itemNum . ". {$item['material_name']}";
+                if ($item['classification']) $itemsList .= " ({$item['classification']})";
+                $qty = (float) $item['quantity'];
+                $qtyFmt = $qty == (int) $qty ? number_format($qty, 0) : number_format($qty, 2, ',', '.');
+                $itemsList .= " - Qtd: {$qtyFmt} {$item['unit']}\n";
+            }
+
+            $suppliersArray = [];
+            if (!empty($orderSuppliers)) {
+                $suppliersArray = array_map(fn($s) => ['id' => $s['supplier_id'], 'name' => $s['supplier_name']], $orderSuppliers);
+            }
+
+            $message = "*NOVO PEDIDO - COTAÇÃO PENDENTE*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . $obraInfo
+                . "*Solicitado por:* {$order['created_by_name']}\n"
+                . "*Data:* " . date('d/m/Y H:i', strtotime($order['created_at'])) . "\n"
+                . "*Itens:* {$itemNum}\n\n"
+                . "*Lista de materiais:*\n{$itemsList}\n"
+                . (!empty($order['description']) ? "*Obs:* {$order['description']}\n\n" : "\n")
+                . "*Link para informar cotação:*\n{$quoteUrl}";
+
+            if ($sendSite) {
+                $sitePhones = implode(',', array_filter(array_column($siteQuoteUsers, 'phone')));
+                $siteNames = implode(',', array_filter(array_column($siteQuoteUsers, 'name')));
+                if (!empty($sitePhones)) {
+                    $this->sendWebhook($webhookUrl, [
+                        'event' => 'quote_requested',
+                        'order_code' => $order['code'],
+                        'suppliers' => $suppliersArray,
+                        'items_count' => $itemNum,
+                        'quote_url' => $quoteUrl,
+                        'created_by' => $order['created_by_name'],
+                        'created_at' => $order['created_at'],
+                        'description' => $order['description'],
+                        'phone' => $sitePhones,
+                        'phone_name' => $siteNames,
+                        'message' => $message,
+                    ], $order['id'], 'quote_requested');
+                }
+            }
+            if ($sendGlobal) {
+                $this->sendWebhook($webhookUrl, [
+                    'event' => 'quote_requested',
+                    'order_code' => $order['code'],
+                    'suppliers' => $suppliersArray,
+                    'items_count' => $itemNum,
+                    'quote_url' => $quoteUrl,
+                    'created_by' => $order['created_by_name'],
+                    'created_at' => $order['created_at'],
+                    'description' => $order['description'],
+                    'phone' => Setting::get('orders_quote_phone', ''),
+                    'phone_name' => Setting::get('orders_quote_phone_name', ''),
+                    'message' => $message,
+                ], $order['id'], 'quote_requested');
+            }
+        }
+    }
+
     public function sendApprovalNotifications(int $orderId, string $token): void
     {
         $order = PurchaseOrder::findFull($orderId);

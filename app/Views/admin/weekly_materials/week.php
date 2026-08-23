@@ -7,6 +7,7 @@
         <i class="bi bi-calendar-week"></i> 
         <strong><?= date('d/m/Y', strtotime($weekStart)) ?></strong> a <strong><?= date('d/m/Y', strtotime($weekStart . ' +6 days')) ?></strong>
     </span>
+    <a href="/admin/weekly-materials/purchases/<?= htmlspecialchars($weekStart) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-cart"></i> Lista de Compras</a>
 </div>
 
 <?php if (empty($requests)): ?>
@@ -18,48 +19,120 @@
 </div>
 <?php else: ?>
 
-<!-- Resumo -->
-<?php
-$filled = count(array_filter($requests, fn($r) => $r['status'] === 'filled'));
-$pending = count(array_filter($requests, fn($r) => $r['status'] === 'pending'));
-$overdue = count(array_filter($requests, fn($r) => $r['status'] === 'overdue'));
-$totalItems = 0;
-foreach ($requests as $r) { $totalItems += count($r['items'] ?? []); }
-?>
+<!-- Resumo / Dashboard gerencial (PARTE 22) -->
+<?php $stats = $stats ?? []; ?>
 <div class="row g-3 mb-3">
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-2">
+        <div class="card stat-card">
+            <div class="card-body py-2 px-3">
+                <small class="text-muted">Links enviados</small>
+                <div class="stat-number text-info" style="font-size:1.5rem;"><?= (int) ($stats['links_sent'] ?? 0) ?></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
         <div class="card stat-card">
             <div class="card-body py-2 px-3">
                 <small class="text-muted">Preenchidos</small>
-                <div class="stat-number text-success" style="font-size:1.5rem;"><?= $filled ?></div>
+                <div class="stat-number text-success" style="font-size:1.5rem;"><?= (int) ($stats['filled'] ?? 0) ?></div>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-2">
         <div class="card stat-card">
             <div class="card-body py-2 px-3">
                 <small class="text-muted">Pendentes</small>
-                <div class="stat-number text-warning" style="font-size:1.5rem;"><?= $pending ?></div>
+                <div class="stat-number text-warning" style="font-size:1.5rem;"><?= (int) ($stats['pending'] ?? 0) ?></div>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-2">
         <div class="card stat-card">
             <div class="card-body py-2 px-3">
-                <small class="text-muted">Não preencheu</small>
-                <div class="stat-number text-danger" style="font-size:1.5rem;"><?= $overdue ?></div>
+                <small class="text-muted">Atrasados</small>
+                <div class="stat-number text-danger" style="font-size:1.5rem;"><?= (int) ($stats['overdue'] ?? 0) ?></div>
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-2">
         <div class="card stat-card">
             <div class="card-body py-2 px-3">
-                <small class="text-muted">Total de Materiais</small>
-                <div class="stat-number" style="font-size:1.5rem;"><?= $totalItems ?></div>
+                <small class="text-muted">Itens solicitados</small>
+                <div class="stat-number" style="font-size:1.5rem;"><?= (int) ($stats['items_total'] ?? 0) ?></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card stat-card">
+            <div class="card-body py-2 px-3">
+                <small class="text-muted">Compras críticas</small>
+                <div class="stat-number text-danger" style="font-size:1.5rem;"><?= (int) ($stats['critical_count'] ?? 0) ?></div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Controle por Responsável (PARTE 23) -->
+<?php if (!empty($managerControl)): ?>
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-people"></i> Controle por Responsável</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Responsável</th>
+                        <th>Obra</th>
+                        <th class="text-center">Link enviado</th>
+                        <th class="text-center">Status</th>
+                        <th>Último pedido</th>
+                        <th>Próxima necessidade</th>
+                        <th class="text-center">Últimos 4 ciclos</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($managerControl as $mc): ?>
+                    <?php
+                    $statusBadge = $mc['status'] === 'filled'
+                        ? '<span class="badge bg-success">Preenchido</span>'
+                        : ($mc['status'] === 'overdue'
+                            ? '<span class="badge bg-danger">Atrasado</span>'
+                            : (empty($mc['notified_at']) ? '<span class="badge bg-secondary">Não enviado</span>' : '<span class="badge bg-warning text-dark">Pendente</span>'));
+                    ?>
+                    <tr>
+                        <td><strong><?= htmlspecialchars($mc['manager_name']) ?></strong></td>
+                        <td><small><?= htmlspecialchars($mc['construction_site_name'] ?? '—') ?></small></td>
+                        <td class="text-center"><small><?= !empty($mc['notified_at']) ? date('d/m H:i', strtotime($mc['notified_at'])) : '—' ?></small></td>
+                        <td class="text-center"><?= $statusBadge ?></td>
+                        <td>
+                            <?php if (!empty($mc['order_code'])): ?>
+                            <a href="/admin/orders/show/<?= (int) $mc['po_id'] ?>" class="text-decoration-none">#<?= htmlspecialchars($mc['order_code']) ?></a>
+                            <small class="text-muted d-block"><?= !empty($mc['order_created_at']) ? date('d/m/Y', strtotime($mc['order_created_at'])) : '' ?></small>
+                            <?php else: ?>—<?php endif; ?>
+                        </td>
+                        <td><small><?= !empty($mc['needed_date']) ? date('d/m/Y', strtotime($mc['needed_date'])) : '—' ?></small></td>
+                        <td class="text-center">
+                            <?php foreach (array_reverse($mc['recent_cycles']) as $c): ?>
+                            <?php
+                            $dot = $c['status'] === 'filled' ? 'text-success' : ($c['status'] === 'overdue' ? 'text-danger' : 'text-warning');
+                            ?>
+                            <i class="bi bi-circle-fill <?= $dot ?>" style="font-size:.6rem;" title="<?= date('d/m', strtotime($c['week_start'])) ?>: <?= $c['status'] ?>"></i>
+                            <?php endforeach; ?>
+                        </td>
+                        <td class="text-end">
+                            <a href="/admin/weekly-materials/manager/<?= (int) $mc['manager_id'] ?>" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Ver detalhes
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php foreach ($requests as $req): ?>
 <?php
@@ -83,7 +156,27 @@ $headerBg = $req['status'] === 'filled' ? 'bg-success bg-opacity-10' : ($req['st
                 <?php endif; ?>
             </div>
         </div>
-        <div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <?php
+            // Urgência (PARTE 9)
+            $urgencyMap = [
+                'critical' => ['Crítica', 'bg-danger'],
+                'high'     => ['Alta', 'bg-warning text-dark'],
+                'medium'   => ['Média', 'bg-info text-dark'],
+                'low'      => ['Baixa', 'bg-secondary'],
+            ];
+            if ($req['status'] === 'filled' && !empty($req['urgency']) && isset($urgencyMap[$req['urgency']])):
+                [$uLabel, $uClass] = $urgencyMap[$req['urgency']];
+            ?>
+            <span class="badge <?= $uClass ?>"><?= $uLabel ?></span>
+            <?php endif; ?>
+
+            <?php if ($req['status'] === 'filled' && !empty($req['order_code'])): ?>
+            <a href="/admin/orders/show/<?= (int) $req['order_id'] ?>" class="badge bg-primary text-decoration-none" title="Abrir Pedido">
+                <i class="bi bi-receipt"></i> Pedido #<?= htmlspecialchars($req['order_code']) ?>
+            </a>
+            <?php endif; ?>
+
             <?php if ($req['status'] === 'filled'): ?>
             <span class="badge bg-success">Preenchido em <?= date('d/m H:i', strtotime($req['filled_at'])) ?></span>
             <?php elseif ($req['status'] === 'overdue'): ?>
@@ -120,6 +213,42 @@ $headerBg = $req['status'] === 'filled' ? 'bg-success bg-opacity-10' : ($req['st
                 </tbody>
             </table>
         </div>
+
+        <div class="border-top p-3 d-flex flex-wrap gap-3 align-items-center small">
+            <?php if (!empty($req['needed_date'])): ?>
+            <span><i class="bi bi-calendar-check text-muted"></i> Necessário em <strong><?= date('d/m/Y', strtotime($req['needed_date'])) ?></strong></span>
+            <?php
+            $antec = \App\Models\WeeklyMaterialRequest::calcAntecedence($req['needed_date'], $req['filled_at'] ?? null);
+            if ($antec !== null):
+                if ($antec >= 15): ?>
+                <span class="badge bg-success"><i class="bi bi-check-circle"></i> <?= $antec ?> dias — dentro do prazo</span>
+                <?php else: ?>
+                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> <?= $antec ?> dia(s) — fora dos 15 dias</span>
+                <?php endif;
+            endif; ?>
+            <?php endif; ?>
+
+            <?php if (in_array($req['urgency'] ?? '', ['high', 'critical'])): ?>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="collapse" data-bs-target="#reason<?= $req['id'] ?>">
+                <i class="bi bi-info-circle"></i> Ver motivo
+            </button>
+            <?php endif; ?>
+        </div>
+
+        <?php if (in_array($req['urgency'] ?? '', ['high', 'critical'])): ?>
+        <div class="collapse" id="reason<?= $req['id'] ?>">
+            <div class="border-top p-3 bg-danger bg-opacity-10">
+                <strong class="text-danger small"><i class="bi bi-exclamation-triangle-fill"></i> Motivo da urgência</strong>
+                <ul class="mb-2 mt-1 small">
+                    <?php if (!empty($req['urgency_reason_no_advance'])): ?><li>Não houve solicitação antecipada</li><?php endif; ?>
+                    <?php if (!empty($req['urgency_reason_site_occurrence'])): ?><li>Ocorrência em obra</li><?php endif; ?>
+                </ul>
+                <?php if (!empty($req['urgency_description'])): ?>
+                <p class="mb-0 small"><strong>Justificativa:</strong> <?= nl2br(htmlspecialchars($req['urgency_description'])) ?></p>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <?php if (!empty($req['notes']) || !empty($req['audio_filename'])): ?>
         <div class="border-top p-3">

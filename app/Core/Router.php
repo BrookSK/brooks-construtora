@@ -245,6 +245,8 @@ class Router
             // Lista Semanal de Materiais
             'weekly-materials' => ['WeeklyMaterialController', 'index'],
             'weekly-materials/week' => ['WeeklyMaterialController', 'week'],
+            'weekly-materials/purchases' => ['WeeklyMaterialController', 'purchases'],
+            'weekly-materials/manager' => ['WeeklyMaterialController', 'manager'],
             'weekly-materials/generate' => ['WeeklyMaterialController', 'generate'],
             'weekly-materials/send-now' => ['WeeklyMaterialController', 'sendNow'],
             'weekly-materials/send-reminder' => ['WeeklyMaterialController', 'sendReminder'],

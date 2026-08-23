@@ -160,4 +160,121 @@ class PurchaseOrder extends Model
     {
         return self::count("status = ?", [$status]);
     }
+
+    /**
+     * Verifica se a coluna informada existe na tabela purchase_orders.
+     * Mantém compatibilidade com bancos que ainda não rodaram a migration
+     * de integração (origin / weekly_request_id).
+     */
+    private static array $columnCache = [];
+
+    public static function hasColumn(string $column): bool
+    {
+        if (!array_key_exists($column, self::$columnCache)) {
+            try {
+                $result = Database::fetch(
+                    "SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_orders' AND COLUMN_NAME = ? LIMIT 1",
+                    [$column]
+                );
+                self::$columnCache[$column] = !empty($result);
+            } catch (\Exception $e) {
+                self::$columnCache[$column] = false;
+            }
+        }
+        return self::$columnCache[$column];
+    }
+
+    /**
+     * Busca um pedido já vinculado a uma solicitação semanal (idempotência).
+     */
+    public static function findByWeeklyRequest(int $weeklyRequestId): ?array
+    {
+        if (!self::hasColumn('weekly_request_id')) return null;
+        return Database::fetch(
+            "SELECT * FROM purchase_orders WHERE weekly_request_id = ? ORDER BY id DESC LIMIT 1",
+            [$weeklyRequestId]
+        );
+    }
+
+    /**
+     * PONTO ÚNICO DE CRIAÇÃO DE PEDIDO (fonte única da verdade).
+     *
+     * Cria um pedido de material real no sistema existente + seus itens,
+     * seguindo o mesmo fluxo de cotação. É usado tanto pelo fluxo manual
+     * (Novo Pedido) quanto pela Lista Semanal, evitando sistema paralelo.
+     *
+     * @param array $data  order_type, description, urgency, deadline,
+     *                     construction_site_id, created_by, created_by_name,
+     *                     origin, weekly_request_id
+     * @param array $items material_name, specification, classification, unit,
+     *                     quantity, material_id
+     * @return array{id:int, code:string, quote_token:string, approval_token:string}
+     */
+    public static function createWithItems(array $data, array $items): array
+    {
+        $code = self::generateCode();
+        $quoteToken = self::generateToken();
+        $approvalToken = self::generateToken();
+
+        $orderType = $data['order_type'] ?? 'material';
+        if (!in_array($orderType, ['material', 'service'])) $orderType = 'material';
+
+        $urgency = $data['urgency'] ?? 'medium';
+        if (!in_array($urgency, ['low', 'medium', 'high', 'critical'])) $urgency = 'medium';
+
+        $orderData = [
+            'code' => $code,
+            'order_type' => $orderType,
+            'supplier_id' => null,
+            'status' => 'pending_quote',
+            'description' => $data['description'] ?? '',
+            'urgency' => $urgency,
+            'deadline' => !empty($data['deadline']) ? $data['deadline'] : null,
+            'created_by' => $data['created_by'] ?? null,
+            'created_by_name' => $data['created_by_name'] ?? 'Sistema',
+            'quote_token' => $quoteToken,
+            'approval_token' => $approvalToken,
+            'created_at' => date('Y-m-d H:i:s'),
+        ];
+
+        // Origem do pedido (manual | weekly_list) — só se a coluna existir
+        if (self::hasColumn('origin')) {
+            $orderData['origin'] = $data['origin'] ?? 'manual';
+        }
+        if (self::hasColumn('weekly_request_id') && !empty($data['weekly_request_id'])) {
+            $orderData['weekly_request_id'] = (int) $data['weekly_request_id'];
+        }
+
+        // Obra (se a coluna existir e informada)
+        if (!empty($data['construction_site_id']) && self::hasColumn('construction_site_id')) {
+            $orderData['construction_site_id'] = (int) $data['construction_site_id'];
+        }
+
+        $orderId = self::create($orderData);
+
+        // Itens do pedido (fluxo padrão de cotação: source_type = null)
+        foreach ($items as $item) {
+            if (empty(trim($item['material_name'] ?? ''))) continue;
+            \App\Models\PurchaseOrderItem::create([
+                'order_id' => $orderId,
+                'material_id' => !empty($item['material_id']) ? (int) $item['material_id'] : null,
+                'material_name' => trim($item['material_name']),
+                'specification' => $item['specification'] ?? '',
+                'classification' => $item['classification'] ?? '',
+                'unit' => $item['unit'] ?? '',
+                'quantity' => (float) ($item['quantity'] ?? 1),
+                'source_type' => null,
+                'stock_from_site_id' => null,
+                'stock_movement_id' => null,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        return [
+            'id' => $orderId,
+            'code' => $code,
+            'quote_token' => $quoteToken,
+            'approval_token' => $approvalToken,
+        ];
+    }
 }
