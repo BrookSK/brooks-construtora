@@ -134,6 +134,9 @@ class WeeklyMaterialController extends Controller
         $minNeededDate = WeeklyMaterialRequest::defaultNeededDate();
         $defaultNeededDate = $minNeededDate;
 
+        // Rótulo do ciclo (número, semana do mês e intervalo de datas)
+        $cycleLabel = WeeklyMaterialRequest::cycleLabel($request['week_start']);
+
         require ROOT_PATH . '/app/Views/site/weekly_materials/form.php';
     }
 

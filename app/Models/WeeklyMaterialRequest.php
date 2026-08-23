@@ -495,6 +495,49 @@ class WeeklyMaterialRequest extends Model
     }
 
     /**
+     * Número sequencial do ciclo (1º, 2º, 3º...) considerando todos os
+     * week_start distintos já criados, em ordem cronológica.
+     */
+    public static function cycleNumber(string $weekStart): int
+    {
+        $row = Database::fetch(
+            "SELECT COUNT(DISTINCT week_start) AS n FROM weekly_material_requests WHERE week_start <= ?",
+            [$weekStart]
+        );
+        return max(1, (int) ($row['n'] ?? 1));
+    }
+
+    /**
+     * Rótulo amigável do ciclo. Ex.:
+     *  "2º ciclo — 3ª semana de Agosto (23/08/2026 a 06/09/2026, 15 dias)"
+     */
+    public static function cycleLabel(string $weekStart): array
+    {
+        $interval = self::cycleIntervalDays();
+        $startTs = strtotime($weekStart);
+        $endTs = strtotime(self::cycleEnd($weekStart));
+        $number = self::cycleNumber($weekStart);
+
+        $meses = [1=>'Janeiro',2=>'Fevereiro',3=>'Março',4=>'Abril',5=>'Maio',6=>'Junho',
+                  7=>'Julho',8=>'Agosto',9=>'Setembro',10=>'Outubro',11=>'Novembro',12=>'Dezembro'];
+        $mesNome = $meses[(int) date('n', $startTs)] ?? '';
+        // Semana do mês baseada no dia (1-7 = 1ª, 8-14 = 2ª, ...)
+        $semanaDoMes = (int) ceil(((int) date('j', $startTs)) / 7);
+        $ordSemana = ['1ª','2ª','3ª','4ª','5ª'][$semanaDoMes - 1] ?? ($semanaDoMes . 'ª');
+
+        return [
+            'number' => $number,
+            'interval' => $interval,
+            'start' => date('d/m/Y', $startTs),
+            'end' => date('d/m/Y', $endTs),
+            'week_of_month' => $ordSemana . ' semana de ' . $mesNome,
+            'text' => "{$number}º ciclo — {$ordSemana} semana de {$mesNome}"
+                . " ({$interval} " . ($interval === 1 ? 'dia' : 'dias') . "): "
+                . date('d/m/Y', $startTs) . " a " . date('d/m/Y', $endTs),
+        ];
+    }
+
+    /**
      * Início do PRÓXIMO ciclo, respeitando o intervalo configurado.
      * Se já existe um ciclo, soma o intervalo a ele; senão, começa hoje.
      */

@@ -38,10 +38,25 @@
         <div class="card mb-3">
             <div class="card-header bg-primary bg-opacity-10 border-0 p-3">
                 <h5 class="mb-1">Olá, <?= htmlspecialchars($request['manager_name']) ?>!</h5>
+                <?php if (!empty($cycleLabel)): ?>
+                <div class="mb-2">
+                    <span class="badge bg-primary"><i class="bi bi-calendar-week"></i> <?= (int) $cycleLabel['number'] ?>º ciclo</span>
+                    <span class="badge bg-info text-dark"><?= htmlspecialchars($cycleLabel['week_of_month']) ?></span>
+                </div>
+                <p class="mb-0 small">
+                    Este pedido é referente ao <strong><?= (int) $cycleLabel['number'] ?>º ciclo</strong>
+                    (<strong><?= (int) $cycleLabel['interval'] ?> <?= $cycleLabel['interval'] === 1 ? 'dia' : 'dias' ?></strong>),
+                    da <strong><?= htmlspecialchars($cycleLabel['week_of_month']) ?></strong>.
+                    <br>
+                    Período: <strong><?= htmlspecialchars($cycleLabel['start']) ?></strong> a <strong><?= htmlspecialchars($cycleLabel['end']) ?></strong>.
+                    Informe os materiais que você vai precisar neste período.
+                </p>
+                <?php else: ?>
                 <p class="mb-0 text-muted small">
                     Informe os materiais que você vai precisar no ciclo que começa em
                     <strong><?= date('d/m/Y', strtotime($request['week_start'])) ?></strong>
                 </p>
+                <?php endif; ?>
             </div>
         </div>
 
