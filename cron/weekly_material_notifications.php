@@ -43,16 +43,23 @@ $baseUrl = Setting::get('site_url', 'https://brooksconstrutora.com.br');
 echo "[$action] Iniciando às " . date('Y-m-d H:i:s') . "\n";
 
 if ($action === 'notify') {
-    // Gera e envia respeitando o INTERVALO configurado (ex.: a cada 15 dias).
-    // O cron pode rodar diariamente; só dispara quando o ciclo está vencido.
+    // Gera e envia respeitando o INTERVALO e a ANTECEDÊNCIA configurados.
+    // O link é enviado com "antecedência mínima" dias ANTES do próximo ciclo.
+    // Ex.: intervalo 15 dias, antecedência 5 dias → envia no dia 10 após o
+    // último ciclo (5 dias antes do próximo ciclo de dia 15).
     $interval = WeeklyMaterialRequest::cycleIntervalDays();
+    $minAdvance = (int) Setting::get('weekly_min_advance_days', '15');
+    // Antecedência não pode ser maior que o intervalo (senão enviaria imediatamente)
+    $advance = min($minAdvance, $interval);
     $latest = WeeklyMaterialRequest::latestCycleStart();
     $today = strtotime(date('Y-m-d'));
 
     if ($latest) {
-        $due = strtotime($latest . ' +' . $interval . ' days');
+        // Dia de envio = último ciclo + (intervalo - antecedência)
+        $sendOffset = max(0, $interval - $advance);
+        $due = strtotime($latest . ' +' . $sendOffset . ' days');
         if ($today < $due) {
-            echo "Ciclo ainda não vencido. Último ciclo: {$latest}, intervalo: {$interval} dias. Próximo em " . date('Y-m-d', $due) . ".\n";
+            echo "Ainda não é hora de enviar. Último ciclo: {$latest}, intervalo: {$interval} dias, antecedência: {$advance} dias. Envio em " . date('Y-m-d', $due) . ".\n";
             echo "Finalizado às " . date('Y-m-d H:i:s') . "\n";
             return;
         }
@@ -76,9 +83,15 @@ if ($action === 'notify') {
         if ($req['status'] !== 'pending') continue;
         if (!empty($req['notified_at'])) continue;
 
+        $siteLabel = !empty($req['construction_site_name'])
+            ? ((!empty($req['construction_site_code']) ? $req['construction_site_code'] . ' - ' : '') . $req['construction_site_name'])
+            : '';
+        $obraLinha = $siteLabel ? "*Obra:* {$siteLabel}\n" : '';
+
         $formUrl = $baseUrl . '/lista-semanal/' . $req['token'];
         $message = "Olá {$req['manager_name']}! 📋\n\n"
-            . "Preciso que você envie a lista de materiais que vai precisar na semana de "
+            . $obraLinha
+            . "Preciso que você envie a lista de materiais que vai precisar no ciclo de "
             . date('d/m/Y', strtotime($nextWeek)) . ".\n\n"
             . "Acesse o link abaixo e preencha:\n{$formUrl}\n\n"
             . "Obrigado!";
@@ -90,6 +103,7 @@ if ($action === 'notify') {
                 'name' => $req['manager_name'],
                 'message' => $message,
                 'type' => 'weekly_material_request',
+                'construction_site' => $siteLabel,
             ]);
         }
 

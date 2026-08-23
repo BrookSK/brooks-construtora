@@ -80,15 +80,31 @@ class WeeklyMaterialRequest extends Model
         $created = 0;
 
         foreach ($managers as $manager) {
-            // Verificar se já existe (usando manager_id = pin_user.id)
-            $existing = Database::fetch(
-                "SELECT id FROM weekly_material_requests WHERE manager_id = ? AND week_start = ?",
-                [$manager['id'], $weekStart]
-            );
+            // Cada responsável recebe um link por OBRA em que participa.
+            $sites = self::sitesForManager((int) $manager['id']);
 
-            if (!$existing) {
-                // Pré-seleciona a obra do responsável quando houver apenas uma vinculada
-                $siteId = self::defaultSiteForManager((int) $manager['id']);
+            // Sem obra vinculada → gera um registro sem obra (será selecionada no form)
+            if (empty($sites)) {
+                $sites = [['id' => null, 'name' => null, 'code' => null]];
+            }
+
+            foreach ($sites as $site) {
+                $siteId = $site['id'] !== null ? (int) $site['id'] : null;
+
+                // Idempotência por (responsável, ciclo, obra)
+                if ($siteId !== null) {
+                    $existing = Database::fetch(
+                        "SELECT id FROM weekly_material_requests WHERE manager_id = ? AND week_start = ? AND construction_site_id = ?",
+                        [$manager['id'], $weekStart, $siteId]
+                    );
+                } else {
+                    $existing = Database::fetch(
+                        "SELECT id FROM weekly_material_requests WHERE manager_id = ? AND week_start = ? AND construction_site_id IS NULL",
+                        [$manager['id'], $weekStart]
+                    );
+                }
+                if ($existing) continue;
+
                 $reqId = self::create([
                     'manager_id' => $manager['id'],
                     'construction_site_id' => $siteId,
@@ -99,10 +115,12 @@ class WeeklyMaterialRequest extends Model
                     'status' => 'pending',
                     'created_at' => date('Y-m-d H:i:s'),
                 ]);
+
+                $siteLabel = $site['name'] ? " (obra: {$site['name']})" : '';
                 \App\Models\WeeklyMaterialLog::record(
                     \App\Models\WeeklyMaterialLog::ACTION_LINK_GENERATED,
                     $reqId,
-                    "Solicitação e link gerados para {$manager['name']}",
+                    "Solicitação e link gerados para {$manager['name']}{$siteLabel}",
                     $weekStart
                 );
                 $created++;
@@ -112,11 +130,37 @@ class WeeklyMaterialRequest extends Model
         \App\Models\WeeklyMaterialLog::record(
             \App\Models\WeeklyMaterialLog::ACTION_WEEK_CREATED,
             null,
-            "Semana gerada: {$created} solicitação(ões) criada(s)",
+            "Ciclo gerado: {$created} solicitação(ões) criada(s)",
             $weekStart
         );
 
         return $created;
+    }
+
+    /**
+     * Apaga um ciclo inteiro (todas as solicitações daquele week_start) e
+     * seus itens/logs associados. Usado no gerenciamento de ciclos (testes).
+     * Retorna a quantidade de solicitações removidas.
+     */
+    public static function deleteCycle(string $weekStart): int
+    {
+        $rows = Database::fetchAll(
+            "SELECT id FROM weekly_material_requests WHERE week_start = ?",
+            [$weekStart]
+        );
+        $ids = array_map(fn($r) => (int) $r['id'], $rows);
+
+        foreach ($ids as $rid) {
+            Database::delete('weekly_material_request_items', 'request_id = ?', [$rid]);
+        }
+
+        // Logs do ciclo
+        try {
+            Database::delete('weekly_material_logs', 'week_start = ?', [$weekStart]);
+        } catch (\Throwable $e) {}
+
+        $count = Database::delete(self::$table, 'week_start = ?', [$weekStart]);
+        return (int) $count;
     }
 
     /**

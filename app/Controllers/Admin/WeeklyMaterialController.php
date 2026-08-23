@@ -341,6 +341,49 @@ class WeeklyMaterialController extends Controller
     }
 
     /**
+     * Gerenciar ciclos: lista os ciclos gerados para permitir exclusão.
+     */
+    public function cycles(): void
+    {
+        $weeks = WeeklyMaterialRequest::getWeeks();
+        $nextCycle = WeeklyMaterialRequest::nextCycleStart();
+        $cycleDays = WeeklyMaterialRequest::cycleIntervalDays();
+
+        $this->view('admin.weekly_materials.cycles', [
+            'weeks' => $weeks,
+            'nextCycle' => $nextCycle,
+            'cycleDays' => $cycleDays,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+            'pageTitle' => 'Gerenciar Ciclos',
+            'currentPage' => 'weekly_materials',
+        ]);
+    }
+
+    /**
+     * Apagar um ciclo já gerado (para testes). Após apagar, a próxima
+     * geração volta a partir do último ciclo restante.
+     */
+    public function deleteCycle(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/weekly-materials/cycles');
+            return;
+        }
+
+        $weekStart = $this->input('week_start', '');
+        if (!$weekStart) {
+            $this->setFlash('error', 'Ciclo não informado.');
+            $this->redirect('/admin/weekly-materials/cycles');
+            return;
+        }
+
+        $removed = WeeklyMaterialRequest::deleteCycle($weekStart);
+        $this->setFlash('success', "Ciclo de " . date('d/m/Y', strtotime($weekStart)) . " apagado ({$removed} solicitação(ões)). A próxima geração recomeça a partir daqui.");
+        $this->redirect('/admin/weekly-materials/cycles');
+    }
+
+    /**
      * Gerar registros da semana (manual ou via cron)
      */
     public function generate(): void
@@ -391,9 +434,16 @@ class WeeklyMaterialController extends Controller
         foreach ($requests as $req) {
             if ($req['status'] !== 'pending') continue;
 
+            // Identifica a obra no link/mensagem (um link por obra)
+            $siteLabel = !empty($req['construction_site_name'])
+                ? (($req['construction_site_code'] ? $req['construction_site_code'] . ' - ' : '') . $req['construction_site_name'])
+                : '';
+
             $formUrl = $baseUrl . '/lista-semanal/' . $req['token'];
+            $obraLinha = $siteLabel ? "*Obra:* {$siteLabel}\n" : '';
             $message = "Olá {$req['manager_name']}! 📋\n\n"
-                . "Preciso que você envie a lista de materiais que vai precisar na semana de "
+                . $obraLinha
+                . "Preciso que você envie a lista de materiais que vai precisar no ciclo de "
                 . date('d/m/Y', strtotime($nextWeek)) . ".\n\n"
                 . "Acesse o link abaixo e preencha:\n{$formUrl}\n\n"
                 . "Obrigado!";
@@ -404,16 +454,19 @@ class WeeklyMaterialController extends Controller
                     'name' => $req['manager_name'],
                     'message' => $message,
                     'type' => 'weekly_material_request',
+                    'construction_site' => $siteLabel,
                 ]);
                 $sent++;
             }
 
             if (!empty($req['manager_email'])) {
+                $obraHtml = $siteLabel ? "<p><strong>Obra:</strong> " . htmlspecialchars($siteLabel) . "</p>" : '';
                 \App\Services\NotificationService::queueEmails(
                     $req['manager_email'],
-                    'Lista Semanal de Materiais - Semana ' . date('d/m', strtotime($nextWeek)),
+                    'Lista Semanal de Materiais' . ($siteLabel ? ' - ' . $siteLabel : '') . ' - ' . date('d/m', strtotime($nextWeek)),
                     "<p>Olá <strong>{$req['manager_name']}</strong>!</p>"
-                    . "<p>Precisamos que você envie a lista de materiais da semana de " . date('d/m/Y', strtotime($nextWeek)) . ".</p>"
+                    . $obraHtml
+                    . "<p>Precisamos que você envie a lista de materiais do ciclo de " . date('d/m/Y', strtotime($nextWeek)) . ".</p>"
                     . "<p><a href=\"{$formUrl}\" style=\"background:#3a3b4e; color:#fff; padding:10px 20px; border-radius:5px; text-decoration:none;\">Preencher Lista</a></p>"
                 );
             }
@@ -426,7 +479,7 @@ class WeeklyMaterialController extends Controller
             \App\Models\WeeklyMaterialLog::record(
                 \App\Models\WeeklyMaterialLog::ACTION_LINK_SENT,
                 (int) $req['id'],
-                "Link enviado para {$req['manager_name']}",
+                "Link enviado para {$req['manager_name']}" . ($siteLabel ? " ({$siteLabel})" : ''),
                 $nextWeek
             );
         }

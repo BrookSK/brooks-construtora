@@ -51,7 +51,11 @@
             <div class="card mb-3">
                 <div class="card-header"><i class="bi bi-buildings"></i> Obra *</div>
                 <div class="card-body">
-                    <?php if (count($sites) === 1): ?>
+                    <?php if (!empty($lockedSite)): ?>
+                        <input type="hidden" name="construction_site_id" value="<?= (int) $lockedSite['id'] ?>">
+                        <input type="text" class="form-control" value="<?= htmlspecialchars((!empty($lockedSite['code']) ? $lockedSite['code'] . ' - ' : '') . $lockedSite['name']) ?>" readonly>
+                        <small class="text-muted d-block mt-1">Este link é específico desta obra.</small>
+                    <?php elseif (count($sites) === 1): ?>
                         <input type="hidden" name="construction_site_id" value="<?= (int) $sites[0]['id'] ?>">
                         <input type="text" class="form-control" value="<?= htmlspecialchars(($sites[0]['code'] ? $sites[0]['code'] . ' - ' : '') . $sites[0]['name']) ?>" readonly>
                     <?php else: ?>
@@ -71,48 +75,10 @@
                 <div class="card-header"><i class="bi bi-calendar-check"></i> Data da Necessidade</div>
                 <div class="card-body">
                     <label class="form-label">Preciso deste material até *</label>
-                    <input type="date" class="form-control" name="needed_date" id="neededDate" required min="<?= date('Y-m-d') ?>" value="<?= htmlspecialchars($defaultNeededDate ?? '') ?>">
-                    <small class="text-muted d-block mt-1">Já preenchido com a antecedência mínima recomendada (<?= (int) ($minAdvanceDays ?? 15) ?> dias). Ajuste apenas se precisar antes disso.</small>
-                    <div id="leadTimeInfo" class="mt-2"></div>
-                </div>
-            </div>
-
-            <div class="card mb-3 border-warning d-none" id="urgencyReasonBlock">
-                <div class="card-header bg-warning bg-opacity-10 text-dark">
-                    <i class="bi bi-exclamation-triangle-fill"></i> Solicitação fora do prazo recomendado
-                </div>
-                <div class="card-body">
-                    <p class="small text-muted mb-2">Esta solicitação está abaixo da antecedência recomendada. Informe o motivo:</p>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="urgency_reason_no_advance" value="1" id="reasonNoAdvance">
-                        <label class="form-check-label" for="reasonNoAdvance">
-                            Não houve solicitação antecipada
-                            <small class="text-muted d-block">O material poderia ter sido solicitado antes, mas não foi.</small>
-                        </label>
-                    </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" name="urgency_reason_site_occurrence" value="1" id="reasonOccurrence">
-                        <label class="form-check-label" for="reasonOccurrence">
-                            Ocorrência em obra
-                            <small class="text-muted d-block">Situação não prevista durante a execução (dano, alteração, emergência).</small>
-                        </label>
-                    </div>
-                    <label class="form-label">Descrição da ocorrência / justificativa *</label>
-                    <textarea class="form-control" name="urgency_description" id="urgencyDescription" rows="2" placeholder="Explique o que aconteceu..."></textarea>
-                </div>
-            </div>
-
-            <div class="card mb-3">
-                <div class="card-header"><i class="bi bi-file-earmark-pdf"></i> Importar Materiais (opcional)</div>
-                <div class="card-body">
-                    <p class="text-muted small mb-2">Envie um PDF ou imagem com a lista de materiais. A IA identifica e adiciona automaticamente.</p>
-                    <div class="d-flex gap-2 align-items-center">
-                        <input type="file" class="form-control form-control-sm" id="pdfUpload" accept=".pdf,.jpg,.jpeg,.png,.webp">
-                        <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0" id="parsePdfBtn" onclick="parsePdfFile()">
-                            <i class="bi bi-magic"></i> <span class="d-none d-sm-inline">Analisar</span>
-                        </button>
-                    </div>
-                    <div id="pdfStatus" class="mt-2" style="display:none;"></div>
+                    <input type="date" class="form-control" name="needed_date" id="neededDate" required
+                           min="<?= htmlspecialchars($minNeededDate ?? '') ?>"
+                           value="<?= htmlspecialchars($defaultNeededDate ?? '') ?>">
+                    <small class="text-muted d-block mt-1">A previsão é feita com no mínimo <?= (int) ($minAdvanceDays ?? 15) ?> dias de antecedência. Você pode escolher uma data posterior, se necessário.</small>
                 </div>
             </div>
 
@@ -255,6 +221,7 @@
     <script>
     window.WEEKLY_TOKEN = <?= json_encode($token) ?>;
     window.WEEKLY_MIN_ADVANCE = <?= (int) ($minAdvanceDays ?? 15) ?>;
+    window.WEEKLY_MIN_DATE = <?= json_encode($minNeededDate ?? '') ?>;
     window.WEEKLY_MATERIALS = <?= json_encode(array_values($materials)) ?>;
     </script>
     <script src="/assets/js/weekly-material-form.js"></script>

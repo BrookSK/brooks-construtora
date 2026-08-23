@@ -248,6 +248,8 @@ class Router
             'weekly-materials/purchases' => ['WeeklyMaterialController', 'purchases'],
             'weekly-materials/manager' => ['WeeklyMaterialController', 'manager'],
             'weekly-materials/monitoring' => ['WeeklyMaterialController', 'monitoring'],
+            'weekly-materials/cycles' => ['WeeklyMaterialController', 'cycles'],
+            'weekly-materials/delete-cycle' => ['WeeklyMaterialController', 'deleteCycle'],
             'weekly-materials/save-automation' => ['WeeklyMaterialController', 'saveAutomation'],
             'weekly-materials/save-organization' => ['WeeklyMaterialController', 'saveOrganization'],
             'weekly-materials/export-control' => ['WeeklyMaterialController', 'exportControl'],

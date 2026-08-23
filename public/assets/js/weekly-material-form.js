@@ -5,52 +5,29 @@
  * automaticamente pela data da necessidade.
  *
  * Depende de: SearchableSelect, Bootstrap.
- * Variáveis globais definidas no HTML: WEEKLY_TOKEN, WEEKLY_MIN_ADVANCE, WEEKLY_MATERIALS.
+ * Variáveis globais definidas no HTML: WEEKLY_TOKEN, WEEKLY_MIN_ADVANCE, WEEKLY_MIN_DATE, WEEKLY_MATERIALS.
  */
 (function () {
     const TOKEN = window.WEEKLY_TOKEN;
     const MIN_ADVANCE = parseInt(window.WEEKLY_MIN_ADVANCE || 15, 10);
+    const MIN_DATE = window.WEEKLY_MIN_DATE || '';
     const materials = window.WEEKLY_MATERIALS || [];
     let itemCount = 0;
     let audioBlob = null;
 
-    // ─── Antecedência / regra dos 15 dias (SEM rótulo de urgência) ───────
-    // A urgência NÃO é exibida nem definida aqui — ela é classificada
-    // automaticamente na página de Pedidos, com base na data do pedido e na
-    // data de necessidade. Aqui apenas indicamos se está dentro do prazo e,
-    // quando abaixo da antecedência recomendada, pedimos a justificativa.
+    // ─── Data da necessidade: mínimo obrigatório (15 dias à frente) ──────
+    // O responsável não pode escolher uma data anterior ao mínimo.
     const neededDate = document.getElementById('neededDate');
-    const leadTimeInfo = document.getElementById('leadTimeInfo');
-    const urgencyReasonBlock = document.getElementById('urgencyReasonBlock');
-
-    function isOutOfLeadTime() {
-        if (!neededDate.value) return false;
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        const need = new Date(neededDate.value + 'T00:00:00');
-        const days = Math.floor((need - today) / 86400000);
-        return days < MIN_ADVANCE;
-    }
-
-    function updateLeadTime() {
-        if (!neededDate.value) {
-            leadTimeInfo.innerHTML = '';
-            urgencyReasonBlock.classList.add('d-none');
-            return;
+    function enforceMinDate() {
+        if (!neededDate || !MIN_DATE) return;
+        if (!neededDate.value || neededDate.value < MIN_DATE) {
+            neededDate.value = MIN_DATE;
         }
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        const need = new Date(neededDate.value + 'T00:00:00');
-        const days = Math.floor((need - today) / 86400000);
-
-        if (days >= MIN_ADVANCE) {
-            leadTimeInfo.innerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> ' + days + ' dias de antecedência — dentro do prazo</span>';
-        } else {
-            leadTimeInfo.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> ' + days + ' dia(s) — fora da antecedência recomendada (' + MIN_ADVANCE + ' dias)</span>';
-        }
-
-        // Abre bloco de justificativa quando abaixo da antecedência recomendada
-        urgencyReasonBlock.classList.toggle('d-none', days >= MIN_ADVANCE);
     }
-    if (neededDate) neededDate.addEventListener('change', updateLeadTime);
+    if (neededDate) {
+        neededDate.addEventListener('change', enforceMinDate);
+        neededDate.addEventListener('blur', enforceMinDate);
+    }
 
     // ─── Itens ───────────────────────────────────────────────────────────
     function updateItemCount() {
@@ -213,7 +190,8 @@
         } catch (e) { alert('Erro de conexão'); }
     });
 
-    // ─── Importar PDF/imagem com IA (endpoint público) ───────────────────
+    // ─── Importar PDF/imagem com IA (REMOVIDO nesta tela) ────────────────
+    /* Bloco de importação por PDF/IA removido da solicitação semanal.
     window.parsePdfFile = async function () {
         const fileInput = document.getElementById('pdfUpload');
         const statusEl = document.getElementById('pdfStatus');
@@ -312,6 +290,7 @@
             }
         }
     });
+    */
 
     // ─── Áudio inline ────────────────────────────────────────────────────
     const audioWidget = document.getElementById('audio-recorder-weekly');
@@ -414,17 +393,6 @@
         });
         if (!qtyValid) { alert('A quantidade de "' + invalidName + '" deve ser no mínimo 0,01.'); return; }
 
-        // Fora do prazo recomendado exige justificativa (PARTE 10-13)
-        if (isOutOfLeadTime()) {
-            const anyReason = document.getElementById('reasonNoAdvance').checked || document.getElementById('reasonOccurrence').checked;
-            const desc = document.getElementById('urgencyDescription').value.trim();
-            if (!anyReason || !desc) {
-                alert('Esta solicitação está fora da antecedência recomendada. Informe o motivo e a descrição.');
-                document.getElementById('urgencyReasonBlock').scrollIntoView({ behavior: 'smooth' });
-                return;
-            }
-        }
-
         let html = '<h6 class="mb-3">Itens da solicitação:</h6>';
         if (siteSelect) {
             html += '<div class="alert alert-light py-2 mb-2"><i class="bi bi-buildings"></i> <strong>Obra:</strong> ' + siteSelect.options[siteSelect.selectedIndex].text + '</div>';
@@ -469,5 +437,5 @@
     };
 
     // Estado inicial
-    updateLeadTime();
+    enforceMinDate();
 })();

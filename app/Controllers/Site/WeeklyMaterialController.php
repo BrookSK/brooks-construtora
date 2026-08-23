@@ -107,21 +107,31 @@ class WeeklyMaterialController extends Controller
         $categories = \App\Models\MaterialCategory::all('name ASC');
         $units = \App\Models\MeasurementUnit::all('name ASC');
 
-        // Obras vinculadas ao responsável
-        $sites = WeeklyMaterialRequest::sitesForManager((int) $request['manager_id']);
-        if (empty($sites)) {
-            $sites = ConstructionSite::allActive();
-        }
+        // Obra do link: cada link é específico de uma obra. Se a solicitação
+        // já tem obra definida, ela vem TRAVADA (read-only) no formulário.
         $preselectedSite = $request['construction_site_id'] ?? null;
+        $lockedSite = null;
+        if (!empty($preselectedSite)) {
+            $lockedSite = \App\Models\ConstructionSite::find((int) $preselectedSite);
+        }
+
+        // Fallback: se o link não tem obra (responsável sem obra vinculada),
+        // oferece o seletor com as obras dele (ou todas as ativas).
+        $sites = [];
+        if (!$lockedSite) {
+            $sites = WeeklyMaterialRequest::sitesForManager((int) $request['manager_id']);
+            if (empty($sites)) {
+                $sites = ConstructionSite::allActive();
+            }
+        }
 
         // Configuração de antecedência mínima (regra dos 15 dias / PARTE 8)
         $minAdvanceDays = (int) \App\Models\Setting::get('weekly_min_advance_days', '15');
 
-        // Data de necessidade pré-preenchida com base no mínimo (hoje + antecedência).
-        // Se a solicitação já tem needed_date salvo (rascunho), respeita-o.
-        $defaultNeededDate = !empty($request['needed_date'])
-            ? $request['needed_date']
-            : WeeklyMaterialRequest::defaultNeededDate();
+        // Data mínima e padrão = hoje + antecedência mínima. O responsável NÃO
+        // pode selecionar uma data antes disso (previsão sempre com 15 dias).
+        $minNeededDate = WeeklyMaterialRequest::defaultNeededDate();
+        $defaultNeededDate = $minNeededDate;
 
         require ROOT_PATH . '/app/Views/site/weekly_materials/form.php';
     }
@@ -153,15 +163,6 @@ class WeeklyMaterialController extends Controller
         $neededDate = $this->input('needed_date', '') ?: null;
         $siteId = $this->input('construction_site_id') ? (int) $this->input('construction_site_id') : ($request['construction_site_id'] ?? null);
 
-        // Urgência é DERIVADA da antecedência (autoridade no servidor, PARTE 8/9).
-        // Não confiamos no valor do cliente para evitar manipulação.
-        $urgency = self::deriveUrgency($neededDate);
-
-        // Motivos/justificativa de urgência (PARTE 10/13)
-        $reasonNoAdvance = !empty($_POST['urgency_reason_no_advance']) ? 1 : 0;
-        $reasonOccurrence = !empty($_POST['urgency_reason_site_occurrence']) ? 1 : 0;
-        $urgencyDescription = trim($this->input('urgency_description', ''));
-
         $validItems = array_filter($items, fn($item) => !empty(trim($item['material_name'] ?? '')));
 
         // Validações
@@ -171,18 +172,15 @@ class WeeklyMaterialController extends Controller
             exit;
         }
 
-        // Justificativa obrigatória quando a solicitação está fora da
-        // antecedência mínima recomendada (independe de rótulo de urgência).
-        $minAdvance = (int) \App\Models\Setting::get('weekly_min_advance_days', '15');
-        $antecedence = WeeklyMaterialRequest::calcAntecedence($neededDate);
-        $outOfLeadTime = ($antecedence !== null && $antecedence < $minAdvance);
-        if ($outOfLeadTime) {
-            if ((!$reasonNoAdvance && !$reasonOccurrence) || empty($urgencyDescription)) {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Esta solicitação está fora da antecedência recomendada. Informe o motivo e a descrição.'];
-                header('Location: /lista-semanal/' . $token);
-                exit;
-            }
+        // A data de necessidade deve respeitar a antecedência mínima (15 dias).
+        // Se vier antes do mínimo (ou vazia), força para o mínimo.
+        $minNeededDate = WeeklyMaterialRequest::defaultNeededDate();
+        if (empty($neededDate) || $neededDate < $minNeededDate) {
+            $neededDate = $minNeededDate;
         }
+
+        // Urgência é DERIVADA da antecedência (autoridade no servidor).
+        $urgency = self::deriveUrgency($neededDate);
 
         // Persistir dados de controle na solicitação ANTES de criar o pedido
         // (garante que nada é perdido mesmo se a criação do pedido falhar)
@@ -191,9 +189,6 @@ class WeeklyMaterialController extends Controller
             'construction_site_id' => $siteId,
             'urgency' => $urgency,
             'needed_date' => $neededDate,
-            'urgency_reason_no_advance' => $reasonNoAdvance,
-            'urgency_reason_site_occurrence' => $reasonOccurrence,
-            'urgency_description' => $urgencyDescription ?: null,
             'notes' => $notes ?: null,
         ]);
 
@@ -223,9 +218,6 @@ class WeeklyMaterialController extends Controller
             'needed_date' => $neededDate,
             'deadline' => $neededDate,
             'notes' => $notes,
-            'urgency_reason_no_advance' => $reasonNoAdvance,
-            'urgency_reason_site_occurrence' => $reasonOccurrence,
-            'urgency_description' => $urgencyDescription,
         ]);
 
         if (!$result['success']) {

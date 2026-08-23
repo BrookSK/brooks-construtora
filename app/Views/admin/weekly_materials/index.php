@@ -36,6 +36,7 @@ $critical = (int) ($stats['critical_count'] ?? 0);
     </form>
     <div class="d-flex gap-2 flex-wrap">
         <a href="/admin/weekly-materials/monitoring" class="btn btn-sm btn-outline-info"><i class="bi bi-graph-up"></i> Monitoramento</a>
+        <a href="/admin/weekly-materials/cycles" class="btn btn-sm btn-outline-dark"><i class="bi bi-arrow-repeat"></i> Gerenciar Ciclos</a>
         <a href="/admin/orders/pin-users" class="btn btn-sm btn-outline-secondary"><i class="bi bi-people"></i> Gerenciar Responsáveis</a>
         <form method="POST" action="/admin/weekly-materials/generate" class="d-inline">
             <?php $nextCycle = \App\Models\WeeklyMaterialRequest::nextCycleStart(); $cycleDays = \App\Models\WeeklyMaterialRequest::cycleIntervalDays(); ?>
