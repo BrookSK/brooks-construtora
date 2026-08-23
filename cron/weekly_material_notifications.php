@@ -52,6 +52,11 @@ if ($action === 'notify') {
         $force = !empty($_GET['force']);
     }
 
+    // Modo POR HORA (teste): ignora travas de dia/horário. O cron pode rodar
+    // de hora em hora e o envio acontece assim que houver pendências.
+    $hourly = Setting::get('weekly_cycle_mode', 'daily') === 'hourly';
+    if ($hourly) { $force = true; }
+
     // ─── TRAVA DE DIA DA SEMANA (send_day) ───────────────────────────────
     // Só aplica quando o ciclo NÃO é diário. 1=Seg ... 7=Dom (ISO-8601).
     $interval = WeeklyMaterialRequest::cycleIntervalDays();

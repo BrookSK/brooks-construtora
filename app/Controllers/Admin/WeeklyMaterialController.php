@@ -62,6 +62,7 @@ class WeeklyMaterialController extends Controller
         //  - min_need_days        (Z): antecedência mínima da data "preciso até"
         //                              (a partir da data em que a pessoa preenche)
         $automation = [
+            'cycle_mode' => Setting::get('weekly_cycle_mode', 'daily'),
             'cycle_interval_days' => Setting::get('weekly_cycle_interval_days', '15'),
             'notify_advance_days' => Setting::get('weekly_notify_advance_days', '5'),
             'min_need_days' => Setting::get('weekly_min_need_days', Setting::get('weekly_min_advance_days', '5')),
@@ -111,8 +112,11 @@ class WeeklyMaterialController extends Controller
             return;
         }
 
-        // X — frequência do ciclo (a cada X dias)
-        $cycleInterval = max(1, (int) $this->input('cycle_interval_days', 15));
+        // X — frequência do ciclo. Pode ser 'hourly' (teste) ou nº de dias.
+        $rawInterval = $this->input('cycle_interval_days', '15');
+        $isHourly = ($rawInterval === 'hourly');
+        // Em modo por hora, o intervalo interno é 1 dia (para os cálculos de data)
+        $cycleInterval = $isHourly ? 1 : max(1, (int) $rawInterval);
         // Y — antecedência do envio (enviar o link Y dias antes do ciclo)
         $notifyAdvance = max(0, (int) $this->input('notify_advance_days', 5));
         if ($notifyAdvance > $cycleInterval) $notifyAdvance = $cycleInterval;
@@ -120,6 +124,7 @@ class WeeklyMaterialController extends Controller
         $minNeed = max(1, (int) $this->input('min_need_days', 5));
 
         Setting::setMultiple([
+            'weekly_cycle_mode' => $isHourly ? 'hourly' : 'daily',
             'weekly_cycle_interval_days' => (string) $cycleInterval,
             'weekly_notify_advance_days' => (string) $notifyAdvance,
             'weekly_min_need_days' => (string) $minNeed,

@@ -462,10 +462,14 @@ $critical = (int) ($stats['critical_count'] ?? 0);
                         <label class="form-label small mb-1">1. Frequência do ciclo (X)</label>
                         <select name="cycle_interval_days" id="cycleIntervalSelect" class="form-select form-select-sm">
                             <?php
-                            $intervals = [1=>'Todos os dias (teste)', 7=>'A cada 7 dias', 10=>'A cada 10 dias', 14=>'A cada 14 dias', 15=>'A cada 15 dias', 21=>'A cada 21 dias', 30=>'A cada 30 dias'];
+                            $isHourly = ($automation['cycle_mode'] ?? '') === 'hourly';
                             $curInterval = (int) $automation['cycle_interval_days'];
+                            ?>
+                            <option value="hourly" <?= $isHourly ? 'selected' : '' ?>>Por hora (teste)</option>
+                            <?php
+                            $intervals = [1=>'Todos os dias (teste)', 7=>'A cada 7 dias', 10=>'A cada 10 dias', 14=>'A cada 14 dias', 15=>'A cada 15 dias', 21=>'A cada 21 dias', 30=>'A cada 30 dias'];
                             foreach ($intervals as $d => $lbl): ?>
-                            <option value="<?= $d ?>" <?= $curInterval === $d ? 'selected' : '' ?>><?= $lbl ?></option>
+                            <option value="<?= $d ?>" <?= (!$isHourly && $curInterval === $d) ? 'selected' : '' ?>><?= $lbl ?></option>
                             <?php endforeach; ?>
                         </select>
                         <small class="text-muted d-block mt-1">A cada quantos dias um novo ciclo de solicitação é aberto.</small>
@@ -497,7 +501,8 @@ $critical = (int) ($stats['critical_count'] ?? 0);
                         </div>
                         <div class="col-5">
                             <label class="form-label small mb-1">Horário</label>
-                            <input type="time" name="send_time" class="form-control form-control-sm" value="<?= htmlspecialchars($automation['send_time']) ?>">
+                            <input type="time" name="send_time" id="sendTimeInput" class="form-control form-control-sm" value="<?= htmlspecialchars($automation['send_time']) ?>">
+                            <small class="text-muted d-none" id="sendTimeHourly">Por hora: envia toda hora.</small>
                         </div>
                     </div>
 
@@ -647,16 +652,22 @@ $critical = (int) ($stats['critical_count'] ?? 0);
     });
 })();
 
-// Desabilita "Dia do envio" quando a frequência do ciclo é diária (X=1)
+// Desabilita "Dia do envio" (diário/por hora) e "Horário" (por hora)
 (function() {
     const cycle = document.getElementById('cycleIntervalSelect');
     const sendDay = document.getElementById('sendDaySelect');
-    const hint = document.getElementById('sendDayDaily');
-    if (!cycle || !sendDay) return;
+    const dayHint = document.getElementById('sendDayDaily');
+    const sendTime = document.getElementById('sendTimeInput');
+    const timeHint = document.getElementById('sendTimeHourly');
+    if (!cycle) return;
     function toggle() {
-        const daily = cycle.value === '1';
-        sendDay.disabled = daily;
-        if (hint) hint.classList.toggle('d-none', !daily);
+        const hourly = cycle.value === 'hourly';
+        const daily = cycle.value === '1' || hourly;
+        if (sendDay) sendDay.disabled = daily;
+        if (dayHint) dayHint.classList.toggle('d-none', !daily);
+        // Por hora → horário não se aplica
+        if (sendTime) sendTime.disabled = hourly;
+        if (timeHint) timeHint.classList.toggle('d-none', !hourly);
     }
     cycle.addEventListener('change', toggle);
     toggle();
