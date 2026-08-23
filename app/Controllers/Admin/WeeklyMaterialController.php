@@ -481,6 +481,9 @@ class WeeklyMaterialController extends Controller
     {
         $grouped = [];
         foreach ($requests as $req) {
+            // SÓ pendentes: pula preenchidos e qualquer link que já virou pedido.
+            if ($req['status'] === 'filled') continue;
+            if (!empty($req['order_id'])) continue;
             if ($req['status'] !== 'pending') continue;
             $mid = (int) $req['manager_id'];
             if (!isset($grouped[$mid])) {
@@ -593,10 +596,19 @@ class WeeklyMaterialController extends Controller
         $webhookUrl = Setting::get('orders_weekly_materials_webhook', '');
         $baseUrl = Setting::get('site_url', ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? ''));
 
+        // Só notifica quem tem link PENDENTE. Preenchidos são ignorados.
+        $filledCount = count(array_filter($requests, fn($r) => $r['status'] === 'filled' || !empty($r['order_id'])));
         $grouped = self::groupPendingByManager($requests);
+        $pendingLinks = array_sum(array_map(fn($g) => count($g['items']), $grouped));
         $sent = self::dispatchGroupedLinks($grouped, $weekStart, $webhookUrl, $baseUrl);
 
-        $this->setFlash('success', "Notificações enviadas para {$sent} responsável(is), uma mensagem por pessoa com todos os links.");
+        if ($sent > 0) {
+            $msg = "Notificações enviadas para {$sent} responsável(is) — {$pendingLinks} link(s) pendente(s).";
+            if ($filledCount > 0) $msg .= " {$filledCount} já preenchido(s) foram ignorados.";
+            $this->setFlash('success', $msg);
+        } else {
+            $this->setFlash('success', 'Nenhum link pendente para notificar. Todos já foram preenchidos.');
+        }
         $this->redirect('/admin/weekly-materials/week/' . $weekStart);
     }
 
@@ -627,13 +639,15 @@ class WeeklyMaterialController extends Controller
         $webhookUrl = Setting::get('orders_weekly_materials_webhook', '');
         $baseUrl = Setting::get('site_url', ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? ''));
 
+        // Só links PENDENTES desse responsável (preenchidos são ignorados)
         $grouped = self::groupPendingByManager($requests);
+        $pendingLinks = array_sum(array_map(fn($g) => count($g['items']), $grouped));
         $sent = self::dispatchGroupedLinks($grouped, $weekStart, $webhookUrl, $baseUrl);
 
         if ($sent > 0) {
-            $this->setFlash('success', 'Notificação enviada ao responsável (mensagem única com todos os links).');
+            $this->setFlash('success', "Notificação enviada ao responsável — {$pendingLinks} link(s) pendente(s) em uma única mensagem. Preenchidos foram ignorados.");
         } else {
-            $this->setFlash('success', 'Nenhuma solicitação pendente para notificar este responsável.');
+            $this->setFlash('success', 'Este responsável já preencheu todas as solicitações. Nada a notificar.');
         }
         $this->redirect('/admin/weekly-materials/week/' . $weekStart);
     }

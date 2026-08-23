@@ -462,7 +462,7 @@ $critical = (int) ($stats['critical_count'] ?? 0);
                         <label class="form-label small mb-1">1. Frequência do ciclo (X)</label>
                         <select name="cycle_interval_days" class="form-select form-select-sm">
                             <?php
-                            $intervals = [7=>'A cada 7 dias', 10=>'A cada 10 dias', 14=>'A cada 14 dias', 15=>'A cada 15 dias', 21=>'A cada 21 dias', 30=>'A cada 30 dias'];
+                            $intervals = [1=>'Todos os dias (teste)', 7=>'A cada 7 dias', 10=>'A cada 10 dias', 14=>'A cada 14 dias', 15=>'A cada 15 dias', 21=>'A cada 21 dias', 30=>'A cada 30 dias'];
                             $curInterval = (int) $automation['cycle_interval_days'];
                             foreach ($intervals as $d => $lbl): ?>
                             <option value="<?= $d ?>" <?= $curInterval === $d ? 'selected' : '' ?>><?= $lbl ?></option>
