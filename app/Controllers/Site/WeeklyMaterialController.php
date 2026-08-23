@@ -17,6 +17,38 @@ class WeeklyMaterialController extends Controller
      */
     public function form(string $token = ''): void
     {
+        try {
+            $this->renderForm($token);
+        } catch (\Throwable $e) {
+            // Log detalhado para diagnóstico
+            error_log('[WEEKLY_MATERIAL][FORM] ' . $e->getMessage() . ' em ' . $e->getFile() . ':' . $e->getLine());
+            // Exibe uma página de erro legível (evita tela totalmente branca)
+            http_response_code(500);
+            $isDebug = isset($_GET['debug']);
+            echo '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'
+                . '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+                . '<title>Erro | Brooks Construtora</title>'
+                . '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>'
+                . '<body style="background:#f4f6f9;font-family:sans-serif;">'
+                . '<div class="container py-5" style="max-width:640px;">'
+                . '<div class="card border-danger"><div class="card-body text-center py-5">'
+                . '<h5 class="text-danger mb-3">Não foi possível carregar o formulário</h5>'
+                . '<p class="text-muted">Tente novamente. Se persistir, avise o administrador.</p>';
+            if ($isDebug) {
+                echo '<hr><pre class="text-start small text-danger" style="white-space:pre-wrap;">'
+                    . htmlspecialchars($e->getMessage() . "\n" . $e->getFile() . ':' . $e->getLine() . "\n\n" . $e->getTraceAsString())
+                    . '</pre>';
+            }
+            echo '</div></div></div></body></html>';
+        }
+    }
+
+    /**
+     * Renderiza o formulário público de preenchimento (via token).
+     * Reutiliza os campos do Novo Pedido (obra, prazo, itens).
+     */
+    private function renderForm(string $token = ''): void
+    {
         if (!$token) {
             $this->show404();
             return;
