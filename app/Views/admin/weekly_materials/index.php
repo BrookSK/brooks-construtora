@@ -460,7 +460,7 @@ $critical = (int) ($stats['critical_count'] ?? 0);
 
                     <div class="mb-3">
                         <label class="form-label small mb-1">1. Frequência do ciclo (X)</label>
-                        <select name="cycle_interval_days" class="form-select form-select-sm">
+                        <select name="cycle_interval_days" id="cycleIntervalSelect" class="form-select form-select-sm">
                             <?php
                             $intervals = [1=>'Todos os dias (teste)', 7=>'A cada 7 dias', 10=>'A cada 10 dias', 14=>'A cada 14 dias', 15=>'A cada 15 dias', 21=>'A cada 21 dias', 30=>'A cada 30 dias'];
                             $curInterval = (int) $automation['cycle_interval_days'];
@@ -486,13 +486,14 @@ $critical = (int) ($stats['critical_count'] ?? 0);
                     <div class="row g-2 mb-3">
                         <div class="col-7">
                             <label class="form-label small mb-1">Dia do envio</label>
-                            <select name="send_day" class="form-select form-select-sm">
+                            <select name="send_day" id="sendDaySelect" class="form-select form-select-sm">
                                 <?php
                                 $days = ['1'=>'Segunda-feira','2'=>'Terça-feira','3'=>'Quarta-feira','4'=>'Quinta-feira','5'=>'Sexta-feira','6'=>'Sábado','7'=>'Domingo'];
                                 foreach ($days as $k => $lbl): ?>
                                 <option value="<?= $k ?>" <?= $automation['send_day'] === $k ? 'selected' : '' ?>><?= $lbl ?></option>
                                 <?php endforeach; ?>
                             </select>
+                            <small class="text-muted d-none" id="sendDayDaily">Ciclo diário: enviado todos os dias.</small>
                         </div>
                         <div class="col-5">
                             <label class="form-label small mb-1">Horário</label>
@@ -644,6 +645,21 @@ $critical = (int) ($stats['critical_count'] ?? 0);
         el.addEventListener('input', apply);
         el.addEventListener('change', apply);
     });
+})();
+
+// Desabilita "Dia do envio" quando a frequência do ciclo é diária (X=1)
+(function() {
+    const cycle = document.getElementById('cycleIntervalSelect');
+    const sendDay = document.getElementById('sendDaySelect');
+    const hint = document.getElementById('sendDayDaily');
+    if (!cycle || !sendDay) return;
+    function toggle() {
+        const daily = cycle.value === '1';
+        sendDay.disabled = daily;
+        if (hint) hint.classList.toggle('d-none', !daily);
+    }
+    cycle.addEventListener('change', toggle);
+    toggle();
 })();
 </script>
 
