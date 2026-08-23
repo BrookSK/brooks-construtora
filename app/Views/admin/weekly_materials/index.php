@@ -403,16 +403,28 @@ $critical = (int) ($stats['critical_count'] ?? 0);
                     <p class="text-muted small mb-3">Configure a frequência e quando os responsáveis recebem o formulário.</p>
 
                     <div class="mb-3">
-                        <label class="form-label small mb-1">Frequência do ciclo (intervalo entre envios)</label>
+                        <label class="form-label small mb-1">1. Frequência do ciclo (X)</label>
                         <select name="cycle_interval_days" class="form-select form-select-sm">
                             <?php
-                            $intervals = [7=>'A cada 7 dias (semanal)', 10=>'A cada 10 dias', 14=>'A cada 14 dias (quinzenal)', 15=>'A cada 15 dias', 21=>'A cada 21 dias', 30=>'A cada 30 dias (mensal)'];
+                            $intervals = [7=>'A cada 7 dias', 10=>'A cada 10 dias', 14=>'A cada 14 dias', 15=>'A cada 15 dias', 21=>'A cada 21 dias', 30=>'A cada 30 dias'];
                             $curInterval = (int) $automation['cycle_interval_days'];
                             foreach ($intervals as $d => $lbl): ?>
                             <option value="<?= $d ?>" <?= $curInterval === $d ? 'selected' : '' ?>><?= $lbl ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <small class="text-muted d-block mt-1">Ex.: se a previsão é de 15 dias, envie a cada 15 dias — não semanalmente.</small>
+                        <small class="text-muted d-block mt-1">A cada quantos dias um novo ciclo de solicitação é aberto.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small mb-1">2. Antecedência do envio (Y)</label>
+                        <select name="notify_advance_days" class="form-select form-select-sm">
+                            <?php
+                            $curNotify = (int) $automation['notify_advance_days'];
+                            foreach ([0,2,3,5,7,10] as $d): ?>
+                            <option value="<?= $d ?>" <?= $curNotify === $d ? 'selected' : '' ?>><?= $d === 0 ? 'No início do ciclo' : $d . ' dias antes do ciclo' ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted d-block mt-1">Quantos dias antes do próximo ciclo o link é gerado e enviado. Ex.: ciclo de 15 dias com envio 5 dias antes → o link sai no dia 10.</small>
                     </div>
 
                     <div class="row g-2 mb-3">
@@ -442,12 +454,13 @@ $critical = (int) ($stats['critical_count'] ?? 0);
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small mb-1">Antecedência mínima</label>
-                        <select name="min_advance_days" class="form-select form-select-sm">
-                            <?php foreach ([7,10,15,20,30] as $d): ?>
-                            <option value="<?= $d ?>" <?= (int) $automation['min_advance_days'] === $d ? 'selected' : '' ?>><?= $d ?> dias</option>
+                        <label class="form-label small mb-1">3. Antecedência mínima da necessidade (Z)</label>
+                        <select name="min_need_days" class="form-select form-select-sm">
+                            <?php $curNeed = (int) $automation['min_need_days']; foreach ([3,5,7,10,15] as $d): ?>
+                            <option value="<?= $d ?>" <?= $curNeed === $d ? 'selected' : '' ?>><?= $d ?> dias</option>
                             <?php endforeach; ?>
                         </select>
+                        <small class="text-muted d-block mt-1">A data "preciso até" no formulário vem no mínimo com essa antecedência a partir do dia do preenchimento. Ex.: 5 dias.</small>
                     </div>
 
                     <div class="form-check form-switch mb-2">

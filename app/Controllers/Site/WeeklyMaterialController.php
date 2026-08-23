@@ -125,8 +125,9 @@ class WeeklyMaterialController extends Controller
             }
         }
 
-        // Configuração de antecedência mínima (regra dos 15 dias / PARTE 8)
-        $minAdvanceDays = (int) \App\Models\Setting::get('weekly_min_advance_days', '15');
+        // Antecedência MÍNIMA da necessidade (Z): a data "preciso até" deve
+        // ser no mínimo hoje + Z dias.
+        $minAdvanceDays = WeeklyMaterialRequest::minNeedDays();
 
         // Data mínima e padrão = hoje + antecedência mínima. O responsável NÃO
         // pode selecionar uma data antes disso (previsão sempre com 15 dias).

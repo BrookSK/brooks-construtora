@@ -524,13 +524,25 @@ class WeeklyMaterialRequest extends Model
     }
 
     /**
-     * Data de necessidade padrão (pré-preenchida) para uma solicitação:
-     * data de preenchimento (hoje) + antecedência mínima configurada.
+     * Antecedência mínima (em dias) da data de necessidade ("preciso até"),
+     * contada a partir da data em que a pessoa preenche (hoje).
+     */
+    public static function minNeedDays(): int
+    {
+        $z = (int) \App\Models\Setting::get('weekly_min_need_days', '');
+        if ($z <= 0) {
+            $z = (int) \App\Models\Setting::get('weekly_min_advance_days', '5');
+        }
+        return max(1, $z);
+    }
+
+    /**
+     * Data de necessidade padrão/mínima (pré-preenchida) para uma solicitação:
+     * hoje + antecedência mínima da necessidade (Z).
      */
     public static function defaultNeededDate(): string
     {
-        $minAdvance = (int) \App\Models\Setting::get('weekly_min_advance_days', '15');
-        return date('Y-m-d', strtotime('+' . max(0, $minAdvance) . ' days'));
+        return date('Y-m-d', strtotime('+' . self::minNeedDays() . ' days'));
     }
 
     /**

@@ -43,23 +43,24 @@ $baseUrl = Setting::get('site_url', 'https://brooksconstrutora.com.br');
 echo "[$action] Iniciando às " . date('Y-m-d H:i:s') . "\n";
 
 if ($action === 'notify') {
-    // Gera e envia respeitando o INTERVALO e a ANTECEDÊNCIA configurados.
-    // O link é enviado com "antecedência mínima" dias ANTES do próximo ciclo.
-    // Ex.: intervalo 15 dias, antecedência 5 dias → envia no dia 10 após o
-    // último ciclo (5 dias antes do próximo ciclo de dia 15).
+    // Gera e envia respeitando o INTERVALO (X) e a ANTECEDÊNCIA DE ENVIO (Y).
+    //  - X = frequência do ciclo (a cada X dias)
+    //  - Y = envia o link Y dias ANTES do próximo ciclo
+    // Ex.: X=15 e Y=5 → o link é enviado no dia 10 após o último ciclo
+    // (5 dias antes do próximo ciclo, que cai no dia 15).
     $interval = WeeklyMaterialRequest::cycleIntervalDays();
-    $minAdvance = (int) Setting::get('weekly_min_advance_days', '15');
-    // Antecedência não pode ser maior que o intervalo (senão enviaria imediatamente)
-    $advance = min($minAdvance, $interval);
+    $notifyAdvance = (int) Setting::get('weekly_notify_advance_days', '5');
+    // A antecedência de envio não pode ser maior que o intervalo
+    $notifyAdvance = max(0, min($notifyAdvance, $interval));
     $latest = WeeklyMaterialRequest::latestCycleStart();
     $today = strtotime(date('Y-m-d'));
 
     if ($latest) {
-        // Dia de envio = último ciclo + (intervalo - antecedência)
-        $sendOffset = max(0, $interval - $advance);
+        // Dia de envio = último ciclo + (intervalo - antecedência de envio)
+        $sendOffset = max(0, $interval - $notifyAdvance);
         $due = strtotime($latest . ' +' . $sendOffset . ' days');
         if ($today < $due) {
-            echo "Ainda não é hora de enviar. Último ciclo: {$latest}, intervalo: {$interval} dias, antecedência: {$advance} dias. Envio em " . date('Y-m-d', $due) . ".\n";
+            echo "Ainda não é hora de enviar. Último ciclo: {$latest}, intervalo: {$interval} dias, antecedência de envio: {$notifyAdvance} dias. Envio em " . date('Y-m-d', $due) . ".\n";
             echo "Finalizado às " . date('Y-m-d H:i:s') . "\n";
             return;
         }

@@ -60,12 +60,18 @@ class WeeklyMaterialController extends Controller
         $logs = \App\Models\WeeklyMaterialLog::getByWeek($selectedWeek);
 
         // Configuração de automação (PARTE 17)
+        // Três conceitos SEPARADOS:
+        //  - cycle_interval_days (X): a cada quantos dias um novo ciclo é gerado
+        //  - notify_advance_days  (Y): quantos dias ANTES do ciclo o link é enviado
+        //  - min_need_days        (Z): antecedência mínima da data "preciso até"
+        //                              (a partir da data em que a pessoa preenche)
         $automation = [
-            'cycle_interval_days' => Setting::get('weekly_cycle_interval_days', Setting::get('weekly_min_advance_days', '15')),
+            'cycle_interval_days' => Setting::get('weekly_cycle_interval_days', '15'),
+            'notify_advance_days' => Setting::get('weekly_notify_advance_days', '5'),
+            'min_need_days' => Setting::get('weekly_min_need_days', Setting::get('weekly_min_advance_days', '5')),
             'send_day' => Setting::get('weekly_send_day', '1'),
             'send_time' => Setting::get('weekly_send_time', '08:00'),
             'response_deadline' => Setting::get('weekly_response_deadline', 'same_day_18'),
-            'min_advance_days' => Setting::get('weekly_min_advance_days', '15'),
             'auto_reminder' => Setting::get('weekly_auto_reminder', '1'),
             'auto_overdue' => Setting::get('weekly_auto_overdue', '1'),
             'notify_supervisor' => Setting::get('weekly_notify_supervisor', '0'),
@@ -109,17 +115,23 @@ class WeeklyMaterialController extends Controller
             return;
         }
 
-        $minAdvance = (int) $this->input('min_advance_days', '15');
-        // Intervalo do ciclo: se não informado, acompanha a antecedência mínima
-        $cycleInterval = (int) $this->input('cycle_interval_days', 0);
-        if ($cycleInterval <= 0) $cycleInterval = $minAdvance;
+        // X — frequência do ciclo (a cada X dias)
+        $cycleInterval = max(1, (int) $this->input('cycle_interval_days', 15));
+        // Y — antecedência do envio (enviar o link Y dias antes do ciclo)
+        $notifyAdvance = max(0, (int) $this->input('notify_advance_days', 5));
+        if ($notifyAdvance > $cycleInterval) $notifyAdvance = $cycleInterval;
+        // Z — antecedência mínima da necessidade ("preciso até" a partir de hoje)
+        $minNeed = max(1, (int) $this->input('min_need_days', 5));
 
         Setting::setMultiple([
-            'weekly_cycle_interval_days' => (string) max(1, $cycleInterval),
+            'weekly_cycle_interval_days' => (string) $cycleInterval,
+            'weekly_notify_advance_days' => (string) $notifyAdvance,
+            'weekly_min_need_days' => (string) $minNeed,
+            // Mantém a chave antiga sincronizada com Z para compatibilidade
+            'weekly_min_advance_days' => (string) $minNeed,
             'weekly_send_day' => $this->input('send_day', '1'),
             'weekly_send_time' => $this->input('send_time', '08:00'),
             'weekly_response_deadline' => $this->input('response_deadline', 'same_day_18'),
-            'weekly_min_advance_days' => (string) max(1, $minAdvance),
             'weekly_auto_reminder' => $this->input('auto_reminder') ? '1' : '0',
             'weekly_auto_overdue' => $this->input('auto_overdue') ? '1' : '0',
             'weekly_notify_supervisor' => $this->input('notify_supervisor') ? '1' : '0',
