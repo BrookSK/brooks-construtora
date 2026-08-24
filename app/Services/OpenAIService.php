@@ -281,14 +281,15 @@ JSON puro sem markdown:
         // Processar com Responses API
         $prompt = $this->buildPdfExtractionPrompt();
 
+        // Formato correto da Responses API: input_file / input_text
         $data = [
             'model' => $this->model,
             'input' => [
                 [
                     'role' => 'user',
                     'content' => [
-                        ['type' => 'file', 'file' => ['file_id' => $fileId]],
-                        ['type' => 'text', 'text' => $prompt],
+                        ['type' => 'input_file', 'file_id' => $fileId],
+                        ['type' => 'input_text', 'text' => $prompt],
                     ],
                 ],
             ],
@@ -316,25 +317,35 @@ JSON puro sem markdown:
         }
         curl_close($ch);
 
-        // Se Responses API falhar, tenta fallback via chat/completions
+        // Se Responses API falhar, tenta fallback via chat/completions (base64)
         if ($httpCode !== 200) {
             return $this->extractPdfFallback($filePath);
         }
 
         $result = json_decode($response, true);
         $text = '';
-        if (isset($result['output'])) {
+
+        // Atalho: alguns retornos trazem output_text consolidado no nível raiz
+        if (!empty($result['output_text']) && is_string($result['output_text'])) {
+            $text = $result['output_text'];
+        }
+
+        // Formato padrão: output[].content[].text (type output_text)
+        if ($text === '' && isset($result['output']) && is_array($result['output'])) {
             foreach ($result['output'] as $block) {
-                if (isset($block['content'])) {
+                if (isset($block['content']) && is_array($block['content'])) {
                     foreach ($block['content'] as $c) {
-                        if (($c['type'] ?? '') === 'output_text') $text = $c['text'] ?? '';
+                        if (($c['type'] ?? '') === 'output_text' && !empty($c['text'])) {
+                            $text .= $c['text'];
+                        }
                     }
                 }
             }
         }
 
-        if (empty($text)) {
-            throw new \Exception('A IA não retornou dados do PDF.');
+        // Se não conseguiu texto pela Responses API, tenta o fallback antes de desistir
+        if (trim($text) === '') {
+            return $this->extractPdfFallback($filePath);
         }
 
         return $this->parsePdfResponse($text);
@@ -374,7 +385,7 @@ JSON puro sem markdown:
         $data = [
             'model'    => $this->model,
             'messages' => [
-                ['role' => 'system', 'content' => 'Extraia dados de briefing do PDF. Responda APENAS com JSON válido.'],
+                ['role' => 'system', 'content' => 'Você extrai dados de briefing de construção civil a partir de PDF. Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown, sem comentários e sem texto antes ou depois.'],
                 ['role' => 'user', 'content' => [
                     ['type' => 'text', 'text' => $prompt],
                     ['type' => 'file', 'file' => ['filename' => 'briefing.pdf', 'file_data' => 'data:application/pdf;base64,' . $base64]],
@@ -382,26 +393,97 @@ JSON puro sem markdown:
             ],
             'temperature' => 0.1,
             'max_tokens'  => 4096,
+            'response_format' => ['type' => 'json_object'],
         ];
 
         $response = $this->request('https://api.openai.com/v1/chat/completions', $data);
         $result = json_decode($response, true);
         $text = $result['choices'][0]['message']['content'] ?? '';
+        if (trim($text) === '') {
+            throw new \Exception('A IA não retornou conteúdo ao processar o PDF (fallback).');
+        }
         return $this->parsePdfResponse($text);
     }
 
     private function parsePdfResponse(string $text): array
     {
-        $text = preg_replace('/^```json\s*/i', '', trim($text));
-        $text = preg_replace('/\s*```$/i', '', $text);
+        $original = $text;
+        $text = trim($text);
+
+        // 1) Remove cercas de código markdown (```json ... ``` ou ``` ... ```)
+        $text = preg_replace('/```[a-zA-Z]*\s*/', '', $text);
+        $text = str_replace('```', '', $text);
+        $text = trim($text);
+
+        // 2) Tenta decodificar direto
         $fields = json_decode($text, true);
-        if (!is_array($fields)) throw new \Exception('Resposta da IA não é JSON válido.');
-        return array_map(fn($v) => ($v === null || $v === 'null' || $v === 'N/A') ? '' : (string)$v, $fields);
+
+        // 3) Se falhar, extrai o primeiro objeto JSON balanceado {...} do texto
+        if (!is_array($fields)) {
+            $extracted = $this->extractJsonObject($text);
+            if ($extracted !== null) {
+                $fields = json_decode($extracted, true);
+            }
+        }
+
+        if (!is_array($fields)) {
+            // Mensagem de erro com trecho real retornado pela IA, para diagnóstico
+            $preview = mb_substr(trim($original), 0, 300);
+            throw new \Exception('Resposta da IA não é JSON válido. Retorno recebido: ' . $preview);
+        }
+
+        // Normaliza: null / "null" / "N/A" / "não informado" viram string vazia
+        $out = [];
+        foreach ($fields as $k => $v) {
+            if (is_array($v)) { $v = implode(', ', $v); }
+            $v = (string) ($v ?? '');
+            $low = mb_strtolower(trim($v));
+            if ($v === null || in_array($low, ['null', 'n/a', 'na', 'não informado', 'nao informado', '-', ''], true)) {
+                $v = '';
+            }
+            $out[$k] = $v;
+        }
+        return $out;
+    }
+
+    /**
+     * Extrai o primeiro objeto JSON balanceado ({...}) de um texto,
+     * ignorando qualquer conteúdo antes ou depois. Retorna null se não encontrar.
+     */
+    private function extractJsonObject(string $text): ?string
+    {
+        $start = strpos($text, '{');
+        if ($start === false) return null;
+
+        $depth = 0;
+        $inString = false;
+        $escaped = false;
+        for ($i = $start, $len = strlen($text); $i < $len; $i++) {
+            $ch = $text[$i];
+            if ($inString) {
+                if ($escaped) { $escaped = false; }
+                elseif ($ch === '\\') { $escaped = true; }
+                elseif ($ch === '"') { $inString = false; }
+                continue;
+            }
+            if ($ch === '"') { $inString = true; continue; }
+            if ($ch === '{') { $depth++; }
+            elseif ($ch === '}') {
+                $depth--;
+                if ($depth === 0) {
+                    return substr($text, $start, $i - $start + 1);
+                }
+            }
+        }
+        return null;
     }
 
     private function buildPdfExtractionPrompt(): string
     {
-        return 'Analise o PDF anexado (briefing de obra/construção civil). Extraia as informações e retorne APENAS JSON com estas chaves (string vazia "" se não encontrado — NUNCA invente dados):
+        return 'Você recebeu um PDF que contém informações de um cliente, obra ou briefing de construção civil. '
+. 'Sua tarefa é LER o conteúdo do PDF, identificar as informações presentes e associá-las ao campo correto do briefing.
+
+Retorne EXCLUSIVAMENTE um objeto JSON válido (sem markdown, sem crases, sem texto antes ou depois) exatamente com estas chaves:
 
 {
   "client_name":"","client_document":"","client_phone":"","client_email":"",
@@ -419,7 +501,40 @@ JSON puro sem markdown:
   "contractor_city":"","contractor_state":"","contractor_cep":""
 }
 
-Regras: datas em YYYY-MM-DD, valores numéricos sem R$/%, documentos somente números.';
+ASSOCIAÇÃO DE CADA CAMPO:
+- client_name: nome completo da pessoa OU razão social da empresa contratante.
+- client_document: CPF ou CNPJ do contratante (apenas números).
+- client_phone: telefone/celular do contratante (apenas números).
+- client_email: e-mail do contratante.
+- client_nationality: nacionalidade (ex: brasileiro, brasileira).
+- client_marital_status: estado civil (ex: solteiro, casado, divorciado, viúvo, união estável).
+- project_type: tipo da obra/imóvel (ex: Residencial, Comercial, Reforma, Ampliação).
+- project_address: nome da rua/avenida/logradouro da obra (sem número).
+- project_address_number: número do imóvel da obra.
+- project_complement: complemento (apartamento, sala, bloco, conjunto, andar).
+- project_neighborhood: bairro da obra.
+- project_city: cidade da obra.
+- project_state: UF/estado da obra (2 letras, ex: SP).
+- project_cep: CEP da obra (apenas números).
+- project_area: área da obra em m² (apenas número).
+- project_number: número ou nome do projeto/orçamento.
+- project_goal: objetivo/finalidade da obra.
+- preferences, priorities, needs, restrictions, briefing_summary, negotiation_details: informações da negociação, cada uma no campo mais adequado.
+- contract_value: valor total (apenas número, ex: 250000.00).
+- discount_value: desconto em reais (apenas número). discount_percent: desconto percentual (apenas número). São INDEPENDENTES.
+- payment_method: forma de pagamento. payment_installments: número de parcelas. payment_details: detalhes do parcelamento.
+- start_date / end_date: datas de início/conclusão (YYYY-MM-DD). deadline_days: prazo em dias (apenas número).
+- responsible_name / responsible_role: responsável e cargo.
+- clauses: cláusulas especiais.
+- contractor_*: dados da empresa CONTRATADA (prestadora), se existirem no PDF — não confundir com o contratante.
+
+REGRAS OBRIGATÓRIAS:
+1. Extraia SOMENTE informações realmente presentes no PDF.
+2. Se uma informação NÃO estiver no PDF, deixe a chave com string vazia "". NUNCA invente, suponha ou complete.
+3. Não misture informações de campos diferentes nem de clientes diferentes.
+4. Não pesquise dados externos.
+5. Datas em YYYY-MM-DD, valores e documentos apenas com números.
+6. Responda com o JSON e NADA MAIS.';
     }
 
     private function downloadImage(string $url): ?string

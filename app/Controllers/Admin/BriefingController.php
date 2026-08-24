@@ -612,8 +612,49 @@ class BriefingController extends Controller
         return is_numeric($v) ? $v : null;
     }
 
+    /**
+     * Calcula o valor final do contrato após o desconto, respeitando a modalidade informada.
+     * Caso 1: desconto em R$ preenchido → total - desconto_rs.
+     * Caso 2: desconto em % preenchido → total - (total * pct/100).
+     * Caso 3: nenhum desconto → total.
+     * Nunca converte uma modalidade na outra. Retorna null se não houver valor total.
+     */
+    private function calcFinalValue(array $briefing): ?string
+    {
+        $total = $briefing['contract_value'] ?? null;
+        if ($total === null || $total === '' || !is_numeric($total)) {
+            return null;
+        }
+        $total = (float) $total;
+
+        $dv = $briefing['discount_value'] ?? null;
+        $dp = $briefing['discount_percent'] ?? null;
+
+        if ($dv !== null && $dv !== '' && (float)$dv > 0) {
+            // Desconto em R$ tem prioridade e é exclusivo
+            $final = $total - (float) $dv;
+        } elseif ($dp !== null && $dp !== '' && (float)$dp > 0) {
+            // Desconto em %
+            $final = $total - ($total * ((float) $dp / 100));
+        } else {
+            $final = $total;
+        }
+
+        if ($final < 0) $final = 0;
+        return number_format($final, 2, '.', '');
+    }
+
     private function collectBriefing(int $pid, int $userId): array
     {
+        // Desconto R$ e Desconto % são mutuamente exclusivos.
+        // Se ambos vierem preenchidos, o valor em R$ tem prioridade e o % é descartado.
+        // Nenhuma conversão automática entre as modalidades é feita.
+        $discountValue   = $this->moneyToDecimal($this->input('discount_value',''));
+        $discountPercent = $this->numberToDecimal($this->input('discount_percent',''));
+        if ($discountValue !== null && $discountPercent !== null) {
+            $discountPercent = null; // prioriza R$ e zera o % para não gravar os dois
+        }
+
         return [
             'client_project_id'=>$pid,
             'contractor_company_id'=>$this->input('contractor_company_id')?:null,
@@ -624,8 +665,8 @@ class BriefingController extends Controller
             'briefing_summary'=>trim($this->input('briefing_summary','')),
             'negotiation_details'=>trim($this->input('negotiation_details','')),
             'contract_value'=>$this->moneyToDecimal($this->input('contract_value','')),
-            'discount_value'=>$this->moneyToDecimal($this->input('discount_value','')),
-            'discount_percent'=>$this->numberToDecimal($this->input('discount_percent','')),
+            'discount_value'=>$discountValue,
+            'discount_percent'=>$discountPercent,
             'payment_installments'=>$this->input('payment_installments')?:null,
             'payment_details'=>trim($this->input('payment_details','')),
             'payment_method'=>trim($this->input('payment_method','')),
@@ -773,6 +814,7 @@ class BriefingController extends Controller
             'valor_contrato'=>$fMoney($briefing['contract_value']??null),
             'desconto_valor'=>$fMoney($briefing['discount_value']??null),
             'desconto_percentual'=>$fPct($briefing['discount_percent']??null),
+            'valor_final'=>$fMoney($this->calcFinalValue($briefing)),
             'forma_pagamento'=>$briefing['payment_method']??'',
             'parcelas'=>$briefing['payment_installments']??'',
             'detalhes_parcelamento'=>$briefing['payment_details']??'',

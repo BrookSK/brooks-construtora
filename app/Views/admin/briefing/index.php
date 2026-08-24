@@ -115,7 +115,19 @@ function vrow(string $label, $value): string {
 <div class="card mb-3"><div class="card-header"><h6 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>Condições Comerciais</h6></div><div class="card-body"><div class="row g-2">
 <?=vrow('Valor Total (R$)',!empty($briefing['contract_value'])?number_format((float)$briefing['contract_value'],2,',','.'):'')?>
 <?=vrow('Desconto (R$)',!empty($briefing['discount_value'])?number_format((float)$briefing['discount_value'],2,',','.'):'')?>
-<?=vrow('Desconto (%)',$briefing['discount_percent']??'')?>
+<?=vrow('Desconto (%)',!empty($briefing['discount_percent'])?rtrim(rtrim(number_format((float)$briefing['discount_percent'],2,',','.'),'0'),',').'%':'')?>
+<?php
+// Valor final: aplica a modalidade de desconto informada (R$ ou %), sem converter uma na outra
+$_vf='';
+if(!empty($briefing['contract_value'])){
+    $_tot=(float)$briefing['contract_value'];
+    if(!empty($briefing['discount_value'])&&(float)$briefing['discount_value']>0){$_tot=$_tot-(float)$briefing['discount_value'];}
+    elseif(!empty($briefing['discount_percent'])&&(float)$briefing['discount_percent']>0){$_tot=$_tot-($_tot*((float)$briefing['discount_percent']/100));}
+    if($_tot<0)$_tot=0;
+    $_vf=number_format($_tot,2,',','.');
+}
+?>
+<?=vrow('Valor Final (R$)',$_vf)?>
 <?=vrow('Forma de Pagamento',$briefing['payment_method']??'')?>
 <?=vrow('Parcelas',$briefing['payment_installments']??'')?>
 <?=vrow('Detalhes Parcelamento',$briefing['payment_details']??'')?>
@@ -211,7 +223,7 @@ function shareWhatsapp(id){
 <!-- Condições Comerciais -->
 <div class="card mb-4"><div class="card-header"><h6 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>Condições Comerciais</h6></div><div class="card-body"><div class="row g-3">
 <div class="col-md-3"><label class="form-label">Valor Total (R$)</label><input type="text" class="form-control bf-field money-field" id="contract_value" name="contract_value" inputmode="numeric" placeholder="0,00" value="<?=!empty($briefing['contract_value'])?number_format((float)$briefing['contract_value'],2,',','.'):''?>"></div>
-<div class="col-md-3"><label class="form-label">Desconto (R$)</label><input type="text" class="form-control bf-field money-field" id="discount_value" name="discount_value" inputmode="numeric" placeholder="0,00" value="<?=!empty($briefing['discount_value'])?number_format((float)$briefing['discount_value'],2,',','.'):''?>"></div>
+<div class="col-md-3"><label class="form-label">Desconto (R$)</label><input type="text" class="form-control bf-field money-field" id="discount_value" name="discount_value" inputmode="numeric" placeholder="0,00" value="<?=!empty($briefing['discount_value'])?number_format((float)$briefing['discount_value'],2,',','.'):''?>"><small class="text-muted d-block" id="discount-hint-rs" style="display:none!important;"></small></div>
 <div class="col-md-2"><label class="form-label">Desconto (%)</label><input type="number" class="form-control bf-field" id="discount_percent" name="discount_percent" step="0.01" min="0" max="100" value="<?=bval($briefing['discount_percent']??'')?>"></div>
 <div class="col-md-4"><label class="form-label">Forma de Pagamento</label><input type="text" class="form-control bf-field" id="payment_method" name="payment_method" value="<?=bval($briefing['payment_method']??'')?>"></div>
 <div class="col-md-2"><label class="form-label">Parcelas</label><input type="number" class="form-control bf-field" id="payment_installments" name="payment_installments" min="1" value="<?=bval($briefing['payment_installments']??'')?>"></div>
@@ -232,7 +244,7 @@ function shareWhatsapp(id){
 <div class="card mb-4"><div class="card-header"><h6 class="mb-0"><i class="bi bi-braces me-2"></i>Variáveis Disponíveis</h6></div><div class="card-body">
 <p class="small text-muted mb-2"><strong>Contratante / Obra:</strong></p><div class="d-flex flex-wrap gap-1 mb-3"><?php foreach(['cliente_nome','cliente_documento','cliente_telefone','cliente_email','cliente_nacionalidade','cliente_estado_civil','tipo_obra','endereco_obra','numero_obra','complemento_obra','bairro_obra','cidade_obra','estado_obra','cep_obra','objetivo','area_m2','numero_projeto'] as $var):?><button type="button" class="btn btn-sm btn-outline-secondary font-monospace var-chip" data-var="{{<?=$var?>}}" onclick="copyVar(this)" style="font-size:.72rem">{{<?=$var?>}}</button><?php endforeach;?></div>
 <p class="small text-muted mb-2"><strong>Briefing:</strong></p><div class="d-flex flex-wrap gap-1 mb-3"><?php foreach(['preferencias','prioridades','necessidades','restricoes','resumo_briefing','detalhes_negociacao','briefing'] as $var):?><button type="button" class="btn btn-sm btn-outline-secondary font-monospace var-chip" data-var="{{<?=$var?>}}" onclick="copyVar(this)" style="font-size:.72rem">{{<?=$var?>}}</button><?php endforeach;?></div>
-<p class="small text-muted mb-2"><strong>Condições Comerciais:</strong></p><div class="d-flex flex-wrap gap-1 mb-3"><?php foreach(['valor_contrato','desconto_valor','desconto_percentual','forma_pagamento','parcelas','detalhes_parcelamento','data_inicio','data_conclusao','prazo_dias','clausulas','responsavel_nome','responsavel_cargo'] as $var):?><button type="button" class="btn btn-sm btn-outline-secondary font-monospace var-chip" data-var="{{<?=$var?>}}" onclick="copyVar(this)" style="font-size:.72rem">{{<?=$var?>}}</button><?php endforeach;?></div>
+<p class="small text-muted mb-2"><strong>Condições Comerciais:</strong></p><div class="d-flex flex-wrap gap-1 mb-3"><?php foreach(['valor_contrato','desconto_valor','desconto_percentual','valor_final','forma_pagamento','parcelas','detalhes_parcelamento','data_inicio','data_conclusao','prazo_dias','clausulas','responsavel_nome','responsavel_cargo'] as $var):?><button type="button" class="btn btn-sm btn-outline-secondary font-monospace var-chip" data-var="{{<?=$var?>}}" onclick="copyVar(this)" style="font-size:.72rem">{{<?=$var?>}}</button><?php endforeach;?></div>
 <p class="small text-muted mb-2"><strong>Empresa Contratada:</strong></p><div class="d-flex flex-wrap gap-1"><?php foreach(['contratada_razao_social','contratada_nome_fantasia','contratada_cnpj','contratada_endereco','contratada_numero','contratada_complemento','contratada_bairro','contratada_cidade','contratada_estado','contratada_cep','contratada_telefone','contratada_email','contratada_representante','contratada_representante_cargo'] as $var):?><button type="button" class="btn btn-sm btn-outline-secondary font-monospace var-chip" data-var="{{<?=$var?>}}" onclick="copyVar(this)" style="font-size:.72rem">{{<?=$var?>}}</button><?php endforeach;?></div>
 </div></div>
 
@@ -276,7 +288,14 @@ function renderObj(text,id){var w=document.getElementById('object-result-wrapper
 function copyObjText(){navigator.clipboard.writeText(document.getElementById('object-result-wrapper').dataset.objectText||'').then(()=>showToast('Copiado!','success'));}
 function approveObject(){if(!_objectId){alert('Nada para aprovar.');return;}if(!confirm('Aprovar?'))return;var fd=new FormData();fd.append('object_id',_objectId);fetch('/admin/briefing/approve-object',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{if(d.success){var b=document.getElementById('obj-status-badge');if(b){b.textContent='Aprovado';b.className='badge bg-success ms-2';}var bf=document.getElementById('btn-approve-footer');if(bf){bf.disabled=true;bf.innerHTML='<i class="bi bi-check2-circle me-1"></i> Aprovado';}showToast('Aprovado!','success');}else alert(d.error||'Erro.');});}
 function importPdf(){var inp=document.getElementById('pdf-input'),btn=document.getElementById('btn-import-pdf'),st=document.getElementById('pdf-status');if(!inp||!inp.files.length){alert('Selecione um PDF.');return;}btn.disabled=true;btn.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>Processando…';st.style.display='block';st.textContent='Enviando PDF para a IA...';st.className='mt-2 small text-muted';var fd=new FormData();fd.append('pdf',inp.files[0]);fetch('/admin/briefing/import-pdf',{method:'POST',body:fd}).then(r=>r.json()).then(data=>{btn.disabled=false;btn.innerHTML='<i class="bi bi-magic me-1"></i> Processar';if(data.success&&data.fields){var c=fillFields(data.fields);st.textContent='✔ '+c+' campo(s) preenchido(s). Revise antes de salvar.';st.className='mt-2 small text-success';}else{st.textContent='✘ '+(data.error||'Erro.');st.className='mt-2 small text-danger';}}).catch(()=>{btn.disabled=false;btn.innerHTML='<i class="bi bi-magic me-1"></i> Processar';st.textContent='✘ Falha.';st.className='mt-2 small text-danger';});}
-function fillFields(f){var c=0;Object.keys(f).forEach(k=>{var v=f[k];if(!v)return;var el=document.getElementById(k);if(el){el.value=v;c++;el.classList.add('border-success');setTimeout(()=>el.classList.remove('border-success'),3000);}});return c;}
+function fillFields(f){var c=0;Object.keys(f).forEach(k=>{var v=f[k];if(v===null||v===undefined||String(v).trim()==='')return;var el=document.getElementById(k);if(!el)return;
+    // Valores monetários vindos como decimal (ex: 250000 ou 250000.00) → formata pt-BR
+    if(el.classList.contains('money-field')){var num=parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.'));if(!isNaN(num)){el.value=num.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}else{el.value=v;}}
+    else{el.value=v;}
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    if(el.tagName==='SELECT'){el.dispatchEvent(new Event('change',{bubbles:true}));}
+    c++;el.classList.add('border-success');setTimeout(()=>el.classList.remove('border-success'),3000);
+});return c;}
 function loadContractor(id){var sel=document.getElementById('contractor_company_id'),opt=sel.querySelector('option[value="'+id+'"]'),prev=document.getElementById('contractor-preview'),be=document.getElementById('btn-edit-contractor'),bd=document.getElementById('btn-del-contractor');if(!opt||!id){if(prev)prev.innerHTML='';if(be)be.style.display='none';if(bd)bd.style.display='none';return;}if(be)be.style.display='';if(bd)bd.style.display='';try{var c=JSON.parse(opt.dataset.json||'{}');if(prev&&c.company_name)prev.innerHTML='<div class="bg-light rounded p-3 small"><strong>'+escH(c.company_name)+'</strong>'+(c.cnpj?' — CNPJ: '+escH(c.cnpj):'')+'<br>'+escH(c.address||'')+', '+escH(c.address_number||'')+' '+escH(c.neighborhood||'')+', '+escH(c.city||'')+'/'+escH(c.state||'')+'</div>';}catch(e){}}
 function ctSet(id,v){var el=document.getElementById(id);if(el)el.value=v||'';}
 function openContractorModal(id){
@@ -350,6 +369,23 @@ function rstSR(){if(_srBtn){_srBtn.classList.remove('active');_srBtn.innerHTML='
         el.addEventListener('input',function(){maskMoney(el);});
         el.addEventListener('blur',function(){if(el.value.trim()!=='')maskMoney(el);});
     });
+})();
+/* Desconto R$ x Desconto %: mutuamente exclusivos */
+(function(){
+    var dv=document.getElementById('discount_value'),dp=document.getElementById('discount_percent');
+    if(!dv||!dp)return;
+    function apply(){
+        var hasRs=dv.value.trim()!=='';
+        var hasPct=dp.value.trim()!=='';
+        if(hasRs){dp.value='';dp.disabled=true;dp.classList.add('bg-light');}
+        else{dp.disabled=false;dp.classList.remove('bg-light');}
+        if(hasPct){dv.value='';dv.disabled=true;dv.classList.add('bg-light');}
+        else{dv.disabled=false;dv.classList.remove('bg-light');}
+    }
+    dv.addEventListener('input',function(){if(dv.value.trim()!==''){dp.value='';}apply();});
+    dp.addEventListener('input',function(){if(dp.value.trim()!==''){dv.value='';}apply();});
+    // Estado inicial (ao carregar em modo edição)
+    apply();
 })();
 (function(){var c=document.getElementById('project_cep'),a=document.getElementById('project_address'),ci=document.getElementById('project_city'),nb=document.getElementById('project_neighborhood'),st=document.getElementById('project_state'),fb=document.getElementById('cep-feedback');if(!c)return;c.addEventListener('input',()=>{var d=c.value.replace(/\D/g,'');if(d.length===8){fb.textContent='Consultando…';fb.style.display='block';fetch('https://viacep.com.br/ws/'+d+'/json/').then(r=>r.json()).then(data=>{if(data.erro){c.classList.add('is-invalid');fb.textContent='CEP não encontrado.';}else{c.classList.remove('is-invalid');c.classList.add('is-valid');fb.style.display='none';if(a&&data.logradouro)a.value=data.logradouro;if(nb&&data.bairro)nb.value=data.bairro;if(ci&&data.localidade)ci.value=data.localidade;if(st&&data.uf)st.value=data.uf;}}).catch(()=>{fb.textContent='Erro.';});}else{c.classList.remove('is-invalid','is-valid');fb.style.display='none';}});})();
 function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
