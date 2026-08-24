@@ -10,6 +10,7 @@ RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 RewriteRule ^import\.png$ public/import.png [L]
 RewriteRule ^favicon\.ico$ public/favicon.ico [L]
 RewriteRule ^cron-notifications\.php$ public/cron-notifications.php [L]
+RewriteRule ^cron-weekly-materials\.php$ public/cron-weekly-materials.php [L]
 RewriteRule ^cron\.php$ public/cron.php [L]
 
 # Se o arquivo ou diretório existir na raiz, entrega direto
