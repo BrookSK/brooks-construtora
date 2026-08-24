@@ -483,7 +483,7 @@ class WeeklyMaterialController extends Controller
      * Retorna [manager_id => ['name','phone','email','items'=>[['site'=>..,'token'=>..,'req_id'=>..],...]]]
      * Público para permitir reuso pelo cron.
      */
-    public static function groupPendingByManager(array $requests): array
+    public static function groupPendingByManager(array $requests, bool $onlyNotified = false): array
     {
         $grouped = [];
         foreach ($requests as $req) {
@@ -491,6 +491,9 @@ class WeeklyMaterialController extends Controller
             if ($req['status'] === 'filled') continue;
             if (!empty($req['order_id'])) continue;
             if ($req['status'] !== 'pending') continue;
+            // Para cobrança: só quem JÁ recebeu o link (notified_at preenchido).
+            // Não faz sentido cobrar quem nunca recebeu o formulário.
+            if ($onlyNotified && empty($req['notified_at'])) continue;
             $mid = (int) $req['manager_id'];
             if (!isset($grouped[$mid])) {
                 $grouped[$mid] = [
@@ -681,7 +684,8 @@ class WeeklyMaterialController extends Controller
         $sent = 0;
 
         // Agrupar pendentes por responsável → UMA cobrança com todos os links
-        $grouped = self::groupPendingByManager($requests);
+        // SÓ cobra quem já recebeu o link (notified_at preenchido)
+        $grouped = self::groupPendingByManager($requests, true);
         $dataFmt = date('d/m/Y', strtotime($nextWeek));
 
         foreach ($grouped as $g) {

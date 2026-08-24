@@ -71,7 +71,8 @@ function wm_remind(string $baseUrl, string $webhookUrl): int
 {
     $cycle = WeeklyMaterialRequest::latestCycleStart() ?: WeeklyMaterialRequest::nextCycleStart();
     $requests = WeeklyMaterialRequest::getByWeek($cycle);
-    $grouped = WeeklyMaterialController::groupPendingByManager($requests);
+    // SÓ cobra quem já recebeu o link (notified_at preenchido)
+    $grouped = WeeklyMaterialController::groupPendingByManager($requests, true);
 
     $adminWebhook = Setting::get('orders_weekly_materials_admin_webhook', '');
     $adminPhone = Setting::get('orders_weekly_materials_admin_phone', '');
