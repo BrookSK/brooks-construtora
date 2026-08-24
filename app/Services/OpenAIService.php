@@ -9,12 +9,18 @@ class OpenAIService
     private string $apiKey;
     private string $model;
     private string $imageModel;
+    private string $visionModel;
 
     public function __construct()
     {
         $this->apiKey = Setting::get('openai_api_key', '');
         $this->model = Setting::get('openai_model', 'gpt-4');
         $this->imageModel = Setting::get('openai_image_model', 'dall-e-3');
+
+        // Modelo com visão para interpretar PDFs digitalizados/imagem.
+        // Se o modelo configurado já tiver visão (gpt-4o / turbo), usa ele; senão, força gpt-4o.
+        $visionCapable = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4-turbo-2024-04-09'];
+        $this->visionModel = in_array($this->model, $visionCapable, true) ? $this->model : 'gpt-4o';
 
         if (empty($this->apiKey)) {
             throw new \Exception('Chave da API OpenAI não configurada. Acesse Configurações para definir.');
@@ -282,8 +288,9 @@ JSON puro sem markdown:
         $prompt = $this->buildPdfExtractionPrompt();
 
         // Formato correto da Responses API: input_file / input_text
+        // Usa modelo com visão para interpretar PDFs digitalizados/imagem.
         $data = [
-            'model' => $this->model,
+            'model' => $this->visionModel,
             'input' => [
                 [
                     'role' => 'user',
@@ -383,7 +390,7 @@ JSON puro sem markdown:
         $prompt = $this->buildPdfExtractionPrompt();
 
         $data = [
-            'model'    => $this->model,
+            'model'    => $this->visionModel,
             'messages' => [
                 ['role' => 'system', 'content' => 'Você extrai dados de briefing de construção civil a partir de PDF. Responda EXCLUSIVAMENTE com um objeto JSON válido, sem markdown, sem comentários e sem texto antes ou depois.'],
                 ['role' => 'user', 'content' => [
