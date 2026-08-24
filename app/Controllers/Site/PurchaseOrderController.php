@@ -1350,6 +1350,35 @@ class PurchaseOrderController extends Controller
     /**
      * Cadastro rápido de fornecedor (rota pública para a tela de cotação)
      */
+    /**
+     * Remover fornecedor do pedido (AJAX na tela de cotação)
+     */
+    public function removeSupplier(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $token = $this->input('token', '');
+        $supplierId = (int) $this->input('supplier_id', 0);
+
+        if (!$token || !$supplierId) {
+            $this->json(['error' => 'Parâmetros inválidos.'], 400);
+            return;
+        }
+
+        $order = PurchaseOrder::findByQuoteToken($token);
+        if (!$order) {
+            $this->json(['error' => 'Pedido não encontrado.'], 404);
+            return;
+        }
+
+        PurchaseOrderSupplier::deleteFromOrder($order['id'], $supplierId);
+
+        $this->json(['success' => true]);
+    }
+
     public function quickStoreSupplier(): void
     {
         if (!$this->isPost()) {

@@ -843,7 +843,9 @@
         if (!submitBtn) return;
 
         const hasSuppliers = addedSuppliers.length > 0;
-        const allCoveredByStock = quoteOnlyItems.length > 0 && quoteOnlyItems.every(i => parseFloat(i.quantity) <= 0);
+        // Todos cobertos pelo estoque: ou não há itens de cotação (todos são transferência/estoque),
+        // ou os itens de cotação existentes foram 100% cobertos (quantity <= 0)
+        const allCoveredByStock = quoteOnlyItems.length === 0 || quoteOnlyItems.every(i => parseFloat(i.quantity) <= 0);
 
         if (hasSuppliers || allCoveredByStock) {
             submitBtn.disabled = false;
@@ -1243,6 +1245,13 @@
         addedSuppliers = addedSuppliers.filter(s => s !== sid);
         delete supplierNames[sid];
         checkSubmitEligibility();
+
+        // Se o fornecedor já estava salvo no banco, removê-lo de verdade
+        fetch('/pedido/cotacao/remover-fornecedor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ token: quoteToken, supplier_id: sid })
+        }).catch(() => {});
     }
 
     function calculateSupplierTotal(sid) {

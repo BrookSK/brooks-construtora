@@ -392,6 +392,7 @@ class Router
             'pedido/cotacao/iniciar' => ['PurchaseOrderController', 'startQuote'],
             'pedido/cotacao/cancelar' => ['PurchaseOrderController', 'cancelQuote'],
             'pedido/cotacao/novo-fornecedor' => ['PurchaseOrderController', 'quickStoreSupplier'],
+            'pedido/cotacao/remover-fornecedor' => ['PurchaseOrderController', 'removeSupplier'],
             'pedido/cotacao/parse-service-pdf' => ['PurchaseOrderController', 'parseServicePdfPublic'],
             'pedido/cotacao/save-service-materials' => ['PurchaseOrderController', 'saveServiceMaterialsPublic'],
             'pedido/aprovacao' => ['PurchaseOrderController', 'approval'],

@@ -51,4 +51,22 @@ class PurchaseOrderSupplier extends Model
             [$orderId, $supplierId]
         );
     }
+
+    /**
+     * Remove um fornecedor do pedido e todos os dados relacionados
+     * (preços de item e PDFs vinculados)
+     */
+    public static function deleteFromOrder(int $orderId, int $supplierId): void
+    {
+        // Remover preços de item deste fornecedor
+        Database::delete('purchase_order_item_prices', 'order_id = ? AND supplier_id = ?', [$orderId, $supplierId]);
+
+        // Remover PDFs vinculados (se a tabela existir)
+        try {
+            Database::delete('purchase_order_supplier_pdfs', 'order_id = ? AND supplier_id = ?', [$orderId, $supplierId]);
+        } catch (\Exception $e) {}
+
+        // Remover o fornecedor do pedido
+        Database::delete('purchase_order_suppliers', 'order_id = ? AND supplier_id = ?', [$orderId, $supplierId]);
+    }
 }
