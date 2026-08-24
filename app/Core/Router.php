@@ -435,6 +435,7 @@ class Router
 
             // Lista Semanal de Materiais (público)
             'lista-semanal' => ['WeeklyMaterialController', 'form'],
+            'lista-semanal/hub' => ['WeeklyMaterialController', 'hub'],
             'lista-semanal/enviar' => ['WeeklyMaterialController', 'submit'],
             'lista-semanal/parse-pdf' => ['WeeklyMaterialController', 'parsePdf'],
             'lista-semanal/novo-material' => ['WeeklyMaterialController', 'quickStoreMaterial'],

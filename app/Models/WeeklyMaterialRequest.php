@@ -32,6 +32,60 @@ class WeeklyMaterialRequest extends Model
     }
 
     /**
+     * Gera um token de HUB determinístico para (gerente + ciclo).
+     * Permite um único link no e-mail que lista todas as obras do gerente.
+     */
+    public static function hubToken(int $managerId, string $weekStart): string
+    {
+        $secret = \App\Models\Setting::get('cron_token', 'brooks-weekly-hub');
+        return hash('sha256', 'wmhub:' . $managerId . ':' . $weekStart . ':' . $secret);
+    }
+
+    /**
+     * Valida um hub token e retorna os dados do gerente + solicitações do ciclo.
+     * Retorna null se o token for inválido.
+     */
+    public static function findByHubToken(string $hubToken): ?array
+    {
+        // Buscar entre os ciclos recentes qual (manager, week) gera esse token
+        $rows = Database::fetchAll(
+            "SELECT DISTINCT wmr.manager_id, wmr.week_start, pu.name as manager_name
+             FROM weekly_material_requests wmr
+             JOIN pin_users pu ON wmr.manager_id = pu.id
+             WHERE wmr.week_start >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)"
+        );
+
+        foreach ($rows as $row) {
+            $expected = self::hubToken((int) $row['manager_id'], $row['week_start']);
+            if (hash_equals($expected, $hubToken)) {
+                return [
+                    'manager_id' => (int) $row['manager_id'],
+                    'manager_name' => $row['manager_name'],
+                    'week_start' => $row['week_start'],
+                ];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Solicitações de um gerente em um ciclo específico (para o hub).
+     */
+    public static function getByManagerAndWeek(int $managerId, string $weekStart): array
+    {
+        return Database::fetchAll(
+            "SELECT wmr.*, cs.name as construction_site_name, cs.code as construction_site_code,
+                    po.code as order_code
+             FROM weekly_material_requests wmr
+             LEFT JOIN construction_sites cs ON wmr.construction_site_id = cs.id
+             LEFT JOIN purchase_orders po ON wmr.order_id = po.id
+             WHERE wmr.manager_id = ? AND wmr.week_start = ?
+             ORDER BY cs.name ASC",
+            [$managerId, $weekStart]
+        );
+    }
+
+    /**
      * Buscar registros de uma semana específica (com dados da obra e do pedido gerado)
      */
     public static function getByWeek(string $weekStart): array

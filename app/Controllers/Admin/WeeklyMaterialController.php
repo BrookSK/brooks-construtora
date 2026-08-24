@@ -554,10 +554,13 @@ class WeeklyMaterialController extends Controller
             }
 
             if (!empty($g['email'])) {
+                // E-mail usa 1 ÚNICO link (hub) para evitar bloqueio de spam
+                // do Gmail quando há muitas obras/links.
+                $hubUrl = $baseUrl . '/lista-semanal/hub/' . WeeklyMaterialRequest::hubToken((int) $mid, $weekStart);
                 \App\Services\NotificationService::queueEmails(
                     $g['email'],
                     'Lista Semanal de Materiais - Ciclo ' . date('d/m', strtotime($weekStart)),
-                    \App\Services\EmailTemplate::weeklyMaterialRequest($g['name'], $dataFmt, $sitesForEmail)
+                    \App\Services\EmailTemplate::weeklyMaterialRequest($g['name'], $dataFmt, $hubUrl, count($sitesForEmail))
                 );
             }
 

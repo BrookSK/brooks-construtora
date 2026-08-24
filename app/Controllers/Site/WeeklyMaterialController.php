@@ -145,6 +145,30 @@ class WeeklyMaterialController extends Controller
     }
 
     /**
+     * HUB do responsável: página única com todas as obras do ciclo.
+     * Acessada por um link único no e-mail (evita muitos links = spam no Gmail).
+     */
+    public function hub(string $hubToken = ''): void
+    {
+        if (!$hubToken) {
+            $this->show404();
+            return;
+        }
+
+        $hub = WeeklyMaterialRequest::findByHubToken($hubToken);
+        if (!$hub) {
+            $this->show404();
+            return;
+        }
+
+        $requests = WeeklyMaterialRequest::getByManagerAndWeek($hub['manager_id'], $hub['week_start']);
+        $cycleLabel = WeeklyMaterialRequest::cycleLabel($hub['week_start']);
+        $managerName = $hub['manager_name'];
+
+        require ROOT_PATH . '/app/Views/site/weekly_materials/hub.php';
+    }
+
+    /**
      * Processar envio do formulário → cria um Pedido real no sistema existente.
      */
     public function submit(string $token = ''): void

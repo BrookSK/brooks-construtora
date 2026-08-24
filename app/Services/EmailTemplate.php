@@ -910,30 +910,21 @@ HTML;
 
     /**
      * E-mail de solicitação da lista semanal de materiais.
-     * $sites = [['site' => 'OBR-001 - Nome', 'url' => 'https://...'], ...]
+     * Usa um único link (hub) que leva a uma página com todas as obras,
+     * evitando o bloqueio de spam do Gmail por excesso de links.
      */
-    public static function weeklyMaterialRequest(string $managerName, string $cycleDate, array $sites): string
+    public static function weeklyMaterialRequest(string $managerName, string $cycleDate, string $hubUrl, int $totalObras = 1): string
     {
-        $totalObras = count($sites);
-
-        $sitesHtml = '';
-        foreach ($sites as $s) {
-            $sitesHtml .= '<tr><td style="padding: 14px 20px; border-bottom:1px solid #eee;">'
-                . '<p style="margin:0 0 6px; font-size:14px; color:#3a3b4e; font-weight:600;">🏗️ ' . htmlspecialchars($s['site']) . '</p>'
-                . '<a href="' . $s['url'] . '" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:10px 20px; border-radius:5px; text-decoration:none; font-weight:600; font-size:13px;">Preencher Lista</a>'
-                . '</td></tr>';
-        }
-
         $intro = $totalObras > 1
-            ? 'Você é responsável por <strong>' . $totalObras . ' obras</strong>. Preencha uma solicitação para cada uma:'
-            : 'Preencha a solicitação de materiais da obra abaixo:';
+            ? 'Você é responsável por <strong>' . $totalObras . ' obras</strong> neste ciclo.'
+            : 'Preencha a solicitação de materiais da sua obra.';
 
         $body = '<p style="margin-bottom:15px;">Olá <strong>' . htmlspecialchars($managerName) . '</strong>,</p>'
             . '<p style="margin-bottom:20px;">Envie a lista de materiais que você vai precisar no ciclo de <strong>' . htmlspecialchars($cycleDate) . '</strong>. ' . $intro . '</p>'
-            . '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">'
-            . $sitesHtml
-            . '</table>'
-            . '<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique em "Preencher Lista" na obra desejada para informar os materiais necessários.</p>';
+            . '<p style="text-align:center; margin: 25px 0 10px;">'
+            . '<a href="' . $hubUrl . '" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Acessar Minhas Listas</a>'
+            . '</p>'
+            . '<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique no botão acima para ver todas as suas obras e preencher a lista de materiais de cada uma.</p>';
 
         return self::wrap('Lista Semanal de Materiais - Ciclo ' . htmlspecialchars($cycleDate), $body);
     }
