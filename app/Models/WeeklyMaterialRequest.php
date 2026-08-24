@@ -76,19 +76,13 @@ class WeeklyMaterialRequest extends Model
     {
         // Responsáveis pela lista semanal = pin_users vinculados a alguma obra
         // na fase 'weekly' (definido na tela de edição da obra).
-        // Fallback: também inclui quem está marcado com is_weekly_manager = 1.
+        // NÃO usa mais o flag is_weekly_manager: o vínculo é sempre por obra.
         $managers = Database::fetchAll(
             "SELECT DISTINCT pu.id, pu.name, pu.phone, pu.email
              FROM pin_users pu
-             WHERE pu.active = 1
-               AND (
-                    pu.is_weekly_manager = 1
-                    OR EXISTS (
-                        SELECT 1 FROM construction_site_approvers csa
-                        JOIN construction_sites cs ON cs.id = csa.construction_site_id
-                        WHERE csa.pin_user_id = pu.id AND csa.phase = 'weekly' AND cs.status = 'active'
-                    )
-               )
+             JOIN construction_site_approvers csa ON csa.pin_user_id = pu.id
+             JOIN construction_sites cs ON cs.id = csa.construction_site_id
+             WHERE pu.active = 1 AND csa.phase = 'weekly' AND cs.status = 'active'
              ORDER BY pu.name ASC"
         );
         $created = 0;
@@ -97,26 +91,19 @@ class WeeklyMaterialRequest extends Model
             // Cada responsável recebe um link por OBRA em que é responsável pela lista semanal.
             $sites = self::sitesForManager((int) $manager['id']);
 
-            // Sem obra vinculada → gera um registro sem obra (será selecionada no form)
+            // Sem obra vinculada na fase 'weekly' → não cria nada para este responsável.
             if (empty($sites)) {
-                $sites = [['id' => null, 'name' => null, 'code' => null]];
+                continue;
             }
 
             foreach ($sites as $site) {
-                $siteId = $site['id'] !== null ? (int) $site['id'] : null;
+                $siteId = (int) $site['id'];
 
                 // Idempotência por (responsável, ciclo, obra)
-                if ($siteId !== null) {
-                    $existing = Database::fetch(
-                        "SELECT id FROM weekly_material_requests WHERE manager_id = ? AND week_start = ? AND construction_site_id = ?",
-                        [$manager['id'], $weekStart, $siteId]
-                    );
-                } else {
-                    $existing = Database::fetch(
-                        "SELECT id FROM weekly_material_requests WHERE manager_id = ? AND week_start = ? AND construction_site_id IS NULL",
-                        [$manager['id'], $weekStart]
-                    );
-                }
+                $existing = Database::fetch(
+                    "SELECT id FROM weekly_material_requests WHERE manager_id = ? AND week_start = ? AND construction_site_id = ?",
+                    [$manager['id'], $weekStart, $siteId]
+                );
                 if ($existing) continue;
 
                 $reqId = self::create([
