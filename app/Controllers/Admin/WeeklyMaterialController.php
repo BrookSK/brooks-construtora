@@ -528,14 +528,13 @@ class WeeklyMaterialController extends Controller
         $dataFmt = date('d/m/Y', strtotime($weekStart));
 
         foreach ($grouped as $mid => $g) {
-            // Corpo WhatsApp
+            // Corpo WhatsApp + lista de obras para o e-mail
             $linhas = '';
-            $linhasHtml = '';
+            $sitesForEmail = [];
             foreach ($g['items'] as $it) {
                 $url = $baseUrl . '/lista-semanal/' . $it['token'];
                 $linhas .= "🏗️ *{$it['site']}*\n{$url}\n\n";
-                $linhasHtml .= "<p style=\"margin:0 0 4px;\"><strong>🏗️ " . htmlspecialchars($it['site']) . "</strong><br>"
-                    . "<a href=\"{$url}\">{$url}</a></p>";
+                $sitesForEmail[] = ['site' => $it['site'], 'url' => $url];
             }
 
             $totalObras = count($g['items']);
@@ -558,10 +557,7 @@ class WeeklyMaterialController extends Controller
                 \App\Services\NotificationService::queueEmails(
                     $g['email'],
                     'Lista Semanal de Materiais - Ciclo ' . date('d/m', strtotime($weekStart)),
-                    "<p>Olá <strong>" . htmlspecialchars($g['name']) . "</strong>!</p>"
-                    . "<p>Envie a lista de materiais do ciclo de {$dataFmt}."
-                    . ($totalObras > 1 ? " Você é responsável por {$totalObras} obras — preencha uma solicitação para cada:" : "") . "</p>"
-                    . $linhasHtml
+                    \App\Services\EmailTemplate::weeklyMaterialRequest($g['name'], $dataFmt, $sitesForEmail)
                 );
             }
 

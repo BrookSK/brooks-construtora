@@ -923,4 +923,63 @@ HTML;
 
         return self::wrap("⚠️ Edição Financeira - " . htmlspecialchars($order['code']), $body);
     }
+
+    /**
+     * E-mail de solicitação da lista semanal de materiais.
+     * $sites = [['site' => 'OBR-001 - Nome', 'url' => 'https://...'], ...]
+     */
+    public static function weeklyMaterialRequest(string $managerName, string $cycleDate, array $sites): string
+    {
+        $totalObras = count($sites);
+
+        $sitesHtml = '';
+        foreach ($sites as $s) {
+            $sitesHtml .= '<tr><td style="padding: 14px 20px; border-bottom:1px solid #eee;">'
+                . '<p style="margin:0 0 6px; font-size:14px; color:#3a3b4e; font-weight:600;">🏗️ ' . htmlspecialchars($s['site']) . '</p>'
+                . '<a href="' . $s['url'] . '" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:10px 20px; border-radius:5px; text-decoration:none; font-weight:600; font-size:13px;">Preencher Lista</a>'
+                . '</td></tr>';
+        }
+
+        $intro = $totalObras > 1
+            ? 'Você é responsável por <strong>' . $totalObras . ' obras</strong>. Preencha uma solicitação para cada uma:'
+            : 'Preencha a solicitação de materiais da obra abaixo:';
+
+        $body = '<p style="margin-bottom:15px;">Olá <strong>' . htmlspecialchars($managerName) . '</strong>,</p>'
+            . '<p style="margin-bottom:20px;">Envie a lista de materiais que você vai precisar no ciclo de <strong>' . htmlspecialchars($cycleDate) . '</strong>. ' . $intro . '</p>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">'
+            . $sitesHtml
+            . '</table>'
+            . '<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Clique em "Preencher Lista" na obra desejada para informar os materiais necessários.</p>';
+
+        return self::wrap('Lista Semanal de Materiais - Ciclo ' . htmlspecialchars($cycleDate), $body);
+    }
+
+    /**
+     * E-mail de cobrança da lista semanal (pendente).
+     */
+    public static function weeklyMaterialReminder(string $managerName, string $cycleDate, array $sites): string
+    {
+        $totalObras = count($sites);
+
+        $sitesHtml = '';
+        foreach ($sites as $s) {
+            $sitesHtml .= '<tr><td style="padding: 14px 20px; border-bottom:1px solid #eee;">'
+                . '<p style="margin:0 0 6px; font-size:14px; color:#3a3b4e; font-weight:600;">🏗️ ' . htmlspecialchars($s['site']) . '</p>'
+                . '<a href="' . $s['url'] . '" style="display:inline-block; background-color:#dc3545; color:#ffffff; padding:10px 20px; border-radius:5px; text-decoration:none; font-weight:600; font-size:13px;">Preencher Agora</a>'
+                . '</td></tr>';
+        }
+
+        $body = '<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff3cd; border-radius:6px; margin-bottom:20px; border:1px solid #ffe69c;">'
+            . '<tr><td style="padding: 18px 20px;">'
+            . '<p style="margin:0; font-size:15px; color:#856404; font-weight:600;">⚠️ ' . htmlspecialchars($managerName) . ', você ainda NÃO preencheu a lista!</p>'
+            . '<p style="margin:6px 0 0; font-size:13px; color:#856404;">A lista de materiais do ciclo de <strong>' . htmlspecialchars($cycleDate) . '</strong> está pendente'
+            . ($totalObras > 1 ? ' (' . $totalObras . ' obras)' : '') . '.</p>'
+            . '</td></tr></table>'
+            . '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee; border-radius:6px; margin-bottom:20px;">'
+            . $sitesHtml
+            . '</table>'
+            . '<p style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Por favor, preencha o quanto antes para garantir o pedido dos materiais a tempo.</p>';
+
+        return self::wrap('⚠️ Pendente - Lista Semanal de Materiais', $body);
+    }
 }
