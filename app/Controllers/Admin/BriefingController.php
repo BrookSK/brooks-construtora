@@ -31,6 +31,7 @@ class BriefingController extends Controller
         $files = [
             ROOT_PATH . '/database/migrations/033_create_briefing_contracts.sql',
             ROOT_PATH . '/database/migrations/034_briefing_contractor_and_fields.sql',
+            ROOT_PATH . '/database/migrations/035_add_nationality_marital_to_clients.sql',
         ];
         $pdo = Database::getConnection();
         foreach ($files as $f) {
@@ -178,6 +179,54 @@ class BriefingController extends Controller
     }
 
     // =================================================================
+    // SHOW (somente leitura)
+    // =================================================================
+
+    public function show(string $id = ''): void
+    {
+        $pid = (int)($id ?: $this->input('id'));
+        $project = ClientProject::find($pid);
+        if (!$project) { $this->setFlash('error','Projeto não encontrado.'); $this->redirect('/admin/briefing'); return; }
+
+        $briefing = Briefing::findByProject($pid);
+
+        try {
+            $contractor = (!empty($briefing['contractor_company_id'])) ? ContractorCompany::find((int)$briefing['contractor_company_id']) : null;
+        } catch (\PDOException $e) {
+            $contractor = null;
+        }
+
+        $contractObject = $briefing ? ContractObject::latestByBriefing((int)$briefing['id']) : null;
+
+        $this->view('admin.briefing.index', [
+            'user'=>Auth::user(), 'flash'=>$this->getFlash(), 'mode'=>'view',
+            'project'=>$project, 'briefing'=>$briefing,
+            'selectedContractor'=>$contractor,
+            'contractObject'=>$contractObject,
+            'projects'=>ClientProject::allWithBriefing(100),
+        ]);
+    }
+
+    // =================================================================
+    // COMPARTILHAR VIA WHATSAPP — monta o texto completo do briefing
+    // GET /admin/briefing/whatsapp-text/{id}  (retorna JSON com o texto)
+    // =================================================================
+
+    public function whatsappText(string $id = ''): void
+    {
+        $pid = (int)($id ?: $this->input('id'));
+        $project = ClientProject::find($pid);
+        if (!$project) { $this->json(['error'=>'Projeto não encontrado.'],404); return; }
+
+        $briefing   = Briefing::findByProject($pid);
+        $contractor = (!empty($briefing['contractor_company_id'])) ? ContractorCompany::find((int)$briefing['contractor_company_id']) : null;
+
+        $text = $this->buildBriefingText($project, $briefing ?: [], $contractor);
+
+        $this->json(['success'=>true,'text'=>$text]);
+    }
+
+    // =================================================================
     // UPDATE
     // =================================================================
 
@@ -292,14 +341,35 @@ class BriefingController extends Controller
     public function importPdf(): void
     {
         if (!$this->isPost()) { $this->json(['error'=>'Método inválido.'],400); return; }
-        if (!isset($_FILES['pdf'])||$_FILES['pdf']['error']!==UPLOAD_ERR_OK) { $this->json(['error'=>'PDF inválido.'],400); return; }
-        $file=$_FILES['pdf']; $ext=strtolower(pathinfo($file['name'],PATHINFO_EXTENSION));
-        if ($file['type']!=='application/pdf'&&$ext!=='pdf') { $this->json(['error'=>'Envie um PDF.'],400); return; }
-        if ($file['size']>15*1024*1024) { $this->json(['error'=>'Máximo 15MB.'],400); return; }
+        if (!isset($_FILES['pdf'])||$_FILES['pdf']['error']!==UPLOAD_ERR_OK) {
+            $errMsg = $_FILES['pdf']['error'] ?? 'desconhecido';
+            $this->json(['error'=>'PDF não recebido ou inválido. Código: '.$errMsg],400); return;
+        }
+        $file=$_FILES['pdf'];
+        $ext=strtolower(pathinfo($file['name'],PATHINFO_EXTENSION));
+
+        // Valida pela extensão E pelos magic bytes (%PDF-) — mais robusto que validar apenas MIME
+        // (alguns browsers enviam application/octet-stream para PDFs)
+        $isPdfByMime = in_array($file['type'], ['application/pdf', 'application/x-pdf', 'application/octet-stream']);
+        $isPdfByExt  = ($ext === 'pdf');
+        $isPdfByMagic = false;
+        if ($file['error'] === UPLOAD_ERR_OK && file_exists($file['tmp_name'])) {
+            $handle = fopen($file['tmp_name'], 'rb');
+            if ($handle) {
+                $magic = fread($handle, 4);
+                fclose($handle);
+                $isPdfByMagic = ($magic === '%PDF');
+            }
+        }
+
+        if (!($isPdfByExt || $isPdfByMagic)) {
+            $this->json(['error'=>'Tipo de arquivo não suportado. Envie um PDF.'],400); return;
+        }
+        if ($file['size']>15*1024*1024) { $this->json(['error'=>'Arquivo muito grande. Máximo 15MB.'],400); return; }
 
         $dir=ROOT_PATH.'/public/uploads/briefing_tmp/'; if(!is_dir($dir))mkdir($dir,0755,true);
         $tmp=$dir.'bf_'.Auth::id().'_'.time().'.pdf';
-        if(!move_uploaded_file($file['tmp_name'],$tmp)){$this->json(['error'=>'Erro ao salvar.'],500);return;}
+        if(!move_uploaded_file($file['tmp_name'],$tmp)){$this->json(['error'=>'Erro ao salvar arquivo temporário.'],500);return;}
 
         try {
             $ai=new OpenAIService();
@@ -416,6 +486,8 @@ class BriefingController extends Controller
             'client_document'=>preg_replace('/\D/','',$this->input('client_document','')),
             'client_phone'=>preg_replace('/\D/','',$this->input('client_phone','')),
             'client_email'=>$email,
+            'client_nationality'=>trim($this->input('client_nationality','')),
+            'client_marital_status'=>trim($this->input('client_marital_status','')),
             'project_type'=>trim($this->input('project_type','')),
             'project_address'=>trim($this->input('project_address','')),
             'project_address_number'=>trim($this->input('project_address_number','')),
@@ -460,6 +532,92 @@ class BriefingController extends Controller
         ];
     }
 
+    /**
+     * Monta o texto completo do briefing para compartilhamento (WhatsApp).
+     * Preserva integralmente o conteúdo preenchido — sem alterar, resumir ou omitir.
+     * Campos vazios são omitidos apenas para não poluir; nenhum valor é modificado.
+     */
+    private function buildBriefingText(array $project, array $briefing, ?array $contractor): string
+    {
+        $L = [];
+        $add = function(string $label, $value) use (&$L) {
+            $value = (string)($value ?? '');
+            if (trim($value) !== '') { $L[] = $label . ': ' . $value; }
+        };
+
+        $L[] = '*BRIEFING — ' . (string)($project['client_name'] ?? '') . '*';
+        $L[] = '';
+
+        $L[] = '*Dados do Contratante*';
+        $add('Nome/Razão Social', $project['client_name'] ?? '');
+        $add('CPF/CNPJ',          $project['client_document'] ?? '');
+        $add('Telefone',          $project['client_phone'] ?? '');
+        $add('E-mail',            $project['client_email'] ?? '');
+        $add('Nacionalidade',     $project['client_nationality'] ?? '');
+        $add('Estado Civil',      $project['client_marital_status'] ?? '');
+
+        $L[] = '';
+        $L[] = '*Informações da Obra*';
+        $add('Tipo de Obra',   $project['project_type'] ?? '');
+        $add('Área (m²)',      $project['project_area'] ?? '');
+        $add('Nº Projeto',     $briefing['project_number'] ?? '');
+        $add('Endereço',       $project['project_address'] ?? '');
+        $add('Número',         $project['project_address_number'] ?? '');
+        $add('Complemento',    $project['project_complement'] ?? '');
+        $add('Bairro',         $project['project_neighborhood'] ?? '');
+        $add('Cidade',         $project['project_city'] ?? '');
+        $add('UF',             $project['project_state'] ?? '');
+        $add('CEP',            $project['project_cep'] ?? '');
+        $add('Objetivo',       $project['project_goal'] ?? '');
+
+        if (!empty($briefing)) {
+            $L[] = '';
+            $L[] = '*Briefing da Negociação*';
+            $add('Preferências',        $briefing['preferences'] ?? '');
+            $add('Prioridades',         $briefing['priorities'] ?? '');
+            $add('Necessidades',        $briefing['needs'] ?? '');
+            $add('Restrições',          $briefing['restrictions'] ?? '');
+            $add('Resumo',              $briefing['briefing_summary'] ?? '');
+            $add('Detalhes Negociação', $briefing['negotiation_details'] ?? '');
+
+            $L[] = '';
+            $L[] = '*Condições Comerciais*';
+            $add('Valor Total (R$)',        $briefing['contract_value'] ?? '');
+            $add('Desconto (R$)',           $briefing['discount_value'] ?? '');
+            $add('Desconto (%)',            $briefing['discount_percent'] ?? '');
+            $add('Forma de Pagamento',      $briefing['payment_method'] ?? '');
+            $add('Parcelas',                $briefing['payment_installments'] ?? '');
+            $add('Detalhes Parcelamento',   $briefing['payment_details'] ?? '');
+            $add('Início',                  $briefing['start_date'] ?? '');
+            $add('Conclusão',               $briefing['end_date'] ?? '');
+            $add('Prazo (dias)',            $briefing['deadline_days'] ?? '');
+            $add('Responsável',             $briefing['responsible_name'] ?? '');
+            $add('Cargo',                   $briefing['responsible_role'] ?? '');
+            $add('Cláusulas',               $briefing['clauses'] ?? '');
+        }
+
+        if ($contractor) {
+            $L[] = '';
+            $L[] = '*Empresa Contratada*';
+            $add('Razão Social',   $contractor['company_name'] ?? '');
+            $add('Nome Fantasia',  $contractor['trade_name'] ?? '');
+            $add('CNPJ',           $contractor['cnpj'] ?? '');
+            $add('Endereço',       $contractor['address'] ?? '');
+            $add('Número',         $contractor['address_number'] ?? '');
+            $add('Complemento',    $contractor['complement'] ?? '');
+            $add('Bairro',         $contractor['neighborhood'] ?? '');
+            $add('Cidade',         $contractor['city'] ?? '');
+            $add('UF',             $contractor['state'] ?? '');
+            $add('CEP',            $contractor['cep'] ?? '');
+            $add('Telefone',       $contractor['phone'] ?? '');
+            $add('E-mail',         $contractor['email'] ?? '');
+            $add('Representante',  $contractor['representative_name'] ?? '');
+            $add('Cargo Rep.',     $contractor['representative_role'] ?? '');
+        }
+
+        return implode("\n", $L);
+    }
+
     private function buildVariablesMap(array $project, array $briefing, ?array $contractor): array
     {
         $fDoc=function(?string $v):string{$d=preg_replace('/\D/','',$v??'');if(strlen($d)===11)return preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/','$1.$2.$3-$4',$d);if(strlen($d)===14)return preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/','$1.$2.$3/$4-$5',$d);return $d;};
@@ -476,6 +634,8 @@ class BriefingController extends Controller
             'cliente_cnpj'=>$fDoc($project['client_document']??''),
             'cliente_telefone'=>$fPhone($project['client_phone']??''),
             'cliente_email'=>$project['client_email']??'',
+            'cliente_nacionalidade'=>$project['client_nationality']??'',
+            'cliente_estado_civil'=>$project['client_marital_status']??'',
             'tipo_obra'=>$project['project_type']??'',
             'endereco_obra'=>$project['project_address']??'',
             'numero_obra'=>$project['project_address_number']??'',

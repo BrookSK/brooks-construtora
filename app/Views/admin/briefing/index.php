@@ -3,7 +3,7 @@
 $mode=$mode??'list'; $project=$project??null; $briefing=$briefing??null;
 $contractObject=$contractObject??null; $templates=$templates??[]; $defaultTemplate=$defaultTemplate??null;
 $projects=$projects??[]; $contractors=$contractors??[]; $selectedContractor=$selectedContractor??null;
-$isEdit=$mode==='edit'; $isCreate=$mode==='create'; $isList=$mode==='list';
+$isEdit=$mode==='edit'; $isCreate=$mode==='create'; $isList=$mode==='list'; $isView=$mode==='view';
 
 function bval(?string $v):string{return htmlspecialchars($v??'',ENT_QUOTES);}
 function fmtDoc(?string $v):string{$d=preg_replace('/\D/','',$v??'');if(strlen($d)===11)return preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/','$1.$2.$3-$4',$d);if(strlen($d)===14)return preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/','$1.$2.$3/$4-$5',$d);return bval($v);}
@@ -25,10 +25,121 @@ $contractorId=(int)($briefing['contractor_company_id']??0);
 </div>
 <?php if(empty($projects)):?><div class="card p-5 text-center text-muted"><i class="bi bi-file-earmark-text" style="font-size:3rem;opacity:.3;"></i><p class="mt-3 mb-0">Nenhum briefing cadastrado.</p><a href="/admin/briefing/create" class="btn btn-primary mt-3">Criar primeiro</a></div>
 <?php else:?><div class="card"><div class="table-responsive"><table class="table table-hover mb-0 align-middle"><thead class="table-light"><tr><th>Cliente</th><th>Tipo</th><th class="d-none d-md-table-cell">Cidade</th><th class="d-none d-md-table-cell">Valor</th><th class="d-none d-sm-table-cell">Obj</th><th class="text-end">Ações</th></tr></thead><tbody>
-<?php foreach($projects as $p):?><tr><td><div class="fw-medium"><?=bval($p['client_name'])?></div><div class="text-muted small"><?=bval($p['client_email'])?></div></td><td><?=bval($p['project_type'])?></td><td class="d-none d-md-table-cell"><?=bval($p['project_city'])?></td><td class="d-none d-md-table-cell"><?=!empty($p['contract_value'])?'R$ '.number_format((float)$p['contract_value'],2,',','.'):'<span class="text-muted">—</span>'?></td><td class="d-none d-sm-table-cell"><span class="badge bg-<?=(int)($p['objects_count']??0)>0?'success':'secondary'?>"><?=(int)($p['objects_count']??0)?></span></td><td class="text-end"><a href="/admin/briefing/edit/<?=$p['id']?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a> <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete(<?=$p['id']?>,'<?=bval($p['client_name'])?>')"><i class="bi bi-trash"></i></button></td></tr><?php endforeach;?>
+<?php foreach($projects as $p):?><tr><td><div class="fw-medium"><?=bval($p['client_name'])?></div><div class="text-muted small"><?=bval($p['client_email'])?></div></td><td><?=bval($p['project_type'])?></td><td class="d-none d-md-table-cell"><?=bval($p['project_city'])?></td><td class="d-none d-md-table-cell"><?=!empty($p['contract_value'])?'R$ '.number_format((float)$p['contract_value'],2,',','.'):'<span class="text-muted">—</span>'?></td><td class="d-none d-sm-table-cell"><span class="badge bg-<?=(int)($p['objects_count']??0)>0?'success':'secondary'?>"><?=(int)($p['objects_count']??0)?></span></td><td class="text-end text-nowrap"><a href="/admin/briefing/show/<?=$p['id']?>" class="btn btn-sm btn-outline-secondary" title="Visualizar"><i class="bi bi-eye"></i></a> <button type="button" class="btn btn-sm btn-outline-success" title="Compartilhar via WhatsApp" onclick="shareWhatsapp(<?=$p['id']?>)"><i class="bi bi-whatsapp"></i></button> <a href="/admin/briefing/edit/<?=$p['id']?>" class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a> <button type="button" class="btn btn-sm btn-outline-danger" title="Excluir" onclick="confirmDelete(<?=$p['id']?>,'<?=bval($p['client_name'])?>')"><i class="bi bi-trash"></i></button></td></tr><?php endforeach;?>
 </tbody></table></div></div>
 <form id="delete-form" method="POST" action="/admin/briefing/delete" style="display:none"><input type="hidden" name="id" id="delete-id"></form>
+<script>
+function confirmDelete(id,n){if(!confirm('Excluir "'+n+'"?'))return;document.getElementById('delete-id').value=id;document.getElementById('delete-form').submit();}
+function shareWhatsapp(id){
+    fetch('/admin/briefing/whatsapp-text/'+id).then(r=>r.json()).then(d=>{
+        if(d.success&&d.text){
+            var url='https://api.whatsapp.com/send?text='+encodeURIComponent(d.text);
+            window.open(url,'_blank');
+        }else{
+            alert(d.error||'Não foi possível montar o conteúdo do briefing.');
+        }
+    }).catch(()=>alert('Falha ao gerar o compartilhamento.'));
+}
+</script>
 <?php endif;?>
+
+<?php elseif($isView):?>
+<?php
+// Helper de exibição somente-leitura — mostra "—" quando vazio, nunca altera o valor
+function vrow(string $label, $value): string {
+    $v = trim((string)($value ?? ''));
+    $disp = $v === '' ? '<span class="text-muted">—</span>' : nl2br(htmlspecialchars($v, ENT_QUOTES));
+    return '<div class="col-md-6 mb-2"><div class="small text-muted">'.htmlspecialchars($label).'</div><div class="fw-medium">'.$disp.'</div></div>';
+}
+?>
+<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <a href="/admin/briefing" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+    <h5 class="mb-0 fw-semibold">Visualizar — <?=bval($project['client_name']??'')?></h5>
+    <div class="ms-auto d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-outline-success" onclick="shareWhatsapp(<?=$projectId?>)"><i class="bi bi-whatsapp me-1"></i> WhatsApp</button>
+        <a href="/admin/briefing/edit/<?=$projectId?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil me-1"></i> Editar</a>
+    </div>
+</div>
+
+<div class="alert alert-info d-flex align-items-center gap-2 py-2"><i class="bi bi-eye"></i> Modo de visualização — somente consulta.</div>
+
+<?php if($selectedContractor):?>
+<div class="card mb-3"><div class="card-header"><h6 class="mb-0"><i class="bi bi-building-check me-2"></i>Empresa Contratada</h6></div><div class="card-body"><div class="row g-2">
+<?=vrow('Razão Social',$selectedContractor['company_name']??'')?>
+<?=vrow('Nome Fantasia',$selectedContractor['trade_name']??'')?>
+<?=vrow('CNPJ',fmtDoc($selectedContractor['cnpj']??''))?>
+<?=vrow('Endereço',trim(($selectedContractor['address']??'').' '.($selectedContractor['address_number']??'').' '.($selectedContractor['complement']??'')))?>
+<?=vrow('Bairro',$selectedContractor['neighborhood']??'')?>
+<?=vrow('Cidade/UF',trim(($selectedContractor['city']??'').(!empty($selectedContractor['state'])?'/'.$selectedContractor['state']:'')))?>
+<?=vrow('CEP',fmtCep($selectedContractor['cep']??''))?>
+<?=vrow('Telefone',fmtPhone($selectedContractor['phone']??''))?>
+<?=vrow('E-mail',$selectedContractor['email']??'')?>
+<?=vrow('Representante',$selectedContractor['representative_name']??'')?>
+<?=vrow('Cargo',$selectedContractor['representative_role']??'')?>
+</div></div></div>
+<?php endif;?>
+
+<div class="card mb-3"><div class="card-header"><h6 class="mb-0"><i class="bi bi-person me-2"></i>Dados do Contratante</h6></div><div class="card-body"><div class="row g-2">
+<?=vrow('Nome/Razão Social',$project['client_name']??'')?>
+<?=vrow('CPF/CNPJ',fmtDoc($project['client_document']??''))?>
+<?=vrow('Telefone',fmtPhone($project['client_phone']??''))?>
+<?=vrow('E-mail',$project['client_email']??'')?>
+<?=vrow('Nacionalidade',$project['client_nationality']??'')?>
+<?=vrow('Estado Civil',$project['client_marital_status']??'')?>
+</div></div></div>
+
+<div class="card mb-3"><div class="card-header"><h6 class="mb-0"><i class="bi bi-buildings me-2"></i>Informações da Obra</h6></div><div class="card-body"><div class="row g-2">
+<?=vrow('Tipo de Obra',$project['project_type']??'')?>
+<?=vrow('Área (m²)',$project['project_area']??'')?>
+<?=vrow('Nº Projeto',$briefing['project_number']??'')?>
+<?=vrow('Endereço',$project['project_address']??'')?>
+<?=vrow('Número',$project['project_address_number']??'')?>
+<?=vrow('Complemento',$project['project_complement']??'')?>
+<?=vrow('Bairro',$project['project_neighborhood']??'')?>
+<?=vrow('Cidade',$project['project_city']??'')?>
+<?=vrow('UF',$project['project_state']??'')?>
+<?=vrow('CEP',fmtCep($project['project_cep']??''))?>
+<?=vrow('Objetivo',$project['project_goal']??'')?>
+</div></div></div>
+
+<?php if(!empty($briefing)):?>
+<div class="card mb-3"><div class="card-header"><h6 class="mb-0"><i class="bi bi-chat-left-text me-2"></i>Briefing da Negociação</h6></div><div class="card-body"><div class="row g-2">
+<?=vrow('Preferências',$briefing['preferences']??'')?>
+<?=vrow('Prioridades',$briefing['priorities']??'')?>
+<?=vrow('Necessidades',$briefing['needs']??'')?>
+<?=vrow('Restrições',$briefing['restrictions']??'')?>
+<?=vrow('Resumo',$briefing['briefing_summary']??'')?>
+<?=vrow('Detalhes Negociação',$briefing['negotiation_details']??'')?>
+</div></div></div>
+
+<div class="card mb-3"><div class="card-header"><h6 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>Condições Comerciais</h6></div><div class="card-body"><div class="row g-2">
+<?=vrow('Valor Total (R$)',!empty($briefing['contract_value'])?number_format((float)$briefing['contract_value'],2,',','.'):'')?>
+<?=vrow('Desconto (R$)',!empty($briefing['discount_value'])?number_format((float)$briefing['discount_value'],2,',','.'):'')?>
+<?=vrow('Desconto (%)',$briefing['discount_percent']??'')?>
+<?=vrow('Forma de Pagamento',$briefing['payment_method']??'')?>
+<?=vrow('Parcelas',$briefing['payment_installments']??'')?>
+<?=vrow('Detalhes Parcelamento',$briefing['payment_details']??'')?>
+<?=vrow('Início',$briefing['start_date']??'')?>
+<?=vrow('Conclusão',$briefing['end_date']??'')?>
+<?=vrow('Prazo (dias)',$briefing['deadline_days']??'')?>
+<?=vrow('Responsável',$briefing['responsible_name']??'')?>
+<?=vrow('Cargo',$briefing['responsible_role']??'')?>
+<?=vrow('Cláusulas',$briefing['clauses']??'')?>
+</div></div></div>
+<?php endif;?>
+
+<?php if($contractObject):?>
+<div class="card mb-3"><div class="card-header"><h6 class="mb-0"><i class="bi bi-file-earmark-check me-2"></i>Objeto Gerado</h6></div><div class="card-body"><div style="white-space:pre-wrap;line-height:1.8;font-size:.95rem;"><?=htmlspecialchars($contractObject['generated_text']??'',ENT_QUOTES)?></div></div></div>
+<?php endif;?>
+
+<script>
+function shareWhatsapp(id){
+    fetch('/admin/briefing/whatsapp-text/'+id).then(r=>r.json()).then(d=>{
+        if(d.success&&d.text){window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(d.text),'_blank');}
+        else{alert(d.error||'Não foi possível montar o conteúdo.');}
+    }).catch(()=>alert('Falha ao gerar o compartilhamento.'));
+}
+</script>
 
 <?php else:?>
 <script>var _projectId=<?=$projectId?>,_briefingId=<?=$briefingId?>,_templateId=<?=$templateId?>;</script>
@@ -64,6 +175,8 @@ $contractorId=(int)($briefing['contractor_company_id']??0);
 <div class="col-md-3"><label class="form-label">CPF/CNPJ</label><input type="text" class="form-control bf-field" id="client_document" name="client_document" value="<?=fmtDoc($project['client_document']??'')?>" maxlength="18" inputmode="numeric"></div>
 <div class="col-md-3"><label class="form-label">Telefone</label><input type="text" class="form-control bf-field" id="client_phone" name="client_phone" value="<?=fmtPhone($project['client_phone']??'')?>" maxlength="15" inputmode="numeric"></div>
 <div class="col-md-6"><label class="form-label">E-mail</label><input type="email" class="form-control bf-field" id="client_email" name="client_email" value="<?=bval($project['client_email']??'')?>"><div class="invalid-feedback">E-mail inválido.</div></div>
+<div class="col-md-3"><label class="form-label">Nacionalidade</label><input type="text" class="form-control bf-field" id="client_nationality" name="client_nationality" value="<?=bval($project['client_nationality']??'')?>" placeholder="Brasileira"></div>
+<div class="col-md-3"><label class="form-label">Estado Civil</label><select class="form-select bf-field" id="client_marital_status" name="client_marital_status"><option value="">— Selecione —</option><?php foreach(['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','União Estável','Separado(a)'] as $es):?><option value="<?=$es?>" <?=($project['client_marital_status']??'')===$es?'selected':''?>><?=$es?></option><?php endforeach;?></select></div>
 </div></div></div>
 
 <!-- Obra -->
@@ -75,7 +188,7 @@ $contractorId=(int)($briefing['contractor_company_id']??0);
 <div class="col-md-2"><label class="form-label">UF</label><input type="text" class="form-control bf-field" id="project_state" name="project_state" maxlength="2" value="<?=bval($project['project_state']??'')?>" style="text-transform:uppercase;"></div>
 <div class="col-md-5"><label class="form-label">Endereço <?=micBtn('mic_addr','project_address')?></label><input type="text" class="form-control bf-field" id="project_address" name="project_address" value="<?=bval($project['project_address']??'')?>"></div>
 <div class="col-md-2"><label class="form-label">Número</label><input type="text" class="form-control bf-field" id="project_address_number" name="project_address_number" value="<?=bval($project['project_address_number']??'')?>"></div>
-<div class="col-md-2"><label class="form-label">Compl.</label><input type="text" class="form-control bf-field" id="project_complement" name="project_complement" value="<?=bval($project['project_complement']??'')?>"></div>
+<div class="col-md-2"><label class="form-label">Complemento</label><input type="text" class="form-control bf-field" id="project_complement" name="project_complement" value="<?=bval($project['project_complement']??'')?>"></div>
 <div class="col-md-3"><label class="form-label">Bairro</label><input type="text" class="form-control bf-field" id="project_neighborhood" name="project_neighborhood" value="<?=bval($project['project_neighborhood']??'')?>"></div>
 <div class="col-md-4"><label class="form-label">Cidade <?=micBtn('mic_city','project_city')?></label><input type="text" class="form-control bf-field" id="project_city" name="project_city" value="<?=bval($project['project_city']??'')?>"></div>
 <div class="col-12"><label class="form-label">Objetivo <?=micBtn('mic_goal','project_goal')?></label><textarea class="form-control bf-field" id="project_goal" name="project_goal" rows="3"><?=bval($project['project_goal']??'')?></textarea></div>
@@ -113,7 +226,7 @@ $contractorId=(int)($briefing['contractor_company_id']??0);
 <!-- ═══ ETAPA 2 ═══ -->
 <div class="step-panel d-none" id="step-2">
 <div class="card mb-4"><div class="card-header"><h6 class="mb-0"><i class="bi bi-braces me-2"></i>Variáveis Disponíveis</h6></div><div class="card-body">
-<p class="small text-muted mb-2"><strong>Contratante / Obra:</strong></p><div class="d-flex flex-wrap gap-1 mb-3"><?php foreach(['cliente_nome','cliente_documento','cliente_telefone','cliente_email','tipo_obra','endereco_obra','numero_obra','complemento_obra','bairro_obra','cidade_obra','estado_obra','cep_obra','objetivo','area_m2','numero_projeto'] as $var):?><button type="button" class="btn btn-sm btn-outline-secondary font-monospace var-chip" data-var="{{<?=$var?>}}" onclick="copyVar(this)" style="font-size:.72rem">{{<?=$var?>}}</button><?php endforeach;?></div>
+<p class="small text-muted mb-2"><strong>Contratante / Obra:</strong></p><div class="d-flex flex-wrap gap-1 mb-3"><?php foreach(['cliente_nome','cliente_documento','cliente_telefone','cliente_email','cliente_nacionalidade','cliente_estado_civil','tipo_obra','endereco_obra','numero_obra','complemento_obra','bairro_obra','cidade_obra','estado_obra','cep_obra','objetivo','area_m2','numero_projeto'] as $var):?><button type="button" class="btn btn-sm btn-outline-secondary font-monospace var-chip" data-var="{{<?=$var?>}}" onclick="copyVar(this)" style="font-size:.72rem">{{<?=$var?>}}</button><?php endforeach;?></div>
 <p class="small text-muted mb-2"><strong>Briefing:</strong></p><div class="d-flex flex-wrap gap-1 mb-3"><?php foreach(['preferencias','prioridades','necessidades','restricoes','resumo_briefing','detalhes_negociacao','briefing'] as $var):?><button type="button" class="btn btn-sm btn-outline-secondary font-monospace var-chip" data-var="{{<?=$var?>}}" onclick="copyVar(this)" style="font-size:.72rem">{{<?=$var?>}}</button><?php endforeach;?></div>
 <p class="small text-muted mb-2"><strong>Condições Comerciais:</strong></p><div class="d-flex flex-wrap gap-1 mb-3"><?php foreach(['valor_contrato','desconto_valor','desconto_percentual','forma_pagamento','parcelas','detalhes_parcelamento','data_inicio','data_conclusao','prazo_dias','clausulas','responsavel_nome','responsavel_cargo'] as $var):?><button type="button" class="btn btn-sm btn-outline-secondary font-monospace var-chip" data-var="{{<?=$var?>}}" onclick="copyVar(this)" style="font-size:.72rem">{{<?=$var?>}}</button><?php endforeach;?></div>
 <p class="small text-muted mb-2"><strong>Empresa Contratada:</strong></p><div class="d-flex flex-wrap gap-1"><?php foreach(['contratada_razao_social','contratada_nome_fantasia','contratada_cnpj','contratada_endereco','contratada_numero','contratada_complemento','contratada_bairro','contratada_cidade','contratada_estado','contratada_cep','contratada_telefone','contratada_email','contratada_representante','contratada_representante_cargo'] as $var):?><button type="button" class="btn btn-sm btn-outline-secondary font-monospace var-chip" data-var="{{<?=$var?>}}" onclick="copyVar(this)" style="font-size:.72rem">{{<?=$var?>}}</button><?php endforeach;?></div>
@@ -164,7 +277,8 @@ function loadContractor(id){var sel=document.getElementById('contractor_company_
 function saveContractor(){var fb=document.getElementById('ct-feedback'),name=document.getElementById('ct-company_name').value.trim();if(!name){fb.textContent='Razão social obrigatória.';fb.className='small text-danger';return;}var fd=new FormData();['company_name','trade_name'].forEach(f=>fd.append(f,document.getElementById('ct-'+f).value.trim()));fd.append('contractor_cnpj',document.getElementById('ct-cnpj').value.trim());['address','address_number','complement','neighborhood','city','state','cep','phone','email','representative_name','representative_role'].forEach(f=>fd.append('contractor_'+f,document.getElementById('ct-'+f).value.trim()));fetch('/admin/briefing/store-contractor',{method:'POST',body:fd}).then(r=>r.json()).then(data=>{if(data.success){fb.textContent='Salvo!';fb.className='small text-success';var sel=document.getElementById('contractor_company_id'),opt=document.createElement('option');opt.value=data.id;opt.textContent=data.company.company_name;opt.dataset.json=JSON.stringify(data.company);sel.appendChild(opt);sel.value=data.id;loadContractor(data.id);setTimeout(()=>{bootstrap.Modal.getInstance(document.getElementById('modalContractor')).hide();fb.textContent='';},800);}else{fb.textContent=data.error||'Erro.';fb.className='small text-danger';}}).catch(()=>{fb.textContent='Erro.';fb.className='small text-danger';});}
 function confirmDelete(id,n){if(!confirm('Excluir "'+n+'"?'))return;document.getElementById('delete-id').value=id;document.getElementById('delete-form').submit();}
 var _sr=null,_srBtn=null,_srOk=('SpeechRecognition' in window||'webkitSpeechRecognition' in window);
-function toggleSpeech(bId,tId){if(!_srOk){alert('Voz não suportada.');return;}if(_sr&&_srBtn&&_srBtn.id===bId){_sr.stop();return;}if(_sr)try{_sr.stop();}catch(e){}var SR=window.SpeechRecognition||window.webkitSpeechRecognition,sr=new SR();sr.lang='pt-BR';sr.continuous=true;sr.interimResults=true;_sr=sr;_srBtn=document.getElementById(bId);var tgt=document.getElementById(tId),base=tgt?tgt.value:'';sr.onstart=()=>{if(_srBtn){_srBtn.classList.add('active');_srBtn.innerHTML='<i class="bi bi-stop-fill"></i>';}};sr.onresult=e=>{var f='',i='';for(var x=e.resultIndex;x<e.results.length;x++){if(e.results[x].isFinal)f+=e.results[x][0].transcript;else i+=e.results[x][0].transcript;}if(f)base=(base+(base?' ':'')+f).trim();if(tgt)tgt.value=base+(i?' '+i:'');};sr.onerror=e=>{if(e.error!=='no-speech'&&e.error!=='aborted')showToast('Mic: '+e.error,'danger');rstSR();};sr.onend=()=>{if(tgt)tgt.value=base;rstSR();};sr.start();}
+function toggleSpeech(bId,tId){if(!_srOk){alert('Voz não suportada.');return;}if(_sr&&_srBtn&&_srBtn.id===bId){_sr.stop();return;}if(_sr)try{_sr.stop();}catch(e){}var SR=window.SpeechRecognition||window.webkitSpeechRecognition,sr=new SR();sr.lang='pt-BR';sr.continuous=true;sr.interimResults=true;_sr=sr;_srBtn=document.getElementById(bId);var tgt=document.getElementById(tId),base=tgt?tgt.value:'',startLen=base.length;sr.onstart=()=>{if(_srBtn){_srBtn.classList.add('active');_srBtn.innerHTML='<i class="bi bi-stop-fill"></i>';}};sr.onresult=e=>{var f='',i='';for(var x=e.resultIndex;x<e.results.length;x++){if(e.results[x].isFinal)f+=e.results[x][0].transcript;else i+=e.results[x][0].transcript;}if(f)base=(base+(base?' ':'')+f).trim();if(tgt)tgt.value=base+(i?' '+i:'');};sr.onerror=e=>{if(e.error!=='no-speech'&&e.error!=='aborted')showToast('Mic: '+e.error,'danger');rstSR();};sr.onend=()=>{if(tgt)tgt.value=base;var dictated=base.substring(startLen).trim();if(dictated)polishDictated(tgt,base,startLen,dictated);rstSR();};sr.start();}
+function polishDictated(tgt,base,startLen,dictated){var prev=tgt.value;if(_srBtn){}tgt.disabled=true;var fd=new FormData();fd.append('text',dictated);fetch('/admin/briefing/polish-text',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{tgt.disabled=false;if(d.success&&d.text){tgt.value=base.substring(0,startLen)+(startLen>0&&base.substring(0,startLen).trim()!==''?' ':'')+d.text;}}).catch(()=>{tgt.disabled=false;});}
 function rstSR(){if(_srBtn){_srBtn.classList.remove('active');_srBtn.innerHTML='<i class="bi bi-mic"></i>';}_sr=null;_srBtn=null;}
 (function(){var d=document.getElementById('client_document');if(d)d.addEventListener('input',()=>{var v=d.value.replace(/\D/g,'').substring(0,14);if(v.length<=11){v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');d.maxLength=14;}else{v=v.replace(/(\d{2})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1/$2').replace(/(\d{4})(\d{1,2})$/,'$1-$2');d.maxLength=18;}d.value=v;});var t=document.getElementById('client_phone');if(t)t.addEventListener('input',()=>{var v=t.value.replace(/\D/g,'').substring(0,11);v=v.length<=10?v.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{4})(\d)/,'$1-$2'):v.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2');t.value=v;});var c=document.getElementById('project_cep');if(c)c.addEventListener('input',()=>{var v=c.value.replace(/\D/g,'').substring(0,8);if(v.length>5)v=v.replace(/(\d{5})(\d)/,'$1-$2');c.value=v;});})();
 (function(){var e=document.getElementById('client_email');if(!e)return;function ck(){var v=e.value.trim(),ok=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);e.classList.toggle('is-invalid',v!==''&&!ok);e.classList.toggle('is-valid',v!==''&&ok);}e.addEventListener('blur',ck);e.addEventListener('input',ck);})();

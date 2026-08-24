@@ -170,6 +170,8 @@ class Router
             'briefing/create' => ['BriefingController', 'create'],
             'briefing/store' => ['BriefingController', 'store'],
             'briefing/edit' => ['BriefingController', 'edit'],
+            'briefing/show' => ['BriefingController', 'show'],
+            'briefing/whatsapp-text' => ['BriefingController', 'whatsappText'],
             'briefing/update' => ['BriefingController', 'update'],
             'briefing/delete' => ['BriefingController', 'delete'],
             'briefing/save-ajax' => ['BriefingController', 'saveAjax'],

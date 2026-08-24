@@ -405,6 +405,7 @@ JSON puro sem markdown:
 
 {
   "client_name":"","client_document":"","client_phone":"","client_email":"",
+  "client_nationality":"","client_marital_status":"",
   "project_type":"","project_address":"","project_address_number":"","project_complement":"",
   "project_neighborhood":"","project_city":"","project_state":"","project_cep":"",
   "project_goal":"","project_area":"",
