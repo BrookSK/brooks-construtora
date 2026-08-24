@@ -63,19 +63,26 @@ function wm_notify(string $baseUrl, string $webhookUrl): int
 {
     $nextCycle = WeeklyMaterialRequest::nextCycleStart();
 
-    // Diagnóstico: quantos gerentes têm obra vinculada na fase 'weekly'?
+    // Diagnóstico: quantos gerentes são responsáveis pela lista semanal?
+    // (marcados com is_weekly_manager OU vinculados a obra na fase 'weekly')
     $managerCount = \App\Core\Database::fetch(
         "SELECT COUNT(DISTINCT pu.id) AS n
          FROM pin_users pu
-         JOIN construction_site_approvers csa ON csa.pin_user_id = pu.id
-         JOIN construction_sites cs ON cs.id = csa.construction_site_id
-         WHERE pu.active = 1 AND csa.phase = 'weekly' AND cs.status = 'active'"
+         WHERE pu.active = 1
+           AND (
+                pu.is_weekly_manager = 1
+                OR EXISTS (
+                    SELECT 1 FROM construction_site_approvers csa
+                    JOIN construction_sites cs ON cs.id = csa.construction_site_id
+                    WHERE csa.pin_user_id = pu.id AND csa.phase = 'weekly' AND cs.status = 'active'
+                )
+           )"
     );
     $nManagers = (int) ($managerCount['n'] ?? 0);
-    wm_log("Gerentes vinculados na fase 'weekly': {$nManagers}");
+    wm_log("Gerentes responsáveis pela lista semanal: {$nManagers}");
 
     if ($nManagers === 0) {
-        wm_log("NENHUM gerente vinculado a obra na fase 'Lista Semanal'. Configure em Obras > editar > aba Lista Semanal. Nada a criar.");
+        wm_log("NENHUM gerente marcado. Marque o toggle 'Gerente' em Config. Pedidos > Usuários PIN, ou vincule na aba 'Lista Semanal' da obra. Nada a criar.");
         return 0;
     }
 

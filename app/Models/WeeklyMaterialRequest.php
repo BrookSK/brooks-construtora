@@ -74,36 +74,49 @@ class WeeklyMaterialRequest extends Model
      */
     public static function createWeekRecords(string $weekStart): int
     {
-        // Responsáveis pela lista semanal = pin_users vinculados a alguma obra
-        // na fase 'weekly' (definido na tela de edição da obra).
-        // NÃO usa mais o flag is_weekly_manager: o vínculo é sempre por obra.
+        // Responsáveis pela lista semanal:
+        // marcados com is_weekly_manager = 1 (toggle na tela de Usuários PIN)
+        // OU vinculados a alguma obra na fase 'weekly'.
         $managers = Database::fetchAll(
             "SELECT DISTINCT pu.id, pu.name, pu.phone, pu.email
              FROM pin_users pu
-             JOIN construction_site_approvers csa ON csa.pin_user_id = pu.id
-             JOIN construction_sites cs ON cs.id = csa.construction_site_id
-             WHERE pu.active = 1 AND csa.phase = 'weekly' AND cs.status = 'active'
+             WHERE pu.active = 1
+               AND (
+                    pu.is_weekly_manager = 1
+                    OR EXISTS (
+                        SELECT 1 FROM construction_site_approvers csa
+                        JOIN construction_sites cs ON cs.id = csa.construction_site_id
+                        WHERE csa.pin_user_id = pu.id AND csa.phase = 'weekly' AND cs.status = 'active'
+                    )
+               )
              ORDER BY pu.name ASC"
         );
         $created = 0;
 
         foreach ($managers as $manager) {
-            // Cada responsável recebe um link por OBRA em que é responsável pela lista semanal.
+            // Obras do responsável para a lista semanal (ver sitesForManager).
             $sites = self::sitesForManager((int) $manager['id']);
 
-            // Sem obra vinculada na fase 'weekly' → não cria nada para este responsável.
+            // Sem obra vinculada → gera um registro sem obra (a obra é escolhida no form)
             if (empty($sites)) {
-                continue;
+                $sites = [['id' => null, 'name' => null, 'code' => null]];
             }
 
             foreach ($sites as $site) {
-                $siteId = (int) $site['id'];
+                $siteId = $site['id'] !== null ? (int) $site['id'] : null;
 
                 // Idempotência por (responsável, ciclo, obra)
-                $existing = Database::fetch(
-                    "SELECT id FROM weekly_material_requests WHERE manager_id = ? AND week_start = ? AND construction_site_id = ?",
-                    [$manager['id'], $weekStart, $siteId]
-                );
+                if ($siteId !== null) {
+                    $existing = Database::fetch(
+                        "SELECT id FROM weekly_material_requests WHERE manager_id = ? AND week_start = ? AND construction_site_id = ?",
+                        [$manager['id'], $weekStart, $siteId]
+                    );
+                } else {
+                    $existing = Database::fetch(
+                        "SELECT id FROM weekly_material_requests WHERE manager_id = ? AND week_start = ? AND construction_site_id IS NULL",
+                        [$manager['id'], $weekStart]
+                    );
+                }
                 if ($existing) continue;
 
                 $reqId = self::create([
@@ -184,18 +197,34 @@ class WeeklyMaterialRequest extends Model
 
     /**
      * Obras vinculadas a um responsável para a LISTA SEMANAL.
-     * Filtra pela fase 'weekly' (definida na tela de edição da obra).
-     * Assim o gerente só recebe a lista das obras em que foi marcado
-     * especificamente como responsável pela lista semanal.
+     *
+     * Prioridade:
+     *  1) Obras marcadas na fase 'weekly' (vínculo específico na edição da obra)
+     *  2) Se não houver nenhuma, usa as obras onde a pessoa é notificadora em
+     *     QUALQUER fase (ex.: aprovação) — "se recebe notificação da obra, é
+     *     responsável por ela".
      */
     public static function sitesForManager(int $managerId): array
     {
         try {
-            return Database::fetchAll(
+            // 1) Fase específica 'weekly'
+            $weekly = Database::fetchAll(
                 "SELECT cs.id, cs.name, cs.code
                  FROM construction_site_approvers csa
                  JOIN construction_sites cs ON csa.construction_site_id = cs.id
                  WHERE csa.pin_user_id = ? AND csa.phase = 'weekly' AND cs.status = 'active'
+                 GROUP BY cs.id, cs.name, cs.code
+                 ORDER BY cs.name ASC",
+                [$managerId]
+            );
+            if (!empty($weekly)) return $weekly;
+
+            // 2) Fallback: qualquer fase de notificação
+            return Database::fetchAll(
+                "SELECT cs.id, cs.name, cs.code
+                 FROM construction_site_approvers csa
+                 JOIN construction_sites cs ON csa.construction_site_id = cs.id
+                 WHERE csa.pin_user_id = ? AND cs.status = 'active'
                  GROUP BY cs.id, cs.name, cs.code
                  ORDER BY cs.name ASC",
                 [$managerId]
