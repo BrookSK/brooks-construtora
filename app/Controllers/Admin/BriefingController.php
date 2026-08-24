@@ -267,6 +267,29 @@ class BriefingController extends Controller
 
         $pd=$this->collectProject($email,$userId); $bd=$this->collectBriefing(0,$userId);
 
+        try {
+            $result = $this->persistBriefing($pid,$bid,$pd,$bd,$userId);
+        } catch (\PDOException $e) {
+            // Coluna/tabela ausente — aplica migrations e tenta novamente
+            if (stripos($e->getMessage(),'Unknown column')!==false
+                || stripos($e->getMessage(),"doesn't exist")!==false
+                || stripos($e->getMessage(),'exist')!==false) {
+                $this->ensureTables();
+                $result = $this->persistBriefing($pid,$bid,$pd,$bd,$userId);
+            } else {
+                $this->json(['error'=>'Erro ao salvar: '.$e->getMessage()],500);
+                return;
+            }
+        }
+
+        $this->json(['success'=>true,'project_id'=>$result['pid'],'briefing_id'=>$result['bid'],'edit_url'=>'/admin/briefing/edit/'.$result['pid']]);
+    }
+
+    /**
+     * Persiste projeto + briefing (cria ou atualiza). Isolado para permitir retry após ensureTables().
+     */
+    private function persistBriefing(int $pid, int $bid, array $pd, array $bd, int $userId): array
+    {
         if ($pid>0 && ClientProject::find($pid)) {
             unset($pd['created_by'],$pd['created_at']); $pd['updated_at']=date('Y-m-d H:i:s');
             ClientProject::updateById($pid,$pd);
@@ -276,7 +299,7 @@ class BriefingController extends Controller
         } else {
             $pid=ClientProject::create($pd); $bd['client_project_id']=$pid; $bid=Briefing::create($bd);
         }
-        $this->json(['success'=>true,'project_id'=>$pid,'briefing_id'=>$bid,'edit_url'=>'/admin/briefing/edit/'.$pid]);
+        return ['pid'=>$pid,'bid'=>$bid];
     }
 
     // =================================================================
@@ -475,6 +498,54 @@ class BriefingController extends Controller
         $this->json(['success'=>true,'id'=>$id,'company'=>ContractorCompany::find($id)]);
     }
 
+    // Atualiza uma empresa contratada existente (sem criar duplicata)
+    public function updateContractor(): void
+    {
+        if(!$this->isPost()){$this->json(['error'=>'Método inválido.'],400);return;}
+        $id=(int)$this->input('id');
+        if($id<=0||!ContractorCompany::find($id)){$this->json(['error'=>'Empresa não encontrada.'],404);return;}
+        $name=trim($this->input('company_name',''));
+        if(empty($name)){$this->json(['error'=>'Razão social obrigatória.'],422);return;}
+        ContractorCompany::updateById($id,[
+            'company_name'=>$name,'trade_name'=>trim($this->input('trade_name','')),
+            'cnpj'=>preg_replace('/\D/','',$this->input('contractor_cnpj','')),
+            'address'=>trim($this->input('contractor_address','')),
+            'address_number'=>trim($this->input('contractor_address_number','')),
+            'complement'=>trim($this->input('contractor_complement','')),
+            'neighborhood'=>trim($this->input('contractor_neighborhood','')),
+            'city'=>trim($this->input('contractor_city','')),
+            'state'=>trim($this->input('contractor_state','')),
+            'cep'=>preg_replace('/\D/','',$this->input('contractor_cep','')),
+            'phone'=>preg_replace('/\D/','',$this->input('contractor_phone','')),
+            'email'=>trim($this->input('contractor_email','')),
+            'representative_name'=>trim($this->input('contractor_representative_name','')),
+            'representative_role'=>trim($this->input('contractor_representative_role','')),
+            'updated_at'=>date('Y-m-d H:i:s'),
+        ]);
+        $this->json(['success'=>true,'id'=>$id,'company'=>ContractorCompany::find($id)]);
+    }
+
+    // Exclui uma empresa contratada, respeitando briefings que a utilizam
+    public function deleteContractor(): void
+    {
+        if(!$this->isPost()){$this->json(['error'=>'Método inválido.'],400);return;}
+        $id=(int)$this->input('id');
+        if($id<=0||!ContractorCompany::find($id)){$this->json(['error'=>'Empresa não encontrada.'],404);return;}
+
+        // Verifica se algum briefing usa esta empresa
+        $inUse=(int)(Database::fetch(
+            "SELECT COUNT(*) AS total FROM briefings WHERE contractor_company_id = ?", [$id]
+        )['total'] ?? 0);
+
+        if($inUse>0){
+            $this->json(['error'=>'Esta empresa está vinculada a '.$inUse.' briefing(s) e não pode ser excluída. Os dados históricos serão preservados.'],409);
+            return;
+        }
+
+        ContractorCompany::deleteById($id);
+        $this->json(['success'=>true]);
+    }
+
     // =================================================================
     // HELPERS
     // =================================================================
@@ -503,6 +574,44 @@ class BriefingController extends Controller
         return $d;
     }
 
+    /**
+     * Converte um valor monetário no formato brasileiro (250.000,00) para
+     * decimal armazenável (250000.00). Aceita também valores já numéricos.
+     * Retorna null se vazio.
+     */
+    private function moneyToDecimal($value): ?string
+    {
+        $v = trim((string)($value ?? ''));
+        if ($v === '') return null;
+        // Remove tudo exceto dígitos, vírgula, ponto e sinal
+        $v = preg_replace('/[^\d,.\-]/', '', $v);
+        if ($v === '') return null;
+        // Formato brasileiro: ponto = milhar, vírgula = decimal
+        if (strpos($v, ',') !== false) {
+            $v = str_replace('.', '', $v);   // remove separador de milhar
+            $v = str_replace(',', '.', $v);  // vírgula decimal → ponto
+        }
+        // Se não tem vírgula, assume que já está em formato decimal (ponto ou inteiro)
+        return is_numeric($v) ? $v : null;
+    }
+
+    /**
+     * Converte número no formato brasileiro (10,50) para decimal (10.50).
+     * Usado para percentuais. Retorna null se vazio.
+     */
+    private function numberToDecimal($value): ?string
+    {
+        $v = trim((string)($value ?? ''));
+        if ($v === '') return null;
+        $v = preg_replace('/[^\d,.\-]/', '', $v);
+        if ($v === '') return null;
+        if (strpos($v, ',') !== false) {
+            $v = str_replace('.', '', $v);
+            $v = str_replace(',', '.', $v);
+        }
+        return is_numeric($v) ? $v : null;
+    }
+
     private function collectBriefing(int $pid, int $userId): array
     {
         return [
@@ -514,10 +623,9 @@ class BriefingController extends Controller
             'restrictions'=>trim($this->input('restrictions','')),
             'briefing_summary'=>trim($this->input('briefing_summary','')),
             'negotiation_details'=>trim($this->input('negotiation_details','')),
-            'contract_value'=>$this->input('contract_value')?:null,
-            'down_payment'=>$this->input('down_payment')?:null,
-            'discount_value'=>$this->input('discount_value')?:null,
-            'discount_percent'=>$this->input('discount_percent')?:null,
+            'contract_value'=>$this->moneyToDecimal($this->input('contract_value','')),
+            'discount_value'=>$this->moneyToDecimal($this->input('discount_value','')),
+            'discount_percent'=>$this->numberToDecimal($this->input('discount_percent','')),
             'payment_installments'=>$this->input('payment_installments')?:null,
             'payment_details'=>trim($this->input('payment_details','')),
             'payment_method'=>trim($this->input('payment_method','')),
@@ -663,7 +771,6 @@ class BriefingController extends Controller
                 !empty($briefing['negotiation_details'])?"Negociação: ".$briefing['negotiation_details']:'',
             ])),
             'valor_contrato'=>$fMoney($briefing['contract_value']??null),
-            'entrada'=>$fMoney($briefing['down_payment']??null),
             'desconto_valor'=>$fMoney($briefing['discount_value']??null),
             'desconto_percentual'=>$fPct($briefing['discount_percent']??null),
             'forma_pagamento'=>$briefing['payment_method']??'',

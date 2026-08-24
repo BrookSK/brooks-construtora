@@ -183,6 +183,8 @@ class Router
             'briefing/update-template' => ['BriefingController', 'updateTemplate'],
             'briefing/import-pdf' => ['BriefingController', 'importPdf'],
             'briefing/store-contractor' => ['BriefingController', 'storeContractor'],
+            'briefing/update-contractor' => ['BriefingController', 'updateContractor'],
+            'briefing/delete-contractor' => ['BriefingController', 'deleteContractor'],
 
             // Obras
             'obras' => ['ConstructionSiteController', 'index'],
