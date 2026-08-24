@@ -45,7 +45,16 @@ if (php_sapi_name() === 'cli') {
 $baseUrl = Setting::get('site_url', 'https://www.brooksconstrutora.com.br');
 $webhookUrl = Setting::get('orders_weekly_materials_webhook', '');
 
-echo "[weekly-cron:$action] Iniciando " . date('Y-m-d H:i:s') . "\n";
+// Log persistente para diagnóstico (visível mesmo sem ver a saída do cron)
+function wm_log(string $msg): void
+{
+    $line = '[' . date('Y-m-d H:i:s') . '] ' . $msg . "\n";
+    echo $line;
+    $logFile = ROOT_PATH . '/cron/weekly_cron.log';
+    @file_put_contents($logFile, $line, FILE_APPEND);
+}
+
+wm_log("[weekly-cron:$action] Iniciando");
 
 /**
  * Gera o próximo ciclo e envia os links agrupados por responsável.
@@ -53,20 +62,37 @@ echo "[weekly-cron:$action] Iniciando " . date('Y-m-d H:i:s') . "\n";
 function wm_notify(string $baseUrl, string $webhookUrl): int
 {
     $nextCycle = WeeklyMaterialRequest::nextCycleStart();
+
+    // Diagnóstico: quantos gerentes têm obra vinculada na fase 'weekly'?
+    $managerCount = \App\Core\Database::fetch(
+        "SELECT COUNT(DISTINCT pu.id) AS n
+         FROM pin_users pu
+         JOIN construction_site_approvers csa ON csa.pin_user_id = pu.id
+         JOIN construction_sites cs ON cs.id = csa.construction_site_id
+         WHERE pu.active = 1 AND csa.phase = 'weekly' AND cs.status = 'active'"
+    );
+    $nManagers = (int) ($managerCount['n'] ?? 0);
+    wm_log("Gerentes vinculados na fase 'weekly': {$nManagers}");
+
+    if ($nManagers === 0) {
+        wm_log("NENHUM gerente vinculado a obra na fase 'Lista Semanal'. Configure em Obras > editar > aba Lista Semanal. Nada a criar.");
+        return 0;
+    }
+
     $created = WeeklyMaterialRequest::createWeekRecords($nextCycle);
-    echo "Ciclo {$nextCycle}: {$created} solicitação(ões) criada(s)\n";
+    wm_log("Ciclo {$nextCycle}: {$created} solicitação(ões) criada(s)");
 
     $requests = WeeklyMaterialRequest::getByWeek($nextCycle);
     // Só enviar para quem AINDA NÃO recebeu o link (evita reenvio duplicado)
     $notYetNotified = array_filter($requests, fn($r) => empty($r['notified_at']));
     if (empty($notYetNotified)) {
-        echo "Todos os links deste ciclo já foram enviados. Nada a reenviar.\n";
+        wm_log("Todos os links deste ciclo já foram enviados. Nada a reenviar.");
         return 0;
     }
     $grouped = WeeklyMaterialController::groupPendingByManager(array_values($notYetNotified));
     $sent = WeeklyMaterialController::dispatchGroupedLinks($grouped, $nextCycle, $webhookUrl, $baseUrl);
 
-    echo "Notificações enviadas para {$sent} responsável(is)\n";
+    wm_log("Notificações enviadas para {$sent} responsável(is)");
     return $sent;
 }
 
@@ -110,7 +136,7 @@ function wm_remind(string $baseUrl, string $webhookUrl): int
     });
 
     if (empty($eligible)) {
-        echo "Nenhuma solicitação elegível para cobrança (carência {$graceHours}h / 1x por dia).\n";
+        wm_log("Nenhuma solicitação elegível para cobrança (carência {$graceHours}h / 1x por dia).");
         return 0;
     }
 
@@ -170,8 +196,8 @@ function wm_remind(string $baseUrl, string $webhookUrl): int
         ]);
     }
 
-    echo "Cobranças enviadas: {$sent}\n";
-    if (!empty($pendingNames)) echo "Pendentes: " . implode(', ', $pendingNames) . "\n";
+    wm_log("Cobranças enviadas: {$sent}");
+    if (!empty($pendingNames)) wm_log("Pendentes: " . implode(', ', $pendingNames));
     return $sent;
 }
 
@@ -218,10 +244,10 @@ if ($action === 'notify') {
     }
 
     if ($shouldNotify) {
-        echo "Agendamento atingido → gerando e enviando ciclo\n";
+        wm_log("Agendamento atingido → gerando e enviando ciclo");
         wm_notify($baseUrl, $webhookUrl);
     } else {
-        echo "Fora do horário/agendamento de envio (mode={$cycleMode}, dia={$sendDay}, hora={$sendTime}, últimoCiclo=" . ($latest ?: 'nenhum') . ", diasDesdeÚltimo={$daysSinceLatest}, intervalo={$interval})\n";
+        wm_log("Fora do horário/agendamento de envio (mode={$cycleMode}, dia={$sendDay}, hora={$sendTime}, hora_atual={$currentHour}, últimoCiclo=" . ($latest ?: 'nenhum') . ", diasDesdeÚltimo={$daysSinceLatest}, intervalo={$interval})");
     }
 
     // Cobrança automática dos pendentes do ciclo atual
@@ -232,8 +258,8 @@ if ($action === 'notify') {
     // Marcar ciclos passados como atrasados
     if ($autoOverdue) {
         $overdue = WeeklyMaterialRequest::markOverduePastWeeks(date('Y-m-d'));
-        if ($overdue > 0) echo "Marcados como atrasados: {$overdue}\n";
+        if ($overdue > 0) wm_log("Marcados como atrasados: {$overdue}");
     }
 }
 
-echo "[weekly-cron] Finalizado " . date('Y-m-d H:i:s') . "\n";
+wm_log("[weekly-cron] Finalizado");
