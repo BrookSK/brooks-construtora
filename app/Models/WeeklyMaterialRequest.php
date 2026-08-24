@@ -74,13 +74,27 @@ class WeeklyMaterialRequest extends Model
      */
     public static function createWeekRecords(string $weekStart): int
     {
+        // Responsáveis pela lista semanal = pin_users vinculados a alguma obra
+        // na fase 'weekly' (definido na tela de edição da obra).
+        // Fallback: também inclui quem está marcado com is_weekly_manager = 1.
         $managers = Database::fetchAll(
-            "SELECT id, name, phone, email FROM pin_users WHERE active = 1 AND is_weekly_manager = 1 ORDER BY name ASC"
+            "SELECT DISTINCT pu.id, pu.name, pu.phone, pu.email
+             FROM pin_users pu
+             WHERE pu.active = 1
+               AND (
+                    pu.is_weekly_manager = 1
+                    OR EXISTS (
+                        SELECT 1 FROM construction_site_approvers csa
+                        JOIN construction_sites cs ON cs.id = csa.construction_site_id
+                        WHERE csa.pin_user_id = pu.id AND csa.phase = 'weekly' AND cs.status = 'active'
+                    )
+               )
+             ORDER BY pu.name ASC"
         );
         $created = 0;
 
         foreach ($managers as $manager) {
-            // Cada responsável recebe um link por OBRA em que participa.
+            // Cada responsável recebe um link por OBRA em que é responsável pela lista semanal.
             $sites = self::sitesForManager((int) $manager['id']);
 
             // Sem obra vinculada → gera um registro sem obra (será selecionada no form)
@@ -171,7 +185,7 @@ class WeeklyMaterialRequest extends Model
     {
         try {
             $rows = Database::fetchAll(
-                "SELECT DISTINCT construction_site_id FROM construction_site_approvers WHERE pin_user_id = ?",
+                "SELECT DISTINCT construction_site_id FROM construction_site_approvers WHERE pin_user_id = ? AND phase = 'weekly'",
                 [$managerId]
             );
             if (count($rows) === 1) {
@@ -182,7 +196,10 @@ class WeeklyMaterialRequest extends Model
     }
 
     /**
-     * Obras vinculadas a um responsável (para o seletor do formulário).
+     * Obras vinculadas a um responsável para a LISTA SEMANAL.
+     * Filtra pela fase 'weekly' (definida na tela de edição da obra).
+     * Assim o gerente só recebe a lista das obras em que foi marcado
+     * especificamente como responsável pela lista semanal.
      */
     public static function sitesForManager(int $managerId): array
     {
@@ -191,7 +208,7 @@ class WeeklyMaterialRequest extends Model
                 "SELECT cs.id, cs.name, cs.code
                  FROM construction_site_approvers csa
                  JOIN construction_sites cs ON csa.construction_site_id = cs.id
-                 WHERE csa.pin_user_id = ? AND cs.status = 'active'
+                 WHERE csa.pin_user_id = ? AND csa.phase = 'weekly' AND cs.status = 'active'
                  GROUP BY cs.id, cs.name, cs.code
                  ORDER BY cs.name ASC",
                 [$managerId]

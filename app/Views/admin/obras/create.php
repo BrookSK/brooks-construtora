@@ -92,6 +92,7 @@
                         'delivery' => ['label' => 'Entrega', 'icon' => 'bi-5-circle text-dark', 'desc' => 'Quem recebe o checklist'],
                         'spare' => ['label' => 'Sobressalentes', 'icon' => 'bi-6-circle text-warning', 'desc' => 'Quem recebe itens avulsos'],
                         'transport' => ['label' => 'Transporte', 'icon' => 'bi-truck text-primary', 'desc' => 'Quem recebe transferências'],
+                        'weekly' => ['label' => 'Lista Semanal', 'icon' => 'bi-calendar-week text-success', 'desc' => 'Gerente responsável pela lista semanal desta obra'],
                     ];
                     ?>
                     <?php if (empty($availableNotifiers)): ?>

@@ -151,7 +151,7 @@ class ConstructionSiteController extends Controller
 
         // Salvar responsáveis por fase
         $notifiers = $_POST['notifiers'] ?? [];
-        $allPhases = ['quote', 'approval', 'completed', 'payment', 'delivery', 'spare', 'transport'];
+        $allPhases = ['quote', 'approval', 'completed', 'payment', 'delivery', 'spare', 'transport', 'weekly'];
         foreach ($allPhases as $phase) {
             $phaseUsers = $notifiers[$phase] ?? [];
             if (!empty($phaseUsers)) {
@@ -240,7 +240,7 @@ class ConstructionSiteController extends Controller
 
         // Salvar responsáveis por fase
         $notifiers = $_POST['notifiers'] ?? [];
-        $allPhases = ['quote', 'approval', 'completed', 'payment', 'delivery', 'spare', 'transport'];
+        $allPhases = ['quote', 'approval', 'completed', 'payment', 'delivery', 'spare', 'transport', 'weekly'];
         foreach ($allPhases as $phase) {
             $phaseUsers = $notifiers[$phase] ?? [];
             ConstructionSite::syncApprovers($id, $phaseUsers, $phase);
