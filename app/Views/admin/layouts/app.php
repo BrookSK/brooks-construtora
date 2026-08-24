@@ -276,6 +276,11 @@
                     <i class="bi bi-grid-1x2-fill"></i> <span class="link-text">Dashboard</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'welcome' ? 'active' : '' ?>" href="/admin/welcome" data-title="Boas-vindas">
+                    <i class="bi bi-hand-wave"></i> <span class="link-text">Boas-vindas</span>
+                </a>
+            </li>
             <?php if (\App\Core\Auth::hasPermission('magazines')): ?>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'magazines' ? 'active' : '' ?>" href="/admin/magazines" data-title="Revistas">
@@ -297,6 +302,17 @@
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'newsletter' ? 'active' : '' ?>" href="/admin/newsletter" data-title="Newsletter">
                     <i class="bi bi-envelope-paper"></i> <span class="link-text">Newsletter</span>
+                </a>
+            </li>
+            <?php endif; ?>
+
+            <?php if (\App\Core\Auth::hasPermission('orders')): ?>
+            <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
+                <small class="text-uppercase px-3 opacity-50 nav-section-label" style="font-size:0.65rem; letter-spacing:1px;">Contratos</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'briefing' ? 'active' : '' ?>" href="/admin/briefing" data-title="Briefing & Contratos">
+                    <i class="bi bi-file-earmark-text"></i> <span class="link-text">Briefing & Contratos</span>
                 </a>
             </li>
             <?php endif; ?>

@@ -285,6 +285,71 @@ $_isProduction = $_currentBranch === 'main';
         </div>
     </div>
 
+    <!-- Configuração de Perfil -->
+    <div class="card mb-4" id="perfil">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-person-circle"></i> Configuração de Perfil</h6>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-4">Esses dados são exibidos na página de Boas-vindas do painel.</p>
+
+            <div class="row g-4 align-items-start">
+                <!-- Foto de perfil -->
+                <div class="col-md-4 text-center">
+                    <div class="mb-3">
+                        <?php $avatarUrl = $profile['photo'] ?? ''; ?>
+                        <div id="avatar-preview-wrapper" style="width:100px;height:100px;border-radius:50%;overflow:hidden;margin:0 auto;background:var(--color-primary);display:flex;align-items:center;justify-content:center;border:3px solid #e0e0e0;">
+                            <?php if (!empty($avatarUrl)): ?>
+                                <img id="avatar-preview" src="<?= htmlspecialchars($avatarUrl) ?>" alt="Foto de perfil" style="width:100%;height:100%;object-fit:cover;">
+                            <?php else: ?>
+                                <span id="avatar-initials" style="color:#fff;font-size:2rem;font-weight:700;line-height:1;">
+                                    <?= mb_strtoupper(mb_substr($profile['name'] ?? 'U', 0, 1)) ?>
+                                </span>
+                                <img id="avatar-preview" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;">
+                            <?php endif; ?>
+                        </div>
+                        <p class="text-muted small mt-2 mb-0"><?= !empty($avatarUrl) ? 'Foto atual' : 'Nenhuma foto' ?></p>
+                    </div>
+                    <div>
+                        <input type="file" class="form-control form-control-sm mb-2" id="avatar-input" accept="image/jpeg,image/png,image/webp,image/gif">
+                        <div class="d-flex gap-2 justify-content-center flex-wrap">
+                            <button type="button" class="btn btn-sm btn-primary" id="avatar-submit">
+                                <i class="bi bi-upload"></i> Salvar foto
+                            </button>
+                            <?php if (!empty($avatarUrl)): ?>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="avatar-remove">
+                                <i class="bi bi-trash"></i> Remover
+                            </button>
+                            <?php endif; ?>
+                        </div>
+                        <div id="avatar-feedback" class="mt-2 small"></div>
+                    </div>
+                </div>
+
+                <!-- Nome -->
+                <div class="col-md-8">
+                    <form method="POST" action="/admin/settings/update-profile">
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Nome de exibição</label>
+                            <input type="text" class="form-control" name="profile_name"
+                                   value="<?= htmlspecialchars($profile['name'] ?? '') ?>"
+                                   placeholder="Seu nome completo" required maxlength="255">
+                            <small class="text-muted">Este nome aparece na saudação da página de Boas-vindas.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">E-mail</label>
+                            <input type="email" class="form-control" value="<?= htmlspecialchars($profile['email'] ?? '') ?>" disabled>
+                            <small class="text-muted">O e-mail é gerenciado pela seção de Usuários.</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Salvar nome
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Revista - Webhook WhatsApp -->
     <div class="card mb-4">
         <div class="card-header">
@@ -367,6 +432,85 @@ function removeDefaultCover() {
     .then(data => { if (data.success) location.reload(); })
     .catch(() => alert('Erro.'));
 }
+
+// -------------------------------------------------------------------
+// Foto de perfil (avatar)
+// -------------------------------------------------------------------
+(function () {
+    var input   = document.getElementById('avatar-input');
+    var preview = document.getElementById('avatar-preview');
+    var initials = document.getElementById('avatar-initials');
+    var feedback = document.getElementById('avatar-feedback');
+    var submitBtn = document.getElementById('avatar-submit');
+    var removeBtn = document.getElementById('avatar-remove');
+
+    // Prévia local antes de enviar
+    if (input) {
+        input.addEventListener('change', function () {
+            var file = input.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                if (preview) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                if (initials) initials.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Envio via fetch
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function () {
+            if (!input || !input.files.length) {
+                setFeedback('Selecione uma imagem primeiro.', 'text-danger');
+                return;
+            }
+            var fd = new FormData();
+            fd.append('avatar', input.files[0]);
+            submitBtn.disabled = true;
+            setFeedback('Enviando…', 'text-muted');
+            fetch('/admin/settings/upload-avatar', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    setFeedback('Foto salva!', 'text-success');
+                    setTimeout(function () { location.reload(); }, 800);
+                } else {
+                    setFeedback(data.error || 'Erro ao enviar.', 'text-danger');
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(function () {
+                setFeedback('Erro na requisição.', 'text-danger');
+                submitBtn.disabled = false;
+            });
+        });
+    }
+
+    // Remoção
+    if (removeBtn) {
+        removeBtn.addEventListener('click', function () {
+            if (!confirm('Remover foto de perfil?')) return;
+            removeBtn.disabled = true;
+            fetch('/admin/settings/remove-avatar', { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success) { location.reload(); }
+                else { setFeedback(data.error || 'Erro ao remover.', 'text-danger'); removeBtn.disabled = false; }
+            })
+            .catch(function () { setFeedback('Erro na requisição.', 'text-danger'); removeBtn.disabled = false; });
+        });
+    }
+
+    function setFeedback(msg, cls) {
+        if (!feedback) return;
+        feedback.textContent = msg;
+        feedback.className = 'mt-2 small ' + cls;
+    }
+})();
 </script>
 
 <?php $content = ob_get_clean(); include ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>
