@@ -481,8 +481,9 @@ class WeeklyMaterialController extends Controller
     /**
      * Agrupa solicitações PENDENTES por responsável.
      * Retorna [manager_id => ['name','phone','email','items'=>[['site'=>..,'token'=>..,'req_id'=>..],...]]]
+     * Público para permitir reuso pelo cron.
      */
-    private static function groupPendingByManager(array $requests): array
+    public static function groupPendingByManager(array $requests): array
     {
         $grouped = [];
         foreach ($requests as $req) {
@@ -516,8 +517,9 @@ class WeeklyMaterialController extends Controller
     /**
      * Monta e envia UMA mensagem por responsável com todos os links (obra + link),
      * e marca cada solicitação como notificada. Retorna o nº de responsáveis notificados.
+     * Público para permitir reuso pelo cron.
      */
-    private static function dispatchGroupedLinks(array $grouped, string $weekStart, string $webhookUrl, string $baseUrl): int
+    public static function dispatchGroupedLinks(array $grouped, string $weekStart, string $webhookUrl, string $baseUrl): int
     {
         $sent = 0;
         $dataFmt = date('d/m/Y', strtotime($weekStart));
