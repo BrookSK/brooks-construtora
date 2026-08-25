@@ -740,15 +740,40 @@ class NiboService
             '$filter' => 'dueDate ge ' . $from . 'T00:00:00Z',
         ];
         $res = self::request('GET', $path, $query, null, $token);
+
+        // Se falhou por ordenação/paginação, tenta SEM $orderby (mantendo $skip
+        // quando possível). Se ainda assim precisar remover $skip, marcamos que
+        // a paginação não é confiável para evitar LOOP INFINITO.
+        $pagingReliable = true;
         if (!$res['ok'] && self::isPagingOrOrderByError($res)) {
-            unset($query['$orderby'], $query['$skip']);
-            $res = self::request('GET', $path, $query, null, $token);
+            $q2 = $query; unset($q2['$orderby']);
+            $res = self::request('GET', $path, $q2, null, $token);
+            if (!$res['ok']) {
+                unset($q2['$skip']);
+                $res = self::request('GET', $path, $q2, null, $token);
+                $pagingReliable = false; // sem $skip não dá para paginar
+            }
         }
         if (!$res['ok']) {
             throw new \RuntimeException("HTTP {$res['status']} " . ($res['error'] ?? ''));
         }
+
         $items = self::extractItems($res['response']);
-        return array_map(fn($s) => self::enrichSchedule($s, [], [], [], $type), $items);
+        $mapped = array_map(fn($s) => self::enrichSchedule($s, [], [], [], $type), $items);
+
+        // Total informado pela API (quando disponível) para saber o fim
+        $total = null;
+        $resp = $res['response'];
+        if (is_array($resp) && isset($resp['count']) && is_numeric($resp['count'])) {
+            $total = (int) $resp['count'];
+        }
+
+        return [
+            'items' => $mapped,
+            'received' => count($mapped),
+            'total' => $total,
+            'paging_reliable' => $pagingReliable,
+        ];
     }
 
     /**

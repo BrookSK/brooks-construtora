@@ -60,9 +60,16 @@
     <div id="noTokenText">O token do Nibo desta empresa ainda não foi configurado.</div>
 </div>
 
-<div id="syncStatus" class="alert alert-info d-none align-items-center gap-2" role="alert">
-    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-    <span id="syncStatusText">Buscando seus dados no Nibo…</span>
+<div id="syncStatus" class="alert alert-info d-none" role="alert">
+    <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span id="syncStatusText">Buscando seus dados no Nibo…</span>
+        <span class="ms-auto small text-muted" id="syncCounts"></span>
+    </div>
+    <div class="progress" style="height:8px;">
+        <div id="syncProgress" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width:0%"></div>
+    </div>
+    <div class="small text-muted mt-1">Pode continuar navegando — a busca segue em segundo plano.</div>
 </div>
 <div id="syncError" class="alert alert-warning d-none" role="alert"></div>
 
@@ -1259,6 +1266,12 @@
     function setSyncStatus(text) {
         el('syncStatusText').textContent = text;
     }
+    function setProgress(pct, counts) {
+        pct = Math.max(0, Math.min(100, Math.round(pct)));
+        el('syncProgress').style.width = pct + '%';
+        if (counts !== undefined) el('syncCounts').textContent = counts;
+    }
+    let syncRunning = false;
 
     async function postJson(url, body) {
         const res = await fetch(url, {
@@ -1270,62 +1283,91 @@
     }
 
     // Sincronização EM ETAPAS (várias chamadas curtas) para não estourar o
-    // timeout do proxy. O navegador orquestra: start → páginas → finish.
+    // timeout do proxy. Roda em SEGUNDO PLANO: o usuário pode continuar
+    // navegando (trocar de aba/filtro) enquanto a barra de progresso avança.
     async function doSync() {
-        const btn = el('btnSync');
-        btn.disabled = true;
-        el('syncStatus').classList.remove('d-none'); el('syncStatus').classList.add('d-flex');
-        el('syncError').classList.add('d-none');
-
+        if (syncRunning) return; // já está rodando
         if (currentCompany === 'completo') {
             showError('Selecione uma empresa (Brooks ou Vétriks) para atualizar. A visão consolidada é montada a partir das empresas.');
-            el('syncStatus').classList.add('d-none'); el('syncStatus').classList.remove('d-flex');
-            btn.disabled = false;
             return;
         }
 
+        syncRunning = true;
+        const btn = el('btnSync');
+        const btnOriginal = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Atualizando…';
+        el('syncStatus').classList.remove('d-none');
+        el('syncError').classList.add('d-none');
+        setProgress(2, '');
+
         const from = '2025-12-01';
-        const MAX_PAGES = 500; // trava de segurança
+        const MAX_PAGES = 500;
         const co = currentCompany;
+
+        // Estimativas para dar sensação de progresso (ajustadas em tempo real)
+        let estPayPages = 40, estRecPages = 20;
+
         try {
-            setSyncStatus('Iniciando e lendo saldo das contas…');
+            setSyncStatus('Lendo saldo das contas…');
             const start = await postJson('/admin/finance/sync-start', { from, company: co });
             if (!start.ok) throw new Error(start.error || 'Falha ao iniciar.');
+            setProgress(5, 'saldo ok');
 
-            // Contas a pagar (débito)
-            let skip = 0, page = 0;
+            // Contas a pagar (débito) — 5% a 60%
+            let skip = 0, page = 0, payTotal = 0;
             while (page < MAX_PAGES) {
                 page++;
-                setSyncStatus('Buscando contas a pagar… (' + (skip) + '+)');
                 const r = await postJson('/admin/finance/sync-page', { type: 'payable', skip, company: co });
                 if (!r.ok) throw new Error('Contas a pagar: ' + (r.error || 'erro'));
-                if (r.done) break;
+                payTotal = r.accumulated;
+                if (r.total) estPayPages = Math.max(1, Math.ceil(r.total / 100));
+                else if (page > estPayPages) estPayPages = page + 2;
+                setSyncStatus('Buscando contas a pagar…');
+                setProgress(5 + Math.min(1, page / estPayPages) * 55, payTotal + ' contas a pagar' + (r.total ? ' de ' + r.total : ''));
+                if (r.done || r.received === 0) break;
                 skip = r.next_skip;
             }
+            setProgress(60, payTotal + ' contas a pagar');
 
-            // Contas a receber (crédito)
-            skip = 0; page = 0;
+            // Contas a receber (crédito) — 60% a 92%
+            skip = 0; page = 0; let recTotal = 0;
             while (page < MAX_PAGES) {
                 page++;
-                setSyncStatus('Buscando contas a receber… (' + (skip) + '+)');
                 const r = await postJson('/admin/finance/sync-page', { type: 'receivable', skip, company: co });
                 if (!r.ok) throw new Error('Contas a receber: ' + (r.error || 'erro'));
-                if (r.done) break;
+                recTotal = r.accumulated;
+                if (r.total) estRecPages = Math.max(1, Math.ceil(r.total / 100));
+                else if (page > estRecPages) estRecPages = page + 2;
+                setSyncStatus('Buscando contas a receber…');
+                setProgress(60 + Math.min(1, page / estRecPages) * 32, payTotal + ' a pagar · ' + recTotal + ' a receber');
+                if (r.done || r.received === 0) break;
                 skip = r.next_skip;
             }
 
             setSyncStatus('Consolidando e salvando…');
+            setProgress(96, payTotal + ' a pagar · ' + recTotal + ' a receber');
             const fin = await postJson('/admin/finance/sync-finish', { company: co });
             if (!fin.ok) throw new Error(fin.error || 'Falha ao finalizar.');
 
-            applyData(fin.data);
+            setProgress(100, 'concluído');
+            // Só aplica na tela se o usuário ainda estiver na mesma empresa
+            if (currentCompany === co || currentCompany === 'completo') {
+                if (currentCompany === 'completo') { loadData(); }
+                else { applyData(fin.data); }
+            }
             if (fin.synced_at) el('lastSyncLabel').textContent = 'Atualizado em ' + new Date(fin.synced_at.replace(' ','T')).toLocaleString('pt-BR');
+            setSyncStatus('Concluído!');
+            setTimeout(() => { el('syncStatus').classList.add('d-none'); }, 1200);
         } catch (e) {
             showError('Não foi possível atualizar: ' + e.message + '. Veja a aba Diagnóstico. Os dados anteriores foram mantidos.');
+            el('syncStatus').classList.add('d-none');
         } finally {
-            el('syncStatus').classList.add('d-none'); el('syncStatus').classList.remove('d-flex');
-            setSyncStatus('Sincronizando com o Nibo…');
+            syncRunning = false;
             btn.disabled = false;
+            btn.innerHTML = btnOriginal;
+            setSyncStatus('Buscando seus dados no Nibo…');
+            setProgress(0, '');
         }
     }
 

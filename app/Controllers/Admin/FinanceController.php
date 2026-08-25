@@ -228,23 +228,38 @@ class FinanceController extends Controller
         $from = $_SESSION['finance_sync']['from'] ?? '2025-12-01';
 
         try {
-            $items = NiboService::schedulePage($type, $skip, $from, null, $pageSize, $company);
+            $res = NiboService::schedulePage($type, $skip, $from, null, $pageSize, $company);
         } catch (\Throwable $e) {
             self::log("syncPage[{$company}] {$type} skip={$skip} ERRO: " . $e->getMessage());
             $this->json(['ok' => false, 'error' => $e->getMessage(), 'type' => $type, 'skip' => $skip], 502);
             return;
         }
 
+        $items = $res['items'] ?? [];
+        $received = $res['received'] ?? count($items);
+        $total = $res['total'] ?? null;
+        $pagingReliable = $res['paging_reliable'] ?? true;
+
         $bucket = $type === 'receivable' ? 'receivables' : 'payables';
         foreach ($items as $it) $_SESSION['finance_sync'][$bucket][] = $it;
+        $accumulated = count($_SESSION['finance_sync'][$bucket]);
 
-        $done = count($items) < $pageSize;
-        $total = count($_SESSION['finance_sync'][$bucket]);
+        // Critérios de término (evita loop infinito):
+        //  - página incompleta (menos que o pageSize), OU
+        //  - já acumulamos tudo que a API informou (count), OU
+        //  - a paginação não é confiável (sem $skip) — pega só a 1ª página, OU
+        //  - trava dura por segurança (evita loop caso a API repita itens)
+        $done = ($received < $pageSize)
+            || (!$pagingReliable)
+            || ($total !== null && $accumulated >= $total)
+            || ($skip >= 100000);
+
         $this->json([
             'ok' => true,
             'type' => $type,
-            'received' => count($items),
-            'accumulated' => $total,
+            'received' => $received,
+            'accumulated' => $accumulated,
+            'total' => $total,
             'next_skip' => $skip + $pageSize,
             'done' => $done,
         ]);
