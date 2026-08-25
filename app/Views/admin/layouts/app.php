@@ -210,6 +210,13 @@
                 </a>
             </li>
             <?php endif; ?>
+            <?php if (\App\Core\Auth::hasPermission('orders') || \App\Core\Auth::hasPermission('obras')): ?>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'financeiro' ? 'active' : '' ?>" href="/admin/financeiro">
+                    <i class="bi bi-graph-up-arrow"></i> Dashboard
+                </a>
+            </li>
+            <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('obras')): ?>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'obras' ? 'active' : '' ?>" href="/admin/obras">

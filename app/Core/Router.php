@@ -186,6 +186,9 @@ class Router
             'briefing/update-contractor' => ['BriefingController', 'updateContractor'],
             'briefing/delete-contractor' => ['BriefingController', 'deleteContractor'],
 
+            // Dashboard Financeiro por Obra
+            'financeiro' => ['FinancialDashboardController', 'index'],
+
             // Obras
             'obras' => ['ConstructionSiteController', 'index'],
             'obras/create' => ['ConstructionSiteController', 'create'],
