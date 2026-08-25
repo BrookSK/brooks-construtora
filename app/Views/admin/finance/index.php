@@ -600,7 +600,17 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
 
     function fmtMoney(v) { v = Number(v)||0; return v.toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
     function fmtMoneyFull(v) { v = Number(v)||0; return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
-    function parseDate(s) { if (!s) return null; const d = new Date(String(s).length<=10 ? s+'T00:00:00' : s); return isNaN(d.getTime())?null:d; }
+    function parseDate(s) {
+        if (!s) return null;
+        // A API do Nibo envia datas em UTC (…T00:00:00Z). Para evitar que o
+        // fuso do Brasil (UTC-3) jogue a data para o dia anterior, usamos
+        // SEMPRE apenas a parte da data (YYYY-MM-DD) como meia-noite LOCAL.
+        const str = String(s);
+        const m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+        const d = new Date(str);
+        return isNaN(d.getTime()) ? null : d;
+    }
     function toKey(d) { return d.toISOString().slice(0,10); }
     function esc(s) { return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
     function moneyCell(v) { return !v ? '<span class="zero">0,00</span>' : fmtMoney(v); }
