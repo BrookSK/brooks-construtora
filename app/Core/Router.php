@@ -188,6 +188,7 @@ class Router
 
             // Dashboard Financeiro por Obra
             'financeiro' => ['FinancialDashboardController', 'index'],
+            'financeiro/show' => ['FinancialDashboardController', 'show'],
 
             // Obras
             'obras' => ['ConstructionSiteController', 'index'],

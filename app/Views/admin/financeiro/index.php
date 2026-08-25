@@ -1,8 +1,8 @@
-<?php $pageTitle = 'Dashboard Financeiro'; $currentPage = 'financeiro'; ob_start(); ?>
+<?php $pageTitle = 'Dashboard de Obras'; $currentPage = 'financeiro'; ob_start(); ?>
 
 <?php
 /**
- * Dashboard Financeiro por Obra (somente leitura).
+ * Dashboard de Obras — Visao Geral (somente leitura).
  * Dados agregados no FinancialDashboardController a partir de
  * construction_sites + purchase_orders e tabelas relacionadas.
  */
@@ -16,16 +16,58 @@ $statusLabels = [
 ];
 $sites  = $sites ?? [];
 $totals = $totals ?? ['sites' => 0, 'orders' => 0, 'spent' => 0, 'paid' => 0, 'consumed' => 0];
+$currentSort   = $currentSort ?? 'name';
+$currentStatus = $currentStatus ?? '';
+$sortOptions = [
+    'name'          => 'Nome da obra',
+    'status'        => 'Status',
+    'spent_desc'    => 'Maior valor gasto',
+    'spent_asc'     => 'Menor valor gasto',
+    'paid_desc'     => 'Maior valor pago',
+    'consumed_desc' => 'Maior valor consumido',
+    'orders_desc'   => 'Maior qtd. de pedidos',
+];
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="mb-1">Dashboard Financeiro</h4>
+        <h4 class="mb-1">Dashboard de Obras</h4>
         <p class="text-muted mb-0">Acompanhamento financeiro e de consumo por obra.</p>
     </div>
     <a href="/admin/obras" class="btn btn-sm btn-outline-primary">
         <i class="bi bi-buildings"></i> Ver Obras
     </a>
+</div>
+
+<!-- Filtros e ordenação -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" action="/admin/financeiro" class="row g-2 align-items-end">
+            <div class="col-6 col-md-4">
+                <label class="form-label small mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    <?php foreach ($statusLabels as $key => $lbl): ?>
+                        <option value="<?= $key ?>" <?= $currentStatus === $key ? 'selected' : '' ?>><?= htmlspecialchars($lbl[0]) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-6 col-md-4">
+                <label class="form-label small mb-1">Ordenar por</label>
+                <select name="sort" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <?php foreach ($sortOptions as $key => $lbl): ?>
+                        <option value="<?= $key ?>" <?= $currentSort === $key ? 'selected' : '' ?>><?= htmlspecialchars($lbl) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Aplicar</button>
+                <?php if ($currentStatus !== '' || $currentSort !== 'name'): ?>
+                <a href="/admin/financeiro" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x"></i> Limpar</a>
+                <?php endif; ?>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- Indicadores gerais -->
@@ -80,6 +122,7 @@ $totals = $totals ?? ['sites' => 0, 'orders' => 0, 'spent' => 0, 'paid' => 0, 'c
                             <th class="text-end">Valor Gasto</th>
                             <th class="text-end">Valor Pago</th>
                             <th class="text-end">Valor Consumido</th>
+                            <th class="text-end">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -111,6 +154,11 @@ $totals = $totals ?? ['sites' => 0, 'orders' => 0, 'spent' => 0, 'paid' => 0, 'c
                                 <td class="text-end fw-semibold"><?= $fmtMoney($s['spent'] ?? 0) ?></td>
                                 <td class="text-end text-success"><?= $fmtMoney($s['paid'] ?? 0) ?></td>
                                 <td class="text-end"><?= $fmtMoney($s['consumed'] ?? 0) ?></td>
+                                <td class="text-end">
+                                    <a href="/admin/financeiro/show/<?= (int) $s['id'] ?>" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-graph-up"></i> Ver detalhes
+                                    </a>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -123,6 +171,7 @@ $totals = $totals ?? ['sites' => 0, 'orders' => 0, 'spent' => 0, 'paid' => 0, 'c
                             <td class="text-end"><?= $fmtMoney($totals['spent']) ?></td>
                             <td class="text-end text-success"><?= $fmtMoney($totals['paid']) ?></td>
                             <td class="text-end"><?= $fmtMoney($totals['consumed']) ?></td>
+                            <td></td>
                         </tr>
                     </tfoot>
                 </table>

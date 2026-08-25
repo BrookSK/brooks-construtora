@@ -63,12 +63,252 @@ class FinancialDashboardController extends Controller
             $sites = [];
         }
 
+        // Filtro por status (dado real) + ordenacao (aplicados em PHP, sem tocar no SQL).
+        $status = (string) $this->input('status', '');
+        if ($status !== '') {
+            $sites = array_values(array_filter($sites, static fn($s) => ($s['status'] ?? '') === $status));
+        }
+
+        $sort = (string) $this->input('sort', 'name');
+        $sites = $this->sortSites($sites, $sort);
+
         $this->view('admin.financeiro.index', [
-            'sites'  => $sites,
-            'totals' => $totals,
-            'user'   => Auth::user(),
-            'flash'  => $this->getFlash(),
+            'sites'        => $sites,
+            'totals'       => $totals,
+            'currentSort'  => $sort,
+            'currentStatus'=> $status,
+            'user'         => Auth::user(),
+            'flash'        => $this->getFlash(),
         ]);
+    }
+
+    /**
+     * Ordena a lista de obras conforme criterio real disponivel.
+     */
+    private function sortSites(array $sites, string $sort): array
+    {
+        $cmp = [
+            'spent_desc'    => fn($a, $b) => ($b['spent'] ?? 0)        <=> ($a['spent'] ?? 0),
+            'spent_asc'     => fn($a, $b) => ($a['spent'] ?? 0)        <=> ($b['spent'] ?? 0),
+            'paid_desc'     => fn($a, $b) => ($b['paid'] ?? 0)         <=> ($a['paid'] ?? 0),
+            'consumed_desc' => fn($a, $b) => ($b['consumed'] ?? 0)     <=> ($a['consumed'] ?? 0),
+            'orders_desc'   => fn($a, $b) => ($b['orders_count'] ?? 0) <=> ($a['orders_count'] ?? 0),
+            'status'        => fn($a, $b) => strcmp((string) ($a['status'] ?? ''), (string) ($b['status'] ?? '')),
+            'name'          => fn($a, $b) => strcasecmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')),
+        ];
+        $fn = $cmp[$sort] ?? $cmp['name'];
+        usort($sites, $fn);
+        return $sites;
+    }
+
+    /**
+     * Detalhamento de uma obra especifica.
+     * Todos os dados sao filtrados por construction_site_id = :id.
+     */
+    public function show(int $id = 0): void
+    {
+        $id = $id ?: (int) $this->input('id', 0);
+        if ($id <= 0) {
+            $this->redirect('/admin/financeiro');
+            return;
+        }
+
+        $site = \App\Models\ConstructionSite::find($id);
+        if (!$site) {
+            $this->setFlash('error', 'Obra não encontrada.');
+            $this->redirect('/admin/financeiro');
+            return;
+        }
+
+        $indicators = ['orders_count' => 0, 'spent' => 0.0, 'paid' => 0.0, 'to_pay' => 0.0,
+                       'freight' => 0.0, 'consumed' => 0.0, 'stock_value' => 0.0,
+                       'price_min' => null, 'price_max' => null];
+        $orders     = [];
+        $materials  = [];
+        $suppliers  = [];
+        $payments   = [];
+        $stock      = [];
+        $charts     = ['spend_by_category' => [], 'payments' => [], 'consumption' => []];
+
+        try {
+            if ($this->tablesReady()) {
+                $row = $this->buildSiteIndicators($id);
+                if (!empty($row[0])) {
+                    $r = $row[0];
+                    $indicators = [
+                        'orders_count' => (int) ($r['orders_count'] ?? 0),
+                        'spent'        => (float) ($r['spent'] ?? 0),
+                        'paid'         => (float) ($r['paid'] ?? 0),
+                        'to_pay'       => (float) ($r['to_pay'] ?? 0),
+                        'freight'      => (float) ($r['freight'] ?? 0),
+                        'consumed'     => (float) ($r['consumed'] ?? 0),
+                        'stock_value'  => (float) ($r['stock_value'] ?? 0),
+                        'price_min'    => $r['price_min'] ?? null,
+                        'price_max'    => $r['price_max'] ?? null,
+                    ];
+                }
+                $orders    = $this->orderDetails($id);
+                $materials = $this->materialDetails($id);
+                $suppliers = $this->supplierDetails($id);
+                $payments  = $this->paymentDetails($id);
+                $stock     = $this->stockDetails($id);
+                $charts    = [
+                    'spend_by_category' => $this->spendByCategory($id),
+                    'payments'          => ['paid' => $indicators['paid'], 'to_pay' => $indicators['to_pay']],
+                    'consumption'       => $this->consumptionByMaterial($id),
+                ];
+            }
+        } catch (\Exception $e) {
+            // Estado vazio em caso de falha — nunca 500.
+        }
+
+        $this->view('admin.financeiro.show', [
+            'site'       => $site,
+            'indicators' => $indicators,
+            'orders'     => $orders,
+            'materials'  => $materials,
+            'suppliers'  => $suppliers,
+            'payments'   => $payments,
+            'stock'      => $stock,
+            'charts'     => $charts,
+            'user'       => Auth::user(),
+            'flash'      => $this->getFlash(),
+        ]);
+    }
+
+    /**
+     * Pedidos da obra (dados reais de purchase_orders).
+     */
+    private function orderDetails(int $siteId): array
+    {
+        return Database::fetchAll(
+            "SELECT po.id, po.code, po.status, po.created_at, po.total_estimated,
+                    s.name AS supplier_name,
+                    (SELECT COALESCE(SUM(pop.amount), 0) FROM purchase_order_payments pop
+                      WHERE pop.order_id = po.id AND pop.paid = 1) AS paid
+             FROM purchase_orders po
+             LEFT JOIN suppliers s ON po.supplier_id = s.id
+             WHERE po.construction_site_id = ?
+             ORDER BY po.created_at DESC",
+            [$siteId]
+        );
+    }
+
+    /**
+     * Materiais dos pedidos da obra, agregados por material (dados reais dos itens).
+     */
+    private function materialDetails(int $siteId): array
+    {
+        return Database::fetchAll(
+            "SELECT poi.material_name,
+                    SUM(poi.quantity) AS quantity,
+                    MAX(poi.unit_price) AS unit_price,
+                    SUM(COALESCE(poi.total_price, 0)) AS total_price
+             FROM purchase_order_items poi
+             INNER JOIN purchase_orders po ON po.id = poi.order_id
+             WHERE po.construction_site_id = ?
+             GROUP BY poi.material_name
+             ORDER BY total_price DESC",
+            [$siteId]
+        );
+    }
+
+    /**
+     * Fornecedores relacionados aos pedidos da obra (dados reais).
+     */
+    private function supplierDetails(int $siteId): array
+    {
+        return Database::fetchAll(
+            "SELECT s.name AS supplier_name, s.cnpj,
+                    COUNT(DISTINCT pos.order_id) AS orders_count,
+                    COALESCE(SUM(CASE WHEN pos.approved = 1 THEN pos.subtotal_final ELSE 0 END), 0) AS approved_total
+             FROM purchase_order_suppliers pos
+             INNER JOIN purchase_orders po ON po.id = pos.order_id
+             INNER JOIN suppliers s ON s.id = pos.supplier_id
+             WHERE po.construction_site_id = ?
+             GROUP BY s.id, s.name, s.cnpj
+             ORDER BY approved_total DESC, orders_count DESC",
+            [$siteId]
+        );
+    }
+
+    /**
+     * Pagamentos (NF/boletos) dos pedidos da obra (dados reais).
+     */
+    private function paymentDetails(int $siteId): array
+    {
+        return Database::fetchAll(
+            "SELECT pop.type, pop.number, pop.amount, pop.paid, pop.due_date, pop.created_at,
+                    po.code AS order_code
+             FROM purchase_order_payments pop
+             INNER JOIN purchase_orders po ON po.id = pop.order_id
+             WHERE po.construction_site_id = ?
+             ORDER BY pop.created_at DESC",
+            [$siteId]
+        );
+    }
+
+    /**
+     * Estoque vinculado a obra (via location OU coluna direta), dados reais.
+     */
+    private function stockDetails(int $siteId): array
+    {
+        if (!$this->tableExists('stock_items')) {
+            return [];
+        }
+        return Database::fetchAll(
+            "SELECT m.name AS material_name,
+                    si.quantity, si.unit_price,
+                    (si.quantity * COALESCE(si.unit_price, 0)) AS total_value,
+                    sl.name AS location_name
+             FROM stock_items si
+             INNER JOIN materials m ON m.id = si.material_id
+             LEFT JOIN stock_locations sl ON sl.id = si.stock_location_id
+             WHERE COALESCE(sl.construction_site_id, si.construction_site_id) = ?
+             ORDER BY total_value DESC",
+            [$siteId]
+        );
+    }
+
+    /**
+     * Distribuicao de gastos por categoria de material (para grafico de gastos).
+     */
+    private function spendByCategory(int $siteId): array
+    {
+        return Database::fetchAll(
+            "SELECT COALESCE(mc.name, 'Sem categoria') AS label,
+                    SUM(COALESCE(poi.total_price, 0)) AS value
+             FROM purchase_order_items poi
+             INNER JOIN purchase_orders po ON po.id = poi.order_id
+             LEFT JOIN materials m ON m.id = poi.material_id
+             LEFT JOIN material_categories mc ON mc.id = m.category_id
+             WHERE po.construction_site_id = ?
+               AND COALESCE(poi.total_price, 0) > 0
+             GROUP BY COALESCE(mc.name, 'Sem categoria')
+             ORDER BY value DESC
+             LIMIT 8",
+            [$siteId]
+        );
+    }
+
+    /**
+     * Consumo por material (itens de estoque usados/transferidos) — para grafico de consumo.
+     */
+    private function consumptionByMaterial(int $siteId): array
+    {
+        return Database::fetchAll(
+            "SELECT poi.material_name AS label,
+                    SUM(poi.quantity) AS qty,
+                    SUM(COALESCE(poi.total_price, 0)) AS value
+             FROM purchase_order_items poi
+             INNER JOIN purchase_orders po ON po.id = poi.order_id
+             WHERE po.construction_site_id = ?
+               AND poi.source_type IN ('stock_use', 'stock_transfer')
+             GROUP BY poi.material_name
+             ORDER BY value DESC, qty DESC
+             LIMIT 8",
+            [$siteId]
+        );
     }
 
     /**
@@ -114,7 +354,7 @@ class FinancialDashboardController extends Controller
      *                  (via stock_items, resolvendo a obra por location ou coluna direta).
      * - freight      : SUM(purchase_order_suppliers.freight) dos fornecedores aprovados (frete de compra).
      */
-    private function buildSiteIndicators(): array
+    private function buildSiteIndicators(?int $siteId = null): array
     {
         // Tabelas opcionais (módulos que podem não existir em todos os ambientes).
         // Se ausentes, os respectivos indicadores retornam 0 sem quebrar a query.
@@ -238,10 +478,11 @@ class FinancialDashboardController extends Controller
                 {$priceMaxExpr} AS price_max
 
             FROM construction_sites cs
+            " . ($siteId !== null ? "WHERE cs.id = ?" : "") . "
             ORDER BY cs.name ASC
         ";
 
-        return Database::fetchAll($sql);
+        return Database::fetchAll($sql, $siteId !== null ? [$siteId] : []);
     }
 
     /**
