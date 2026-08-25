@@ -1555,6 +1555,31 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
             }
         });
 
+        // ── Abas de período ajustam a janela temporal do filtro ────────
+        // Semanal → 90 dias · Mensal → este ano · Anual → tudo.
+        // Mantém os demais filtros (fornecedor, centro de custo, situação).
+        const tabPeriodMap = {
+            '#tab-semanal': '90',
+            '#tab-mensal': 'this-year',
+            '#tab-anual': 'all',
+        };
+        Object.keys(tabPeriodMap).forEach(sel => {
+            const btn = document.querySelector('[data-bs-target="' + sel + '"]');
+            if (!btn) return;
+            btn.addEventListener('shown.bs.tab', function () {
+                const target = tabPeriodMap[sel];
+                if (el('filterPeriod').value !== target) {
+                    el('filterPeriod').value = target;
+                    toggleCustomDatesSafe();
+                    refresh();
+                }
+            });
+        });
+        function toggleCustomDatesSafe() {
+            const custom = el('filterPeriod').value === 'custom';
+            document.querySelectorAll('.filter-custom-date').forEach(d => d.classList.toggle('d-none', !custom));
+        }
+
         // ── Lupa em cada bloco: abre pop-up com o conteúdo completo ────
         setupExpandButtons();
 
