@@ -117,20 +117,30 @@
                 </div>
                 <div class="col-6 col-md-3 col-xl-2">
                     <label class="form-label small mb-1">Situação</label>
-                    <select id="filterStatus" class="form-select form-select-sm">
-                        <option value="">Todas</option>
-                        <option value="open">Em aberto</option>
-                        <option value="overdue">Vencidas</option>
-                        <option value="paid">Já pagas/recebidas</option>
-                    </select>
-                    <div class="form-check mt-1">
-                        <input class="form-check-input" type="checkbox" id="filterPostponed">
-                        <label class="form-check-label small" for="filterPostponed" style="color:#6f42c1;">
-                            <i class="bi bi-arrow-repeat"></i> Só postergadas
-                        </label>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary w-100 dropdown-toggle text-start d-flex justify-content-between align-items-center" type="button" id="statusDropdownBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <span id="statusDropdownLabel">Todas</span>
+                        </button>
+                        <div class="dropdown-menu p-2" style="min-width:220px;">
+                            <label class="dropdown-item px-2 py-1 d-flex align-items-center gap-2" style="cursor:pointer;">
+                                <input class="form-check-input m-0 status-opt" type="checkbox" value="open"> Em aberto
+                            </label>
+                            <label class="dropdown-item px-2 py-1 d-flex align-items-center gap-2" style="cursor:pointer;">
+                                <input class="form-check-input m-0 status-opt" type="checkbox" value="overdue"> Vencidas
+                            </label>
+                            <label class="dropdown-item px-2 py-1 d-flex align-items-center gap-2" style="cursor:pointer;">
+                                <input class="form-check-input m-0 status-opt" type="checkbox" value="paid"> Já pagas/recebidas
+                            </label>
+                            <div class="dropdown-divider"></div>
+                            <label class="dropdown-item px-2 py-1 d-flex align-items-center gap-2" style="cursor:pointer; color:#6f42c1;">
+                                <input class="form-check-input m-0 status-opt" type="checkbox" value="postponed"> <i class="bi bi-arrow-repeat"></i> Só postergadas
+                            </label>
+                            <div class="dropdown-divider"></div>
+                            <button type="button" class="btn btn-sm btn-link p-0 px-2" id="statusClearOpts">Limpar seleção</button>
+                        </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3 col-xl-2">
+                <div class="col-6 col-md-3 col-xl-2 d-flex align-items-end">
                     <button id="btnClearFilters" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-x-lg"></i> Limpar filtros</button>
                 </div>
             </div>
@@ -634,12 +644,21 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
 
     // ── Filtros (barra única) ─────────────────────────────────────────
     function getFilters() {
+        const checked = Array.from(document.querySelectorAll('.status-opt:checked')).map(c => c.value);
+        const postponed = checked.includes('postponed');
+        const statuses = checked.filter(v => v !== 'postponed'); // open/overdue/paid
         return {
             costCenter: el('filterCostCenter').value,
             contact: el('filterContact').value,
-            status: el('filterStatus').value,
-            postponed: el('filterPostponed').checked,
+            statuses: statuses,     // multiseleção de situação
+            postponed: postponed,   // combinável
         };
+    }
+    // Atualiza o rótulo do dropdown de situação
+    function updateStatusLabel() {
+        const checked = Array.from(document.querySelectorAll('.status-opt:checked'));
+        const labels = checked.map(c => c.parentElement.textContent.trim());
+        el('statusDropdownLabel').textContent = labels.length ? labels.join(', ') : 'Todas';
     }
     // Mapas id→nome dos cadastros, para casar filtro por ID ou por nome
     let ccNameById = {}, contactNameById = {};
@@ -653,18 +672,10 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
     // Vale igualmente para TODAS as abas, evitando inconsistências.
     function matchesAll(x) {
         const f = getFilters();
-        if (f.status && x.status !== f.status) return false;
+        if (f.statuses.length && !f.statuses.includes(x.status)) return false;
         if (f.postponed && !x.date_changed) return false; // combina com a situação
-        if (f.costCenter) {
-            const byId = String(x.cost_center_id||'') === f.costCenter;
-            const byName = ccNameById[f.costCenter] && (x.cost_center||'') === ccNameById[f.costCenter];
-            if (!byId && !byName) return false;
-        }
-        if (f.contact) {
-            const byId = String(x.contact_id||'') === f.contact;
-            const byName = contactNameById[f.contact] && (x.contact_name||'') === contactNameById[f.contact];
-            if (!byId && !byName) return false;
-        }
+        if (f.costCenter && !matchContact(x, f.costCenter, 'cost_center')) return false;
+        if (f.contact && !matchContact(x, f.contact, 'contact')) return false;
         const { start, end } = periodRange();
         const d = parseDate(x.due_date);
         if (!d) return false;
@@ -673,20 +684,21 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
     function filteredPayables() { return state.payables.filter(matchesAll); }
     function filteredReceivables() { return state.receivables.filter(matchesAll); }
 
+    // Casa um lançamento com o valor do filtro (que pode ser um ID ou um nome)
+    // kind: 'cost_center' | 'contact'
+    function matchContact(x, filterValue, kind) {
+        if (kind === 'cost_center') {
+            return String(x.cost_center_id||'') === filterValue || (x.cost_center||'') === filterValue;
+        }
+        return String(x.contact_id||'') === filterValue || (x.contact_name||'') === filterValue;
+    }
+
     // Filtros SEM a janela de data (usado pelo quadro de Vencidas)
     function matchesFiltersNoDate(x) {
         const f = getFilters();
         if (f.postponed && !x.date_changed) return false;
-        if (f.costCenter) {
-            const byId = String(x.cost_center_id||'') === f.costCenter;
-            const byName = ccNameById[f.costCenter] && (x.cost_center||'') === ccNameById[f.costCenter];
-            if (!byId && !byName) return false;
-        }
-        if (f.contact) {
-            const byId = String(x.contact_id||'') === f.contact;
-            const byName = contactNameById[f.contact] && (x.contact_name||'') === contactNameById[f.contact];
-            if (!byId && !byName) return false;
-        }
+        if (f.costCenter && !matchContact(x, f.costCenter, 'cost_center')) return false;
+        if (f.contact && !matchContact(x, f.contact, 'contact')) return false;
         return true;
     }
     // Vencimento contábil: SEMPRE a data de vencimento (fixa, due_date).
@@ -716,29 +728,36 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
     // próprios lançamentos.
     function populateFilterOptions() {
         const fdata = state.filters || {};
-        let centers = fdata.costcenters || [];
-        let contacts = fdata.contacts || [];
+        // União: começa com as listas da API e agrega TUDO que aparece nos
+        // lançamentos carregados (garante lista completa de fornecedores/clientes).
+        const cMap = {}, kMap = {};
+        (fdata.costcenters || []).forEach(c => { if (c && c.name) cMap[c.id || c.name] = c.name; });
+        (fdata.contacts || []).forEach(c => { if (c && c.name) kMap[c.id || c.name] = c.name; });
 
-        if (!centers.length || !contacts.length) {
-            const cMap = {}, kMap = {};
-            [...state.payables, ...state.receivables].forEach(x => {
-                if (x.cost_center_id && x.cost_center && x.cost_center !== '—') cMap[x.cost_center_id] = x.cost_center;
-                if (x.contact_id && x.contact_name && x.contact_name !== '—') kMap[x.contact_id] = x.contact_name;
-            });
-            if (!centers.length) centers = Object.entries(cMap).map(([id,name])=>({id,name})).sort((a,b)=>a.name.localeCompare(b.name));
-            if (!contacts.length) contacts = Object.entries(kMap).map(([id,name])=>({id,name})).sort((a,b)=>a.name.localeCompare(b.name));
-        }
+        [...state.payables, ...state.receivables].forEach(x => {
+            if (x.cost_center && x.cost_center !== '—') cMap[x.cost_center_id || x.cost_center] = x.cost_center;
+            const nm = (x.contact_name && x.contact_name !== '—') ? x.contact_name
+                     : ((x.description && !x.contact_id) ? null : null);
+            if (nm) kMap[x.contact_id || nm] = nm;
+        });
+
+        const centers = Object.entries(cMap).map(([id,name]) => ({ id, name }))
+            .sort((a,b) => a.name.localeCompare(b.name));
+        const contacts = Object.entries(kMap).map(([id,name]) => ({ id, name }))
+            .sort((a,b) => a.name.localeCompare(b.name));
 
         fillSelect('filterCostCenter', centers);
         fillSelect('filterContact', contacts);
     }
-    // values = [{id, name}]
+    // values = [{id, name}] — usa a KEY (id ou nome) como value do option
     function fillSelect(id, values) {
         const sel = el(id); const current = sel.value;
         sel.innerHTML = '<option value="">Todos</option>' + values
-            .filter(v => v && v.id)
-            .map(v => '<option value="'+esc(v.id)+'">'+esc(v.name)+'</option>').join('');
-        if (current && sel.querySelector('option[value="'+CSS.escape(current)+'"]')) sel.value = current;
+            .filter(v => v && (v.id || v.name))
+            .map(v => '<option value="'+esc(v.id || v.name)+'">'+esc(v.name)+'</option>').join('');
+        if (current) {
+            try { if (sel.querySelector('option[value="'+CSS.escape(current)+'"]')) sel.value = current; } catch(e){}
+        }
     }
 
     // ── Cards de resumo ───────────────────────────────────────────────
@@ -1447,11 +1466,22 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         }
 
         // BARRA ÚNICA: qualquer filtro recalcula TODAS as abas
-        ['filterPeriod','filterStart','filterEnd','filterContact','filterCostCenter','filterStatus','filterPostponed']
+        ['filterPeriod','filterStart','filterEnd','filterContact','filterCostCenter']
             .forEach(id => el(id).addEventListener('change', function () {
                 toggleCustomDates();
                 refresh();
             }));
+
+        // Multiseleção de Situação (checkboxes no dropdown)
+        document.querySelectorAll('.status-opt').forEach(c => c.addEventListener('change', function () {
+            updateStatusLabel();
+            refresh();
+        }));
+        el('statusClearOpts').addEventListener('click', function () {
+            document.querySelectorAll('.status-opt').forEach(c => c.checked = false);
+            updateStatusLabel();
+            refresh();
+        });
 
         // Agrupamento da matriz detalhada (só re-renderiza a matriz)
         el('flowGrouping').addEventListener('change', renderFlow);
@@ -1463,8 +1493,9 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         el('btnClearFilters').addEventListener('click', function () {
             el('filterPeriod').value = 'this-year';
             el('filterStart').value = ''; el('filterEnd').value = '';
-            el('filterContact').value = ''; el('filterCostCenter').value = ''; el('filterStatus').value = '';
-            el('filterPostponed').checked = false;
+            el('filterContact').value = ''; el('filterCostCenter').value = '';
+            document.querySelectorAll('.status-opt').forEach(c => c.checked = false);
+            updateStatusLabel();
             toggleCustomDates();
             refresh();
         });
@@ -1584,6 +1615,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         setupExpandButtons();
 
         toggleCustomDates();
+        updateStatusLabel();
         applyCompanyUI();
         loadData();
     });
