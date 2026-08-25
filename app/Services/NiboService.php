@@ -257,8 +257,8 @@ class NiboService
             [
                 'key' => 'costcenters_list', 'group' => 'Centros de Custo', 'label' => 'Listar centros de custo',
                 'method' => 'GET', 'path' => '/costcenters',
-                'description' => 'Lista os centros de custo (OData).',
-                'sample_query' => ['$orderby' => 'name', '$top' => '50'],
+                'description' => 'Lista os centros de custo (OData). Obs.: este endpoint não aceita $orderby=name.',
+                'sample_query' => ['$top' => '50', '$skip' => '0'],
             ],
             [
                 'key' => 'costcenters_create', 'group' => 'Centros de Custo', 'label' => 'Criar centro de custo',
@@ -298,8 +298,8 @@ class NiboService
             [
                 'key' => 'payments_list', 'group' => 'Pagamentos', 'label' => 'Listar pagamentos realizados (contas pagas)',
                 'method' => 'GET', 'path' => '/payments',
-                'description' => 'Lista pagamentos já realizados (OData).',
-                'sample_query' => ['$orderby' => 'paymentDate', '$top' => '20', '$skip' => '0'],
+                'description' => 'Lista pagamentos já realizados (OData). Obs.: use $orderby=dueDate (não há paymentDate).',
+                'sample_query' => ['$orderby' => 'dueDate', '$top' => '20', '$skip' => '0'],
                 'doc' => 'https://nibo.readme.io/reference/pagar-1',
             ],
 
@@ -333,8 +333,8 @@ class NiboService
             [
                 'key' => 'receipts_list', 'group' => 'Recebimentos', 'label' => 'Listar recebimentos realizados (contas recebidas)',
                 'method' => 'GET', 'path' => '/receipts',
-                'description' => 'Lista recebimentos já realizados (OData).',
-                'sample_query' => ['$orderby' => 'receiptDate', '$top' => '20', '$skip' => '0'],
+                'description' => 'Lista recebimentos já realizados (OData). Obs.: use $orderby=dueDate (não há receiptDate).',
+                'sample_query' => ['$orderby' => 'dueDate', '$top' => '20', '$skip' => '0'],
                 'doc' => 'https://nibo.readme.io/reference/receber-1',
             ],
 
@@ -422,6 +422,15 @@ class NiboService
                 '$skip' => (string) $skip,
             ]);
             $res = self::request('GET', $path, $query, null, $token);
+
+            // Resiliência: alguns endpoints não aceitam o campo de ordenação
+            // pedido (retornam HTTP 500 validation_error do OData). Nesse caso,
+            // tentamos de novo sem o $orderby para não quebrar a sincronização.
+            if (!$res['ok'] && self::isOrderByError($res) && isset($query['$orderby'])) {
+                unset($query['$orderby']);
+                $res = self::request('GET', $path, $query, null, $token);
+            }
+
             if (!$res['ok']) {
                 // Propaga erro para o chamador tratar (mantém dados antigos na tela)
                 throw new \RuntimeException("Falha ao ler {$path}: HTTP {$res['status']} " . ($res['error'] ?? ''));
@@ -450,6 +459,26 @@ class NiboService
     }
 
     /**
+     * Detecta o erro típico do OData quando o campo de $orderby não existe
+     * no DTO daquele endpoint (ex.: /costcenters não tem 'name' para ordenar,
+     * /payments e /receipts não têm 'paymentDate'/'receiptDate').
+     */
+    private static function isOrderByError(array $res): bool
+    {
+        $resp = $res['response'] ?? null;
+        $msg = '';
+        if (is_array($resp)) {
+            $msg = ($resp['error_description'] ?? '') . ' ' . ($resp['exception']['message'] ?? '');
+        } elseif (is_string($resp)) {
+            $msg = $resp;
+        }
+        $msg = strtolower($msg);
+        return strpos($msg, 'could not find a property') !== false
+            || strpos($msg, 'orderby') !== false
+            || strpos($msg, 'order by') !== false;
+    }
+
+    /**
      * Executa o fluxo COMPLETO de sincronização (somente leitura):
      *  1) listas mestres  2) saldos  3) agendamentos  4) consolidação.
      * Retorna a estrutura pronta para o dashboard + eventuais erros parciais.
@@ -470,7 +499,7 @@ class NiboService
         $suppliers = $customers = $costcenters = $categories = $accounts = [];
         try { $suppliers = self::getAllPaged('/suppliers', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
         try { $customers = self::getAllPaged('/customers', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
-        try { $costcenters = self::getAllPaged('/costcenters', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
+        try { $costcenters = self::getAllPaged('/costcenters', '', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
         try { $categories = self::getAllPaged('/categories', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
 
         // ── Etapa 2: saldos das contas ──────────────────────────────────
