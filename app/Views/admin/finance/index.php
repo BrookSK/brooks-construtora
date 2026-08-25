@@ -205,13 +205,15 @@
             <!-- VENCIDAS: independe do filtro de tempo; só sai quando for paga -->
             <div class="card border-0 shadow-sm mb-3 border-start border-4 border-warning">
                 <div class="card-header bg-warning-subtle d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <span class="fw-semibold text-warning-emphasis">
-                        <i class="bi bi-exclamation-triangle-fill"></i> Contas vencidas (a pagar)
-                        <span class="badge bg-secondary ms-1" id="overdueCount">0</span>
-                    </span>
+                    <div>
+                        <span class="fw-semibold text-warning-emphasis">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Contas vencidas (a pagar)
+                            <span class="badge bg-secondary ms-1" id="overdueCount">0</span>
+                        </span>
+                        <div class="small text-muted">Ignora o filtro de tempo — só some quando for paga.</div>
+                    </div>
                     <div class="d-flex align-items-center gap-2">
                         <input type="search" id="searchOverdue" class="form-control form-control-sm" placeholder="Filtrar por nome…" style="max-width:200px;">
-                        <small class="text-muted d-none d-lg-inline">Ignora o filtro de tempo — só some quando for paga.</small>
                         <span class="badge bg-warning text-dark" id="overdueTotal">R$ 0,00</span>
                     </div>
                 </div>
