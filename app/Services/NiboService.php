@@ -257,8 +257,8 @@ class NiboService
             [
                 'key' => 'costcenters_list', 'group' => 'Centros de Custo', 'label' => 'Listar centros de custo',
                 'method' => 'GET', 'path' => '/costcenters',
-                'description' => 'Lista os centros de custo (OData). Obs.: este endpoint não aceita $orderby=name.',
-                'sample_query' => ['$top' => '50', '$skip' => '0'],
+                'description' => 'Lista os centros de custo. Este endpoint retorna todos sem paginação — não use $orderby nem $skip.',
+                'sample_query' => new \stdClass(),
             ],
             [
                 'key' => 'costcenters_create', 'group' => 'Centros de Custo', 'label' => 'Criar centro de custo',
@@ -298,8 +298,8 @@ class NiboService
             [
                 'key' => 'payments_list', 'group' => 'Pagamentos', 'label' => 'Listar pagamentos realizados (contas pagas)',
                 'method' => 'GET', 'path' => '/payments',
-                'description' => 'Lista pagamentos já realizados (OData). Obs.: use $orderby=dueDate (não há paymentDate).',
-                'sample_query' => ['$orderby' => 'dueDate', '$top' => '20', '$skip' => '0'],
+                'description' => 'Lista pagamentos já realizados (OData). Ordenação por "date" (ex.: date desc). Máx. 100 por página.',
+                'sample_query' => ['$orderby' => 'date desc', '$top' => '20', '$skip' => '0'],
                 'doc' => 'https://nibo.readme.io/reference/pagar-1',
             ],
 
@@ -333,8 +333,8 @@ class NiboService
             [
                 'key' => 'receipts_list', 'group' => 'Recebimentos', 'label' => 'Listar recebimentos realizados (contas recebidas)',
                 'method' => 'GET', 'path' => '/receipts',
-                'description' => 'Lista recebimentos já realizados (OData). Obs.: use $orderby=dueDate (não há receiptDate).',
-                'sample_query' => ['$orderby' => 'dueDate', '$top' => '20', '$skip' => '0'],
+                'description' => 'Lista recebimentos já realizados (OData). Ordenação por "date" (ex.: date desc). Máx. 100 por página.',
+                'sample_query' => ['$orderby' => 'date desc', '$top' => '20', '$skip' => '0'],
                 'doc' => 'https://nibo.readme.io/reference/receber-1',
             ],
 
@@ -408,12 +408,27 @@ class NiboService
     // ═══════════════════════════════════════════════════════════════════
 
     /**
-     * GET paginado com OData. Percorre $skip/$top (limite 500 por página)
-     * até esgotar os registros. Retorna a lista completa de itens.
+     * GET paginado com OData. Percorre $skip/$top até esgotar os registros.
+     * A API do Nibo retorna no máximo 100 registros por requisição, por isso
+     * o pageSize padrão é 100 (conforme documentação oficial). Retorna a lista
+     * completa de itens.
      */
-    public static function getAllPaged(string $path, string $orderBy = 'name', array $extraQuery = [], ?string $token = null, int $pageSize = 500, int $maxPages = 50): array
+    public static function getAllPaged(string $path, string $orderBy = 'name', array $extraQuery = [], ?string $token = null, int $pageSize = 100, int $maxPages = 50): array
     {
         $all = [];
+        // Sem campo de ordenação, o OData do Nibo não permite paginar com $skip
+        // ("Skip is only supported for sorted input"). Nesse caso buscamos uma
+        // única página sem $orderby/$skip (endpoints como /costcenters retornam
+        // tudo sem paginação, respeitando o limite de 100 por requisição).
+        if ($orderBy === '') {
+            $query = array_merge($extraQuery, ['$top' => (string) $pageSize]);
+            $res = self::request('GET', $path, $query, null, $token);
+            if (!$res['ok']) {
+                throw new \RuntimeException("Falha ao ler {$path}: HTTP {$res['status']} " . ($res['error'] ?? ''));
+            }
+            return self::extractItems($res['response']);
+        }
+
         $skip = 0;
         for ($page = 0; $page < $maxPages; $page++) {
             $query = array_merge($extraQuery, [
@@ -424,11 +439,18 @@ class NiboService
             $res = self::request('GET', $path, $query, null, $token);
 
             // Resiliência: alguns endpoints não aceitam o campo de ordenação
-            // pedido (retornam HTTP 500 validation_error do OData). Nesse caso,
-            // tentamos de novo sem o $orderby para não quebrar a sincronização.
-            if (!$res['ok'] && self::isOrderByError($res) && isset($query['$orderby'])) {
-                unset($query['$orderby']);
-                $res = self::request('GET', $path, $query, null, $token);
+            // pedido (HTTP 500 validation_error) OU exigem ordenação para poder
+            // paginar com $skip ("Skip is only supported for sorted input").
+            // Nesses casos refazemos a chamada sem $orderby e sem $skip (uma
+            // única página, sem ordenação) para não quebrar a sincronização.
+            if (!$res['ok'] && self::isPagingOrOrderByError($res)) {
+                $fallbackQuery = $query;
+                unset($fallbackQuery['$orderby'], $fallbackQuery['$skip']);
+                $res = self::request('GET', $path, $fallbackQuery, null, $token);
+                if ($res['ok']) {
+                    // Sem ordenação não dá para paginar com segurança: retorna a página única.
+                    return self::extractItems($res['response']);
+                }
             }
 
             if (!$res['ok']) {
@@ -459,23 +481,28 @@ class NiboService
     }
 
     /**
-     * Detecta o erro típico do OData quando o campo de $orderby não existe
-     * no DTO daquele endpoint (ex.: /costcenters não tem 'name' para ordenar,
-     * /payments e /receipts não têm 'paymentDate'/'receiptDate').
+     * Detecta os erros do OData relacionados a ordenação/paginação:
+     *  - campo de $orderby inexistente no DTO (ex.: /costcenters sem 'name');
+     *  - uso de $skip sem $orderby ("Skip is only supported for sorted input").
+     * Em ambos, a estratégia é refazer sem $orderby e sem $skip.
      */
-    private static function isOrderByError(array $res): bool
+    private static function isPagingOrOrderByError(array $res): bool
     {
         $resp = $res['response'] ?? null;
         $msg = '';
         if (is_array($resp)) {
-            $msg = ($resp['error_description'] ?? '') . ' ' . ($resp['exception']['message'] ?? '');
+            $msg = ($resp['error_description'] ?? '') . ' '
+                . ($resp['exception']['message'] ?? '') . ' '
+                . ($resp['exception']['InnerException']['Message'] ?? '');
         } elseif (is_string($resp)) {
             $msg = $resp;
         }
         $msg = strtolower($msg);
         return strpos($msg, 'could not find a property') !== false
             || strpos($msg, 'orderby') !== false
-            || strpos($msg, 'order by') !== false;
+            || strpos($msg, 'order by') !== false
+            || strpos($msg, 'sorted input') !== false
+            || strpos($msg, "method 'skip'") !== false;
     }
 
     /**
