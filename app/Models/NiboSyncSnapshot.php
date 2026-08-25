@@ -26,6 +26,7 @@ class NiboSyncSnapshot extends Model
             'payload_json' => json_encode([
                 'generated_at' => $data['generated_at'] ?? date('Y-m-d H:i:s'),
                 'masters' => $data['masters'] ?? [],
+                'filters' => $data['filters'] ?? [],
                 'accounts' => $data['accounts'] ?? [],
                 'payables' => $data['payables'] ?? [],
                 'receivables' => $data['receivables'] ?? [],

@@ -126,6 +126,7 @@ class FinanceController extends Controller
             'data' => [
                 'generated_at' => $result['generated_at'],
                 'masters' => $result['masters'],
+                'filters' => $result['filters'] ?? [],
                 'accounts' => $result['accounts'],
                 'payables' => $result['payables'],
                 'receivables' => $result['receivables'],

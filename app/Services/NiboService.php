@@ -538,6 +538,20 @@ class NiboService
         $idxCc  = self::indexById($costcenters);
         $idxCat = self::indexById($categories);
 
+        // Listas normalizadas {id,name} para os filtros da tela (todos os
+        // cadastros vindos da API, mesmo que ainda não apareçam em agendamentos).
+        $normalize = function (array $list): array {
+            $out = [];
+            foreach ($list as $item) {
+                $id = $item['id'] ?? $item['Id'] ?? $item['costCenterId'] ?? $item['categoryId'] ?? null;
+                $name = $item['name'] ?? $item['Name'] ?? $item['description'] ?? '';
+                if ($id === null && $name === '') continue;
+                $out[] = ['id' => $id !== null ? (string) $id : null, 'name' => $name ?: '(sem nome)'];
+            }
+            usort($out, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+            return $out;
+        };
+
         // ── Etapa 3: agendamentos (débito/crédito) ──────────────────────
         $payablesRaw = $receivablesRaw = [];
         try { $payablesRaw = self::getAllPaged('/schedules/debit', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
@@ -561,6 +575,13 @@ class NiboService
                 'customers' => $customers,
                 'costcenters' => $costcenters,
                 'categories' => $categories,
+            ],
+            'filters' => [
+                'suppliers' => $normalize($suppliers),
+                'customers' => $normalize($customers),
+                'costcenters' => $normalize($costcenters),
+                'categories' => $normalize($categories),
+                'contacts' => $normalize(array_merge($suppliers, $customers)),
             ],
             'accounts' => $accounts,
             'payables' => $payables,
@@ -636,9 +657,11 @@ class NiboService
             'due_date' => $dueDate,
             'value' => $value,
             'description' => $s['description'] ?? '',
-            'contact_id' => $contactId,
+            'contact_id' => $contactId !== null ? (string) $contactId : null,
             'contact_name' => $contactName ?: '—',
+            'cost_center_id' => $ccId !== null ? (string) $ccId : null,
             'cost_center' => $ccName ?: '—',
+            'category_id' => $catId !== null ? (string) $catId : null,
             'category' => $catName ?: '—',
             'status' => $status,
             'is_paid' => $isPaid,
