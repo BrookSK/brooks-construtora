@@ -160,6 +160,7 @@
         <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-anual" type="button"><i class="bi bi-calendar3"></i> Anual</button></li>
         <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-contas" type="button"><i class="bi bi-list-columns-reverse"></i> Contas a Pagar e Receber</button></li>
         <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-detalhe" type="button"><i class="bi bi-table"></i> Detalhado</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-diag" type="button"><i class="bi bi-bug"></i> Diagnóstico</button></li>
     </ul>
 
     <div class="tab-content">
@@ -396,6 +397,24 @@
                 </div>
                 <div class="card-footer bg-white small text-muted">
                     O <strong>saldo final</strong> de cada período vira o saldo inicial do próximo. Entradas somam, saídas reduzem.
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ DIAGNÓSTICO (logs de erro) ═══ -->
+        <div class="tab-pane fade" id="tab-diag" role="tabpanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span><i class="bi bi-bug"></i> Log da sincronização (diagnóstico)</span>
+                    <div class="d-flex gap-2">
+                        <button id="btnReloadLogs" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-clockwise"></i> Recarregar</button>
+                        <button id="btnCopyLogs" class="btn btn-sm btn-outline-primary"><i class="bi bi-clipboard"></i> Copiar</button>
+                        <button id="btnClearLogs" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Limpar</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Se a atualização falhar, este log mostra em qual etapa e endpoint ocorreu o erro (mestres, saldo, contas a pagar/receber), com a mensagem retornada pela API do Nibo.</p>
+                    <textarea id="logBox" class="form-control font-monospace" rows="18" readonly style="font-size:.75rem; white-space:pre;"></textarea>
                 </div>
             </div>
         </div>
@@ -930,10 +949,13 @@
                 if (json.synced_at) el('lastSyncLabel').textContent = 'Atualizado em ' + new Date(json.synced_at.replace(' ','T')).toLocaleString('pt-BR');
                 if (json.partial_errors && json.partial_errors.length) showError('Atualizado com avisos: ' + json.partial_errors.join(' · '));
             } else {
-                showError(json.error || 'Não foi possível atualizar. Mantendo a última versão.');
+                let msg = json.error || 'Não foi possível atualizar. Mantendo a última versão.';
+                if (json.detail) msg += ' (' + json.detail + ')';
+                if (json.errors && json.errors.length) msg += ' — ' + json.errors.join(' · ');
+                showError(msg + ' Veja a aba Diagnóstico para detalhes.');
             }
         } catch (e) {
-            showError('Falha de conexão ao atualizar. Mantendo a última versão.');
+            showError('Falha de conexão ao atualizar (a busca pode ter demorado demais). Abra a aba Diagnóstico para ver o log. Detalhe: ' + e.message);
         } finally {
             el('syncStatus').classList.add('d-none'); el('syncStatus').classList.remove('d-flex');
             btn.disabled = false;
@@ -970,6 +992,30 @@
             toggleCustomDates();
             refresh();
         });
+
+        // ── Diagnóstico / logs ────────────────────────────────────────
+        async function loadLogs() {
+            try {
+                const res = await fetch('/admin/finance/logs');
+                const json = await res.json();
+                el('logBox').value = (json.lines && json.lines.length) ? json.lines.join('\n') : (json.message || 'Nenhum log ainda.');
+                el('logBox').scrollTop = el('logBox').scrollHeight;
+            } catch (e) {
+                el('logBox').value = 'Falha ao carregar o log: ' + e.message;
+            }
+        }
+        el('btnReloadLogs').addEventListener('click', loadLogs);
+        el('btnCopyLogs').addEventListener('click', async function () {
+            const t = el('logBox').value;
+            try { await navigator.clipboard.writeText(t); } catch (e) { el('logBox').select(); document.execCommand('copy'); }
+            const o = this.innerHTML; this.innerHTML = '<i class="bi bi-check2"></i> Copiado'; setTimeout(()=>this.innerHTML=o, 1500);
+        });
+        el('btnClearLogs').addEventListener('click', async function () {
+            await fetch('/admin/finance/clear-logs', { method:'POST', headers:{ 'X-Requested-With':'XMLHttpRequest' } });
+            loadLogs();
+        });
+        // Carrega o log ao abrir a aba de diagnóstico
+        document.querySelector('[data-bs-target="#tab-diag"]').addEventListener('shown.bs.tab', loadLogs);
 
         toggleCustomDates();
         loadData();

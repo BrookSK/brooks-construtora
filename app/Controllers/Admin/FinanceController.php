@@ -86,6 +86,9 @@ class FinanceController extends Controller
         @set_time_limit(0);
         @ini_set('memory_limit', '512M');
 
+        self::log('=== INÍCIO SYNC === por ' . (Auth::user()['name'] ?? '?'));
+        $t0 = microtime(true);
+
         // Snapshot anterior (para calcular o "que mudou")
         $prev = NiboSyncSnapshot::latest();
         $prevPayload = $prev ? NiboSyncSnapshot::decodePayload($prev) : null;
@@ -93,17 +96,35 @@ class FinanceController extends Controller
         try {
             $result = NiboService::syncAll();
         } catch (\Throwable $e) {
+            $msg = $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine();
+            self::log('EXCEÇÃO no syncAll: ' . $msg);
+            self::log($e->getTraceAsString());
             // Nunca limpa a tela: devolve erro e o front mantém os dados antigos
             $this->json([
                 'ok' => false,
                 'error' => 'Não foi possível atualizar os dados agora. Mostrando a última versão sincronizada.',
-                'detail' => $e->getMessage(),
+                'detail' => $msg,
             ], 502);
             return;
         }
 
+        $elapsed = round(microtime(true) - $t0, 1);
+        self::log(sprintf(
+            'syncAll concluído em %ss — payables=%d, receivables=%d, accounts=%d, balance=%s, erros=%d',
+            $elapsed,
+            count($result['payables'] ?? []),
+            count($result['receivables'] ?? []),
+            count($result['accounts'] ?? []),
+            $result['totals']['balance'] ?? 0,
+            count($result['errors'] ?? [])
+        ));
+        if (!empty($result['errors'])) {
+            foreach ($result['errors'] as $err) self::log('  erro parcial: ' . $err);
+        }
+
         // Se veio completamente vazio e com erros, não sobrescreve
         if (!$result['ok'] && empty($result['payables']) && empty($result['receivables']) && empty($result['accounts'])) {
+            self::log('Sync retornou vazio com erros — snapshot NÃO sobrescrito.');
             $this->json([
                 'ok' => false,
                 'error' => 'A sincronização falhou (verifique o token/conexão). Mantendo a última versão.',
@@ -114,7 +135,17 @@ class FinanceController extends Controller
 
         // Salva o novo snapshot (o anterior continua no histórico)
         $createdBy = Auth::user()['name'] ?? 'Sistema';
-        NiboSyncSnapshot::store($result, $createdBy);
+        try {
+            NiboSyncSnapshot::store($result, $createdBy);
+            self::log('Snapshot salvo com sucesso.');
+        } catch (\Throwable $e) {
+            self::log('ERRO ao salvar snapshot: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+            $this->json([
+                'ok' => false,
+                'error' => 'Os dados foram lidos, mas houve falha ao salvá-los. Detalhe: ' . $e->getMessage(),
+            ], 500);
+            return;
+        }
 
         // Resumo do que mudou (contagens simples)
         $changes = null;
@@ -155,5 +186,52 @@ class FinanceController extends Controller
             unset($r['totals_json']);
         }
         $this->json(['ok' => true, 'history' => $rows]);
+    }
+
+    /**
+     * Caminho do arquivo de log da sincronização financeira.
+     */
+    private static function logFile(): string
+    {
+        $dir = ROOT_PATH . '/storage/logs';
+        if (!is_dir($dir)) @mkdir($dir, 0775, true);
+        return $dir . '/finance_sync.log';
+    }
+
+    /**
+     * Registra uma linha no log de sincronização (para diagnóstico).
+     */
+    private static function log(string $message): void
+    {
+        $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . PHP_EOL;
+        @file_put_contents(self::logFile(), $line, FILE_APPEND | LOCK_EX);
+        // Também no error_log padrão do PHP/servidor
+        error_log('[finance] ' . $message);
+    }
+
+    /**
+     * Retorna as últimas linhas do log (para exibir na aba de diagnóstico).
+     */
+    public function logs(): void
+    {
+        $file = self::logFile();
+        if (!is_file($file)) {
+            $this->json(['ok' => true, 'lines' => [], 'message' => 'Nenhum log ainda.']);
+            return;
+        }
+        $content = @file_get_contents($file);
+        $lines = $content !== false ? explode(PHP_EOL, trim($content)) : [];
+        // Últimas 200 linhas
+        $lines = array_slice($lines, -200);
+        $this->json(['ok' => true, 'lines' => $lines]);
+    }
+
+    /**
+     * Limpa o arquivo de log.
+     */
+    public function clearLogs(): void
+    {
+        @file_put_contents(self::logFile(), '');
+        $this->json(['ok' => true]);
     }
 }

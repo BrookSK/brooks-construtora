@@ -292,6 +292,8 @@ class Router
             'finance/data' => ['FinanceController', 'data'],
             'finance/sync' => ['FinanceController', 'sync'],
             'finance/history' => ['FinanceController', 'history'],
+            'finance/logs' => ['FinanceController', 'logs'],
+            'finance/clear-logs' => ['FinanceController', 'clearLogs'],
         ];
 
         $path = implode('/', $segments);

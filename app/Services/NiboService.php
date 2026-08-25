@@ -538,27 +538,28 @@ class NiboService
     {
         $token = $token ?: self::token();
         $errors = [];
-
-        // Janela padrão: 12 meses atrás até 12 meses à frente
-        $from = $from ?: date('Y-m-d', strtotime('-12 months'));
-        $to = $to ?: date('Y-m-d', strtotime('+12 months'));
+        $log = fn($m) => error_log('[finance][syncAll] ' . $m);
 
         // ── Etapa 1: listas mestres ─────────────────────────────────────
         $suppliers = $customers = $costcenters = $categories = $accounts = [];
-        try { $suppliers = self::getAllPaged('/suppliers', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
-        try { $customers = self::getAllPaged('/customers', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
-        try { $costcenters = self::getAllPaged('/costcenters', '', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
-        try { $categories = self::getAllPaged('/categories', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
+        $log('etapa 1: mestres');
+        try { $suppliers = self::getAllPaged('/suppliers', 'name', [], $token); } catch (\Throwable $e) { $errors[] = 'suppliers: ' . $e->getMessage(); }
+        try { $customers = self::getAllPaged('/customers', 'name', [], $token); } catch (\Throwable $e) { $errors[] = 'customers: ' . $e->getMessage(); }
+        try { $costcenters = self::getAllPaged('/costcenters', '', [], $token); } catch (\Throwable $e) { $errors[] = 'costcenters: ' . $e->getMessage(); }
+        try { $categories = self::getAllPaged('/categories', 'name', [], $token); } catch (\Throwable $e) { $errors[] = 'categories: ' . $e->getMessage(); }
+        $log(sprintf('mestres: sup=%d cus=%d cc=%d cat=%d', count($suppliers), count($customers), count($costcenters), count($categories)));
 
         // ── Etapa 2: saldos das contas ──────────────────────────────────
         // Endpoint oficial de saldo: /accounts/views/balance (campos: accountId,
         // accountName, balance). Fallback para /accounts se indisponível.
+        $log('etapa 2: saldo');
         try {
             $accounts = self::getAllPaged('/accounts/views/balance', 'accountName', [], $token);
         } catch (\Throwable $e) {
-            $errors[] = $e->getMessage();
-            try { $accounts = self::getAllPaged('/accounts', 'name', [], $token); } catch (\Throwable $e2) { $errors[] = $e2->getMessage(); }
+            $errors[] = 'balance: ' . $e->getMessage();
+            try { $accounts = self::getAllPaged('/accounts', 'name', [], $token); } catch (\Throwable $e2) { $errors[] = 'accounts: ' . $e2->getMessage(); }
         }
+        $log('saldo: contas=' . count($accounts));
 
         // Índices id→nome para enriquecimento
         $idxSup = self::indexById($suppliers);
@@ -587,10 +588,13 @@ class NiboService
         // data é: dueDate ge 2025-12-01T00:00:00Z (sem wrapper datetime).
         $from = $from ?: '2025-12-01';
         $scheduleFilter = ['$filter' => 'dueDate ge ' . $from . 'T00:00:00Z'];
+        $log('etapa 3: agendamentos desde ' . $from);
 
         $payablesRaw = $receivablesRaw = [];
         try { $payablesRaw = self::getAllPaged('/schedules/debit', 'dueDate', $scheduleFilter, $token, 100, 300); } catch (\Throwable $e) { $errors[] = 'debit: ' . $e->getMessage(); }
+        $log('debit: ' . count($payablesRaw));
         try { $receivablesRaw = self::getAllPaged('/schedules/credit', 'dueDate', $scheduleFilter, $token, 100, 300); } catch (\Throwable $e) { $errors[] = 'credit: ' . $e->getMessage(); }
+        $log('credit: ' . count($receivablesRaw));
 
         // ── Etapa 4: consolidação (enriquecer + status) ─────────────────
         $payables = array_map(fn($s) => self::enrichSchedule($s, $idxSup, $idxCc, $idxCat, 'payable'), $payablesRaw);
