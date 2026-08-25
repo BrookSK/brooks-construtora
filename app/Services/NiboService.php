@@ -144,6 +144,13 @@ class NiboService
                 'doc' => 'https://nibo.readme.io/reference/listar-contas',
             ],
             [
+                'key' => 'accounts_balance', 'group' => 'Contas', 'label' => 'Consultar saldo das contas',
+                'method' => 'GET', 'path' => '/accounts/views/balance',
+                'description' => 'Retorna o saldo de cada conta (accountId, accountName, balance). Suporta OData.',
+                'sample_query' => ['$orderby' => 'accountName', '$top' => '20', '$skip' => '0'],
+                'doc' => 'https://nibo.readme.io/reference/consultar-saldo',
+            ],
+            [
                 'key' => 'accounts_update', 'group' => 'Contas', 'label' => 'Atualizar conta bancária',
                 'method' => 'PUT', 'path' => '/accounts/{id}', 'needs_id' => true,
                 'description' => 'Edita uma conta bancária (informe o accountId).',
@@ -530,7 +537,14 @@ class NiboService
         try { $categories = self::getAllPaged('/categories', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
 
         // ── Etapa 2: saldos das contas ──────────────────────────────────
-        try { $accounts = self::getAllPaged('/accounts', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
+        // Endpoint oficial de saldo: /accounts/views/balance (campos: accountId,
+        // accountName, balance). Fallback para /accounts se indisponível.
+        try {
+            $accounts = self::getAllPaged('/accounts/views/balance', 'accountName', [], $token);
+        } catch (\Throwable $e) {
+            $errors[] = $e->getMessage();
+            try { $accounts = self::getAllPaged('/accounts', 'name', [], $token); } catch (\Throwable $e2) { $errors[] = $e2->getMessage(); }
+        }
 
         // Índices id→nome para enriquecimento
         $idxSup = self::indexById($suppliers);
@@ -561,11 +575,19 @@ class NiboService
         $payables = array_map(fn($s) => self::enrichSchedule($s, $idxSup, $idxCc, $idxCat, 'payable'), $payablesRaw);
         $receivables = array_map(fn($s) => self::enrichSchedule($s, $idxCus, $idxCc, $idxCat, 'receivable'), $receivablesRaw);
 
-        // Saldo total
+        // Saldo total (campo oficial: balance; fallbacks para variações)
         $balance = 0.0;
+        $accountsOut = [];
         foreach ($accounts as $a) {
-            $balance += (float) ($a['balance'] ?? $a['currentBalance'] ?? $a['value'] ?? 0);
+            $accBalance = (float) ($a['balance'] ?? $a['currentBalance'] ?? $a['bankBalance'] ?? $a['value'] ?? 0);
+            $balance += $accBalance;
+            $accountsOut[] = [
+                'id' => $a['accountId'] ?? $a['id'] ?? null,
+                'name' => $a['accountName'] ?? $a['name'] ?? '(conta)',
+                'balance' => $accBalance,
+            ];
         }
+        $accounts = $accountsOut;
 
         return [
             'ok' => empty($errors),
@@ -592,6 +614,14 @@ class NiboService
                 'customers' => count($customers),
                 'payables' => count($payables),
                 'receivables' => count($receivables),
+            ],
+            'debug' => [
+                'raw_payables' => count($payablesRaw),
+                'raw_receivables' => count($receivablesRaw),
+                'accounts_count' => count($accounts),
+                'balance' => $balance,
+                'sample_payable_keys' => !empty($payablesRaw) ? array_keys($payablesRaw[0]) : [],
+                'sample_payable' => $payablesRaw[0] ?? null,
             ],
             'errors' => $errors,
         ];
@@ -637,8 +667,17 @@ class NiboService
         $catId = $s['categoryId'] ?? $s['category']['id'] ?? null;
         $catName = $s['category']['name'] ?? ($catId !== null ? ($idxCat[(string) $catId] ?? null) : null);
 
-        $value = (float) ($s['value'] ?? $s['amount'] ?? 0);
-        $dueDate = $s['dueDate'] ?? $s['accrualDate'] ?? null;
+        // Valor: a API varia entre value/amount/openValue/paidValue etc.
+        $value = (float) (
+            $s['value'] ?? $s['amount'] ?? $s['openValue'] ?? $s['paidValue']
+            ?? $s['originalValue'] ?? $s['netValue'] ?? $s['totalValue'] ?? 0
+        );
+
+        // Data de vencimento: o débito (contas a pagar) pode usar nomes
+        // diferentes do crédito. Testamos várias variações.
+        $dueDate = $s['dueDate'] ?? $s['dueDateString'] ?? $s['date'] ?? $s['scheduleDate']
+            ?? $s['expectedDate'] ?? $s['paymentDate'] ?? $s['accrualDate'] ?? $s['competenceDate'] ?? null;
+
         $isPaid = !empty($s['isPaid']) || !empty($s['paid']) || !empty($s['paymentDate']) || !empty($s['isFullyPaid']);
 
         // Status derivado (só leitura): pago / vencido / em aberto

@@ -924,6 +924,7 @@
         try {
             const res = await fetch('/admin/finance/sync', { method:'POST', headers:{ 'X-Requested-With':'XMLHttpRequest' } });
             const json = await res.json();
+            if (json.debug) console.log('[Finance] debug do sync:', json.debug);
             if (json.ok) {
                 applyData(json.data);
                 if (json.synced_at) el('lastSyncLabel').textContent = 'Atualizado em ' + new Date(json.synced_at.replace(' ','T')).toLocaleString('pt-BR');

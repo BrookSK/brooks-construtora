@@ -133,6 +133,7 @@ class FinanceController extends Controller
                 'totals' => $result['totals'],
                 'errors' => $result['errors'],
             ],
+            'debug' => $result['debug'] ?? null,
             'changes' => $changes,
             'partial_errors' => $result['errors'] ?? [],
         ]);
