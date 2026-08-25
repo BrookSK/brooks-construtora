@@ -45,10 +45,19 @@
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
                 <strong><i class="bi bi-lightning-charge"></i> Testar todas as rotas</strong>
-                <div class="text-muted small">Executa automaticamente as rotas de <strong>consulta (GET)</strong> sem parâmetros obrigatórios. Rotas que criam/alteram/excluem (POST/PUT/DELETE) e as que exigem ID não entram no teste em massa — teste-as individualmente.</div>
+                <div class="text-muted small">
+                    Percorre <strong>todas</strong> as rotas. Por padrão executa só as de <strong>consulta (GET)</strong>.
+                    Rotas que exigem ID/parâmetros só são testadas se os campos estiverem preenchidos (senão são <em>puladas</em>).
+                </div>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="includeWrite">
+                    <label class="form-check-label small text-danger" for="includeWrite">
+                        Incluir rotas de escrita (POST/PUT/DELETE) — <strong>cria/altera/exclui dados reais</strong> na sua conta Nibo
+                    </label>
+                </div>
             </div>
             <button type="button" id="runAllBtn" class="btn btn-primary">
-                <i class="bi bi-play-circle"></i> Testar Todas (GET)
+                <i class="bi bi-play-circle"></i> Testar Todas
             </button>
         </div>
         <div id="runAllSummary" class="mt-3 d-none">
@@ -56,6 +65,7 @@
                 <span class="badge bg-secondary" id="sumTotal">0 testadas</span>
                 <span class="badge bg-success" id="sumOk">0 ok</span>
                 <span class="badge bg-danger" id="sumFail">0 falhas</span>
+                <span class="badge bg-warning text-dark" id="sumSkip">0 puladas</span>
             </div>
             <div class="table-responsive">
                 <table class="table table-sm mb-0 align-middle">
@@ -248,32 +258,69 @@
         });
     });
 
-    // Testar todas as rotas seguras (GET sem parâmetros obrigatórios)
+    // Verifica se um endpoint tem todos os campos obrigatórios preenchidos
+    function isReady(btn) {
+        const key = btn.dataset.key;
+        if (btn.dataset.needsid === '1') {
+            const idEl = document.querySelector('.ep-id[data-key="' + key + '"]');
+            if (!idEl || !idEl.value.trim()) return false;
+        }
+        const paramEls = document.querySelectorAll('.ep-param[data-key="' + key + '"]');
+        for (const el of paramEls) { if (!el.value.trim()) return false; }
+        return true;
+    }
+
+    // Testar TODAS as rotas
     const runAllBtn = document.getElementById('runAllBtn');
     if (runAllBtn) {
         runAllBtn.addEventListener('click', async function () {
-            const safeBtns = Array.from(document.querySelectorAll('.ep-test[data-safe="1"]'));
+            const includeWrite = document.getElementById('includeWrite').checked;
+            const allBtns = Array.from(document.querySelectorAll('.ep-test'));
             const summary = document.getElementById('runAllSummary');
             const rows = document.getElementById('runAllRows');
             summary.classList.remove('d-none');
             rows.innerHTML = '';
 
-            let total = 0, okCount = 0, failCount = 0;
+            if (includeWrite && !confirm('ATENÇÃO: incluir rotas de escrita vai CRIAR/ALTERAR/EXCLUIR dados reais na sua conta Nibo (apenas as que tiverem parâmetros preenchidos). Continuar?')) {
+                return;
+            }
+
+            let total = 0, okCount = 0, failCount = 0, skipCount = 0;
             this.disabled = true;
             const original = this.innerHTML;
-            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Testando ' + safeBtns.length + ' rotas...';
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Testando...';
 
-            for (const btn of safeBtns) {
+            for (const btn of allBtns) {
                 const key = btn.dataset.key;
-                const label = btn.closest('.accordion-item').querySelector('.fw-bold').textContent.trim();
-                const path = btn.closest('.accordion-item').querySelector('code').textContent.trim();
+                const method = btn.dataset.method;
+                const isWrite = (method !== 'GET');
+                const item = btn.closest('.accordion-item');
+                const label = item.querySelector('.fw-bold').textContent.trim();
+                const path = item.querySelector('code').textContent.trim();
 
                 const tr = document.createElement('tr');
+                rows.appendChild(tr);
+
+                // Regras de pulo: escrita desabilitada, ou faltam parâmetros
+                let skipReason = '';
+                if (isWrite && !includeWrite) skipReason = 'escrita (desativada)';
+                else if (!isReady(btn)) skipReason = 'requer parâmetro';
+
+                if (skipReason) {
+                    skipCount++; total++;
+                    tr.innerHTML = '<td class="text-center"><i class="bi bi-slash-circle text-warning"></i></td>'
+                        + '<td class="small">' + label + '</td>'
+                        + '<td><code class="small">' + path + '</code> <span class="badge bg-secondary">' + method + '</span></td>'
+                        + '<td class="text-end small text-muted">pulada · ' + skipReason + '</td>';
+                    document.getElementById('sumTotal').textContent = total + ' testadas';
+                    document.getElementById('sumSkip').textContent = skipCount + ' puladas';
+                    continue;
+                }
+
                 tr.innerHTML = '<td class="text-center"><span class="spinner-border spinner-border-sm text-muted"></span></td>'
                     + '<td class="small">' + label + '</td>'
-                    + '<td><code class="small">' + path + '</code></td>'
+                    + '<td><code class="small">' + path + '</code> <span class="badge bg-secondary">' + method + '</span></td>'
                     + '<td class="text-end small">...</td>';
-                rows.appendChild(tr);
 
                 const res = await runTest(key);
                 total++;
