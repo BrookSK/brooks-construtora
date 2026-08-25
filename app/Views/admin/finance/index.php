@@ -51,12 +51,12 @@
                         <option value="7">Próximos 7 dias</option>
                         <option value="15">Próximos 15 dias</option>
                         <option value="20">Próximos 20 dias</option>
-                        <option value="30" selected>Próximos 30 dias</option>
+                        <option value="30">Próximos 30 dias</option>
                         <option value="60">Próximos 60 dias</option>
                         <option value="90">Próximos 90 dias</option>
                         <option value="this-month">Este mês</option>
-                        <option value="this-year">Este ano</option>
-                        <option value="all">Tudo</option>
+                        <option value="this-year" selected>Este ano</option>
+                        <option value="all">Tudo (2024 até hoje)</option>
                         <option value="custom">Datas personalizadas</option>
                     </select>
                 </div>
@@ -964,7 +964,7 @@
         el('searchRec').addEventListener('input', () => renderFullList('fullRecList', 'ctaRecListTotal', filteredReceivables(), el('searchRec').value));
 
         el('btnClearFilters').addEventListener('click', function () {
-            el('filterPeriod').value = '30';
+            el('filterPeriod').value = 'this-year';
             el('filterStart').value = ''; el('filterEnd').value = '';
             el('filterContact').value = ''; el('filterCostCenter').value = ''; el('filterStatus').value = '';
             toggleCustomDates();

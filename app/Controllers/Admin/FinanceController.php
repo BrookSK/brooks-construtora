@@ -81,6 +81,11 @@ class FinanceController extends Controller
             return;
         }
 
+        // A consolidação percorre milhares de lançamentos (muitas chamadas à
+        // API), então liberamos tempo/memória para concluir a sincronização.
+        @set_time_limit(0);
+        @ini_set('memory_limit', '512M');
+
         // Snapshot anterior (para calcular o "que mudou")
         $prev = NiboSyncSnapshot::latest();
         $prevPayload = $prev ? NiboSyncSnapshot::decodePayload($prev) : null;

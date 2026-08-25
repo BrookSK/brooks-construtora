@@ -581,18 +581,13 @@ class NiboService
         };
 
         // ── Etapa 3: agendamentos (débito/crédito) ──────────────────────
-        // Alguns ambientes retornam vazio em /schedules/debit e mantêm os
-        // lançamentos em /schedules/debit/opened. Buscamos o principal e, se
-        // vier vazio, complementamos com os "em aberto".
+        // TODOS os lançamentos (pagos, vencidos, agendados e em aberto).
+        // /schedules/debit e /schedules/credit trazem o histórico completo.
+        // Paginamos por completo (100 por página) e consolidamos — são
+        // milhares de itens, então usamos teto de páginas alto.
         $payablesRaw = $receivablesRaw = [];
-        try { $payablesRaw = self::getAllPaged('/schedules/debit', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = 'debit: ' . $e->getMessage(); }
-        if (empty($payablesRaw)) {
-            try { $payablesRaw = self::getAllPaged('/schedules/debit/opened', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = 'debit/opened: ' . $e->getMessage(); }
-        }
-        try { $receivablesRaw = self::getAllPaged('/schedules/credit', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = 'credit: ' . $e->getMessage(); }
-        if (empty($receivablesRaw)) {
-            try { $receivablesRaw = self::getAllPaged('/schedules/credit/opened', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = 'credit/opened: ' . $e->getMessage(); }
-        }
+        try { $payablesRaw = self::getAllPaged('/schedules/debit', 'dueDate', [], $token, 100, 1000); } catch (\Throwable $e) { $errors[] = 'debit: ' . $e->getMessage(); }
+        try { $receivablesRaw = self::getAllPaged('/schedules/credit', 'dueDate', [], $token, 100, 1000); } catch (\Throwable $e) { $errors[] = 'credit: ' . $e->getMessage(); }
 
         // ── Etapa 4: consolidação (enriquecer + status) ─────────────────
         $payables = array_map(fn($s) => self::enrichSchedule($s, $idxSup, $idxCc, $idxCat, 'payable'), $payablesRaw);
@@ -678,24 +673,28 @@ class NiboService
         }
 
         $ccId = $s['costCenterId'] ?? $s['costCenter']['id'] ?? null;
-        $ccName = $s['costCenter']['name'] ?? ($ccId !== null ? ($idxCc[(string) $ccId] ?? null) : null);
+        $ccName = $s['costCenter']['name'] ?? $s['costCenter']['description'] ?? ($ccId !== null ? ($idxCc[(string) $ccId] ?? null) : null);
         // Alguns retornos trazem rateio de centros de custo em array
         if (!$ccName && !empty($s['costCenters']) && is_array($s['costCenters'])) {
             $first = $s['costCenters'][0] ?? null;
             if ($first) {
                 $fid = $first['costCenterId'] ?? $first['id'] ?? null;
-                $ccName = $first['name'] ?? ($fid !== null ? ($idxCc[(string) $fid] ?? null) : null);
+                if (!$ccId && $fid) $ccId = $fid;
+                $ccName = $first['costCenterDescription'] ?? $first['name'] ?? ($fid !== null ? ($idxCc[(string) $fid] ?? null) : null);
             }
         }
 
         $catId = $s['categoryId'] ?? $s['category']['id'] ?? null;
         $catName = $s['category']['name'] ?? ($catId !== null ? ($idxCat[(string) $catId] ?? null) : null);
 
-        // Valor: a API varia entre value/amount/openValue/paidValue etc.
-        $value = (float) (
-            $s['value'] ?? $s['amount'] ?? $s['openValue'] ?? $s['paidValue']
-            ?? $s['originalValue'] ?? $s['netValue'] ?? $s['totalValue'] ?? 0
-        );
+        // Valor total do lançamento (sempre positivo). O débito traz "value"
+        // positivo e "paidValue" negativo; usamos o valor bruto do lançamento.
+        $value = abs((float) (
+            $s['value'] ?? $s['amount'] ?? $s['originalValue']
+            ?? $s['netValue'] ?? $s['totalValue'] ?? 0
+        ));
+        // Valor ainda em aberto (0 quando já pago)
+        $openValue = isset($s['openValue']) ? abs((float) $s['openValue']) : null;
 
         // Data de vencimento: o débito (contas a pagar) pode usar nomes
         // diferentes do crédito. Testamos várias variações.
@@ -719,6 +718,7 @@ class NiboService
             'type' => $type,
             'due_date' => $dueDate,
             'value' => $value,
+            'open_value' => $openValue,
             'description' => $s['description'] ?? '',
             'contact_id' => $contactId !== null ? (string) $contactId : null,
             'contact_name' => $contactName ?: '—',
