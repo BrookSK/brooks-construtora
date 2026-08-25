@@ -203,10 +203,10 @@
         <div class="tab-pane fade show active" id="tab-resumo" role="tabpanel">
 
             <!-- VENCIDAS: independe do filtro de tempo; só sai quando for paga -->
-            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-warning">
-                <div class="card-header bg-warning-subtle d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="card border-0 shadow-sm mb-3" style="border-left:4px solid #fd7e14 !important;">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2" style="background-color:#fff3e6;">
                     <div>
-                        <span class="fw-semibold text-warning-emphasis">
+                        <span class="fw-semibold" style="color:#c05600;">
                             <i class="bi bi-exclamation-triangle-fill"></i> Contas vencidas (a pagar)
                             <span class="badge bg-secondary ms-1" id="overdueCount">0</span>
                         </span>
@@ -214,7 +214,7 @@
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <input type="search" id="searchOverdue" class="form-control form-control-sm" placeholder="Filtrar por nome…" style="max-width:200px;">
-                        <span class="badge bg-warning text-dark" id="overdueTotal">R$ 0,00</span>
+                        <span class="badge text-white" id="overdueTotal" style="background-color:#fd7e14;">R$ 0,00</span>
                     </div>
                 </div>
                 <div class="table-responsive" style="max-height:280px;">
@@ -762,7 +762,7 @@
                 + '<td>' + esc(r.contact_name) + '</td>'
                 + '<td style="min-width:220px; white-space:normal; word-break:break-word;">' + esc(r.description) + '</td>'
                 + '<td>' + esc(r.cost_center) + '</td>'
-                + '<td class="text-end fw-semibold text-danger">' + fmtMoneyFull(r.value) + '</td></tr>';
+                + '<td class="text-end fw-semibold" style="color:#c05600;">' + fmtMoneyFull(r.value) + '</td></tr>';
         }).join('');
     }
 
