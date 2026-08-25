@@ -1305,17 +1305,57 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         setTimeout(() => box.classList.add('d-none'), 9000);
     }
 
-    async function loadData() {
+    // ── Cache no navegador (localStorage) por empresa ─────────────────
+    // A tela carrega instantâneo do cache; só busca do servidor quando não
+    // houver cache ou quando o usuário clicar em Atualizar.
+    const CACHE_PREFIX = 'finance_cache_v1_';
+    function cacheKey(company) { return CACHE_PREFIX + company; }
+    function saveCache(company, data, syncedAt) {
+        try {
+            localStorage.setItem(cacheKey(company), JSON.stringify({ data, synced_at: syncedAt, cached_at: Date.now() }));
+        } catch (e) { /* quota excedida: ignora */ }
+    }
+    function readCache(company) {
+        try {
+            const raw = localStorage.getItem(cacheKey(company));
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) { return null; }
+    }
+    function clearCache(company) {
+        try { localStorage.removeItem(cacheKey(company)); } catch (e) {}
+    }
+    function setLastSyncLabel(syncedAt, fromCache) {
+        if (syncedAt) {
+            el('lastSyncLabel').textContent = (fromCache ? 'Em cache · ' : '') + 'Atualizado em '
+                + new Date(String(syncedAt).replace(' ','T')).toLocaleString('pt-BR');
+        } else {
+            el('lastSyncLabel').textContent = 'Nunca atualizado';
+        }
+    }
+
+    // Carrega os dados: usa o CACHE primeiro (instantâneo). Só vai ao servidor
+    // se não houver cache para a empresa. Passar force=true ignora o cache.
+    async function loadData(force) {
         el('dashboard').classList.add('d-none');
         el('emptyState').classList.add('d-none');
+
+        if (!force) {
+            const cached = readCache(currentCompany);
+            if (cached && cached.data) {
+                applyData(cached.data);
+                setLastSyncLabel(cached.synced_at, true);
+                return;
+            }
+        }
+
+        el('lastSyncLabel').textContent = 'Carregando…';
         try {
             const res = await fetch('/admin/finance/data?company=' + encodeURIComponent(currentCompany));
             const json = await res.json();
             if (json.ok && json.has_data) {
                 applyData(json.data);
-                el('lastSyncLabel').textContent = json.synced_at
-                    ? 'Atualizado em ' + new Date(String(json.synced_at).replace(' ','T')).toLocaleString('pt-BR')
-                    : 'Sem dados';
+                saveCache(currentCompany, json.data, json.synced_at);
+                setLastSyncLabel(json.synced_at, false);
             } else {
                 el('emptyState').classList.remove('d-none');
                 el('lastSyncLabel').textContent = 'Nunca atualizado';
@@ -1446,12 +1486,18 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
             if (!fin.ok) throw new Error(fin.error || 'Falha ao finalizar.');
 
             setProgress(100, 'concluído');
+            // Atualiza o cache da empresa sincronizada
+            saveCache(co, fin.data, fin.synced_at);
+            // A consolidada depende das duas empresas: invalida o cache dela
+            clearCache('completo');
+
             // Só aplica na tela se o usuário ainda estiver na mesma empresa
-            if (currentCompany === co || currentCompany === 'completo') {
-                if (currentCompany === 'completo') { loadData(); }
-                else { applyData(fin.data); }
+            if (currentCompany === co) {
+                applyData(fin.data);
+                setLastSyncLabel(fin.synced_at, false);
+            } else if (currentCompany === 'completo') {
+                loadData(true); // recarrega consolidado do servidor
             }
-            if (fin.synced_at) el('lastSyncLabel').textContent = 'Atualizado em ' + new Date(fin.synced_at.replace(' ','T')).toLocaleString('pt-BR');
             setSyncStatus('Concluído!');
             setTimeout(() => { el('syncStatus').classList.add('d-none'); }, 1200);
         } catch (e) {
