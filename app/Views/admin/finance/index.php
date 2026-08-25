@@ -504,6 +504,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
+                <div id="drillHistory" class="d-none"></div>
                 <div class="d-flex flex-wrap gap-2 mb-2" id="drillSummary"></div>
                 <div class="mb-2">
                     <input type="search" id="drillSearch" class="form-control form-control-sm" placeholder="Buscar por fornecedor/cliente, descrição, centro de custo…">
@@ -542,6 +543,9 @@
 .finance-flow .row-detail td:first-child { padding-left:1.25rem; font-weight:400; color:#444; }
 .finance-flow .balance-row td { background:#fff3cd; font-weight:700; }
 .finance-flow .zero { color:#bbb; }
+/* Linhas com data postergada — fundo roxo claro (cobre o bg das células do Bootstrap) */
+tr.row-postponed > td { background-color:#efe6fb !important; }
+tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
 </style>
 
 <script>
@@ -783,14 +787,17 @@
             // Dias vencidos SEMPRE pela data de VENCIMENTO (fixa)
             const dias = venc ? Math.round((today - venc) / 86400000) : 0;
             const changed = !!r.date_changed;
+            const nChanges = (r.date_history || []).length;
             // Previsto inicial e postergado (previsto atual)
             const previstoInicial = r.original_forecast_date || r.forecast_date || r.due_date;
             const postergado = changed
-                ? dateLabel(r.forecast_date) + ' <i class="bi bi-arrow-repeat" style="color:#6f42c1;" title="Previsto postergado"></i>'
+                ? dateLabel(r.forecast_date)
+                    + ' <i class="bi bi-arrow-repeat" style="color:#6f42c1;" title="Previsto postergado"></i>'
+                    + ' <span class="badge" style="background-color:#6f42c1;" title="Postergado ' + nChanges + ' vez(es)">' + nChanges + 'x</span>'
                 : '<span class="text-muted">—</span>';
-            const rowStyle = changed ? ' style="background-color:#efe6fb; cursor:pointer;"' : ' style="cursor:pointer;"';
+            const rowClass = 'overdue-row' + (changed ? ' row-postponed' : '');
             const valColor = changed ? '#6f42c1' : '#c05600';
-            return '<tr class="overdue-row" data-id="' + esc(r.id||'') + '"' + rowStyle + '>'
+            return '<tr class="' + rowClass + '" data-id="' + esc(r.id||'') + '" style="cursor:pointer;">'
                 + '<td class="text-nowrap">' + dateLabel(r.due_date) + '</td>'
                 + '<td class="text-nowrap">' + dateLabel(previstoInicial) + '</td>'
                 + '<td class="text-nowrap">' + postergado + '</td>'
@@ -810,9 +817,9 @@
         if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Nada no período.</td></tr>'; return; }
         tb.innerHTML = rows.map(r => {
             const changed = !!r.date_changed;
-            const rowStyle = changed ? ' style="background-color:#efe6fb;"' : '';
+            const rowClass = changed ? ' class="row-postponed"' : '';
             const mark = changed ? ' <i class="bi bi-arrow-repeat" style="color:#6f42c1;" title="Data postergada"></i>' : '';
-            return '<tr' + rowStyle + '><td>' + dateLabel(r.due_date) + mark + '</td>'
+            return '<tr' + rowClass + '><td>' + dateLabel(r.due_date) + mark + '</td>'
                 + '<td>' + esc(r.contact_name && r.contact_name !== '—' ? r.contact_name : (r.description||'—')) + '</td>'
                 + '<td class="text-end fw-semibold ' + valClass + '">' + fmtMoneyFull(r.value) + '</td>'
                 + '<td>' + statusBadge(r.status) + '</td></tr>';
@@ -842,9 +849,45 @@
     function openDrill(title, items) {
         drillItems = items.slice().sort((a,b) => (parseDate(a.due_date)||0) - (parseDate(b.due_date)||0));
         el('drillTitle').innerHTML = '<i class="bi bi-list-ul"></i> ' + esc(title);
+
+        // Se for um único item com histórico de postergação, mostra um painel
+        // de rastreabilidade em destaque no topo do modal.
+        const box = el('drillHistory');
+        if (items.length === 1 && (items[0].date_history || []).length) {
+            box.innerHTML = historyPanel(items[0]);
+            box.classList.remove('d-none');
+        } else {
+            box.innerHTML = '';
+            box.classList.add('d-none');
+        }
+
         renderDrill('');
         if (!drillModal) drillModal = new bootstrap.Modal(el('drillModal'));
         drillModal.show();
+    }
+
+    // Painel de rastreabilidade das mudanças de data (previsto para)
+    function historyPanel(r) {
+        const hist = r.date_history || [];
+        const rows = hist.map((h, i) => {
+            const from = h.from ? new Date(h.from+'T00:00:00').toLocaleDateString('pt-BR') : '?';
+            const to = h.to ? new Date(h.to+'T00:00:00').toLocaleDateString('pt-BR') : '?';
+            const at = h.at ? new Date(String(h.at).replace(' ','T')).toLocaleString('pt-BR') : '';
+            return '<tr><td class="text-muted">' + (i+1) + 'ª</td>'
+                + '<td>' + from + '</td>'
+                + '<td><i class="bi bi-arrow-right-short"></i></td>'
+                + '<td class="fw-semibold">' + to + '</td>'
+                + '<td class="text-muted small">' + at + '</td></tr>';
+        }).join('');
+        return '<div class="alert" style="background:#efe6fb; border:1px solid #d6c2f0;">'
+            + '<div class="fw-semibold mb-2" style="color:#6f42c1;">'
+            + '<i class="bi bi-clock-history"></i> Histórico de postergações — ' + hist.length + 'x'
+            + '</div>'
+            + '<div class="small mb-2">Vencimento (fixo): <strong>' + dateLabel(r.due_date).replace(/<[^>]+>/g,'') + '</strong>'
+            + ' · Previsto inicial: <strong>' + (r.original_forecast_date ? new Date(r.original_forecast_date.slice(0,10)+'T00:00:00').toLocaleDateString('pt-BR') : '—') + '</strong>'
+            + ' · Previsto atual: <strong style="color:#6f42c1;">' + (r.forecast_date ? new Date(r.forecast_date.slice(0,10)+'T00:00:00').toLocaleDateString('pt-BR') : '—') + '</strong></div>'
+            + '<table class="table table-sm mb-0"><thead><tr class="small text-muted"><th>#</th><th>De</th><th></th><th>Para</th><th>Quando</th></tr></thead><tbody>'
+            + rows + '</tbody></table></div>';
     }
     // Monta o texto do histórico de mudanças de data de um lançamento
     function dateHistoryHtml(r) {
@@ -882,12 +925,12 @@
                 ? '<span class="badge bg-danger-subtle text-danger">Saída</span>'
                 : '<span class="badge bg-success-subtle text-success">Entrada</span>';
             const changed = !!r.date_changed;
-            const rowStyle = changed ? ' style="background-color:#efe6fb;"' : '';
+            const rowClass = changed ? ' class="row-postponed"' : '';
             const curForecast = r.forecast_date || r.due_date;
             const dateCell = changed
                 ? '<span class="text-muted text-decoration-line-through">' + dateLabel(r.original_forecast_date) + '</span> <i class="bi bi-arrow-right-short" style="color:#6f42c1;"></i> <strong style="color:#6f42c1;">' + dateLabel(curForecast) + '</strong>'
                 : dateLabel(curForecast);
-            return '<tr' + rowStyle + '><td class="text-nowrap">' + dateCell + '</td>'
+            return '<tr' + rowClass + '><td class="text-nowrap">' + dateCell + '</td>'
                 + '<td>' + tipo + '</td>'
                 + '<td>' + esc(r.contact_name) + '</td>'
                 + '<td style="min-width:260px; white-space:normal; word-break:break-word;">' + esc(r.description) + dateHistoryHtml(r) + '</td>'
@@ -1103,12 +1146,12 @@
         if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhuma conta encontrada.</td></tr>'; return; }
         tb.innerHTML = rows.map(r => {
             const changed = !!r.date_changed;
-            const rowStyle = changed ? ' style="background-color:#efe6fb;"' : '';
+            const rowClass = changed ? ' class="row-postponed"' : '';
             const curForecast = r.forecast_date || r.due_date;
             const dateCell = changed
                 ? '<span class="text-muted text-decoration-line-through">' + dateLabel(r.original_forecast_date) + '</span> <i class="bi bi-arrow-right-short" style="color:#6f42c1;"></i> <strong style="color:#6f42c1;">' + dateLabel(curForecast) + '</strong>'
                 : dateLabel(curForecast);
-            return '<tr' + rowStyle + '><td class="text-nowrap">' + dateCell + '</td>'
+            return '<tr' + rowClass + '><td class="text-nowrap">' + dateCell + '</td>'
                 + '<td>' + esc(r.contact_name) + '</td>'
                 + '<td class="text-truncate" style="max-width:240px;">' + esc(r.description) + '</td>'
                 + '<td>' + esc(r.cost_center) + '</td>'
