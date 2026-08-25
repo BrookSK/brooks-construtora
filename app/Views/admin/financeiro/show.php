@@ -141,14 +141,22 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
 </div>
 
 <!-- Tabela: Pedidos -->
-<div class="card mb-3">
-    <div class="card-header"><h6 class="mb-0">Pedidos da Obra</h6></div>
+<div class="card mb-3 dash-section" data-limit="8">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h6 class="mb-0">Pedidos da Obra</h6>
+        <?php if (!empty($orders)): ?>
+        <div class="input-group input-group-sm" style="max-width:260px;">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control dash-search" placeholder="Buscar pedido, fornecedor...">
+        </div>
+        <?php endif; ?>
+    </div>
     <div class="card-body p-0">
         <?php if (empty($orders)): ?>
             <p class="text-muted text-center py-4 mb-0">Nenhum pedido vinculado a esta obra.</p>
         <?php else: ?>
         <div class="table-responsive">
-            <table class="table table-hover table-sm mb-0 align-middle">
+            <table class="table table-hover table-sm mb-0 align-middle dash-table">
                 <thead class="table-light">
                     <tr>
                         <th>Código</th><th>Fornecedor</th><th class="text-center">Status</th>
@@ -156,8 +164,8 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($orders as $i => $o): ?>
-                    <tr<?= $i >= 8 ? ' class="order-row-extra" style="display:none;"' : '' ?>>
+                    <?php foreach ($orders as $o): ?>
+                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($o['code'] ?? '') . ' ' . ($o['supplier_name'] ?? '') . ' ' . ($o['status'] ?? ''))) ?>">
                         <td><a href="/admin/orders/show/<?= (int) $o['id'] ?>" class="text-decoration-none"><?= htmlspecialchars($o['code'] ?? ('#' . $o['id'])) ?></a></td>
                         <td><?= htmlspecialchars($o['supplier_name'] ?? '—') ?></td>
                         <td class="text-center"><span class="badge bg-secondary"><?= htmlspecialchars($o['status'] ?? '') ?></span></td>
@@ -166,30 +174,36 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                         <td class="text-end text-success"><?= $fmtMoney($o['paid'] ?? 0) ?></td>
                     </tr>
                     <?php endforeach; ?>
+                    <tr class="dash-no-results" style="display:none;"><td colspan="6" class="text-center text-muted py-3">Nenhum resultado para a busca.</td></tr>
                 </tbody>
             </table>
         </div>
-        <?php if (count($orders) > 8): ?>
-        <div class="text-center py-2 border-top">
-            <button type="button" class="btn btn-sm btn-outline-primary" id="ordersShowMoreBtn"
-                    onclick="document.querySelectorAll('.order-row-extra').forEach(function(r){r.style.display='';}); this.parentNode.style.display='none';">
-                <i class="bi bi-chevron-down"></i> Ver mais (<?= count($orders) - 8 ?>)
+        <div class="text-center py-2 border-top dash-more-wrap" style="display:none;">
+            <button type="button" class="btn btn-sm btn-outline-primary dash-more-btn">
+                <i class="bi bi-chevron-down"></i> Ver mais
             </button>
         </div>
-        <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>
 
 <!-- Tabela: Materiais -->
-<div class="card mb-3">
-    <div class="card-header"><h6 class="mb-0">Materiais da Obra</h6></div>
+<div class="card mb-3 dash-section" data-limit="8">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h6 class="mb-0">Materiais da Obra</h6>
+        <?php if (!empty($materials)): ?>
+        <div class="input-group input-group-sm" style="max-width:260px;">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control dash-search" placeholder="Buscar material...">
+        </div>
+        <?php endif; ?>
+    </div>
     <div class="card-body p-0">
         <?php if (empty($materials)): ?>
             <p class="text-muted text-center py-4 mb-0">Nenhum material registrado nos pedidos desta obra.</p>
         <?php else: ?>
         <div class="table-responsive">
-            <table class="table table-hover table-sm mb-0 align-middle">
+            <table class="table table-hover table-sm mb-0 align-middle dash-table">
                 <thead class="table-light">
                     <tr>
                         <th>Material</th><th class="text-center">Quantidade</th>
@@ -198,29 +212,43 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 </thead>
                 <tbody>
                     <?php foreach ($materials as $m): ?>
-                    <tr>
+                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower($m['material_name'] ?? '')) ?>">
                         <td><?= htmlspecialchars($m['material_name'] ?? '—') ?></td>
                         <td class="text-center"><?= $fmtQty($m['quantity'] ?? 0) ?></td>
                         <td class="text-end"><?= !empty($m['unit_price']) ? $fmtMoney($m['unit_price']) : '<span class="text-muted">Não informado</span>' ?></td>
                         <td class="text-end"><?= !empty($m['total_price']) ? $fmtMoney($m['total_price']) : '<span class="text-muted">Não informado</span>' ?></td>
                     </tr>
                     <?php endforeach; ?>
+                    <tr class="dash-no-results" style="display:none;"><td colspan="4" class="text-center text-muted py-3">Nenhum resultado para a busca.</td></tr>
                 </tbody>
             </table>
+        </div>
+        <div class="text-center py-2 border-top dash-more-wrap" style="display:none;">
+            <button type="button" class="btn btn-sm btn-outline-primary dash-more-btn">
+                <i class="bi bi-chevron-down"></i> Ver mais
+            </button>
         </div>
         <?php endif; ?>
     </div>
 </div>
 
 <!-- Tabela: Fornecedores -->
-<div class="card mb-3">
-    <div class="card-header"><h6 class="mb-0">Fornecedores da Obra</h6></div>
+<div class="card mb-3 dash-section" data-limit="8">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h6 class="mb-0">Fornecedores da Obra</h6>
+        <?php if (!empty($suppliers)): ?>
+        <div class="input-group input-group-sm" style="max-width:260px;">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control dash-search" placeholder="Buscar fornecedor, CNPJ...">
+        </div>
+        <?php endif; ?>
+    </div>
     <div class="card-body p-0">
         <?php if (empty($suppliers)): ?>
             <p class="text-muted text-center py-4 mb-0">Nenhum fornecedor relacionado aos pedidos desta obra.</p>
         <?php else: ?>
         <div class="table-responsive">
-            <table class="table table-hover table-sm mb-0 align-middle">
+            <table class="table table-hover table-sm mb-0 align-middle dash-table">
                 <thead class="table-light">
                     <tr>
                         <th>Fornecedor</th><th>CNPJ</th>
@@ -229,15 +257,21 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 </thead>
                 <tbody>
                     <?php foreach ($suppliers as $sup): ?>
-                    <tr>
+                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($sup['supplier_name'] ?? '') . ' ' . ($sup['cnpj'] ?? ''))) ?>">
                         <td><?= htmlspecialchars($sup['supplier_name'] ?? '—') ?></td>
                         <td><?= htmlspecialchars($sup['cnpj'] ?? '—') ?></td>
                         <td class="text-center"><?= (int) ($sup['orders_count'] ?? 0) ?></td>
                         <td class="text-end"><?= $fmtMoney($sup['approved_total'] ?? 0) ?></td>
                     </tr>
                     <?php endforeach; ?>
+                    <tr class="dash-no-results" style="display:none;"><td colspan="4" class="text-center text-muted py-3">Nenhum resultado para a busca.</td></tr>
                 </tbody>
             </table>
+        </div>
+        <div class="text-center py-2 border-top dash-more-wrap" style="display:none;">
+            <button type="button" class="btn btn-sm btn-outline-primary dash-more-btn">
+                <i class="bi bi-chevron-down"></i> Ver mais
+            </button>
         </div>
         <?php endif; ?>
     </div>
@@ -283,14 +317,22 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
 </div>
 
 <!-- Tabela: Estoque -->
-<div class="card mb-4">
-    <div class="card-header"><h6 class="mb-0">Estoque da Obra</h6></div>
+<div class="card mb-4 dash-section" data-limit="8">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h6 class="mb-0">Estoque da Obra</h6>
+        <?php if (!empty($stock)): ?>
+        <div class="input-group input-group-sm" style="max-width:260px;">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control dash-search" placeholder="Buscar material, depósito...">
+        </div>
+        <?php endif; ?>
+    </div>
     <div class="card-body p-0">
         <?php if (empty($stock)): ?>
             <p class="text-muted text-center py-4 mb-0">Nenhum item de estoque vinculado a esta obra.</p>
         <?php else: ?>
         <div class="table-responsive">
-            <table class="table table-hover table-sm mb-0 align-middle">
+            <table class="table table-hover table-sm mb-0 align-middle dash-table">
                 <thead class="table-light">
                     <tr>
                         <th>Material</th><th>Depósito</th><th class="text-center">Qtd</th>
@@ -299,7 +341,7 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 </thead>
                 <tbody>
                     <?php foreach ($stock as $it): ?>
-                    <tr>
+                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($it['material_name'] ?? '') . ' ' . ($it['location_name'] ?? ''))) ?>">
                         <td><?= htmlspecialchars($it['material_name'] ?? '—') ?></td>
                         <td><?= htmlspecialchars($it['location_name'] ?? '—') ?></td>
                         <td class="text-center"><?= $fmtQty($it['quantity'] ?? 0) ?></td>
@@ -307,12 +349,74 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                         <td class="text-end"><?= $fmtMoney($it['total_value'] ?? 0) ?></td>
                     </tr>
                     <?php endforeach; ?>
+                    <tr class="dash-no-results" style="display:none;"><td colspan="5" class="text-center text-muted py-3">Nenhum resultado para a busca.</td></tr>
                 </tbody>
             </table>
+        </div>
+        <div class="text-center py-2 border-top dash-more-wrap" style="display:none;">
+            <button type="button" class="btn btn-sm btn-outline-primary dash-more-btn">
+                <i class="bi bi-chevron-down"></i> Ver mais
+            </button>
         </div>
         <?php endif; ?>
     </div>
 </div>
+
+<script>
+// ===== Busca + "Ver mais" por seção (Pedidos, Materiais, Fornecedores, Estoque) =====
+(function () {
+    document.querySelectorAll('.dash-section').forEach(function (section) {
+        const limit    = parseInt(section.getAttribute('data-limit') || '0', 10);
+        const rows     = Array.prototype.slice.call(section.querySelectorAll('.dash-row'));
+        const searchEl = section.querySelector('.dash-search');
+        const moreWrap = section.querySelector('.dash-more-wrap');
+        const moreBtn  = section.querySelector('.dash-more-btn');
+        const noResult = section.querySelector('.dash-no-results');
+        let expanded   = false;
+
+        // Renderiza conforme busca + estado de expansão.
+        function render() {
+            const term = (searchEl && searchEl.value ? searchEl.value : '').toLowerCase().trim();
+            const searching = term !== '';
+            let matches = 0, shown = 0;
+
+            rows.forEach(function (row) {
+                const hay = row.getAttribute('data-search') || '';
+                const match = !term || hay.indexOf(term) !== -1;
+                if (!match) { row.style.display = 'none'; return; }
+                matches++;
+                // Durante a busca, mostra todos os que casam (ignora limite).
+                if (searching || expanded || limit <= 0 || shown < limit) {
+                    row.style.display = '';
+                    shown++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (noResult) noResult.style.display = matches === 0 ? '' : 'none';
+
+            // Botão "Ver mais": só quando não está buscando, há limite e há excedente.
+            if (moreWrap && moreBtn) {
+                if (!searching && !expanded && limit > 0 && matches > limit) {
+                    moreWrap.style.display = '';
+                    moreBtn.innerHTML = '<i class="bi bi-chevron-down"></i> Ver mais (' + (matches - limit) + ')';
+                } else {
+                    moreWrap.style.display = 'none';
+                }
+            }
+        }
+
+        if (moreBtn) {
+            moreBtn.addEventListener('click', function () { expanded = true; render(); });
+        }
+        if (searchEl) {
+            searchEl.addEventListener('input', render);
+        }
+        render();
+    });
+})();
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
