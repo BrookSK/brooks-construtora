@@ -56,7 +56,7 @@
                         <option value="90">Próximos 90 dias</option>
                         <option value="this-month">Este mês</option>
                         <option value="this-year" selected>Este ano</option>
-                        <option value="all">Tudo (2024 até hoje)</option>
+                        <option value="all">Tudo (desde dez/2025)</option>
                         <option value="custom">Datas personalizadas</option>
                     </select>
                 </div>

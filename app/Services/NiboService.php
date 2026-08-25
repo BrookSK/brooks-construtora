@@ -581,13 +581,16 @@ class NiboService
         };
 
         // ── Etapa 3: agendamentos (débito/crédito) ──────────────────────
-        // TODOS os lançamentos (pagos, vencidos, agendados e em aberto).
-        // /schedules/debit e /schedules/credit trazem o histórico completo.
-        // Paginamos por completo (100 por página) e consolidamos — são
-        // milhares de itens, então usamos teto de páginas alto.
+        // Lançamentos a partir de dezembro/2025 (pagos, vencidos, agendados e
+        // em aberto). Filtrar por data reduz muito o volume e evita timeout.
+        // A API do Nibo usa OData v4 (Microsoft.AspNet.OData), cuja sintaxe de
+        // data é: dueDate ge 2025-12-01T00:00:00Z (sem wrapper datetime).
+        $from = $from ?: '2025-12-01';
+        $scheduleFilter = ['$filter' => 'dueDate ge ' . $from . 'T00:00:00Z'];
+
         $payablesRaw = $receivablesRaw = [];
-        try { $payablesRaw = self::getAllPaged('/schedules/debit', 'dueDate', [], $token, 100, 1000); } catch (\Throwable $e) { $errors[] = 'debit: ' . $e->getMessage(); }
-        try { $receivablesRaw = self::getAllPaged('/schedules/credit', 'dueDate', [], $token, 100, 1000); } catch (\Throwable $e) { $errors[] = 'credit: ' . $e->getMessage(); }
+        try { $payablesRaw = self::getAllPaged('/schedules/debit', 'dueDate', $scheduleFilter, $token, 100, 300); } catch (\Throwable $e) { $errors[] = 'debit: ' . $e->getMessage(); }
+        try { $receivablesRaw = self::getAllPaged('/schedules/credit', 'dueDate', $scheduleFilter, $token, 100, 300); } catch (\Throwable $e) { $errors[] = 'credit: ' . $e->getMessage(); }
 
         // ── Etapa 4: consolidação (enriquecer + status) ─────────────────
         $payables = array_map(fn($s) => self::enrichSchedule($s, $idxSup, $idxCc, $idxCat, 'payable'), $payablesRaw);
