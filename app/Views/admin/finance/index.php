@@ -144,92 +144,255 @@
         </div>
     </div>
 
-    <!-- Duas listas claras: quem pagar e quem recebe -->
-    <div class="row g-3 mb-3">
-        <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold text-danger"><i class="bi bi-arrow-up-circle"></i> Contas a pagar no período</span>
-                    <span class="badge bg-danger" id="payListTotal">R$ 0,00</span>
-                </div>
-                <div class="table-responsive" style="max-height:420px;">
-                    <table class="table table-sm table-hover mb-0 align-middle">
-                        <thead class="table-light" style="position:sticky;top:0;">
-                            <tr><th>Quando</th><th>Quem</th><th class="text-end">Quanto</th><th>Situação</th></tr>
-                        </thead>
-                        <tbody id="payList"><tr><td colspan="4" class="text-center text-muted py-3">—</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold text-success"><i class="bi bi-arrow-down-circle"></i> Contas a receber no período</span>
-                    <span class="badge bg-success" id="recListTotal">R$ 0,00</span>
-                </div>
-                <div class="table-responsive" style="max-height:420px;">
-                    <table class="table table-sm table-hover mb-0 align-middle">
-                        <thead class="table-light" style="position:sticky;top:0;">
-                            <tr><th>Quando</th><th>Quem</th><th class="text-end">Quanto</th><th>Situação</th></tr>
-                        </thead>
-                        <tbody id="recList"><tr><td colspan="4" class="text-center text-muted py-3">—</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Abas -->
+    <ul class="nav nav-tabs mb-3" id="financeTabs" role="tablist">
+        <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-resumo" type="button"><i class="bi bi-grid-1x2"></i> Resumo</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-semanal" type="button"><i class="bi bi-calendar-week"></i> Semanal</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-mensal" type="button"><i class="bi bi-calendar-month"></i> Mensal</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-anual" type="button"><i class="bi bi-calendar3"></i> Anual</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-contas" type="button"><i class="bi bi-list-columns-reverse"></i> Contas a Pagar e Receber</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-detalhe" type="button"><i class="bi bi-table"></i> Detalhado</button></li>
+    </ul>
 
-    <!-- Gráfico simples: entradas x saídas -->
-    <div class="card border-0 shadow-sm mb-3">
-        <div class="card-header bg-white"><i class="bi bi-bar-chart"></i> Entradas e saídas ao longo do período</div>
-        <div class="card-body"><canvas id="chartInOut" height="90"></canvas></div>
-    </div>
+    <div class="tab-content">
 
-    <!-- Maiores contas a pagar (ranking simples) -->
-    <div class="row g-3 mb-3">
-        <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white fw-semibold"><i class="bi bi-trophy"></i> Para quem você mais paga</div>
-                <ul class="list-group list-group-flush" id="topSuppliers"></ul>
-            </div>
-        </div>
-        <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white fw-semibold"><i class="bi bi-trophy"></i> De quem você mais recebe</div>
-                <ul class="list-group list-group-flush" id="topCustomers"></ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- Visão detalhada (avançada) recolhida -->
-    <div class="accordion mb-3" id="advancedAcc">
-        <div class="accordion-item border-0 shadow-sm">
-            <h2 class="accordion-header">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#detailFlow">
-                    <i class="bi bi-table me-2"></i> Visão detalhada por dia (avançado)
-                </button>
-            </h2>
-            <div id="detailFlow" class="accordion-collapse collapse" data-bs-parent="#advancedAcc">
-                <div class="accordion-body p-0">
-                    <div class="d-flex justify-content-end p-2">
-                        <select id="flowGrouping" class="form-select form-select-sm" style="width:auto;">
-                            <option value="day" selected>Por dia</option>
-                            <option value="week">Por semana</option>
-                            <option value="month">Por mês</option>
-                        </select>
+        <!-- ═══ RESUMO ═══ -->
+        <div class="tab-pane fade show active" id="tab-resumo" role="tabpanel">
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold text-danger"><i class="bi bi-arrow-up-circle"></i> Contas a pagar no período</span>
+                            <span class="badge bg-danger" id="payListTotal">R$ 0,00</span>
+                        </div>
+                        <div class="table-responsive" style="max-height:420px;">
+                            <table class="table table-sm table-hover mb-0 align-middle">
+                                <thead class="table-light" style="position:sticky;top:0;">
+                                    <tr><th>Quando</th><th>Quem</th><th class="text-end">Quanto</th><th>Situação</th></tr>
+                                </thead>
+                                <tbody id="payList"><tr><td colspan="4" class="text-center text-muted py-3">—</td></tr></tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div class="table-responsive" style="max-height:60vh;">
-                        <table class="table table-sm table-bordered mb-0 finance-flow" style="font-size:.8rem; white-space:nowrap;">
-                            <thead id="flowHead"></thead>
-                            <tbody id="flowBody"></tbody>
-                        </table>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold text-success"><i class="bi bi-arrow-down-circle"></i> Contas a receber no período</span>
+                            <span class="badge bg-success" id="recListTotal">R$ 0,00</span>
+                        </div>
+                        <div class="table-responsive" style="max-height:420px;">
+                            <table class="table table-sm table-hover mb-0 align-middle">
+                                <thead class="table-light" style="position:sticky;top:0;">
+                                    <tr><th>Quando</th><th>Quem</th><th class="text-end">Quanto</th><th>Situação</th></tr>
+                                </thead>
+                                <tbody id="recList"><tr><td colspan="4" class="text-center text-muted py-3">—</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white"><i class="bi bi-bar-chart"></i> Entradas e saídas ao longo do período</div>
+                <div class="card-body"><canvas id="chartInOut" height="90"></canvas></div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white fw-semibold"><i class="bi bi-trophy"></i> Para quem você mais paga</div>
+                        <ul class="list-group list-group-flush" id="topSuppliers"></ul>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white fw-semibold"><i class="bi bi-trophy"></i> De quem você mais recebe</div>
+                        <ul class="list-group list-group-flush" id="topCustomers"></ul>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
+        <!-- ═══ SEMANAL ═══ -->
+        <div class="tab-pane fade" id="tab-semanal" role="tabpanel">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white"><i class="bi bi-bar-chart"></i> Entradas x Saídas por semana (próximas 12 semanas)</div>
+                <div class="card-body"><canvas id="chartWeekly" height="90"></canvas></div>
+            </div>
+            <div class="card border-0 shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 align-middle">
+                        <thead class="table-light"><tr><th>Semana</th><th class="text-end text-success">Entradas</th><th class="text-end text-danger">Saídas</th><th class="text-end">Saldo do período</th></tr></thead>
+                        <tbody id="tblWeekly"><tr><td colspan="4" class="text-center text-muted py-3">—</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ MENSAL ═══ -->
+        <div class="tab-pane fade" id="tab-mensal" role="tabpanel">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white"><i class="bi bi-bar-chart"></i> Entradas x Saídas por mês (próximos 12 meses)</div>
+                <div class="card-body"><canvas id="chartMonthly" height="90"></canvas></div>
+            </div>
+            <div class="card border-0 shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 align-middle">
+                        <thead class="table-light"><tr><th>Mês</th><th class="text-end text-success">Entradas</th><th class="text-end text-danger">Saídas</th><th class="text-end">Saldo do período</th></tr></thead>
+                        <tbody id="tblMonthly"><tr><td colspan="4" class="text-center text-muted py-3">—</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ ANUAL ═══ -->
+        <div class="tab-pane fade" id="tab-anual" role="tabpanel">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white"><i class="bi bi-bar-chart"></i> Entradas x Saídas por ano</div>
+                <div class="card-body"><canvas id="chartYearly" height="90"></canvas></div>
+            </div>
+            <div class="card border-0 shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 align-middle">
+                        <thead class="table-light"><tr><th>Ano</th><th class="text-end text-success">Entradas</th><th class="text-end text-danger">Saídas</th><th class="text-end">Saldo do período</th></tr></thead>
+                        <tbody id="tblYearly"><tr><td colspan="4" class="text-center text-muted py-3">—</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ CONTAS A PAGAR E RECEBER ═══ -->
+        <div class="tab-pane fade" id="tab-contas" role="tabpanel">
+
+            <!-- Cards de totais -->
+            <div class="row g-3 mb-3">
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
+                        <div class="card-body">
+                            <div class="small text-uppercase text-danger fw-semibold" style="letter-spacing:.5px;">A pagar</div>
+                            <div class="fs-4 fw-bold text-danger" id="ctaPayTotal">—</div>
+                            <div class="small text-muted"><span id="ctaPayCount">0</span> contas</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+                        <div class="card-body">
+                            <div class="small text-uppercase text-success fw-semibold" style="letter-spacing:.5px;">A receber</div>
+                            <div class="fs-4 fw-bold text-success" id="ctaRecTotal">—</div>
+                            <div class="small text-muted"><span id="ctaRecCount">0</span> contas</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+                        <div class="card-body">
+                            <div class="small text-uppercase text-warning fw-semibold" style="letter-spacing:.5px;">Vencidas (a pagar)</div>
+                            <div class="fs-4 fw-bold text-warning" id="ctaOverdueTotal">—</div>
+                            <div class="small text-muted"><span id="ctaOverdueCount">0</span> contas</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+                        <div class="card-body">
+                            <div class="small text-uppercase text-primary fw-semibold" style="letter-spacing:.5px;">Diferença (recebe − paga)</div>
+                            <div class="fs-4 fw-bold" id="ctaDiff">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumos por centro de custo e por fornecedor/cliente -->
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white fw-semibold"><i class="bi bi-diagram-3"></i> Total por centro de custo</div>
+                        <div class="table-responsive" style="max-height:320px;">
+                            <table class="table table-sm mb-0 align-middle">
+                                <thead class="table-light" style="position:sticky;top:0;"><tr><th>Centro de custo</th><th class="text-end text-success">Recebe</th><th class="text-end text-danger">Paga</th></tr></thead>
+                                <tbody id="byCostCenter"><tr><td colspan="3" class="text-center text-muted py-3">—</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white fw-semibold"><i class="bi bi-people"></i> Total por fornecedor / cliente</div>
+                        <div class="table-responsive" style="max-height:320px;">
+                            <table class="table table-sm mb-0 align-middle">
+                                <thead class="table-light" style="position:sticky;top:0;"><tr><th>Fornecedor / Cliente</th><th class="text-end text-success">Recebe</th><th class="text-end text-danger">Paga</th></tr></thead>
+                                <tbody id="byContact"><tr><td colspan="3" class="text-center text-muted py-3">—</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Listagem completa: A PAGAR -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="fw-semibold text-danger"><i class="bi bi-arrow-up-circle"></i> Contas a Pagar (detalhado)</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="search" id="searchPay" class="form-control form-control-sm" placeholder="Buscar nesta lista…" style="max-width:220px;">
+                        <span class="badge bg-danger" id="ctaPayListTotal">R$ 0,00</span>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height:500px;">
+                    <table class="table table-sm table-hover mb-0 align-middle">
+                        <thead class="table-light" style="position:sticky;top:0;">
+                            <tr><th>Vencimento</th><th>Fornecedor</th><th>Descrição</th><th>Centro de custo</th><th>Categoria</th><th class="text-end">Valor</th><th>Situação</th></tr>
+                        </thead>
+                        <tbody id="fullPayList"><tr><td colspan="7" class="text-center text-muted py-3">—</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Listagem completa: A RECEBER -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="fw-semibold text-success"><i class="bi bi-arrow-down-circle"></i> Contas a Receber (detalhado)</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="search" id="searchRec" class="form-control form-control-sm" placeholder="Buscar nesta lista…" style="max-width:220px;">
+                        <span class="badge bg-success" id="ctaRecListTotal">R$ 0,00</span>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height:500px;">
+                    <table class="table table-sm table-hover mb-0 align-middle">
+                        <thead class="table-light" style="position:sticky;top:0;">
+                            <tr><th>Vencimento</th><th>Cliente</th><th>Descrição</th><th>Centro de custo</th><th>Categoria</th><th class="text-end">Valor</th><th>Situação</th></tr>
+                        </thead>
+                        <tbody id="fullRecList"><tr><td colspan="7" class="text-center text-muted py-3">—</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ DETALHADO (matriz) ═══ -->
+        <div class="tab-pane fade" id="tab-detalhe" role="tabpanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span><i class="bi bi-table"></i> Previsão de fluxo de caixa por período</span>
+                    <select id="flowGrouping" class="form-select form-select-sm" style="width:auto;">
+                        <option value="day" selected>Por dia</option>
+                        <option value="week">Por semana</option>
+                        <option value="month">Por mês</option>
+                    </select>
+                </div>
+                <div class="table-responsive" style="max-height:65vh;">
+                    <table class="table table-sm table-bordered mb-0 finance-flow" style="font-size:.8rem; white-space:nowrap;">
+                        <thead id="flowHead"></thead>
+                        <tbody id="flowBody"></tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-white small text-muted">
+                    O <strong>saldo final</strong> de cada período vira o saldo inicial do próximo. Entradas somam, saídas reduzem.
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
 
 <style>
@@ -301,10 +464,10 @@
         (state.filters.contacts || []).forEach(c => { if (c.id) contactNameById[String(c.id)] = c.name; });
     }
 
-    function inPeriodAndFilters(x) {
+    // Aplica apenas os filtros de fornecedor/centro/situação (SEM janela de data)
+    function matchesFilters(x) {
         const f = getFilters();
         if (f.status && x.status !== f.status) return false;
-        // Casa por ID; se o lançamento não tiver o ID, tenta pelo nome do cadastro.
         if (f.costCenter) {
             const byId = String(x.cost_center_id||'') === f.costCenter;
             const byName = ccNameById[f.costCenter] && (x.cost_center||'') === ccNameById[f.costCenter];
@@ -315,13 +478,22 @@
             const byName = contactNameById[f.contact] && (x.contact_name||'') === contactNameById[f.contact];
             if (!byId && !byName) return false;
         }
+        return true;
+    }
+    // Filtros + janela de data do botão de período (7/15/20/30)
+    function inPeriodAndFilters(x) {
+        if (!matchesFilters(x)) return false;
         const { start, end } = periodRange();
         const d = parseDate(x.due_date);
         if (!d) return false;
         return d >= start && d <= end;
     }
+    // Para as abas Resumo (janela do período)
     function filteredPayables() { return state.payables.filter(inPeriodAndFilters); }
     function filteredReceivables() { return state.receivables.filter(inPeriodAndFilters); }
+    // Para as abas Semanal/Mensal/Anual/Detalhado (só filtros, sem janela)
+    function allPayables() { return state.payables.filter(matchesFilters); }
+    function allReceivables() { return state.receivables.filter(matchesFilters); }
     const sum = (arr) => arr.reduce((a,x) => a + (Number(x.value)||0), 0);
 
     // Popula os seletores a partir dos CADASTROS completos vindos da API
@@ -453,6 +625,58 @@
         });
     }
 
+    // ── Visões Semanal / Mensal / Anual ───────────────────────────────
+    // Agrupa TODOS os lançamentos filtrados (sem a janela de dias) por período.
+    function groupInOut(fpay, frec, grouping) {
+        const map = {};
+        const ensure = k => { if (!map[k]) map[k] = { in:0, out:0 }; return map[k]; };
+        frec.forEach(x => { const d = parseDate(x.due_date); if (!d) return; ensure(periodKeyForDate(d, grouping)).in += Number(x.value)||0; });
+        fpay.forEach(x => { const d = parseDate(x.due_date); if (!d) return; ensure(periodKeyForDate(d, grouping)).out += Number(x.value)||0; });
+        return Object.keys(map).sort().map(k => ({ key:k, in:map[k].in, out:map[k].out }));
+    }
+    function keyToLabel(key, grouping) {
+        if (grouping === 'week') { const d = parseDate(key); const e = new Date(d); e.setDate(e.getDate()+6); return d.getDate()+'/'+(d.getMonth()+1)+' a '+e.getDate()+'/'+(e.getMonth()+1); }
+        if (grouping === 'month') { const [y,m] = key.split('-'); return MONTHS[parseInt(m,10)-1]+'/'+y; }
+        return key; // ano
+    }
+    function renderPeriodView(grouping, canvasId, tblId, limit) {
+        const fpay = allPayables(), frec = allReceivables();
+        let rows = groupInOut(fpay, frec, grouping);
+        // A partir de hoje/ano atual, limitado a N períodos
+        if (grouping !== 'year') {
+            const nowKey = periodKeyForDate(new Date(), grouping);
+            rows = rows.filter(r => r.key >= nowKey);
+        }
+        if (limit) rows = rows.slice(0, limit);
+
+        const labels = rows.map(r => keyToLabel(r.key, grouping));
+        if (charts[canvasId]) charts[canvasId].destroy();
+        if (el(canvasId)) {
+            charts[canvasId] = new Chart(el(canvasId), {
+                type: 'bar',
+                data: { labels, datasets: [
+                    { label: 'Entradas', data: rows.map(r=>r.in), backgroundColor: 'rgba(25,135,84,.8)' },
+                    { label: 'Saídas', data: rows.map(r=>r.out), backgroundColor: 'rgba(220,53,69,.8)' },
+                ]},
+                options: {
+                    responsive: true, maintainAspectRatio: true,
+                    plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': ' + fmtMoneyFull(c.raw) } } },
+                    scales: { y: { ticks: { callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' } } }
+                }
+            });
+        }
+        const tb = el(tblId);
+        if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Sem dados.</td></tr>'; return; }
+        tb.innerHTML = rows.map(r => {
+            const bal = r.in - r.out;
+            const cls = bal >= 0 ? 'text-success' : 'text-danger';
+            return '<tr><td>'+esc(keyToLabel(r.key, grouping))+'</td>'
+                + '<td class="text-end text-success">'+fmtMoneyFull(r.in)+'</td>'
+                + '<td class="text-end text-danger">'+fmtMoneyFull(r.out)+'</td>'
+                + '<td class="text-end fw-semibold '+cls+'">'+fmtMoneyFull(bal)+'</td></tr>';
+        }).join('');
+    }
+
     // ── Períodos (colunas) para gráfico e matriz ──────────────────────
     function startOfWeek(d) { const t = new Date(d); t.setHours(0,0,0,0); const day=(t.getDay()+6)%7; t.setDate(t.getDate()-day); return t; }
     function buildPeriods(start, end, grouping) {
@@ -493,12 +717,90 @@
         return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
     }
 
-    // ── Matriz detalhada (avançado) ───────────────────────────────────
-    function renderFlow(fpay, frec) {
-        const detail = el('detailFlow');
-        if (!detail || !detail.classList.contains('show')) return; // só renderiza se aberto
+    // ── Aba Contas a Pagar e Receber ──────────────────────────────────
+    function renderContas() {
+        const fpay = allPayables(), frec = allReceivables();
+        const openPay = fpay.filter(x => x.status !== 'paid');
+        const openRec = frec.filter(x => x.status !== 'paid');
+        const overdue = fpay.filter(x => x.status === 'overdue');
+        const totPay = sum(openPay), totRec = sum(openRec);
+
+        el('ctaPayTotal').textContent = fmtMoneyFull(totPay);
+        el('ctaPayCount').textContent = openPay.length;
+        el('ctaRecTotal').textContent = fmtMoneyFull(totRec);
+        el('ctaRecCount').textContent = openRec.length;
+        el('ctaOverdueTotal').textContent = fmtMoneyFull(sum(overdue));
+        el('ctaOverdueCount').textContent = overdue.length;
+        const diff = totRec - totPay;
+        const diffEl = el('ctaDiff');
+        diffEl.textContent = fmtMoneyFull(diff);
+        diffEl.className = 'fs-4 fw-bold ' + (diff < 0 ? 'text-danger' : 'text-success');
+
+        // Resumo por centro de custo
+        renderGroupTable('byCostCenter', fpay, frec, x => (x.cost_center && x.cost_center !== '—') ? x.cost_center : 'Sem centro de custo');
+        // Resumo por fornecedor/cliente
+        renderGroupTable('byContact', fpay, frec, x => (x.contact_name && x.contact_name !== '—') ? x.contact_name : (x.description || 'Outros'));
+
+        // Listagens completas (com busca textual)
+        renderFullList('fullPayList', 'ctaPayListTotal', fpay, el('searchPay').value);
+        renderFullList('fullRecList', 'ctaRecListTotal', frec, el('searchRec').value);
+    }
+
+    // Agrupa recebe/paga por uma chave (centro de custo ou contato)
+    function renderGroupTable(tbodyId, fpay, frec, keyFn) {
+        const map = {};
+        const ensure = k => { if (!map[k]) map[k] = { in:0, out:0 }; return map[k]; };
+        frec.forEach(x => ensure(keyFn(x)).in += Number(x.value)||0);
+        fpay.forEach(x => ensure(keyFn(x)).out += Number(x.value)||0);
+        const rows = Object.entries(map)
+            .map(([name,v]) => ({ name, in:v.in, out:v.out }))
+            .sort((a,b) => (b.in+b.out) - (a.in+a.out));
+        const tb = el(tbodyId);
+        if (!rows.length) { tb.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Sem dados.</td></tr>'; return; }
+        tb.innerHTML = rows.map(r =>
+            '<tr><td class="text-truncate" style="max-width:280px;">' + esc(r.name) + '</td>'
+            + '<td class="text-end text-success">' + (r.in ? fmtMoneyFull(r.in) : '—') + '</td>'
+            + '<td class="text-end text-danger">' + (r.out ? fmtMoneyFull(r.out) : '—') + '</td></tr>'
+        ).join('');
+    }
+
+    // Listagem detalhada com todas as colunas
+    function renderFullList(tbodyId, totalId, items, searchText) {
+        let rows = items.slice();
+        if (searchText) {
+            const q = searchText.toLowerCase();
+            rows = rows.filter(r =>
+                (r.contact_name||'').toLowerCase().includes(q) ||
+                (r.description||'').toLowerCase().includes(q) ||
+                (r.cost_center||'').toLowerCase().includes(q) ||
+                (r.category||'').toLowerCase().includes(q));
+        }
+        rows.sort((a,b) => (parseDate(a.due_date)||0) - (parseDate(b.due_date)||0));
+        const openTotal = rows.filter(r => r.status !== 'paid').reduce((a,x)=>a+(Number(x.value)||0),0);
+        el(totalId).textContent = fmtMoneyFull(openTotal);
+        const tb = el(tbodyId);
+        if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhuma conta encontrada.</td></tr>'; return; }
+        tb.innerHTML = rows.map(r =>
+            '<tr><td>' + dateLabel(r.due_date) + '</td>'
+            + '<td>' + esc(r.contact_name) + '</td>'
+            + '<td class="text-truncate" style="max-width:240px;">' + esc(r.description) + '</td>'
+            + '<td>' + esc(r.cost_center) + '</td>'
+            + '<td>' + esc(r.category) + '</td>'
+            + '<td class="text-end fw-semibold">' + fmtMoneyFull(r.value) + '</td>'
+            + '<td>' + statusBadge(r.status) + '</td></tr>'
+        ).join('');
+    }
+
+    // ── Matriz detalhada ──────────────────────────────────────────────
+    function renderFlow() {
+        const fpay = allPayables(), frec = allReceivables();
         const grouping = el('flowGrouping').value;
-        const { start, end } = periodRange();
+        // Janela da matriz: de hoje até +90 dias (dia), +12 semanas ou +12 meses
+        const start = new Date(); start.setHours(0,0,0,0);
+        const end = new Date(start);
+        if (grouping === 'day') end.setDate(end.getDate()+90);
+        else if (grouping === 'week') end.setDate(end.getDate()+7*12);
+        else end.setMonth(end.getMonth()+12);
         const periods = buildPeriods(start, end, grouping);
         const map = {};
         periods.forEach(p => map[p.key] = { in:0, out:0, inBy:{}, outBy:{} });
@@ -537,6 +839,7 @@
 
     // ── Recalcula tudo conforme período + filtros ─────────────────────
     function refresh() {
+        // Resumo (respeita a janela do botão de período)
         const fpay = filteredPayables(), frec = filteredReceivables();
         renderCards(fpay, frec);
         renderSimpleList('payList', 'payListTotal', fpay, 'text-danger');
@@ -544,7 +847,17 @@
         renderRanking('topSuppliers', fpay, 'text-danger');
         renderRanking('topCustomers', frec, 'text-success');
         renderChart(fpay, frec);
-        renderFlow(fpay, frec);
+
+        // Semanal / Mensal / Anual (todos os dados filtrados, sem janela de dias)
+        renderPeriodView('week', 'chartWeekly', 'tblWeekly', 12);
+        renderPeriodView('month', 'chartMonthly', 'tblMonthly', 12);
+        renderPeriodView('year', 'chartYearly', 'tblYearly', 0);
+
+        // Contas a pagar e receber (respeita filtros, sem janela de dias)
+        renderContas();
+
+        // Detalhado (matriz)
+        renderFlow();
     }
 
     function applyData(data) {
@@ -611,14 +924,16 @@
         }));
 
         // Filtros avançados recalculam tudo
-        ['filterContact','filterCostCenter','filterStatus','flowGrouping'].forEach(id => el(id).addEventListener('change', refresh));
+        ['filterContact','filterCostCenter','filterStatus'].forEach(id => el(id).addEventListener('change', refresh));
+        // Agrupamento da matriz detalhada
+        el('flowGrouping').addEventListener('change', renderFlow);
+        // Buscas das listagens de contas
+        el('searchPay').addEventListener('input', () => renderFullList('fullPayList', 'ctaPayListTotal', allPayables(), el('searchPay').value));
+        el('searchRec').addEventListener('input', () => renderFullList('fullRecList', 'ctaRecListTotal', allReceivables(), el('searchRec').value));
         el('btnClearFilters').addEventListener('click', function () {
             el('filterContact').value = ''; el('filterCostCenter').value = ''; el('filterStatus').value = '';
             refresh();
         });
-
-        // Renderiza a matriz quando o usuário abrir a seção avançada
-        el('detailFlow').addEventListener('shown.bs.collapse', refresh);
 
         loadData();
     });
