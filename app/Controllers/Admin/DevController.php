@@ -19,8 +19,8 @@ class DevController extends Controller
             $this->redirect('/admin/login');
             exit;
         }
-        // Apenas super admin acessa a área de dev
-        if (!Auth::isSuperAdmin()) {
+        // Área de dev: super admin e admin
+        if (!Auth::isAdmin()) {
             $this->redirect('/admin/dashboard');
             exit;
         }

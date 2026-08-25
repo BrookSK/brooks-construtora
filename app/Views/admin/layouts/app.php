@@ -478,7 +478,7 @@
                 </a>
             </li>
             <?php endif; ?>
-            <?php if (\App\Core\Auth::isSuperAdmin()): ?>
+            <?php if (\App\Core\Auth::isAdmin()): ?>
             <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
                 <small class="text-uppercase px-3 opacity-50 nav-section-label" style="font-size:0.65rem; letter-spacing:1px;">Desenvolvimento</small>
             </li>
