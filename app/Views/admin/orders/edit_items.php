@@ -67,6 +67,7 @@
                             <th style="min-width:250px;">Material</th>
                             <th style="min-width:120px;">Especificação</th>
                             <th style="min-width:100px;">Classificação</th>
+                            <th style="min-width:160px;">Link da compra</th>
                             <th style="width:90px;">Qtd</th>
                             <th style="width:50px;"></th>
                         </tr>
@@ -158,6 +159,7 @@ function addItem(prefill = null) {
         </td>
         <td><input type="text" class="form-control form-control-sm" name="items[${idx}][specification]" id="spec-${idx}" value="${prefill?.specification || ''}" readonly></td>
         <td><input type="text" class="form-control form-control-sm" name="items[${idx}][classification]" id="class-${idx}" value="${prefill?.classification || ''}" readonly></td>
+        <td><input type="url" class="form-control form-control-sm" name="items[${idx}][link]" id="link-${idx}" value="${prefill?.link || ''}" placeholder="https://..."></td>
         <td><input type="number" class="form-control form-control-sm" name="items[${idx}][quantity]" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required></td>
         <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(${idx})"><i class="bi bi-trash"></i></button></td>
     `;
@@ -215,6 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'classification' => $freshClass,
             'unit' => $freshUnit,
             'quantity' => (float) $item['quantity'],
+            'link' => $item['link'] ?? '',
         ];
     }, $items)) ?>;
 

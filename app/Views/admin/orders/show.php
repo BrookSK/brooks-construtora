@@ -220,6 +220,7 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                             <th>Espec.</th>
                             <th>Class.</th>
                             <th class="text-center">Qtd</th>
+                            <th class="text-center">Link</th>
                             <th>Origem</th>
                             <?php if ($showPriceColumns): ?>
                             <th class="text-end">Unit.</th>
@@ -253,6 +254,15 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                                 <?= number_format($item['quantity'], $item['quantity'] == (int)$item['quantity'] ? 0 : 2) ?>
                                 <?php if (!empty($item['already_purchased']) && !empty($item['already_purchased_qty']) && (float)$item['already_purchased_qty'] < (float)$item['quantity']): ?>
                                 <br><small class="text-muted" style="font-size:0.65rem;">Cotado: <?= number_format((float)$item['quantity'] - (float)$item['already_purchased_qty'], ((float)$item['quantity'] - (float)$item['already_purchased_qty']) == (int)((float)$item['quantity'] - (float)$item['already_purchased_qty']) ? 0 : 2) ?></small>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-center">
+                                <?php if (!empty($item['link'])): ?>
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-copy-link" data-link="<?= htmlspecialchars($item['link']) ?>" title="Copiar link da compra">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                                <?php else: ?>
+                                <span class="text-muted">-</span>
                                 <?php endif; ?>
                             </td>
                             <td>
@@ -289,24 +299,24 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <?php if (!$hasPurchaseItems && $totalEstoque > 0): ?>
                         <!-- Pedido 100% estoque -->
                         <tr class="table-light">
-                            <td colspan="7" class="text-end fw-bold"><i class="bi bi-box-seam"></i> Valor Itens de Estoque:</td>
+                            <td colspan="8" class="text-end fw-bold"><i class="bi bi-box-seam"></i> Valor Itens de Estoque:</td>
                             <td class="text-end fw-bold" style="color:#6f42c1;">R$ <?= number_format($totalEstoque, 2, ',', '.') ?></td>
                         </tr>
                         <?php else: ?>
                         <?php if ($displayTotal > 0): ?>
                         <tr class="table-light">
-                            <td colspan="7" class="text-end fw-bold">TOTAL:</td>
+                            <td colspan="8" class="text-end fw-bold">TOTAL:</td>
                             <td class="text-end fw-bold text-success">R$ <?= number_format($displayTotal, 2, ',', '.') ?></td>
                         </tr>
                         <?php endif; ?>
                         <?php if ($totalEstoque > 0): ?>
                         <tr class="table-light">
-                            <td colspan="7" class="text-end"><i class="bi bi-box-seam"></i> Valor Itens de Estoque:</td>
+                            <td colspan="8" class="text-end"><i class="bi bi-box-seam"></i> Valor Itens de Estoque:</td>
                             <td class="text-end fw-bold" style="color:#6f42c1;">R$ <?= number_format($totalEstoque, 2, ',', '.') ?></td>
                         </tr>
                         <?php if ($displayTotal > 0): ?>
                         <tr class="table-light">
-                            <td colspan="7" class="text-end fw-bold">TOTAL GERAL:</td>
+                            <td colspan="8" class="text-end fw-bold">TOTAL GERAL:</td>
                             <td class="text-end fw-bold" style="color:#3a3b4e;">R$ <?= number_format($displayTotal + $totalEstoque, 2, ',', '.') ?></td>
                         </tr>
                         <?php endif; ?>
@@ -1351,6 +1361,29 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
 <script src="/assets/js/searchable-select.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Copiar link da compra dos itens do pedido
+    document.querySelectorAll('.btn-copy-link').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const link = this.getAttribute('data-link') || '';
+            if (!link) return;
+            const icon = this.querySelector('i');
+            const done = function () {
+                if (icon) {
+                    const prev = icon.className;
+                    icon.className = 'bi bi-check2';
+                    setTimeout(function () { icon.className = prev; }, 1500);
+                }
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(link).then(done).catch(function () {
+                    window.prompt('Copie o link:', link);
+                });
+            } else {
+                window.prompt('Copie o link:', link);
+            }
+        });
+    });
+
     // SearchableSelect para materiais no formulário de sobressalentes
     const selectEl = document.getElementById('spare-mat-select');
     if (selectEl) {

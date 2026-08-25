@@ -1620,6 +1620,37 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Normaliza um link de compra (opcional). Retorna null se vazio.
+     */
+    private function cleanLink($raw): ?string
+    {
+        $v = trim((string) ($raw ?? ''));
+        if ($v === '') return null;
+        return mb_substr($v, 0, 500);
+    }
+
+    /**
+     * Garante que a coluna purchase_order_items.link exista (migration 038 lazy).
+     */
+    private function ensureItemLinkColumn(): void
+    {
+        try {
+            $c = Database::fetch(
+                "SELECT 1 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_order_items'
+                   AND COLUMN_NAME = 'link' LIMIT 1"
+            );
+            if (empty($c)) {
+                Database::getConnection()->exec(
+                    "ALTER TABLE purchase_order_items ADD COLUMN link VARCHAR(500) DEFAULT NULL AFTER classification"
+                );
+            }
+        } catch (\Exception $e) {
+            // Silencioso: se falhar, o create sem a coluna ainda funciona (link ignorado).
+        }
+    }
+
+    /**
      * Salvar edição de itens do pedido
      */
     public function updateItems(): void
@@ -1628,6 +1659,8 @@ class PurchaseOrderController extends Controller
             $this->redirect('/admin/orders');
             return;
         }
+
+        $this->ensureItemLinkColumn();
 
         $id = (int) $this->input('id');
         $order = PurchaseOrder::findFull($id);
@@ -1809,6 +1842,7 @@ class PurchaseOrderController extends Controller
                             'material_name' => $item['material_name'],
                             'specification' => $item['specification'] ?? '',
                             'classification' => $item['classification'] ?? '',
+                            'link' => $this->cleanLink($item['link'] ?? null),
                             'unit' => $item['unit'] ?? '',
                             'quantity' => $purchaseQty,
                             'source_type' => 'purchase',
@@ -1863,6 +1897,7 @@ class PurchaseOrderController extends Controller
                             'material_name' => $item['material_name'],
                             'specification' => $item['specification'] ?? '',
                             'classification' => $item['classification'] ?? '',
+                            'link' => $this->cleanLink($item['link'] ?? null),
                             'unit' => $item['unit'] ?? '',
                             'quantity' => $quantity - $fromStockQty,
                             'source_type' => 'purchase',
@@ -1878,6 +1913,7 @@ class PurchaseOrderController extends Controller
                     'material_name' => $item['material_name'],
                     'specification' => $item['specification'] ?? '',
                     'classification' => $item['classification'] ?? '',
+                    'link' => $this->cleanLink($item['link'] ?? null),
                     'unit' => $item['unit'] ?? '',
                     'quantity' => $quantity,
                     'source_type' => null,

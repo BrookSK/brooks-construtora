@@ -1027,6 +1027,12 @@
                                     name="supplier_prices[${sid}][${item.id}]" placeholder="0,00" required
                                     data-qty="${item.quantity}" data-sid="${sid}" data-item-id="${item.id}">
                             </div>
+                            <div class="input-group input-group-sm mt-1">
+                                <span class="input-group-text" title="Link da compra (opcional)"><i class="bi bi-link-45deg"></i></span>
+                                <input type="url" class="form-control supplier-link-input"
+                                    name="supplier_links[${sid}][${item.id}]" placeholder="Link do produto (opcional)"
+                                    data-sid="${sid}" data-item-id="${item.id}">
+                            </div>
                         </div>
                     </div>
                 </div>`;
@@ -1592,11 +1598,14 @@
         const existingPrices = <?= json_encode($itemPrices ?? []) ?>;
         const pricesBySupplier = {};
         const totalPricesBySupplier = {};
+        const linksBySupplier = {};
         existingPrices.forEach(p => {
             if (!pricesBySupplier[p.supplier_id]) pricesBySupplier[p.supplier_id] = {};
             if (!totalPricesBySupplier[p.supplier_id]) totalPricesBySupplier[p.supplier_id] = {};
+            if (!linksBySupplier[p.supplier_id]) linksBySupplier[p.supplier_id] = {};
             pricesBySupplier[p.supplier_id][p.item_id] = p.unit_price;
             totalPricesBySupplier[p.supplier_id][p.item_id] = p.total_price;
+            if (p.link) linksBySupplier[p.supplier_id][p.item_id] = p.link;
         });
 
         // Fornecedores da tabela purchase_order_suppliers
@@ -1623,6 +1632,12 @@
                     input.value = displayVal.toFixed(2).replace('.', ',');
                     input.dispatchEvent(new Event('input', {bubbles:true}));
                 }
+            }
+            // Preencher links salvos deste fornecedor
+            const links = linksBySupplier['<?= $os['supplier_id'] ?>'] || {};
+            for (const itemId in links) {
+                const linkInput = block.querySelector('input[name="supplier_links[<?= $os['supplier_id'] ?>][' + itemId + ']"]');
+                if (linkInput) linkInput.value = links[itemId];
             }
             // Preencher vendedor
             const vName = block.querySelector('[name*="[name]"]'); if (vName) vName.value = '<?= htmlspecialchars($os['vendor_name'] ?? '') ?>';
@@ -1674,6 +1689,11 @@
                             inp.value = (priceMode === 'total' ? nv * qt : nv).toFixed(2).replace('.', ',');
                             inp.dispatchEvent(new Event('input', {bubbles:true}));
                         }
+                    }
+                    const lks = linksBySupplier[sid] || {};
+                    for (const iid in lks) {
+                        const li = blk.querySelector('input[name="supplier_links[' + sid + '][' + iid + ']"]');
+                        if (li) li.value = lks[iid];
                     }
                     setTimeout(function() { calculateSupplierTotal(String(sid)); }, 800);
                 }, 500);
