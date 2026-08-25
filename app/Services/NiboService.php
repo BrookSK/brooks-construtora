@@ -17,9 +17,47 @@ class NiboService
 {
     private const BASE_URL = 'https://api.nibo.com.br/empresas/v1';
 
-    public static function token(): string
+    /**
+     * Empresas disponíveis no Dashboard Financeiro. Cada uma tem seu token,
+     * guardado em Settings na chave nibo_api_token_<company>.
+     * 'brooks' mantém compatibilidade com a chave antiga nibo_api_token.
+     */
+    public static function companies(): array
     {
-        return (string) Setting::get('nibo_api_token', '');
+        return [
+            'brooks' => 'Financeiro Brooks',
+            'vetriks' => 'Financeiro Vétriks',
+        ];
+    }
+
+    public static function isValidCompany(string $company): bool
+    {
+        return array_key_exists($company, self::companies());
+    }
+
+    /**
+     * Chave de Setting do token de uma empresa.
+     */
+    public static function tokenSettingKey(string $company): string
+    {
+        // Brooks reaproveita a chave histórica para não perder o token já salvo.
+        return $company === 'brooks' ? 'nibo_api_token' : 'nibo_api_token_' . $company;
+    }
+
+    /**
+     * Token de uma empresa específica (padrão: brooks).
+     */
+    public static function token(string $company = 'brooks'): string
+    {
+        return (string) Setting::get(self::tokenSettingKey($company), '');
+    }
+
+    /**
+     * Salva o token de uma empresa.
+     */
+    public static function saveToken(string $company, string $token): void
+    {
+        Setting::set(self::tokenSettingKey($company), trim($token));
     }
 
     public static function baseUrl(): string
@@ -660,9 +698,9 @@ class NiboService
     /**
      * Busca só os saldos das contas (rápido). Retorna [accounts, balance].
      */
-    public static function accountsBalance(?string $token = null): array
+    public static function accountsBalance(?string $token = null, string $company = 'brooks'): array
     {
-        $token = $token ?: self::token();
+        $token = $token ?: self::token($company);
         $raw = [];
         try {
             $raw = self::getAllPaged('/accounts/views/balance', 'accountName', [], $token);
@@ -691,9 +729,9 @@ class NiboService
      * @param string $type  'payable' (débito) ou 'receivable' (crédito)
      * @return array Itens enriquecidos desta página
      */
-    public static function schedulePage(string $type, int $skip, string $from, ?string $token = null, int $pageSize = 100): array
+    public static function schedulePage(string $type, int $skip, string $from, ?string $token = null, int $pageSize = 100, string $company = 'brooks'): array
     {
-        $token = $token ?: self::token();
+        $token = $token ?: self::token($company);
         $path = ($type === 'receivable') ? '/schedules/credit' : '/schedules/debit';
         $query = [
             '$orderby' => 'dueDate',

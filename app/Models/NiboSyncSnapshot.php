@@ -7,18 +7,20 @@ use App\Core\Database;
 
 /**
  * Snapshots das sincronizações do Dashboard Financeiro (somente leitura).
- * Cada registro guarda o conjunto de dados lido do Nibo num instante.
+ * Cada registro guarda o conjunto de dados lido do Nibo num instante,
+ * associado a uma empresa (ex.: 'brooks', 'vetriks').
  */
 class NiboSyncSnapshot extends Model
 {
     protected static string $table = 'nibo_sync_snapshots';
 
     /**
-     * Salva um novo snapshot. Retorna o ID.
+     * Salva um novo snapshot para uma empresa. Retorna o ID.
      */
-    public static function store(array $data, ?string $createdBy = null): int
+    public static function store(array $data, ?string $createdBy = null, string $company = 'brooks'): int
     {
         return self::create([
+            'company' => $company,
             'created_at' => date('Y-m-d H:i:s'),
             'created_by' => $createdBy,
             'ok' => !empty($data['ok']) ? 1 : 0,
@@ -37,23 +39,31 @@ class NiboSyncSnapshot extends Model
     }
 
     /**
-     * Último snapshot salvo (para exibição instantânea).
+     * Último snapshot salvo de uma empresa (para exibição instantânea).
      */
-    public static function latest(): ?array
+    public static function latest(string $company = 'brooks'): ?array
     {
         return Database::fetch(
-            "SELECT * FROM nibo_sync_snapshots ORDER BY created_at DESC, id DESC LIMIT 1"
+            "SELECT * FROM nibo_sync_snapshots WHERE company = ? ORDER BY created_at DESC, id DESC LIMIT 1",
+            [$company]
         );
     }
 
     /**
      * Histórico recente (data/hora + resumo), sem o payload pesado.
      */
-    public static function history(int $limit = 20): array
+    public static function history(int $limit = 20, ?string $company = null): array
     {
         $limit = (int) $limit;
+        if ($company !== null) {
+            return Database::fetchAll(
+                "SELECT id, company, created_at, created_by, ok, totals_json
+                 FROM nibo_sync_snapshots WHERE company = ? ORDER BY created_at DESC, id DESC LIMIT {$limit}",
+                [$company]
+            );
+        }
         return Database::fetchAll(
-            "SELECT id, created_at, created_by, ok, totals_json
+            "SELECT id, company, created_at, created_by, ok, totals_json
              FROM nibo_sync_snapshots ORDER BY created_at DESC, id DESC LIMIT {$limit}"
         );
     }

@@ -1,31 +1,64 @@
 <?php $pageTitle = 'Financeiro'; $currentPage = 'finance'; ?>
 <?php ob_start(); ?>
 
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
     <div>
         <h5 class="mb-0"><i class="bi bi-cash-coin"></i> Financeiro</h5>
         <small class="text-muted">Um resumo simples do seu caixa: o que entra, o que sai e quanto sobra.</small>
     </div>
     <div class="d-flex align-items-center gap-2">
-        <span id="lastSyncLabel" class="small text-muted">
-            <?php if (!empty($lastSyncAt)): ?>
-                Atualizado em <?= date('d/m/Y H:i', strtotime($lastSyncAt)) ?>
-            <?php else: ?>
-                Nunca atualizado
-            <?php endif; ?>
-        </span>
-        <button id="btnSync" class="btn btn-sm btn-dark" <?= $hasToken ? '' : 'disabled' ?>>
+        <span id="lastSyncLabel" class="small text-muted">Carregando…</span>
+        <button id="btnSync" class="btn btn-sm btn-dark">
             <i class="bi bi-arrow-repeat"></i> Atualizar
         </button>
     </div>
 </div>
 
-<?php if (!$hasToken): ?>
-<div class="alert alert-warning d-flex align-items-center gap-2">
-    <i class="bi bi-exclamation-triangle-fill"></i>
-    <div>O token do Nibo ainda não foi configurado. Configure em <a href="/admin/dev/nibo">Desenvolvimento → API Nibo</a> para atualizar os dados.</div>
+<?php
+    $companies = $companies ?? [];
+    $tokens = $tokens ?? [];
+    $currentCompany = $currentCompany ?? 'completo';
+?>
+
+<!-- Seletor de EMPRESA (3 visões) -->
+<ul class="nav nav-pills mb-3 gap-1" id="companyTabs">
+    <li class="nav-item">
+        <button class="nav-link company-tab <?= $currentCompany === 'completo' ? 'active' : '' ?>" data-company="completo">
+            <i class="bi bi-diagram-2"></i> Financeiro Completo
+        </button>
+    </li>
+    <?php foreach ($companies as $key => $label): ?>
+    <li class="nav-item">
+        <button class="nav-link company-tab <?= $currentCompany === $key ? 'active' : '' ?>" data-company="<?= htmlspecialchars($key) ?>">
+            <i class="bi bi-building"></i> <?= htmlspecialchars($label) ?>
+            <?php if (empty($tokens[$key])): ?><span class="badge bg-warning text-dark ms-1" title="Sem token">!</span><?php endif; ?>
+        </button>
+    </li>
+    <?php endforeach; ?>
+</ul>
+
+<!-- Configuração de token (apenas nas abas de empresa específica) -->
+<div id="tokenConfig" class="card border-0 shadow-sm mb-3 d-none">
+    <div class="card-body py-2">
+        <form id="tokenForm" class="row g-2 align-items-end">
+            <div class="col-12 col-md-8">
+                <label class="form-label small mb-1">Token da API Nibo — <span id="tokenCompanyLabel"></span></label>
+                <input type="text" id="tokenInput" class="form-control form-control-sm" placeholder="Cole aqui o ApiToken desta empresa (Nibo → Configurações → API)">
+                <small class="text-muted">Cada empresa usa seu próprio token. O token fica salvo no sistema.</small>
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-dark"><i class="bi bi-save"></i> Salvar token</button>
+                <span id="tokenStatus" class="small align-self-center"></span>
+            </div>
+        </form>
+    </div>
 </div>
-<?php endif; ?>
+
+<!-- Aviso quando falta token -->
+<div id="noTokenAlert" class="alert alert-warning d-none align-items-center gap-2">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div id="noTokenText">O token do Nibo desta empresa ainda não foi configurado.</div>
+</div>
 
 <div id="syncStatus" class="alert alert-info d-none align-items-center gap-2" role="alert">
     <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -495,6 +528,11 @@
 .finance-flow .zero { color:#bbb; }
 </style>
 
+<script>
+    window.FINANCE_TOKENS = <?= json_encode($tokens ?? [], JSON_UNESCAPED_UNICODE) ?>;
+    window.FINANCE_COMPANIES = <?= json_encode($companies ?? [], JSON_UNESCAPED_UNICODE) ?>;
+    window.FINANCE_COMPANY = <?= json_encode($currentCompany ?? 'completo') ?>;
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 (function () {
@@ -503,6 +541,9 @@
     const el = (id) => document.getElementById(id);
     const charts = {};
     let state = { payables: [], receivables: [], accounts: [], totals: {}, filters: {} };
+    let currentCompany = window.FINANCE_COMPANY || 'completo';
+    const tokens = window.FINANCE_TOKENS || {};
+    const companyLabels = window.FINANCE_COMPANIES || {};
 
     const WEEKDAYS = ['dom','seg','ter','qua','qui','sex','sáb'];
     const MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
@@ -1096,12 +1137,56 @@
     }
 
     async function loadData() {
+        el('dashboard').classList.add('d-none');
+        el('emptyState').classList.add('d-none');
         try {
-            const res = await fetch('/admin/finance/data');
+            const res = await fetch('/admin/finance/data?company=' + encodeURIComponent(currentCompany));
             const json = await res.json();
-            if (json.ok && json.has_data) applyData(json.data);
-            else el('emptyState').classList.remove('d-none');
+            if (json.ok && json.has_data) {
+                applyData(json.data);
+                el('lastSyncLabel').textContent = json.synced_at
+                    ? 'Atualizado em ' + new Date(String(json.synced_at).replace(' ','T')).toLocaleString('pt-BR')
+                    : 'Sem dados';
+            } else {
+                el('emptyState').classList.remove('d-none');
+                el('lastSyncLabel').textContent = 'Nunca atualizado';
+            }
         } catch (e) { el('emptyState').classList.remove('d-none'); }
+    }
+
+    // Ajusta a UI conforme a empresa selecionada (token, botão atualizar)
+    function applyCompanyUI() {
+        const isConsolidated = currentCompany === 'completo';
+        // Config de token só nas abas de empresa específica
+        if (isConsolidated) {
+            el('tokenConfig').classList.add('d-none');
+            el('noTokenAlert').classList.add('d-none');
+            el('btnSync').classList.add('d-none'); // consolidado não sincroniza direto
+        } else {
+            el('btnSync').classList.remove('d-none');
+            el('tokenConfig').classList.remove('d-none');
+            el('tokenCompanyLabel').textContent = companyLabels[currentCompany] || currentCompany;
+            el('tokenInput').value = '';
+            el('tokenStatus').textContent = tokens[currentCompany] ? '✓ token salvo' : '';
+            el('tokenStatus').className = 'small align-self-center ' + (tokens[currentCompany] ? 'text-success' : 'text-muted');
+            const hasToken = !!tokens[currentCompany];
+            el('btnSync').disabled = !hasToken;
+            if (!hasToken) {
+                el('noTokenAlert').classList.remove('d-none');
+                el('noTokenAlert').classList.add('d-flex');
+                el('noTokenText').textContent = 'O token do Nibo para "' + (companyLabels[currentCompany] || currentCompany) + '" ainda não foi configurado. Cadastre abaixo para poder atualizar os dados.';
+            } else {
+                el('noTokenAlert').classList.add('d-none');
+                el('noTokenAlert').classList.remove('d-flex');
+            }
+        }
+    }
+
+    function switchCompany(company) {
+        currentCompany = company;
+        document.querySelectorAll('.company-tab').forEach(b => b.classList.toggle('active', b.dataset.company === company));
+        applyCompanyUI();
+        loadData();
     }
 
     function setSyncStatus(text) {
@@ -1125,11 +1210,19 @@
         el('syncStatus').classList.remove('d-none'); el('syncStatus').classList.add('d-flex');
         el('syncError').classList.add('d-none');
 
+        if (currentCompany === 'completo') {
+            showError('Selecione uma empresa (Brooks ou Vétriks) para atualizar. A visão consolidada é montada a partir das empresas.');
+            el('syncStatus').classList.add('d-none'); el('syncStatus').classList.remove('d-flex');
+            btn.disabled = false;
+            return;
+        }
+
         const from = '2025-12-01';
         const MAX_PAGES = 500; // trava de segurança
+        const co = currentCompany;
         try {
             setSyncStatus('Iniciando e lendo saldo das contas…');
-            const start = await postJson('/admin/finance/sync-start', { from });
+            const start = await postJson('/admin/finance/sync-start', { from, company: co });
             if (!start.ok) throw new Error(start.error || 'Falha ao iniciar.');
 
             // Contas a pagar (débito)
@@ -1137,7 +1230,7 @@
             while (page < MAX_PAGES) {
                 page++;
                 setSyncStatus('Buscando contas a pagar… (' + (skip) + '+)');
-                const r = await postJson('/admin/finance/sync-page', { type: 'payable', skip });
+                const r = await postJson('/admin/finance/sync-page', { type: 'payable', skip, company: co });
                 if (!r.ok) throw new Error('Contas a pagar: ' + (r.error || 'erro'));
                 if (r.done) break;
                 skip = r.next_skip;
@@ -1148,14 +1241,14 @@
             while (page < MAX_PAGES) {
                 page++;
                 setSyncStatus('Buscando contas a receber… (' + (skip) + '+)');
-                const r = await postJson('/admin/finance/sync-page', { type: 'receivable', skip });
+                const r = await postJson('/admin/finance/sync-page', { type: 'receivable', skip, company: co });
                 if (!r.ok) throw new Error('Contas a receber: ' + (r.error || 'erro'));
                 if (r.done) break;
                 skip = r.next_skip;
             }
 
             setSyncStatus('Consolidando e salvando…');
-            const fin = await postJson('/admin/finance/sync-finish', {});
+            const fin = await postJson('/admin/finance/sync-finish', { company: co });
             if (!fin.ok) throw new Error(fin.error || 'Falha ao finalizar.');
 
             applyData(fin.data);
@@ -1240,7 +1333,42 @@
             openDrill(keyToLabel(r.key, view) + ' — entradas e saídas', all);
         });
 
+        // Troca de empresa (Completo / Brooks / Vétriks)
+        document.querySelectorAll('.company-tab').forEach(b => b.addEventListener('click', function () {
+            switchCompany(this.dataset.company);
+        }));
+
+        // Salvar token da empresa atual
+        el('tokenForm').addEventListener('submit', async function (ev) {
+            ev.preventDefault();
+            if (currentCompany === 'completo') return;
+            const token = el('tokenInput').value.trim();
+            el('tokenStatus').textContent = 'salvando…';
+            el('tokenStatus').className = 'small align-self-center text-muted';
+            try {
+                const r = await postJson('/admin/finance/save-token', { company: currentCompany, token });
+                if (r.ok) {
+                    tokens[currentCompany] = r.has_token;
+                    el('tokenInput').value = '';
+                    applyCompanyUI();
+                    // Atualiza o badge "!" da aba
+                    const tabBtn = document.querySelector('.company-tab[data-company="'+currentCompany+'"]');
+                    const badge = tabBtn ? tabBtn.querySelector('.badge') : null;
+                    if (r.has_token && badge) badge.remove();
+                    el('tokenStatus').textContent = r.has_token ? '✓ token salvo' : 'token removido';
+                    el('tokenStatus').className = 'small align-self-center ' + (r.has_token ? 'text-success' : 'text-muted');
+                } else {
+                    el('tokenStatus').textContent = r.error || 'falha ao salvar';
+                    el('tokenStatus').className = 'small align-self-center text-danger';
+                }
+            } catch (e) {
+                el('tokenStatus').textContent = 'erro: ' + e.message;
+                el('tokenStatus').className = 'small align-self-center text-danger';
+            }
+        });
+
         toggleCustomDates();
+        applyCompanyUI();
         loadData();
     });
 })();

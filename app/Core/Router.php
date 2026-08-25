@@ -294,6 +294,7 @@ class Router
             'finance/sync-start' => ['FinanceController', 'syncStart'],
             'finance/sync-page' => ['FinanceController', 'syncPage'],
             'finance/sync-finish' => ['FinanceController', 'syncFinish'],
+            'finance/save-token' => ['FinanceController', 'saveToken'],
             'finance/history' => ['FinanceController', 'history'],
             'finance/logs' => ['FinanceController', 'logs'],
             'finance/clear-logs' => ['FinanceController', 'clearLogs'],
