@@ -266,6 +266,45 @@ class FinanceController extends Controller
         $accounts = $acc['accounts'] ?? [];
         $balance = $acc['balance'] ?? 0;
 
+        // ── Rastreabilidade de mudanças de data de vencimento ──────────
+        // Compara com o snapshot anterior da mesma empresa. Preserva a data
+        // original (original_due_date) e guarda o histórico de alterações.
+        $prevRow = NiboSyncSnapshot::latest($company);
+        $prevById = [];
+        if ($prevRow) {
+            $prevPayload = NiboSyncSnapshot::decodePayload($prevRow);
+            foreach (array_merge($prevPayload['payables'] ?? [], $prevPayload['receivables'] ?? []) as $px) {
+                if (!empty($px['id'])) $prevById[(string) $px['id']] = $px;
+            }
+        }
+        $nowStamp = date('Y-m-d H:i:s');
+        $applyTracking = function (array &$list) use ($prevById, $nowStamp) {
+            foreach ($list as &$x) {
+                $id = isset($x['id']) ? (string) $x['id'] : '';
+                $prev = $id !== '' ? ($prevById[$id] ?? null) : null;
+
+                // Data original: herda do anterior; se não existir, é a atual
+                $x['original_due_date'] = $prev['original_due_date'] ?? ($prev['due_date'] ?? $x['due_date']);
+                $x['date_history'] = $prev['date_history'] ?? [];
+
+                // Detecta alteração da data de vencimento entre sincronizações
+                if ($prev && !empty($prev['due_date']) && !empty($x['due_date'])
+                    && substr($prev['due_date'], 0, 10) !== substr($x['due_date'], 0, 10)) {
+                    $x['date_history'][] = [
+                        'from' => substr($prev['due_date'], 0, 10),
+                        'to' => substr($x['due_date'], 0, 10),
+                        'at' => $nowStamp,
+                    ];
+                }
+                $x['date_changed'] = !empty($x['date_history']);
+                // Data anterior imediata (para exibir "alterado para")
+                $x['previous_due_date'] = ($prev['due_date'] ?? null);
+            }
+            unset($x);
+        };
+        $applyTracking($payables);
+        $applyTracking($receivables);
+
         $ccMap = [];
         $contactMap = [];
         foreach (array_merge($payables, $receivables) as $x) {

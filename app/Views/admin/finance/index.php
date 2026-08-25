@@ -220,9 +220,9 @@
                 <div class="table-responsive" style="max-height:280px;">
                     <table class="table table-sm table-hover mb-0 align-middle">
                         <thead class="table-light" style="position:sticky;top:0;">
-                            <tr><th>Venceu em</th><th>Dias</th><th>Quem</th><th>Descrição</th><th>Centro de custo</th><th class="text-end">Quanto</th></tr>
+                            <tr><th>Venceu em</th><th>Alterado para</th><th>Dias</th><th>Quem</th><th>Descrição</th><th>Centro de custo</th><th class="text-end">Quanto</th></tr>
                         </thead>
-                        <tbody id="overdueList"><tr><td colspan="6" class="text-center text-muted py-3">—</td></tr></tbody>
+                        <tbody id="overdueList"><tr><td colspan="7" class="text-center text-muted py-3">—</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -355,10 +355,10 @@
                     </div>
                 </div>
                 <div class="col-6 col-lg-3">
-                    <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+                    <div class="card border-0 shadow-sm h-100 border-start border-4" style="border-color:#fd7e14 !important;">
                         <div class="card-body">
-                            <div class="small text-uppercase text-warning fw-semibold" style="letter-spacing:.5px;">Vencidas (a pagar)</div>
-                            <div class="fs-4 fw-bold text-warning" id="ctaOverdueTotal">—</div>
+                            <div class="small text-uppercase fw-semibold" style="letter-spacing:.5px; color:#c05600;">Vencidas (a pagar)</div>
+                            <div class="fs-4 fw-bold" id="ctaOverdueTotal" style="color:#fd7e14;">—</div>
                             <div class="small text-muted"><span id="ctaOverdueCount">0</span> contas</div>
                         </div>
                     </div>
@@ -649,9 +649,21 @@
         }
         return true;
     }
-    // Contas a pagar vencidas e ainda NÃO pagas — independem do filtro de tempo
+    // Data que conta para vencimento contábil: SEMPRE a original prevista
+    // (mesmo que a data tenha sido postergada em sincronizações seguintes).
+    function accountingDate(x) {
+        return parseDate(x.original_due_date || x.due_date);
+    }
+    // Contas a pagar vencidas e ainda NÃO pagas — independem do filtro de tempo.
+    // O vencimento é medido pela data ORIGINAL prevista.
     function overduePayables() {
-        return state.payables.filter(x => x.status === 'overdue' && matchesFiltersNoDate(x));
+        const today = new Date(); today.setHours(0,0,0,0);
+        return state.payables.filter(x => {
+            if (x.status === 'paid') return false;
+            if (!matchesFiltersNoDate(x)) return false;
+            const d = accountingDate(x);
+            return d && d < today;
+        });
     }
     // Aliases usados pelas abas (mesma fonte, filtro único)
     const allPayables = filteredPayables;
@@ -749,20 +761,27 @@
         el('overdueCount').textContent = rows.length;
         const tb = el('overdueList');
         if (!rows.length) {
-            tb.innerHTML = '<tr><td colspan="6" class="text-center text-success py-3"><i class="bi bi-check2-circle"></i> Nenhuma conta vencida em aberto.</td></tr>';
+            tb.innerHTML = '<tr><td colspan="7" class="text-center text-success py-3"><i class="bi bi-check2-circle"></i> Nenhuma conta vencida em aberto.</td></tr>';
             return;
         }
         const today = new Date(); today.setHours(0,0,0,0);
-        tb.innerHTML = rows.map(r => {
-            const d = parseDate(r.due_date);
-            const dias = d ? Math.round((today - d) / 86400000) : 0;
-            return '<tr>'
-                + '<td class="text-nowrap">' + dateLabel(r.due_date) + '</td>'
+        tb.innerHTML = rows.map((r, i) => {
+            const orig = accountingDate(r);
+            // Dias vencidos SEMPRE pela data original prevista (contábil)
+            const dias = orig ? Math.round((today - orig) / 86400000) : 0;
+            const changed = !!r.date_changed;
+            // "Alterado para": a data atual, quando difere da original
+            const alterado = changed ? dateLabel(r.due_date) : '<span class="text-muted">—</span>';
+            const rowStyle = changed ? ' style="background-color:#efe6fb;"' : '';
+            const valColor = changed ? '#6f42c1' : '#c05600';
+            return '<tr class="overdue-row" data-id="' + esc(r.id||'') + '"' + rowStyle + ' style="cursor:pointer">'
+                + '<td class="text-nowrap">' + dateLabel(r.original_due_date || r.due_date) + '</td>'
+                + '<td class="text-nowrap">' + alterado + (changed ? ' <i class="bi bi-arrow-repeat" style="color:#6f42c1;" title="Data postergada"></i>' : '') + '</td>'
                 + '<td><span class="badge bg-danger">' + dias + ' d</span></td>'
                 + '<td>' + esc(r.contact_name) + '</td>'
                 + '<td style="min-width:220px; white-space:normal; word-break:break-word;">' + esc(r.description) + '</td>'
                 + '<td>' + esc(r.cost_center) + '</td>'
-                + '<td class="text-end fw-semibold" style="color:#c05600;">' + fmtMoneyFull(r.value) + '</td></tr>';
+                + '<td class="text-end fw-semibold" style="color:' + valColor + ';">' + fmtMoneyFull(r.value) + '</td></tr>';
         }).join('');
     }
 
@@ -772,12 +791,15 @@
         el(totalId).textContent = fmtMoneyFull(sum(rows));
         const tb = el(tbodyId);
         if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Nada no período.</td></tr>'; return; }
-        tb.innerHTML = rows.map(r =>
-            '<tr><td>' + dateLabel(r.due_date) + '</td>'
-            + '<td>' + esc(r.contact_name && r.contact_name !== '—' ? r.contact_name : (r.description||'—')) + '</td>'
-            + '<td class="text-end fw-semibold ' + valClass + '">' + fmtMoneyFull(r.value) + '</td>'
-            + '<td>' + statusBadge(r.status) + '</td></tr>'
-        ).join('');
+        tb.innerHTML = rows.map(r => {
+            const changed = !!r.date_changed;
+            const rowStyle = changed ? ' style="background-color:#efe6fb;"' : '';
+            const mark = changed ? ' <i class="bi bi-arrow-repeat" style="color:#6f42c1;" title="Data postergada"></i>' : '';
+            return '<tr' + rowStyle + '><td>' + dateLabel(r.due_date) + mark + '</td>'
+                + '<td>' + esc(r.contact_name && r.contact_name !== '—' ? r.contact_name : (r.description||'—')) + '</td>'
+                + '<td class="text-end fw-semibold ' + valClass + '">' + fmtMoneyFull(r.value) + '</td>'
+                + '<td>' + statusBadge(r.status) + '</td></tr>';
+        }).join('');
     }
 
     // ── Ranking (top contatos) ────────────────────────────────────────
@@ -807,6 +829,19 @@
         if (!drillModal) drillModal = new bootstrap.Modal(el('drillModal'));
         drillModal.show();
     }
+    // Monta o texto do histórico de mudanças de data de um lançamento
+    function dateHistoryHtml(r) {
+        const hist = r.date_history || [];
+        if (!hist.length) return '';
+        const parts = hist.map(h => {
+            const from = h.from ? new Date(h.from+'T00:00:00').toLocaleDateString('pt-BR') : '?';
+            const to = h.to ? new Date(h.to+'T00:00:00').toLocaleDateString('pt-BR') : '?';
+            const at = h.at ? ' <span class="text-muted">(' + new Date(String(h.at).replace(' ','T')).toLocaleDateString('pt-BR') + ')</span>' : '';
+            return '<div><i class="bi bi-arrow-right-short"></i> ' + from + ' → <strong>' + to + '</strong>' + at + '</div>';
+        }).join('');
+        return '<div class="small mt-1" style="color:#6f42c1;"><i class="bi bi-clock-history"></i> Mudanças de data:' + parts + '</div>';
+    }
+
     function renderDrill(search) {
         let rows = drillItems;
         if (search) {
@@ -829,10 +864,15 @@
             const tipo = r.type === 'payable'
                 ? '<span class="badge bg-danger-subtle text-danger">Saída</span>'
                 : '<span class="badge bg-success-subtle text-success">Entrada</span>';
-            return '<tr><td class="text-nowrap">' + dateLabel(r.due_date) + '</td>'
+            const changed = !!r.date_changed;
+            const rowStyle = changed ? ' style="background-color:#efe6fb;"' : '';
+            const dateCell = changed
+                ? '<span class="text-muted text-decoration-line-through">' + dateLabel(r.original_due_date) + '</span> <i class="bi bi-arrow-right-short" style="color:#6f42c1;"></i> <strong style="color:#6f42c1;">' + dateLabel(r.due_date) + '</strong>'
+                : dateLabel(r.due_date);
+            return '<tr' + rowStyle + '><td class="text-nowrap">' + dateCell + '</td>'
                 + '<td>' + tipo + '</td>'
                 + '<td>' + esc(r.contact_name) + '</td>'
-                + '<td style="min-width:260px; white-space:normal; word-break:break-word;">' + esc(r.description) + '</td>'
+                + '<td style="min-width:260px; white-space:normal; word-break:break-word;">' + esc(r.description) + dateHistoryHtml(r) + '</td>'
                 + '<td>' + esc(r.cost_center) + '</td>'
                 + '<td>' + esc(r.category) + '</td>'
                 + '<td class="text-end fw-semibold text-nowrap">' + fmtMoneyFull(r.value) + '</td>'
@@ -1043,15 +1083,20 @@
         el(totalId).textContent = fmtMoneyFull(openTotal);
         const tb = el(tbodyId);
         if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhuma conta encontrada.</td></tr>'; return; }
-        tb.innerHTML = rows.map(r =>
-            '<tr><td>' + dateLabel(r.due_date) + '</td>'
-            + '<td>' + esc(r.contact_name) + '</td>'
-            + '<td class="text-truncate" style="max-width:240px;">' + esc(r.description) + '</td>'
-            + '<td>' + esc(r.cost_center) + '</td>'
-            + '<td>' + esc(r.category) + '</td>'
-            + '<td class="text-end fw-semibold">' + fmtMoneyFull(r.value) + '</td>'
-            + '<td>' + statusBadge(r.status) + '</td></tr>'
-        ).join('');
+        tb.innerHTML = rows.map(r => {
+            const changed = !!r.date_changed;
+            const rowStyle = changed ? ' style="background-color:#efe6fb;"' : '';
+            const dateCell = changed
+                ? '<span class="text-muted text-decoration-line-through">' + dateLabel(r.original_due_date) + '</span> <i class="bi bi-arrow-right-short" style="color:#6f42c1;"></i> <strong style="color:#6f42c1;">' + dateLabel(r.due_date) + '</strong>'
+                : dateLabel(r.due_date);
+            return '<tr' + rowStyle + '><td class="text-nowrap">' + dateCell + '</td>'
+                + '<td>' + esc(r.contact_name) + '</td>'
+                + '<td class="text-truncate" style="max-width:240px;">' + esc(r.description) + '</td>'
+                + '<td>' + esc(r.cost_center) + '</td>'
+                + '<td>' + esc(r.category) + '</td>'
+                + '<td class="text-end fw-semibold">' + fmtMoneyFull(r.value) + '</td>'
+                + '<td>' + statusBadge(r.status) + '</td></tr>';
+        }).join('');
     }
 
     // ── Matriz detalhada ──────────────────────────────────────────────
@@ -1332,6 +1377,15 @@
 
         // Filtro por nome no quadro de vencidas
         el('searchOverdue').addEventListener('input', renderOverdue);
+
+        // Clique numa conta vencida abre o detalhamento com a rastreabilidade
+        document.addEventListener('click', function (ev) {
+            const tr = ev.target.closest('.overdue-row');
+            if (!tr) return;
+            const id = tr.dataset.id;
+            const item = state.payables.find(x => String(x.id||'') === String(id));
+            if (item) openDrill('Detalhe da conta — ' + (item.contact_name || ''), [item]);
+        });
 
         // Clique nas linhas das tabelas Semanal/Mensal/Anual abre o detalhamento
         document.addEventListener('click', function (ev) {
