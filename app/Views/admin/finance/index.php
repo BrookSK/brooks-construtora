@@ -214,9 +214,9 @@
     <!-- Abas -->
     <ul class="nav nav-tabs mb-3" id="financeTabs" role="tablist">
         <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-resumo" type="button"><i class="bi bi-grid-1x2"></i> Resumo</button></li>
-        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-semanal" type="button"><i class="bi bi-calendar-week"></i> Semanal</button></li>
-        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-mensal" type="button"><i class="bi bi-calendar-month"></i> Mensal</button></li>
-        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-anual" type="button"><i class="bi bi-calendar3"></i> Anual</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-semanal" data-period="7" type="button"><i class="bi bi-calendar-week"></i> Semanal</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-mensal" data-period="30" type="button"><i class="bi bi-calendar-month"></i> Mensal</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-anual" data-period="this-year" type="button"><i class="bi bi-calendar3"></i> Anual</button></li>
         <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-contas" type="button"><i class="bi bi-list-columns-reverse"></i> Contas a Pagar e Receber</button></li>
         <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-detalhe" type="button"><i class="bi bi-table"></i> Detalhado</button></li>
         <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-diag" type="button"><i class="bi bi-bug"></i> Diagnóstico</button></li>
@@ -1691,34 +1691,23 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
             }
         });
 
-        // ── Abas de período ajustam a janela temporal do filtro ────────
-        // Semanal → 90 dias · Mensal → este ano · Anual → tudo.
-        // Mantém os demais filtros (fornecedor, centro de custo, situação).
-        const tabPeriodMap = {
-            '#tab-semanal': '90',
-            '#tab-mensal': 'this-year',
-            '#tab-anual': 'all',
-        };
-        Object.keys(tabPeriodMap).forEach(sel => {
-            const btn = document.querySelector('[data-bs-target="' + sel + '"]');
-            if (!btn) return;
-            btn.addEventListener('shown.bs.tab', function () {
-                const target = tabPeriodMap[sel];
-                if (el('filterPeriod').value !== target) {
-                    el('filterPeriod').value = target;
-                    toggleCustomDatesSafe();
-                    refresh();
-                }
-            });
-        });
-        function toggleCustomDatesSafe() {
-            const custom = el('filterPeriod').value === 'custom';
-            document.querySelectorAll('.filter-custom-date').forEach(d => d.classList.toggle('d-none', !custom));
-        }
+        // As abas Semanal/Mensal/Anual já agrupam os dados na sua granularidade
+        // fixa (semana/mês/ano) sobre o período do filtro. Não alteramos o
+        // dropdown de período ao trocar de aba (evita a confusão de trocar sozinho).
 
-        // Renderização preguiçosa: ao mostrar uma aba, renderiza só ela
+        // Renderização preguiçosa + sincronismo do período com a aba.
+        // As abas Semanal/Mensal/Anual têm data-period: ao abrir, o dropdown
+        // de período muda para o valor correspondente (um filtro só, sem conflito).
         document.querySelectorAll('#financeTabs [data-bs-toggle="tab"]').forEach(btn => {
-            btn.addEventListener('shown.bs.tab', function () { renderActiveTab(); });
+            btn.addEventListener('shown.bs.tab', function () {
+                const p = this.getAttribute('data-period');
+                if (p && el('filterPeriod').value !== p) {
+                    el('filterPeriod').value = p;
+                    const custom = el('filterPeriod').value === 'custom';
+                    document.querySelectorAll('.filter-custom-date').forEach(d => d.classList.toggle('d-none', !custom));
+                }
+                renderActiveTab();
+            });
         });
 
         // ── Lupa em cada bloco: abre pop-up com o conteúdo completo ────
