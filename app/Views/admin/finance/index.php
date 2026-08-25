@@ -122,8 +122,13 @@
                         <option value="open">Em aberto</option>
                         <option value="overdue">Vencidas</option>
                         <option value="paid">Já pagas/recebidas</option>
-                        <option value="postponed">Postergadas (remanejadas)</option>
                     </select>
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="checkbox" id="filterPostponed">
+                        <label class="form-check-label small" for="filterPostponed" style="color:#6f42c1;">
+                            <i class="bi bi-arrow-repeat"></i> Só postergadas
+                        </label>
+                    </div>
                 </div>
                 <div class="col-6 col-md-3 col-xl-2">
                     <button id="btnClearFilters" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-x-lg"></i> Limpar filtros</button>
@@ -494,6 +499,22 @@
     </div>
 </div>
 
+<!-- Modal "expandir bloco" (mostra o conteúdo completo de um card) -->
+<div class="modal fade" id="expandModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen-lg-down modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="expandTitle"><i class="bi bi-search"></i> Detalhes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body" id="expandBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de detalhamento (lançamentos que compõem o ponto do gráfico) -->
 <div class="modal fade" id="drillModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -617,6 +638,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
             costCenter: el('filterCostCenter').value,
             contact: el('filterContact').value,
             status: el('filterStatus').value,
+            postponed: el('filterPostponed').checked,
         };
     }
     // Mapas id→nome dos cadastros, para casar filtro por ID ou por nome
@@ -631,11 +653,8 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
     // Vale igualmente para TODAS as abas, evitando inconsistências.
     function matchesAll(x) {
         const f = getFilters();
-        if (f.status === 'postponed') {
-            if (!x.date_changed) return false;
-        } else if (f.status) {
-            if (x.status !== f.status) return false;
-        }
+        if (f.status && x.status !== f.status) return false;
+        if (f.postponed && !x.date_changed) return false; // combina com a situação
         if (f.costCenter) {
             const byId = String(x.cost_center_id||'') === f.costCenter;
             const byName = ccNameById[f.costCenter] && (x.cost_center||'') === ccNameById[f.costCenter];
@@ -657,6 +676,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
     // Filtros SEM a janela de data (usado pelo quadro de Vencidas)
     function matchesFiltersNoDate(x) {
         const f = getFilters();
+        if (f.postponed && !x.date_changed) return false;
         if (f.costCenter) {
             const byId = String(x.cost_center_id||'') === f.costCenter;
             const byName = ccNameById[f.costCenter] && (x.cost_center||'') === ccNameById[f.costCenter];
@@ -1427,7 +1447,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         }
 
         // BARRA ÚNICA: qualquer filtro recalcula TODAS as abas
-        ['filterPeriod','filterStart','filterEnd','filterContact','filterCostCenter','filterStatus']
+        ['filterPeriod','filterStart','filterEnd','filterContact','filterCostCenter','filterStatus','filterPostponed']
             .forEach(id => el(id).addEventListener('change', function () {
                 toggleCustomDates();
                 refresh();
@@ -1444,6 +1464,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
             el('filterPeriod').value = 'this-year';
             el('filterStart').value = ''; el('filterEnd').value = '';
             el('filterContact').value = ''; el('filterCostCenter').value = ''; el('filterStatus').value = '';
+            el('filterPostponed').checked = false;
             toggleCustomDates();
             refresh();
         });
@@ -1534,10 +1555,80 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
             }
         });
 
+        // ── Lupa em cada bloco: abre pop-up com o conteúdo completo ────
+        setupExpandButtons();
+
         toggleCustomDates();
         applyCompanyUI();
         loadData();
     });
+
+    // Injeta um botão de lupa no canto superior direito de cada card e do
+    // bloco de vencidas, abrindo um modal com o conteúdo completo do bloco.
+    let expandModal = null;
+    function setupExpandButtons() {
+        const dash = el('dashboard');
+        if (!dash) return;
+        const cards = dash.querySelectorAll('.card');
+        cards.forEach(card => {
+            const header = card.querySelector('.card-header');
+            if (!header || header.querySelector('.btn-expand-block')) return;
+            // Não coloca lupa nos 4 cards de KPI (não têm card-header mesmo)
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-link text-secondary p-0 ms-2 btn-expand-block';
+            btn.title = 'Ver tudo';
+            btn.innerHTML = '<i class="bi bi-search"></i>';
+            btn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                openExpand(card, header);
+            });
+            const alreadyFlex = header.classList.contains('justify-content-between')
+                || header.classList.contains('d-flex');
+            header.classList.add('d-flex', 'align-items-center');
+            // Se o header ainda não empurra conteúdo à direita, a lupa usa ms-auto
+            if (!alreadyFlex) btn.classList.add('ms-auto');
+            header.appendChild(btn);
+        });
+    }
+
+    function openExpand(card, header) {
+        // Título: usa o primeiro rótulo do header (span/fw-semibold), senão o texto todo
+        let titleEl = header.querySelector('.fw-semibold, span');
+        let titleText = (titleEl ? titleEl.textContent : header.textContent || 'Detalhes').trim();
+        titleText = titleText.replace(/\s+/g, ' ');
+        el('expandTitle').innerHTML = '<i class="bi bi-search"></i> ' + esc(titleText);
+
+        // Clona o corpo do card (tabela/canvas/lista) para o modal, sem limite de altura
+        const body = el('expandBody');
+        body.innerHTML = '';
+        const parts = card.querySelectorAll('.table-responsive, .card-body, .list-group, .card-footer');
+        if (parts.length) {
+            parts.forEach(p => {
+                const clone = p.cloneNode(true);
+                clone.style.maxHeight = 'none';
+                clone.querySelectorAll('[style*="max-height"]').forEach(e => e.style.maxHeight = 'none');
+                // Canvas (gráficos) não sobrevivem ao clone: troca por imagem
+                const srcCanvases = p.querySelectorAll('canvas');
+                const dstCanvases = clone.querySelectorAll('canvas');
+                srcCanvases.forEach((src, i) => {
+                    try {
+                        const img = document.createElement('img');
+                        img.src = src.toDataURL('image/png');
+                        img.className = 'img-fluid';
+                        if (dstCanvases[i] && dstCanvases[i].parentNode) {
+                            dstCanvases[i].parentNode.replaceChild(img, dstCanvases[i]);
+                        }
+                    } catch (e) { /* ignora */ }
+                });
+                body.appendChild(clone);
+            });
+        } else {
+            body.appendChild(card.cloneNode(true));
+        }
+        if (!expandModal) expandModal = new bootstrap.Modal(el('expandModal'));
+        expandModal.show();
+    }
 })();
 </script>
 
