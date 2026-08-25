@@ -220,9 +220,15 @@
                 <div class="table-responsive" style="max-height:280px;">
                     <table class="table table-sm table-hover mb-0 align-middle">
                         <thead class="table-light" style="position:sticky;top:0;">
-                            <tr><th>Venceu em</th><th>Alterado para</th><th>Dias</th><th>Quem</th><th>Descrição</th><th>Centro de custo</th><th class="text-end">Quanto</th></tr>
+                            <tr>
+                                <th>Vencimento</th>
+                                <th>Previsto inicial</th>
+                                <th>Postergado para</th>
+                                <th>Dias vencidos</th>
+                                <th>Quem</th><th>Descrição</th><th>Centro de custo</th><th class="text-end">Quanto</th>
+                            </tr>
                         </thead>
-                        <tbody id="overdueList"><tr><td colspan="7" class="text-center text-muted py-3">—</td></tr></tbody>
+                        <tbody id="overdueList"><tr><td colspan="8" class="text-center text-muted py-3">—</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -649,13 +655,13 @@
         }
         return true;
     }
-    // Data que conta para vencimento contábil: SEMPRE a original prevista
-    // (mesmo que a data tenha sido postergada em sincronizações seguintes).
+    // Vencimento contábil: SEMPRE a data de vencimento (fixa, due_date).
+    // A postergação altera apenas o "previsto para" (forecast_date).
     function accountingDate(x) {
-        return parseDate(x.original_due_date || x.due_date);
+        return parseDate(x.due_date);
     }
     // Contas a pagar vencidas e ainda NÃO pagas — independem do filtro de tempo.
-    // O vencimento é medido pela data ORIGINAL prevista.
+    // "Vencida" é medido pela DATA DE VENCIMENTO (fixa).
     function overduePayables() {
         const today = new Date(); today.setHours(0,0,0,0);
         return state.payables.filter(x => {
@@ -766,17 +772,21 @@
         }
         const today = new Date(); today.setHours(0,0,0,0);
         tb.innerHTML = rows.map((r, i) => {
-            const orig = accountingDate(r);
-            // Dias vencidos SEMPRE pela data original prevista (contábil)
-            const dias = orig ? Math.round((today - orig) / 86400000) : 0;
+            const venc = parseDate(r.due_date);
+            // Dias vencidos SEMPRE pela data de VENCIMENTO (fixa)
+            const dias = venc ? Math.round((today - venc) / 86400000) : 0;
             const changed = !!r.date_changed;
-            // "Alterado para": a data atual, quando difere da original
-            const alterado = changed ? dateLabel(r.due_date) : '<span class="text-muted">—</span>';
-            const rowStyle = changed ? ' style="background-color:#efe6fb;"' : '';
+            // Previsto inicial e postergado (previsto atual)
+            const previstoInicial = r.original_forecast_date || r.forecast_date || r.due_date;
+            const postergado = changed
+                ? dateLabel(r.forecast_date) + ' <i class="bi bi-arrow-repeat" style="color:#6f42c1;" title="Previsto postergado"></i>'
+                : '<span class="text-muted">—</span>';
+            const rowStyle = changed ? ' style="background-color:#efe6fb; cursor:pointer;"' : ' style="cursor:pointer;"';
             const valColor = changed ? '#6f42c1' : '#c05600';
-            return '<tr class="overdue-row" data-id="' + esc(r.id||'') + '"' + rowStyle + ' style="cursor:pointer">'
-                + '<td class="text-nowrap">' + dateLabel(r.original_due_date || r.due_date) + '</td>'
-                + '<td class="text-nowrap">' + alterado + (changed ? ' <i class="bi bi-arrow-repeat" style="color:#6f42c1;" title="Data postergada"></i>' : '') + '</td>'
+            return '<tr class="overdue-row" data-id="' + esc(r.id||'') + '"' + rowStyle + '>'
+                + '<td class="text-nowrap">' + dateLabel(r.due_date) + '</td>'
+                + '<td class="text-nowrap">' + dateLabel(previstoInicial) + '</td>'
+                + '<td class="text-nowrap">' + postergado + '</td>'
                 + '<td><span class="badge bg-danger">' + dias + ' d</span></td>'
                 + '<td>' + esc(r.contact_name) + '</td>'
                 + '<td style="min-width:220px; white-space:normal; word-break:break-word;">' + esc(r.description) + '</td>'
@@ -866,9 +876,10 @@
                 : '<span class="badge bg-success-subtle text-success">Entrada</span>';
             const changed = !!r.date_changed;
             const rowStyle = changed ? ' style="background-color:#efe6fb;"' : '';
+            const curForecast = r.forecast_date || r.due_date;
             const dateCell = changed
-                ? '<span class="text-muted text-decoration-line-through">' + dateLabel(r.original_due_date) + '</span> <i class="bi bi-arrow-right-short" style="color:#6f42c1;"></i> <strong style="color:#6f42c1;">' + dateLabel(r.due_date) + '</strong>'
-                : dateLabel(r.due_date);
+                ? '<span class="text-muted text-decoration-line-through">' + dateLabel(r.original_forecast_date) + '</span> <i class="bi bi-arrow-right-short" style="color:#6f42c1;"></i> <strong style="color:#6f42c1;">' + dateLabel(curForecast) + '</strong>'
+                : dateLabel(curForecast);
             return '<tr' + rowStyle + '><td class="text-nowrap">' + dateCell + '</td>'
                 + '<td>' + tipo + '</td>'
                 + '<td>' + esc(r.contact_name) + '</td>'
@@ -1086,9 +1097,10 @@
         tb.innerHTML = rows.map(r => {
             const changed = !!r.date_changed;
             const rowStyle = changed ? ' style="background-color:#efe6fb;"' : '';
+            const curForecast = r.forecast_date || r.due_date;
             const dateCell = changed
-                ? '<span class="text-muted text-decoration-line-through">' + dateLabel(r.original_due_date) + '</span> <i class="bi bi-arrow-right-short" style="color:#6f42c1;"></i> <strong style="color:#6f42c1;">' + dateLabel(r.due_date) + '</strong>'
-                : dateLabel(r.due_date);
+                ? '<span class="text-muted text-decoration-line-through">' + dateLabel(r.original_forecast_date) + '</span> <i class="bi bi-arrow-right-short" style="color:#6f42c1;"></i> <strong style="color:#6f42c1;">' + dateLabel(curForecast) + '</strong>'
+                : dateLabel(curForecast);
             return '<tr' + rowStyle + '><td class="text-nowrap">' + dateCell + '</td>'
                 + '<td>' + esc(r.contact_name) + '</td>'
                 + '<td class="text-truncate" style="max-width:240px;">' + esc(r.description) + '</td>'

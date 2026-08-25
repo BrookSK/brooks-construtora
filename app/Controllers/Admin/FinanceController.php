@@ -283,22 +283,27 @@ class FinanceController extends Controller
                 $id = isset($x['id']) ? (string) $x['id'] : '';
                 $prev = $id !== '' ? ($prevById[$id] ?? null) : null;
 
-                // Data original: herda do anterior; se não existir, é a atual
-                $x['original_due_date'] = $prev['original_due_date'] ?? ($prev['due_date'] ?? $x['due_date']);
+                // O que muda ao postergar é a data PREVISTA (forecast_date).
+                // O vencimento (due_date) é fixo. Rastreamos o previsto.
+                $curForecast = $x['forecast_date'] ?? $x['due_date'] ?? null;
+
+                // Previsto original: herda do anterior; se não existir, é o atual
+                $x['original_forecast_date'] = $prev['original_forecast_date']
+                    ?? ($prev['forecast_date'] ?? $prev['due_date'] ?? $curForecast);
                 $x['date_history'] = $prev['date_history'] ?? [];
 
-                // Detecta alteração da data de vencimento entre sincronizações
-                if ($prev && !empty($prev['due_date']) && !empty($x['due_date'])
-                    && substr($prev['due_date'], 0, 10) !== substr($x['due_date'], 0, 10)) {
+                // Detecta alteração da data PREVISTA entre sincronizações
+                $prevForecast = $prev['forecast_date'] ?? $prev['due_date'] ?? null;
+                if ($prev && !empty($prevForecast) && !empty($curForecast)
+                    && substr($prevForecast, 0, 10) !== substr($curForecast, 0, 10)) {
                     $x['date_history'][] = [
-                        'from' => substr($prev['due_date'], 0, 10),
-                        'to' => substr($x['due_date'], 0, 10),
+                        'from' => substr($prevForecast, 0, 10),
+                        'to' => substr($curForecast, 0, 10),
                         'at' => $nowStamp,
                     ];
                 }
                 $x['date_changed'] = !empty($x['date_history']);
-                // Data anterior imediata (para exibir "alterado para")
-                $x['previous_due_date'] = ($prev['due_date'] ?? null);
+                $x['previous_forecast_date'] = $prevForecast;
             }
             unset($x);
         };

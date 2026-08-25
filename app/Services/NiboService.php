@@ -801,14 +801,16 @@ class NiboService
         // Valor ainda em aberto (0 quando já pago)
         $openValue = isset($s['openValue']) ? abs((float) $s['openValue']) : null;
 
-        // Data de vencimento: o débito (contas a pagar) pode usar nomes
-        // diferentes do crédito. Testamos várias variações.
-        $dueDate = $s['dueDate'] ?? $s['dueDateString'] ?? $s['date'] ?? $s['scheduleDate']
-            ?? $s['expectedDate'] ?? $s['paymentDate'] ?? $s['accrualDate'] ?? $s['competenceDate'] ?? null;
+        // No Nibo há dois campos distintos:
+        //  - Vencimento (fixo): dueDate
+        //  - Previsto para (muda ao postergar): scheduleDate
+        $dueDate = $s['dueDate'] ?? $s['dueDateString'] ?? $s['accrualDate'] ?? $s['competenceDate'] ?? null;
+        $forecastDate = $s['scheduleDate'] ?? $s['expectedDate'] ?? $s['date'] ?? $dueDate;
 
         $isPaid = !empty($s['isPaid']) || !empty($s['paid']) || !empty($s['paymentDate']) || !empty($s['isFullyPaid']);
 
-        // Status derivado (só leitura): pago / vencido / em aberto
+        // Status derivado (só leitura): pago / vencido / em aberto.
+        // O "vencido" é medido pela DATA DE VENCIMENTO (fixa).
         $status = 'open';
         if ($isPaid) {
             $status = 'paid';
@@ -821,7 +823,8 @@ class NiboService
         return [
             'id' => $s['scheduleId'] ?? $s['id'] ?? null,
             'type' => $type,
-            'due_date' => $dueDate,
+            'due_date' => $dueDate,           // Vencimento (fixo)
+            'forecast_date' => $forecastDate, // Previsto para (pode ser postergado)
             'value' => $value,
             'open_value' => $openValue,
             'description' => $s['description'] ?? '',
