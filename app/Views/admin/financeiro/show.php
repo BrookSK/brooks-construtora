@@ -156,8 +156,8 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($orders as $o): ?>
-                    <tr>
+                    <?php foreach ($orders as $i => $o): ?>
+                    <tr<?= $i >= 8 ? ' class="order-row-extra" style="display:none;"' : '' ?>>
                         <td><a href="/admin/orders/show/<?= (int) $o['id'] ?>" class="text-decoration-none"><?= htmlspecialchars($o['code'] ?? ('#' . $o['id'])) ?></a></td>
                         <td><?= htmlspecialchars($o['supplier_name'] ?? '—') ?></td>
                         <td class="text-center"><span class="badge bg-secondary"><?= htmlspecialchars($o['status'] ?? '') ?></span></td>
@@ -169,6 +169,14 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 </tbody>
             </table>
         </div>
+        <?php if (count($orders) > 8): ?>
+        <div class="text-center py-2 border-top">
+            <button type="button" class="btn btn-sm btn-outline-primary" id="ordersShowMoreBtn"
+                    onclick="document.querySelectorAll('.order-row-extra').forEach(function(r){r.style.display='';}); this.parentNode.style.display='none';">
+                <i class="bi bi-chevron-down"></i> Ver mais (<?= count($orders) - 8 ?>)
+            </button>
+        </div>
+        <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>
