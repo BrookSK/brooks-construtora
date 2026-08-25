@@ -281,6 +281,11 @@ class Router
             'weekly-materials/store-manager' => ['WeeklyMaterialController', 'storeManager'],
             'weekly-materials/toggle-manager' => ['WeeklyMaterialController', 'toggleManager'],
             'weekly-materials/delete-manager' => ['WeeklyMaterialController', 'deleteManager'],
+
+            // Área de desenvolvimento / integrações
+            'dev/nibo' => ['DevController', 'nibo'],
+            'dev/nibo/save-token' => ['DevController', 'niboSaveToken'],
+            'dev/nibo/test' => ['DevController', 'niboTest'],
         ];
 
         $path = implode('/', $segments);

@@ -478,6 +478,16 @@
                 </a>
             </li>
             <?php endif; ?>
+            <?php if (\App\Core\Auth::isSuperAdmin()): ?>
+            <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
+                <small class="text-uppercase px-3 opacity-50 nav-section-label" style="font-size:0.65rem; letter-spacing:1px;">Desenvolvimento</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'dev_nibo' ? 'active' : '' ?>" href="/admin/dev/nibo" data-title="API Nibo">
+                    <i class="bi bi-plug"></i> <span class="link-text">API Nibo</span>
+                </a>
+            </li>
+            <?php endif; ?>
             <li class="nav-item mt-3" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
                 <a class="nav-link" href="/" target="_blank" data-title="Ver Site">
                     <i class="bi bi-box-arrow-up-right"></i> <span class="link-text">Ver Site</span>
