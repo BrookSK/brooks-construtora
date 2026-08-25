@@ -277,11 +277,25 @@ class NiboService
 
             // ── Pagamentos (débito / contas a pagar) ───────────────────
             [
-                'key' => 'debit_list', 'group' => 'Pagamentos', 'label' => 'Listar pagamentos em aberto',
+                'key' => 'debit_list', 'group' => 'Pagamentos', 'label' => 'Listar pagamentos agendados (contas a pagar)',
                 'method' => 'GET', 'path' => '/schedules/debit',
-                'description' => 'Lista pagamentos agendados em aberto (OData).',
+                'description' => 'Lista agendamentos de pagamento (OData).',
                 'sample_query' => ['$orderby' => 'dueDate', '$top' => '20', '$skip' => '0'],
-                'doc' => 'https://nibo.readme.io/reference/agendar-pagamento',
+                'doc' => 'https://nibo.readme.io/reference/listar-pagamentos-agendados',
+            ],
+            [
+                'key' => 'debit_opened', 'group' => 'Pagamentos', 'label' => 'Listar pagamentos em aberto',
+                'method' => 'GET', 'path' => '/schedules/debit/opened',
+                'description' => 'Lista pagamentos agendados ainda em aberto (OData).',
+                'sample_query' => ['$orderby' => 'dueDate', '$top' => '20', '$skip' => '0'],
+                'doc' => 'https://nibo.readme.io/reference/listar-pagamentos-em-aberto',
+            ],
+            [
+                'key' => 'debit_dued', 'group' => 'Pagamentos', 'label' => 'Listar pagamentos vencidos',
+                'method' => 'GET', 'path' => '/schedules/debit/dued',
+                'description' => 'Lista pagamentos agendados já vencidos.',
+                'sample_query' => ['$top' => '20'],
+                'doc' => 'https://nibo.readme.io/reference/listar-pagamentos-vencidos',
             ],
             [
                 'key' => 'debit_create', 'group' => 'Pagamentos', 'label' => 'Agendar pagamento',
@@ -567,9 +581,18 @@ class NiboService
         };
 
         // ── Etapa 3: agendamentos (débito/crédito) ──────────────────────
+        // Alguns ambientes retornam vazio em /schedules/debit e mantêm os
+        // lançamentos em /schedules/debit/opened. Buscamos o principal e, se
+        // vier vazio, complementamos com os "em aberto".
         $payablesRaw = $receivablesRaw = [];
-        try { $payablesRaw = self::getAllPaged('/schedules/debit', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
-        try { $receivablesRaw = self::getAllPaged('/schedules/credit', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
+        try { $payablesRaw = self::getAllPaged('/schedules/debit', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = 'debit: ' . $e->getMessage(); }
+        if (empty($payablesRaw)) {
+            try { $payablesRaw = self::getAllPaged('/schedules/debit/opened', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = 'debit/opened: ' . $e->getMessage(); }
+        }
+        try { $receivablesRaw = self::getAllPaged('/schedules/credit', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = 'credit: ' . $e->getMessage(); }
+        if (empty($receivablesRaw)) {
+            try { $receivablesRaw = self::getAllPaged('/schedules/credit/opened', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = 'credit/opened: ' . $e->getMessage(); }
+        }
 
         // ── Etapa 4: consolidação (enriquecer + status) ─────────────────
         $payables = array_map(fn($s) => self::enrichSchedule($s, $idxSup, $idxCc, $idxCat, 'payable'), $payablesRaw);
@@ -622,6 +645,7 @@ class NiboService
                 'balance' => $balance,
                 'sample_payable_keys' => !empty($payablesRaw) ? array_keys($payablesRaw[0]) : [],
                 'sample_payable' => $payablesRaw[0] ?? null,
+                'sample_receivable' => $receivablesRaw[0] ?? null,
             ],
             'errors' => $errors,
         ];
