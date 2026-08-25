@@ -116,8 +116,11 @@ function wm_deadlineTs(string $notifiedAt, string $deadlineCfg): int
     $notifyDate = date('Y-m-d', $notifyTs);
 
     switch ($deadlineCfg) {
+        case '1h': // modo teste: cobra 1 hora após o envio
+            return $notifyTs + 3600;
         case 'next_day':
             return strtotime(date('Y-m-d', strtotime($notifyDate . ' +1 day')) . ' 18:00:00');
+        case 'two_days':
         case '48h':
             return $notifyTs + (48 * 3600);
         case 'same_day_18':

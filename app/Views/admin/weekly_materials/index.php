@@ -509,6 +509,7 @@ $critical = (int) ($stats['critical_count'] ?? 0);
                     <div class="mb-3">
                         <label class="form-label small mb-1">Prazo para resposta</label>
                         <select name="response_deadline" class="form-select form-select-sm">
+                            <option value="1h" <?= $automation['response_deadline'] === '1h' ? 'selected' : '' ?>>1 hora (teste)</option>
                             <option value="same_day_18" <?= $automation['response_deadline'] === 'same_day_18' ? 'selected' : '' ?>>Mesmo dia até 18:00</option>
                             <option value="next_day" <?= $automation['response_deadline'] === 'next_day' ? 'selected' : '' ?>>Até o dia seguinte</option>
                             <option value="two_days" <?= $automation['response_deadline'] === 'two_days' ? 'selected' : '' ?>>Até 2 dias depois</option>
