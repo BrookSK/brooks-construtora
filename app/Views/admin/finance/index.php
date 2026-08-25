@@ -210,7 +210,8 @@
                         <span class="badge bg-secondary ms-1" id="overdueCount">0</span>
                     </span>
                     <div class="d-flex align-items-center gap-2">
-                        <small class="text-muted d-none d-md-inline">Ignora o filtro de tempo — só some quando for paga.</small>
+                        <input type="search" id="searchOverdue" class="form-control form-control-sm" placeholder="Filtrar por nome…" style="max-width:200px;">
+                        <small class="text-muted d-none d-lg-inline">Ignora o filtro de tempo — só some quando for paga.</small>
                         <span class="badge bg-warning text-dark" id="overdueTotal">R$ 0,00</span>
                     </div>
                 </div>
@@ -734,7 +735,14 @@
 
     // ── Quadro de vencidas (ignora filtro de tempo) ───────────────────
     function renderOverdue() {
-        const rows = overduePayables().sort((a,b) => (parseDate(a.due_date)||0) - (parseDate(b.due_date)||0));
+        let rows = overduePayables().sort((a,b) => (parseDate(a.due_date)||0) - (parseDate(b.due_date)||0));
+        const q = (el('searchOverdue').value || '').trim().toLowerCase();
+        if (q) {
+            rows = rows.filter(r =>
+                (r.contact_name||'').toLowerCase().includes(q) ||
+                (r.description||'').toLowerCase().includes(q) ||
+                (r.cost_center||'').toLowerCase().includes(q));
+        }
         el('overdueTotal').textContent = fmtMoneyFull(sum(rows));
         el('overdueCount').textContent = rows.length;
         const tb = el('overdueList');
@@ -1319,6 +1327,9 @@
 
         // Busca dentro do modal de detalhamento
         el('drillSearch').addEventListener('input', function () { renderDrill(this.value); });
+
+        // Filtro por nome no quadro de vencidas
+        el('searchOverdue').addEventListener('input', renderOverdue);
 
         // Clique nas linhas das tabelas Semanal/Mensal/Anual abre o detalhamento
         document.addEventListener('click', function (ev) {
