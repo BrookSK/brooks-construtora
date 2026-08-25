@@ -582,12 +582,12 @@
         }
 
         // Rótulo do período
-        const val = el('filterPeriod').value;
-        if (val === 'all') {
+        const periodVal = el('filterPeriod').value;
+        if (periodVal === 'all') {
             el('periodRangeLabel').innerHTML = '<i class="bi bi-calendar-range"></i> Mostrando toda a base sincronizada';
         } else {
-            const { start, end } = periodRange();
-            el('periodRangeLabel').innerHTML = '<i class="bi bi-calendar-range"></i> Recorte atual: ' + start.toLocaleDateString('pt-BR') + ' até ' + end.toLocaleDateString('pt-BR');
+            const range = periodRange();
+            el('periodRangeLabel').innerHTML = '<i class="bi bi-calendar-range"></i> Recorte atual: ' + range.start.toLocaleDateString('pt-BR') + ' até ' + range.end.toLocaleDateString('pt-BR');
         }
     }
 
