@@ -100,9 +100,17 @@ $sortOptions = [
 
 <!-- Detalhamento por obra -->
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="mb-0">Detalhamento por Obra</h6>
-        <span class="text-muted small">Valor consumido total: <?= $fmtMoney($totals['consumed']) ?></span>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <?php if (!empty($sites)): ?>
+            <div class="input-group input-group-sm" style="max-width:240px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="obraSearch" placeholder="Pesquisar obra...">
+            </div>
+            <?php endif; ?>
+            <span class="text-muted small">Valor consumido total: <?= $fmtMoney($totals['consumed']) ?></span>
+        </div>
     </div>
     <div class="card-body">
         <?php if (empty($sites)): ?>
@@ -131,7 +139,7 @@ $sortOptions = [
                                 $st = $statusLabels[$s['status'] ?? ''] ?? [ucfirst((string) ($s['status'] ?? '')), 'secondary'];
                                 $ordersCount = (int) ($s['orders_count'] ?? 0);
                             ?>
-                            <tr>
+                            <tr class="obra-row" data-obra="<?= htmlspecialchars(mb_strtolower(($s['name'] ?? '') . ' ' . ($s['code'] ?? '') . ' ' . ($s['city'] ?? ''))) ?>">
                                 <td>
                                     <div class="fw-semibold"><?= htmlspecialchars($s['name'] ?? '') ?></div>
                                     <div class="text-muted small">
@@ -161,6 +169,7 @@ $sortOptions = [
                                 </td>
                             </tr>
                         <?php endforeach; ?>
+                        <tr id="obraNoResults" style="display:none;"><td colspan="9" class="text-center text-muted py-3">Nenhuma obra encontrada para a busca.</td></tr>
                     </tbody>
                     <tfoot>
                         <tr class="fw-semibold border-top">
@@ -183,5 +192,27 @@ $sortOptions = [
         <?php endif; ?>
     </div>
 </div>
+
+<script>
+// Busca por nome da obra na tabela "Detalhamento por Obra" (client-side).
+(function () {
+    const input = document.getElementById('obraSearch');
+    if (!input) return;
+    const rows = Array.prototype.slice.call(document.querySelectorAll('.obra-row'));
+    const noResults = document.getElementById('obraNoResults');
+
+    input.addEventListener('input', function () {
+        const term = this.value.toLowerCase().trim();
+        let matches = 0;
+        rows.forEach(function (row) {
+            const hay = row.getAttribute('data-obra') || '';
+            const show = !term || hay.indexOf(term) !== -1;
+            row.style.display = show ? '' : 'none';
+            if (show) matches++;
+        });
+        if (noResults) noResults.style.display = matches === 0 ? '' : 'none';
+    });
+})();
+</script>
 
 <?php $content = ob_get_clean(); include ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>

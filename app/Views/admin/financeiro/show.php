@@ -109,7 +109,7 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 <?php if (empty($charts['spend_by_category'])): ?>
                     <p class="text-muted text-center py-4 mb-0">Sem dados de gastos.</p>
                 <?php else: ?>
-                    <canvas id="chartSpend" height="220"></canvas>
+                    <div style="position:relative;height:160px;"><canvas id="chartSpend"></canvas></div>
                 <?php endif; ?>
             </div>
         </div>
@@ -121,7 +121,7 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 <?php if ((float) ($ind['paid'] ?? 0) <= 0 && (float) ($ind['to_pay'] ?? 0) <= 0): ?>
                     <p class="text-muted text-center py-4 mb-0">Sem dados de pagamento.</p>
                 <?php else: ?>
-                    <canvas id="chartPayments" height="220"></canvas>
+                    <div style="position:relative;height:160px;"><canvas id="chartPayments"></canvas></div>
                 <?php endif; ?>
             </div>
         </div>
@@ -133,7 +133,7 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 <?php if (empty($charts['consumption'])): ?>
                     <p class="text-muted text-center py-4 mb-0">Sem consumo de estoque registrado.</p>
                 <?php else: ?>
-                    <canvas id="chartConsumption" height="220"></canvas>
+                    <div style="position:relative;height:160px;"><canvas id="chartConsumption"></canvas></div>
                 <?php endif; ?>
             </div>
         </div>
@@ -145,9 +145,18 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="mb-0">Pedidos da Obra</h6>
         <?php if (!empty($orders)): ?>
-        <div class="input-group input-group-sm" style="max-width:260px;">
-            <span class="input-group-text"><i class="bi bi-search"></i></span>
-            <input type="text" class="form-control dash-search" placeholder="Buscar pedido, fornecedor...">
+        <div class="d-flex gap-2 flex-wrap">
+            <select class="form-select form-select-sm dash-sort" style="max-width:210px;">
+                <option value="">Ordenar por...</option>
+                <option value="total_desc">Maior Valor Total</option>
+                <option value="total_asc">Menor Valor Total</option>
+                <option value="unit_desc">Maior Preço Unitário</option>
+                <option value="unit_asc">Menor Preço Unitário</option>
+            </select>
+            <div class="input-group input-group-sm" style="max-width:260px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control dash-search" placeholder="Buscar pedido, fornecedor...">
+            </div>
         </div>
         <?php endif; ?>
     </div>
@@ -165,7 +174,7 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 </thead>
                 <tbody>
                     <?php foreach ($orders as $o): ?>
-                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($o['code'] ?? '') . ' ' . ($o['supplier_name'] ?? '') . ' ' . ($o['status'] ?? ''))) ?>">
+                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($o['code'] ?? '') . ' ' . ($o['supplier_name'] ?? '') . ' ' . ($o['status'] ?? ''))) ?>" data-total="<?= (float) ($o['total_estimated'] ?? 0) ?>" data-unit="0">
                         <td><a href="/admin/orders/show/<?= (int) $o['id'] ?>" class="text-decoration-none"><?= htmlspecialchars($o['code'] ?? ('#' . $o['id'])) ?></a></td>
                         <td><?= htmlspecialchars($o['supplier_name'] ?? '—') ?></td>
                         <td class="text-center"><span class="badge bg-secondary"><?= htmlspecialchars($o['status'] ?? '') ?></span></td>
@@ -192,9 +201,18 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="mb-0">Materiais da Obra</h6>
         <?php if (!empty($materials)): ?>
-        <div class="input-group input-group-sm" style="max-width:260px;">
-            <span class="input-group-text"><i class="bi bi-search"></i></span>
-            <input type="text" class="form-control dash-search" placeholder="Buscar material...">
+        <div class="d-flex gap-2 flex-wrap">
+            <select class="form-select form-select-sm dash-sort" style="max-width:210px;">
+                <option value="">Ordenar por...</option>
+                <option value="total_desc">Maior Valor Total</option>
+                <option value="total_asc">Menor Valor Total</option>
+                <option value="unit_desc">Maior Preço Unitário</option>
+                <option value="unit_asc">Menor Preço Unitário</option>
+            </select>
+            <div class="input-group input-group-sm" style="max-width:260px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control dash-search" placeholder="Buscar material...">
+            </div>
         </div>
         <?php endif; ?>
     </div>
@@ -212,7 +230,7 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 </thead>
                 <tbody>
                     <?php foreach ($materials as $m): ?>
-                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower($m['material_name'] ?? '')) ?>">
+                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower($m['material_name'] ?? '')) ?>" data-total="<?= (float) ($m['total_price'] ?? 0) ?>" data-unit="<?= (float) ($m['unit_price'] ?? 0) ?>">
                         <td><?= htmlspecialchars($m['material_name'] ?? '—') ?></td>
                         <td class="text-center"><?= $fmtQty($m['quantity'] ?? 0) ?></td>
                         <td class="text-end"><?= !empty($m['unit_price']) ? $fmtMoney($m['unit_price']) : '<span class="text-muted">Não informado</span>' ?></td>
@@ -237,9 +255,18 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="mb-0">Fornecedores da Obra</h6>
         <?php if (!empty($suppliers)): ?>
-        <div class="input-group input-group-sm" style="max-width:260px;">
-            <span class="input-group-text"><i class="bi bi-search"></i></span>
-            <input type="text" class="form-control dash-search" placeholder="Buscar fornecedor, CNPJ...">
+        <div class="d-flex gap-2 flex-wrap">
+            <select class="form-select form-select-sm dash-sort" style="max-width:210px;">
+                <option value="">Ordenar por...</option>
+                <option value="total_desc">Maior Valor Total</option>
+                <option value="total_asc">Menor Valor Total</option>
+                <option value="unit_desc">Maior Preço Unitário</option>
+                <option value="unit_asc">Menor Preço Unitário</option>
+            </select>
+            <div class="input-group input-group-sm" style="max-width:260px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control dash-search" placeholder="Buscar fornecedor, CNPJ...">
+            </div>
         </div>
         <?php endif; ?>
     </div>
@@ -257,7 +284,7 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 </thead>
                 <tbody>
                     <?php foreach ($suppliers as $sup): ?>
-                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($sup['supplier_name'] ?? '') . ' ' . ($sup['cnpj'] ?? ''))) ?>">
+                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($sup['supplier_name'] ?? '') . ' ' . ($sup['cnpj'] ?? ''))) ?>" data-total="<?= (float) ($sup['approved_total'] ?? 0) ?>" data-unit="0">
                         <td><?= htmlspecialchars($sup['supplier_name'] ?? '—') ?></td>
                         <td><?= htmlspecialchars($sup['cnpj'] ?? '—') ?></td>
                         <td class="text-center"><?= (int) ($sup['orders_count'] ?? 0) ?></td>
@@ -321,9 +348,18 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="mb-0">Estoque da Obra</h6>
         <?php if (!empty($stock)): ?>
-        <div class="input-group input-group-sm" style="max-width:260px;">
-            <span class="input-group-text"><i class="bi bi-search"></i></span>
-            <input type="text" class="form-control dash-search" placeholder="Buscar material, depósito...">
+        <div class="d-flex gap-2 flex-wrap">
+            <select class="form-select form-select-sm dash-sort" style="max-width:210px;">
+                <option value="">Ordenar por...</option>
+                <option value="total_desc">Maior Valor Total</option>
+                <option value="total_asc">Menor Valor Total</option>
+                <option value="unit_desc">Maior Preço Unitário</option>
+                <option value="unit_asc">Menor Preço Unitário</option>
+            </select>
+            <div class="input-group input-group-sm" style="max-width:260px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control dash-search" placeholder="Buscar material, depósito...">
+            </div>
         </div>
         <?php endif; ?>
     </div>
@@ -341,7 +377,7 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 </thead>
                 <tbody>
                     <?php foreach ($stock as $it): ?>
-                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($it['material_name'] ?? '') . ' ' . ($it['location_name'] ?? ''))) ?>">
+                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($it['material_name'] ?? '') . ' ' . ($it['location_name'] ?? ''))) ?>" data-total="<?= (float) ($it['total_value'] ?? 0) ?>" data-unit="<?= (float) ($it['unit_price'] ?? 0) ?>">
                         <td><?= htmlspecialchars($it['material_name'] ?? '—') ?></td>
                         <td><?= htmlspecialchars($it['location_name'] ?? '—') ?></td>
                         <td class="text-center"><?= $fmtQty($it['quantity'] ?? 0) ?></td>
@@ -369,10 +405,28 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
         const limit    = parseInt(section.getAttribute('data-limit') || '0', 10);
         const rows     = Array.prototype.slice.call(section.querySelectorAll('.dash-row'));
         const searchEl = section.querySelector('.dash-search');
+        const sortEl   = section.querySelector('.dash-sort');
         const moreWrap = section.querySelector('.dash-more-wrap');
         const moreBtn  = section.querySelector('.dash-more-btn');
         const noResult = section.querySelector('.dash-no-results');
+        const tbody    = rows.length ? rows[0].parentNode : null;
         let expanded   = false;
+
+        // Reordena as linhas no DOM conforme o criterio escolhido.
+        function applySort() {
+            if (!sortEl || !tbody) return;
+            const mode = sortEl.value;
+            if (!mode) return; // "Ordenar por..." mantem a ordem original
+            const key = mode.indexOf('unit') === 0 ? 'unit' : 'total';
+            const dir = mode.indexOf('asc') !== -1 ? 1 : -1;
+            const sorted = rows.slice().sort(function (a, b) {
+                const va = parseFloat(a.getAttribute('data-' + key)) || 0;
+                const vb = parseFloat(b.getAttribute('data-' + key)) || 0;
+                return (va - vb) * dir;
+            });
+            sorted.forEach(function (row) { tbody.appendChild(row); });
+            if (noResult) tbody.appendChild(noResult); // mantem a linha de "sem resultado" no fim
+        }
 
         // Renderiza conforme busca + estado de expansão.
         function render() {
@@ -396,11 +450,15 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
 
             if (noResult) noResult.style.display = matches === 0 ? '' : 'none';
 
-            // Botão "Ver mais": só quando não está buscando, há limite e há excedente.
+            // Botão "Ver mais / Exibir menos": só quando não está buscando, há limite e há excedente.
             if (moreWrap && moreBtn) {
-                if (!searching && !expanded && limit > 0 && matches > limit) {
+                if (!searching && limit > 0 && matches > limit) {
                     moreWrap.style.display = '';
-                    moreBtn.innerHTML = '<i class="bi bi-chevron-down"></i> Ver mais (' + (matches - limit) + ')';
+                    if (expanded) {
+                        moreBtn.innerHTML = '<i class="bi bi-chevron-up"></i> Exibir menos';
+                    } else {
+                        moreBtn.innerHTML = '<i class="bi bi-chevron-down"></i> Exibir mais (' + (matches - limit) + ')';
+                    }
                 } else {
                     moreWrap.style.display = 'none';
                 }
@@ -408,10 +466,20 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
         }
 
         if (moreBtn) {
-            moreBtn.addEventListener('click', function () { expanded = true; render(); });
+            moreBtn.addEventListener('click', function () {
+                expanded = !expanded;
+                render();
+                // Ao recolher, reposiciona a rolagem no topo da seção.
+                if (!expanded) {
+                    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
         }
         if (searchEl) {
             searchEl.addEventListener('input', render);
+        }
+        if (sortEl) {
+            sortEl.addEventListener('change', function () { applySort(); render(); });
         }
         render();
     });
@@ -437,8 +505,10 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 datasets: [{ data: spend.map(x => Number(x.value)), backgroundColor: palette }]
             },
             options: {
+                responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                    legend: { position: 'right', align: 'center', labels: { boxWidth: 12, font: { size: 11 } } },
                     tooltip: { callbacks: { label: c => c.label + ': ' + brl(c.parsed) } }
                 }
             }
@@ -456,8 +526,10 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 datasets: [{ data: [Number(pay.paid), Number(pay.to_pay)], backgroundColor: ['#28a745', '#fd7e14'] }]
             },
             options: {
+                responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                    legend: { position: 'right', align: 'center', labels: { boxWidth: 12, font: { size: 11 } } },
                     tooltip: { callbacks: { label: c => c.label + ': ' + brl(c.parsed) } }
                 }
             }
@@ -476,6 +548,8 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
             },
             options: {
                 indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
                     tooltip: { callbacks: { label: c => brl(c.parsed.x) } }
