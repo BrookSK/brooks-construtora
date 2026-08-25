@@ -104,11 +104,34 @@ function wm_notify(string $baseUrl, string $webhookUrl): int
 }
 
 /**
+ * Calcula o timestamp do PRAZO DE RESPOSTA de uma solicitação, a partir da
+ * data em que o link foi enviado (notified_at) e da configuração.
+ *   same_day_18 → 18h do mesmo dia do envio
+ *   next_day    → 18h do dia seguinte ao envio
+ *   48h         → 48 horas após o envio
+ */
+function wm_deadlineTs(string $notifiedAt, string $deadlineCfg): int
+{
+    $notifyTs = strtotime($notifiedAt);
+    $notifyDate = date('Y-m-d', $notifyTs);
+
+    switch ($deadlineCfg) {
+        case 'next_day':
+            return strtotime(date('Y-m-d', strtotime($notifyDate . ' +1 day')) . ' 18:00:00');
+        case '48h':
+            return $notifyTs + (48 * 3600);
+        case 'same_day_18':
+        default:
+            return strtotime($notifyDate . ' 18:00:00');
+    }
+}
+
+/**
  * Cobra os responsáveis com solicitação pendente no ciclo mais recente.
  *
- * Regras (evitam spam):
+ * Regras (respeitam a configuração de prazo de resposta):
  *   - Só cobra quem JÁ recebeu o link (notified_at preenchido)
- *   - Só cobra depois de passado um tempo mínimo desde o envio (grace period)
+ *   - Só cobra DEPOIS de passado o prazo de resposta configurado
  *   - Só cobra 1x por dia por solicitação (reminder_sent_at não é de hoje)
  */
 function wm_remind(string $baseUrl, string $webhookUrl): int
@@ -116,34 +139,27 @@ function wm_remind(string $baseUrl, string $webhookUrl): int
     $cycle = WeeklyMaterialRequest::latestCycleStart() ?: WeeklyMaterialRequest::nextCycleStart();
     $requests = WeeklyMaterialRequest::getByWeek($cycle);
 
-    // Período de carência: quantas horas esperar após o envio antes de cobrar.
-    // Baseado no prazo de resposta configurado.
     $deadlineCfg = Setting::get('weekly_response_deadline', 'same_day_18');
-    $graceHours = 4; // padrão: cobra só 4h depois de enviar
-    if ($deadlineCfg === 'next_day') $graceHours = 24;
-    elseif ($deadlineCfg === 'same_day_18') $graceHours = 4;
-    elseif ($deadlineCfg === '48h') $graceHours = 48;
-
     $today = date('Y-m-d');
     $now = time();
 
     // Filtrar apenas itens elegíveis para cobrança
-    $eligible = array_filter($requests, function ($req) use ($graceHours, $today, $now) {
+    $eligible = array_filter($requests, function ($req) use ($deadlineCfg, $today, $now) {
         if ($req['status'] === 'filled') return false;
         if (!empty($req['order_id'])) return false;
         if ($req['status'] !== 'pending') return false;
         // Precisa ter sido notificado
         if (empty($req['notified_at'])) return false;
-        // Precisa ter passado o período de carência desde o envio
-        $hoursSinceNotify = ($now - strtotime($req['notified_at'])) / 3600;
-        if ($hoursSinceNotify < $graceHours) return false;
+        // Só cobra DEPOIS do prazo de resposta configurado
+        $deadlineTs = wm_deadlineTs($req['notified_at'], $deadlineCfg);
+        if ($now < $deadlineTs) return false;
         // Não cobrar de novo se já cobrou hoje
         if (!empty($req['reminder_sent_at']) && date('Y-m-d', strtotime($req['reminder_sent_at'])) === $today) return false;
         return true;
     });
 
     if (empty($eligible)) {
-        wm_log("Nenhuma solicitação elegível para cobrança (carência {$graceHours}h / 1x por dia).");
+        wm_log("Nenhuma solicitação elegível para cobrança (prazo de resposta '{$deadlineCfg}' ainda não venceu ou já cobrado hoje).");
         return 0;
     }
 
@@ -238,23 +254,30 @@ if ($action === 'notify') {
     $intervalPassed = ($daysSinceLatest >= $interval);
     $shouldNotify = false;
 
+    $createdToday = ($latest === date('Y-m-d'));
+    $currentMinutes = (int) date('H') * 60 + (int) date('i');
+    $sendParts = explode(':', $sendTime);
+    $sendMinutes = ((int) ($sendParts[0] ?? 0)) * 60 + ((int) ($sendParts[1] ?? 0));
+    $timeReached = ($currentMinutes >= $sendMinutes);
+
     if ($cycleMode === 'hourly') {
-        // Modo teste: gera 1 ciclo por dia no máximo (não a cada hora).
-        // Só cria se ainda não existe ciclo criado hoje.
-        $shouldNotify = ($latest !== date('Y-m-d'));
+        // Modo teste: gera no máximo 1 ciclo por dia (não a cada hora).
+        $shouldNotify = !$createdToday;
     } elseif ($cycleMode === 'interval') {
-        // A cada X dias, a partir do horário configurado
-        $shouldNotify = $intervalPassed && ($currentHour >= $sendHour);
+        // A cada X dias, a partir do horário configurado. Nunca 2x no mesmo dia.
+        $shouldNotify = $intervalPassed && $timeReached && !$createdToday;
     } else {
-        // daily/weekly: no dia da semana e horário configurados, respeitando o intervalo
-        $shouldNotify = ($todayDow === $sendDay) && ($currentHour >= $sendHour) && $intervalPassed;
+        // daily (todos os dias): gera 1 ciclo por dia, no horário configurado.
+        $shouldNotify = $timeReached && !$createdToday;
     }
 
     if ($shouldNotify) {
-        wm_log("Agendamento atingido → gerando e enviando ciclo");
+        wm_log("Agendamento atingido → gerando e enviando ciclo (mode={$cycleMode}, hora={$sendTime})");
         wm_notify($baseUrl, $webhookUrl);
+    } elseif ($createdToday) {
+        wm_log("Ciclo já foi gerado hoje ({$latest}). Não gera outro no mesmo dia.");
     } else {
-        wm_log("Fora do horário/agendamento de envio (mode={$cycleMode}, dia={$sendDay}, hora={$sendTime}, hora_atual={$currentHour}, últimoCiclo=" . ($latest ?: 'nenhum') . ", diasDesdeÚltimo={$daysSinceLatest}, intervalo={$interval})");
+        wm_log("Aguardando horário de envio (mode={$cycleMode}, horário={$sendTime}, agora=" . date('H:i') . ", intervalo={$interval}d, diasDesdeÚltimo={$daysSinceLatest})");
     }
 
     // Cobrança automática dos pendentes do ciclo atual
