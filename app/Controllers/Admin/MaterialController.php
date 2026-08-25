@@ -451,4 +451,138 @@ class MaterialController extends Controller
         $unit = MeasurementUnit::find($id);
         $this->json(['success' => true, 'unit' => $unit]);
     }
+
+    /**
+     * Upload da imagem/foto de um material (AJAX).
+     * Aceita arquivo enviado por selecao ou captura de camera (mesmo campo file).
+     * Segue o padrao de upload de SettingsController::uploadAvatar.
+     */
+    public function uploadImage(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $materialId = (int) $this->input('id', 0);
+        if ($materialId <= 0 || !Material::find($materialId)) {
+            $this->json(['error' => 'Material não encontrado.'], 404);
+            return;
+        }
+
+        if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            $this->json(['error' => 'Erro no upload do arquivo.'], 400);
+            return;
+        }
+
+        $file         = $_FILES['image'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+        if (!in_array($file['type'], $allowedTypes, true)) {
+            $this->json(['error' => 'Tipo não permitido. Use JPG, PNG, WEBP ou GIF.'], 400);
+            return;
+        }
+
+        if ($file['size'] > 5 * 1024 * 1024) {
+            $this->json(['error' => 'Arquivo muito grande. Máximo 5 MB.'], 400);
+            return;
+        }
+
+        $ext       = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) ?: 'jpg';
+        $filename  = 'material_' . $materialId . '_' . time() . '.' . $ext;
+        $uploadDir = ROOT_PATH . '/public/uploads/materials/';
+
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $destination = $uploadDir . $filename;
+
+        if (!move_uploaded_file($file['tmp_name'], $destination)) {
+            $this->json(['error' => 'Erro ao salvar arquivo.'], 500);
+            return;
+        }
+
+        // Remove imagem anterior, se houver
+        $current = Material::find($materialId);
+        if (!empty($current['image_path']) && file_exists(ROOT_PATH . '/public' . $current['image_path'])) {
+            @unlink(ROOT_PATH . '/public' . $current['image_path']);
+        }
+
+        $imageUrl = '/uploads/materials/' . $filename;
+
+        try {
+            Material::updateById($materialId, ['image_path' => $imageUrl]);
+        } catch (\PDOException $e) {
+            // Coluna image_path pode nao existir — executa a migration 036 e tenta de novo.
+            if ($this->isMissingColumn($e)) {
+                $this->runImageMigration();
+                Material::updateById($materialId, ['image_path' => $imageUrl]);
+            } else {
+                throw $e;
+            }
+        }
+
+        $this->json(['success' => true, 'url' => $imageUrl]);
+    }
+
+    /**
+     * Remove a imagem de um material (AJAX), mantendo os demais dados.
+     */
+    public function removeImage(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $materialId = (int) $this->input('id', 0);
+        $current = Material::find($materialId);
+        if (!$current) {
+            $this->json(['error' => 'Material não encontrado.'], 404);
+            return;
+        }
+
+        if (!empty($current['image_path']) && file_exists(ROOT_PATH . '/public' . $current['image_path'])) {
+            @unlink(ROOT_PATH . '/public' . $current['image_path']);
+        }
+
+        try {
+            Material::updateById($materialId, ['image_path' => null]);
+        } catch (\PDOException $e) {
+            if (!$this->isMissingColumn($e)) {
+                throw $e;
+            }
+            // Coluna nao existe — nada a remover.
+        }
+
+        $this->json(['success' => true]);
+    }
+
+    /**
+     * Detecta erro de coluna inexistente (para acionar a migration lazy).
+     */
+    private function isMissingColumn(\PDOException $e): bool
+    {
+        $msg = $e->getMessage();
+        return stripos($msg, 'Unknown column') !== false
+            || stripos($msg, "doesn't exist") !== false;
+    }
+
+    /**
+     * Executa a migration 036 (adiciona image_path) de forma idempotente.
+     */
+    private function runImageMigration(): void
+    {
+        $migrationFile = ROOT_PATH . '/database/migrations/036_add_image_to_materials.sql';
+        if (!file_exists($migrationFile)) {
+            return;
+        }
+        $sql = file_get_contents($migrationFile);
+        $sql = preg_replace('/--[^\n]*/', '', $sql);
+        $pdo = \App\Core\Database::getConnection();
+        foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
+            try { $pdo->exec($stmt); } catch (\PDOException $ignore) {}
+        }
+    }
 }

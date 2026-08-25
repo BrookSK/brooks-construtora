@@ -213,7 +213,7 @@
             <?php if (\App\Core\Auth::hasPermission('orders') || \App\Core\Auth::hasPermission('obras')): ?>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'financeiro' ? 'active' : '' ?>" href="/admin/financeiro">
-                    <i class="bi bi-graph-up-arrow"></i> Dashboard
+                    <i class="bi bi-graph-up-arrow"></i> Dashboard de Obras
                 </a>
             </li>
             <?php endif; ?>

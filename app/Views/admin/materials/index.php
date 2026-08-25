@@ -50,7 +50,10 @@
                     <td><?= htmlspecialchars($m['unit_name'] ?? '-') ?> <?= $m['unit_abbr'] ? '(' . $m['unit_abbr'] . ')' : '' ?></td>
                     <td><?= $m['active'] ? '<span class="badge bg-success">Ativo</span>' : '<span class="badge bg-secondary">Inativo</span>' ?></td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>"><i class="bi bi-pencil"></i></button>
+                        <?php if (!empty($m['image_path'])): ?>
+                        <button type="button" class="btn btn-sm btn-outline-secondary view-image-btn" data-image="<?= htmlspecialchars($m['image_path']) ?>" data-name="<?= htmlspecialchars($m['name']) ?>" title="Visualizar imagem"><i class="bi bi-image"></i></button>
+                        <?php endif; ?>
+                        <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>" data-image="<?= htmlspecialchars($m['image_path'] ?? '') ?>"><i class="bi bi-pencil"></i></button>
                         <?php if ($m['active']): ?>
                         <form method="POST" action="/admin/materials/delete" class="d-inline" onsubmit="return confirm('Desativar?')"><input type="hidden" name="id" value="<?= $m['id'] ?>"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
                         <?php elseif (\App\Core\Auth::isSuperAdmin()): ?>
@@ -83,7 +86,10 @@
                     </div>
                 </div>
                 <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>"><i class="bi bi-pencil"></i></button>
+                    <?php if (!empty($m['image_path'])): ?>
+                    <button type="button" class="btn btn-sm btn-outline-secondary view-image-btn" data-image="<?= htmlspecialchars($m['image_path']) ?>" data-name="<?= htmlspecialchars($m['name']) ?>" title="Visualizar imagem"><i class="bi bi-image"></i></button>
+                    <?php endif; ?>
+                    <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>" data-image="<?= htmlspecialchars($m['image_path'] ?? '') ?>"><i class="bi bi-pencil"></i></button>
                     <?php if ($m['active']): ?><form method="POST" action="/admin/materials/delete" onsubmit="return confirm('Desativar?')"><input type="hidden" name="id" value="<?= $m['id'] ?>"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
                     <?php elseif (\App\Core\Auth::isSuperAdmin()): ?><form method="POST" action="/admin/materials/delete" onsubmit="return confirm('EXCLUIR permanentemente?')"><input type="hidden" name="id" value="<?= $m['id'] ?>"><input type="hidden" name="action" value="permanent"><button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button></form>
                     <?php endif; ?>
@@ -175,6 +181,37 @@
                                 <button type="button" class="btn btn-outline-primary" onclick="showQuickAddMat('unit')"><i class="bi bi-plus"></i></button>
                             </div>
                         </div>
+
+                        <!-- Imagem/Foto do material (opcional) -->
+                        <div class="mb-2">
+                            <label class="form-label">Imagem do Produto <span class="text-muted small">(opcional)</span></label>
+                            <div class="d-flex align-items-center gap-3">
+                                <img id="matImagePreview" src="" alt="" class="rounded border"
+                                     style="width:72px;height:72px;object-fit:cover;display:none;">
+                                <div id="matImagePlaceholder" class="rounded border d-flex align-items-center justify-content-center text-muted"
+                                     style="width:72px;height:72px;background:#f8f9fa;">
+                                    <i class="bi bi-image" style="font-size:1.5rem;"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="matPickImageBtn">
+                                            <i class="bi bi-upload"></i> Selecionar
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="matCameraBtn">
+                                            <i class="bi bi-camera"></i> Câmera
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" id="matRemoveImageBtn" style="display:none;">
+                                            <i class="bi bi-trash"></i> Remover
+                                        </button>
+                                    </div>
+                                    <!-- input padrao (galeria/arquivo) -->
+                                    <input type="file" accept="image/*" id="matImageFile" class="d-none">
+                                    <!-- input com captura de camera (quando disponivel) -->
+                                    <input type="file" accept="image/*" capture="environment" id="matImageCamera" class="d-none">
+                                    <div class="small text-muted mt-1" id="matImageHint">Salve o material para habilitar o envio da imagem.</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -215,7 +252,31 @@
     </div>
 </div>
 
+<!-- Modal Visualizar Imagem -->
+<div class="modal fade" id="viewImageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title" id="viewImageTitle">Imagem do Produto</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="viewImageEl" src="" alt="" class="img-fluid rounded" style="max-height:70vh;">
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+// Visualizar imagem (ação rápida na listagem)
+document.querySelectorAll('.view-image-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('viewImageEl').src = this.dataset.image;
+        document.getElementById('viewImageTitle').textContent = this.dataset.name || 'Imagem do Produto';
+        new bootstrap.Modal(document.getElementById('viewImageModal')).show();
+    });
+});
+
 // Editar material
 document.querySelectorAll('.edit-material-btn').forEach(btn => {
     btn.addEventListener('click', function() {
@@ -229,6 +290,7 @@ document.querySelectorAll('.edit-material-btn').forEach(btn => {
         document.getElementById('matSpecification').value = this.dataset.specification;
         document.getElementById('matClassification').value = this.dataset.classification;
         document.getElementById('matUnitId').value = this.dataset.unitId;
+        setMatImageState(this.dataset.id, this.dataset.image || '');
         new bootstrap.Modal(document.getElementById('newMaterialModal')).show();
     });
 });
@@ -241,7 +303,105 @@ document.getElementById('newMaterialModal').addEventListener('hidden.bs.modal', 
     document.getElementById('materialForm').action = '/admin/materials/store';
     document.getElementById('materialForm').reset();
     document.getElementById('matId').value = '';
+    setMatImageState('', '');
 });
+
+// ===== Imagem do material (upload / camera / remover) =====
+(function () {
+    const previewEl     = document.getElementById('matImagePreview');
+    const placeholderEl = document.getElementById('matImagePlaceholder');
+    const hintEl        = document.getElementById('matImageHint');
+    const pickBtn       = document.getElementById('matPickImageBtn');
+    const cameraBtn     = document.getElementById('matCameraBtn');
+    const removeBtn     = document.getElementById('matRemoveImageBtn');
+    const fileInput     = document.getElementById('matImageFile');
+    const cameraInput   = document.getElementById('matImageCamera');
+
+    // Estado da imagem conforme material selecionado (novo x edicao).
+    window.setMatImageState = function (materialId, imageUrl) {
+        const hasId = !!materialId;
+        if (imageUrl) {
+            previewEl.src = imageUrl;
+            previewEl.style.display = '';
+            placeholderEl.style.display = 'none';
+            removeBtn.style.display = hasId ? '' : 'none';
+        } else {
+            previewEl.src = '';
+            previewEl.style.display = 'none';
+            placeholderEl.style.display = '';
+            removeBtn.style.display = 'none';
+        }
+        // Upload so e possivel com material ja salvo (precisa do id).
+        pickBtn.disabled = !hasId;
+        cameraBtn.disabled = !hasId;
+        hintEl.textContent = hasId
+            ? 'Selecione uma imagem ou use a câmera. Máx. 5 MB (JPG, PNG, WEBP, GIF).'
+            : 'Salve o material para habilitar o envio da imagem.';
+    };
+
+    // Esconde o botao de camera quando claramente indisponivel.
+    const hasCameraSupport = 'mediaDevices' in navigator
+        || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    if (!hasCameraSupport) {
+        cameraBtn.style.display = 'none';
+    }
+
+    pickBtn.addEventListener('click', () => { if (!pickBtn.disabled) fileInput.click(); });
+    cameraBtn.addEventListener('click', () => { if (!cameraBtn.disabled) cameraInput.click(); });
+
+    async function doUpload(file) {
+        const materialId = document.getElementById('matId').value;
+        if (!materialId) { alert('Salve o material primeiro.'); return; }
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { alert('Imagem muito grande. Máximo 5 MB.'); return; }
+
+        const fd = new FormData();
+        fd.append('id', materialId);
+        fd.append('image', file);
+
+        hintEl.textContent = 'Enviando imagem...';
+        try {
+            const resp = await fetch('/admin/materials/upload-image', { method: 'POST', body: fd });
+            const data = await resp.json();
+            if (data.success && data.url) {
+                setMatImageState(materialId, data.url + '?t=' + Date.now());
+                hintEl.textContent = 'Imagem enviada com sucesso. Recarregue a lista para ver o botão de visualização.';
+            } else {
+                hintEl.textContent = data.error || 'Erro ao enviar imagem.';
+            }
+        } catch (e) {
+            hintEl.textContent = 'Erro de rede ao enviar imagem.';
+        }
+    }
+
+    fileInput.addEventListener('change', function () { doUpload(this.files[0]); this.value = ''; });
+    cameraInput.addEventListener('change', function () { doUpload(this.files[0]); this.value = ''; });
+
+    removeBtn.addEventListener('click', async function () {
+        const materialId = document.getElementById('matId').value;
+        if (!materialId) return;
+        if (!confirm('Remover a imagem deste material?')) return;
+        try {
+            const resp = await fetch('/admin/materials/remove-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ id: materialId }),
+            });
+            const data = await resp.json();
+            if (data.success) {
+                setMatImageState(materialId, '');
+                hintEl.textContent = 'Imagem removida.';
+            } else {
+                hintEl.textContent = data.error || 'Erro ao remover imagem.';
+            }
+        } catch (e) {
+            hintEl.textContent = 'Erro de rede ao remover imagem.';
+        }
+    });
+
+    // Estado inicial: novo material (sem id, sem imagem).
+    setMatImageState('', '');
+})();
 
 // Sync category name
 document.getElementById('matCategoryId').addEventListener('change', function() {

@@ -150,6 +150,11 @@ ob_start();
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-end">
+                                    <?php if (!empty($item['image_path'])): ?>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary view-image-btn" data-image="<?= htmlspecialchars($item['image_path']) ?>" data-name="<?= htmlspecialchars($item['material_name']) ?>" title="Visualizar imagem">
+                                        <i class="bi bi-image"></i>
+                                    </button>
+                                    <?php endif; ?>
                                     <a href="/admin/stock/edit/<?= $item['id'] ?>" class="btn btn-sm btn-outline-primary" title="Editar">
                                         <i class="bi bi-pencil"></i>
                                     </a>
@@ -168,6 +173,31 @@ ob_start();
         </div>
     </div>
 <?php endif; ?>
+
+<!-- Modal Visualizar Imagem -->
+<div class="modal fade" id="viewImageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title" id="viewImageTitle">Imagem do Produto</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="viewImageEl" src="" alt="" class="img-fluid rounded" style="max-height:70vh;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.view-image-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('viewImageEl').src = this.dataset.image;
+        document.getElementById('viewImageTitle').textContent = this.dataset.name || 'Imagem do Produto';
+        new bootstrap.Modal(document.getElementById('viewImageModal')).show();
+    });
+});
+</script>
 
 <?php
 $content = ob_get_clean();

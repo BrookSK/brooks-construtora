@@ -90,6 +90,37 @@ ob_start();
                             <label class="form-label">Observações</label>
                             <textarea name="notes" class="form-control" rows="2" placeholder="Observações sobre este item..."><?= htmlspecialchars($isEdit ? ($item['notes'] ?? '') : '') ?></textarea>
                         </div>
+
+                        <!-- Imagem/Foto do item de estoque (opcional, propria do estoque) -->
+                        <div class="col-12">
+                            <label class="form-label">Imagem do Produto <span class="text-muted small">(opcional)</span></label>
+                            <div class="d-flex align-items-center gap-3">
+                                <img id="stockImagePreview" src="<?= $isEdit && !empty($item['image_path']) ? htmlspecialchars($item['image_path']) : '' ?>" alt="" class="rounded border"
+                                     style="width:72px;height:72px;object-fit:cover;<?= $isEdit && !empty($item['image_path']) ? '' : 'display:none;' ?>">
+                                <div id="stockImagePlaceholder" class="rounded border d-flex align-items-center justify-content-center text-muted"
+                                     style="width:72px;height:72px;background:#f8f9fa;<?= $isEdit && !empty($item['image_path']) ? 'display:none;' : '' ?>">
+                                    <i class="bi bi-image" style="font-size:1.5rem;"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="stockPickImageBtn">
+                                            <i class="bi bi-upload"></i> Selecionar
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="stockCameraBtn">
+                                            <i class="bi bi-camera"></i> Câmera
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" id="stockRemoveImageBtn" style="<?= $isEdit && !empty($item['image_path']) ? '' : 'display:none;' ?>">
+                                            <i class="bi bi-trash"></i> Remover
+                                        </button>
+                                    </div>
+                                    <input type="file" accept="image/*" id="stockImageFile" class="d-none">
+                                    <input type="file" accept="image/*" capture="environment" id="stockImageCamera" class="d-none">
+                                    <div class="small text-muted mt-1" id="stockImageHint">
+                                        <?= $isEdit ? 'Selecione uma imagem ou use a câmera. Máx. 5 MB (JPG, PNG, WEBP, GIF).' : 'Salve o item para habilitar o envio da imagem.' ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="d-flex justify-content-between mt-4">
@@ -116,6 +147,96 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// ===== Imagem do item de estoque (upload / camera / remover) =====
+(function () {
+    const stockItemId   = <?= $isEdit ? (int) $item['id'] : 0 ?>;
+    const previewEl     = document.getElementById('stockImagePreview');
+    const placeholderEl = document.getElementById('stockImagePlaceholder');
+    const hintEl        = document.getElementById('stockImageHint');
+    const pickBtn       = document.getElementById('stockPickImageBtn');
+    const cameraBtn     = document.getElementById('stockCameraBtn');
+    const removeBtn     = document.getElementById('stockRemoveImageBtn');
+    const fileInput     = document.getElementById('stockImageFile');
+    const cameraInput   = document.getElementById('stockImageCamera');
+
+    function showImage(url) {
+        if (url) {
+            previewEl.src = url;
+            previewEl.style.display = '';
+            placeholderEl.style.display = 'none';
+            removeBtn.style.display = '';
+        } else {
+            previewEl.src = '';
+            previewEl.style.display = 'none';
+            placeholderEl.style.display = '';
+            removeBtn.style.display = 'none';
+        }
+    }
+
+    // Upload so e possivel com item ja salvo (precisa do id).
+    const hasId = stockItemId > 0;
+    pickBtn.disabled = !hasId;
+    cameraBtn.disabled = !hasId;
+
+    // Esconde o botao de camera quando claramente indisponivel.
+    const hasCameraSupport = 'mediaDevices' in navigator
+        || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    if (!hasCameraSupport) {
+        cameraBtn.style.display = 'none';
+    }
+
+    pickBtn.addEventListener('click', () => { if (!pickBtn.disabled) fileInput.click(); });
+    cameraBtn.addEventListener('click', () => { if (!cameraBtn.disabled) cameraInput.click(); });
+
+    async function doUpload(file) {
+        if (!hasId) { alert('Salve o item primeiro.'); return; }
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { alert('Imagem muito grande. Máximo 5 MB.'); return; }
+
+        const fd = new FormData();
+        fd.append('id', stockItemId);
+        fd.append('image', file);
+
+        hintEl.textContent = 'Enviando imagem...';
+        try {
+            const resp = await fetch('/admin/stock/upload-image', { method: 'POST', body: fd });
+            const data = await resp.json();
+            if (data.success && data.url) {
+                showImage(data.url + '?t=' + Date.now());
+                hintEl.textContent = 'Imagem enviada com sucesso.';
+            } else {
+                hintEl.textContent = data.error || 'Erro ao enviar imagem.';
+            }
+        } catch (e) {
+            hintEl.textContent = 'Erro de rede ao enviar imagem.';
+        }
+    }
+
+    fileInput.addEventListener('change', function () { doUpload(this.files[0]); this.value = ''; });
+    cameraInput.addEventListener('change', function () { doUpload(this.files[0]); this.value = ''; });
+
+    removeBtn.addEventListener('click', async function () {
+        if (!hasId) return;
+        if (!confirm('Remover a imagem deste item?')) return;
+        try {
+            const resp = await fetch('/admin/stock/remove-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ id: stockItemId }),
+            });
+            const data = await resp.json();
+            if (data.success) {
+                showImage('');
+                hintEl.textContent = 'Imagem removida.';
+            } else {
+                hintEl.textContent = data.error || 'Erro ao remover imagem.';
+            }
+        } catch (e) {
+            hintEl.textContent = 'Erro de rede ao remover imagem.';
+        }
+    });
+})();
 </script>
 
 <?php

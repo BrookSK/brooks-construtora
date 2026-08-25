@@ -9,13 +9,39 @@ class StockItem extends Model
 {
     protected static string $table = 'stock_items';
 
+    private static ?bool $hasImageColumn = null;
+
+    /**
+     * Verifica (com cache) se a coluna stock_items.image_path existe.
+     * Mantem o Estoque funcionando mesmo antes da migration 037 rodar.
+     * A imagem do estoque e propria (independente da imagem do material).
+     */
+    private static function stockImageSelect(): string
+    {
+        if (self::$hasImageColumn === null) {
+            try {
+                $r = Database::fetch(
+                    "SELECT 1 FROM information_schema.COLUMNS
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'stock_items'
+                       AND COLUMN_NAME = 'image_path' LIMIT 1"
+                );
+                self::$hasImageColumn = !empty($r);
+            } catch (\Exception $e) {
+                self::$hasImageColumn = false;
+            }
+        }
+        // Quando a coluna existe, si.* ja a traz; caso contrario, expor NULL.
+        return self::$hasImageColumn ? '' : ', NULL AS image_path';
+    }
+
     /**
      * Lista estoque por depósito
      */
     public static function getByLocation(int $locationId): array
     {
+        $imgSel = self::stockImageSelect();
         return Database::fetchAll(
-            "SELECT si.*, m.name as material_name, m.specification, m.classification,
+            "SELECT si.*{$imgSel}, m.name as material_name, m.specification, m.classification,
                     mu.name as unit_name, mu.abbreviation as unit_abbr,
                     mc.name as category_name, sl.name as location_name, sl.code as location_code
              FROM stock_items si
@@ -42,8 +68,9 @@ class StockItem extends Model
             $params[] = $locationId;
         }
 
+        $imgSel = self::stockImageSelect();
         return Database::fetchAll(
-            "SELECT si.*, m.name as material_name, m.specification, m.classification,
+            "SELECT si.*{$imgSel}, m.name as material_name, m.specification, m.classification,
                     mu.name as unit_name, mu.abbreviation as unit_abbr,
                     mc.name as category_name, 
                     sl.name as location_name, sl.code as location_code,

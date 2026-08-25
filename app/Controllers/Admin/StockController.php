@@ -596,6 +596,137 @@ class StockController extends Controller
     }
 
     /**
+     * Upload da imagem/foto de um item de estoque (AJAX).
+     * Imagem propria do estoque, independente do material.
+     */
+    public function uploadImage(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $itemId = (int) $this->input('id', 0);
+        if ($itemId <= 0 || !StockItem::find($itemId)) {
+            $this->json(['error' => 'Item de estoque não encontrado.'], 404);
+            return;
+        }
+
+        if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            $this->json(['error' => 'Erro no upload do arquivo.'], 400);
+            return;
+        }
+
+        $file         = $_FILES['image'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+        if (!in_array($file['type'], $allowedTypes, true)) {
+            $this->json(['error' => 'Tipo não permitido. Use JPG, PNG, WEBP ou GIF.'], 400);
+            return;
+        }
+
+        if ($file['size'] > 5 * 1024 * 1024) {
+            $this->json(['error' => 'Arquivo muito grande. Máximo 5 MB.'], 400);
+            return;
+        }
+
+        $ext       = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) ?: 'jpg';
+        $filename  = 'stock_' . $itemId . '_' . time() . '.' . $ext;
+        $uploadDir = ROOT_PATH . '/public/uploads/stock/';
+
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $destination = $uploadDir . $filename;
+
+        if (!move_uploaded_file($file['tmp_name'], $destination)) {
+            $this->json(['error' => 'Erro ao salvar arquivo.'], 500);
+            return;
+        }
+
+        // Remove imagem anterior, se houver
+        $current = StockItem::find($itemId);
+        if (!empty($current['image_path']) && file_exists(ROOT_PATH . '/public' . $current['image_path'])) {
+            @unlink(ROOT_PATH . '/public' . $current['image_path']);
+        }
+
+        $imageUrl = '/uploads/stock/' . $filename;
+
+        try {
+            StockItem::updateById($itemId, ['image_path' => $imageUrl]);
+        } catch (\PDOException $e) {
+            if ($this->isMissingImageColumn($e)) {
+                $this->runStockImageMigration();
+                StockItem::updateById($itemId, ['image_path' => $imageUrl]);
+            } else {
+                throw $e;
+            }
+        }
+
+        $this->json(['success' => true, 'url' => $imageUrl]);
+    }
+
+    /**
+     * Remove a imagem de um item de estoque (AJAX), mantendo os demais dados.
+     */
+    public function removeImage(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $itemId = (int) $this->input('id', 0);
+        $current = StockItem::find($itemId);
+        if (!$current) {
+            $this->json(['error' => 'Item de estoque não encontrado.'], 404);
+            return;
+        }
+
+        if (!empty($current['image_path']) && file_exists(ROOT_PATH . '/public' . $current['image_path'])) {
+            @unlink(ROOT_PATH . '/public' . $current['image_path']);
+        }
+
+        try {
+            StockItem::updateById($itemId, ['image_path' => null]);
+        } catch (\PDOException $e) {
+            if (!$this->isMissingImageColumn($e)) {
+                throw $e;
+            }
+        }
+
+        $this->json(['success' => true]);
+    }
+
+    /**
+     * Detecta erro de coluna inexistente (para acionar a migration lazy).
+     */
+    private function isMissingImageColumn(\PDOException $e): bool
+    {
+        $msg = $e->getMessage();
+        return stripos($msg, 'Unknown column') !== false
+            || stripos($msg, "doesn't exist") !== false;
+    }
+
+    /**
+     * Executa a migration 037 (adiciona stock_items.image_path) de forma idempotente.
+     */
+    private function runStockImageMigration(): void
+    {
+        $migrationFile = ROOT_PATH . '/database/migrations/037_add_image_to_stock_items.sql';
+        if (!file_exists($migrationFile)) {
+            return;
+        }
+        $sql = file_get_contents($migrationFile);
+        $sql = preg_replace('/--[^\n]*/', '', $sql);
+        $pdo = Database::getConnection();
+        foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
+            try { $pdo->exec($stmt); } catch (\PDOException $ignore) {}
+        }
+    }
+
+    /**
      * Notificar o responsável pelo transporte
      */
     private function notifyTransport(int $movementId): void

@@ -221,6 +221,8 @@ class Router
             'materials/quick-store-unit' => ['MaterialController', 'quickStoreUnit'],
             'materials/import' => ['MaterialController', 'import'],
             'materials/import-process' => ['MaterialController', 'importProcess'],
+            'materials/upload-image' => ['MaterialController', 'uploadImage'],
+            'materials/remove-image' => ['MaterialController', 'removeImage'],
 
             // Fornecedores - Contatos/Vendedores
             'suppliers/contacts' => ['SupplierController', 'contacts'],
@@ -248,6 +250,8 @@ class Router
             'stock/search-stock' => ['StockController', 'searchStock'],
             'stock/bulk-create' => ['StockController', 'bulkCreate'],
             'stock/bulk-store' => ['StockController', 'bulkStore'],
+            'stock/upload-image' => ['StockController', 'uploadImage'],
+            'stock/remove-image' => ['StockController', 'removeImage'],
 
             // Transporte (Wilton)
             'transport' => ['TransportController', 'index'],
