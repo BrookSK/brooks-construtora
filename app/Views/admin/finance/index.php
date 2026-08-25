@@ -935,29 +935,67 @@
         } catch (e) { el('emptyState').classList.remove('d-none'); }
     }
 
+    function setSyncStatus(text) {
+        el('syncStatusText').textContent = text;
+    }
+
+    async function postJson(url, body) {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body ? new URLSearchParams(body).toString() : ''
+        });
+        return res.json();
+    }
+
+    // Sincronização EM ETAPAS (várias chamadas curtas) para não estourar o
+    // timeout do proxy. O navegador orquestra: start → páginas → finish.
     async function doSync() {
         const btn = el('btnSync');
         btn.disabled = true;
         el('syncStatus').classList.remove('d-none'); el('syncStatus').classList.add('d-flex');
         el('syncError').classList.add('d-none');
+
+        const from = '2025-12-01';
+        const MAX_PAGES = 500; // trava de segurança
         try {
-            const res = await fetch('/admin/finance/sync', { method:'POST', headers:{ 'X-Requested-With':'XMLHttpRequest' } });
-            const json = await res.json();
-            if (json.debug) console.log('[Finance] debug do sync:', json.debug);
-            if (json.ok) {
-                applyData(json.data);
-                if (json.synced_at) el('lastSyncLabel').textContent = 'Atualizado em ' + new Date(json.synced_at.replace(' ','T')).toLocaleString('pt-BR');
-                if (json.partial_errors && json.partial_errors.length) showError('Atualizado com avisos: ' + json.partial_errors.join(' · '));
-            } else {
-                let msg = json.error || 'Não foi possível atualizar. Mantendo a última versão.';
-                if (json.detail) msg += ' (' + json.detail + ')';
-                if (json.errors && json.errors.length) msg += ' — ' + json.errors.join(' · ');
-                showError(msg + ' Veja a aba Diagnóstico para detalhes.');
+            setSyncStatus('Iniciando e lendo saldo das contas…');
+            const start = await postJson('/admin/finance/sync-start', { from });
+            if (!start.ok) throw new Error(start.error || 'Falha ao iniciar.');
+
+            // Contas a pagar (débito)
+            let skip = 0, page = 0;
+            while (page < MAX_PAGES) {
+                page++;
+                setSyncStatus('Buscando contas a pagar… (' + (skip) + '+)');
+                const r = await postJson('/admin/finance/sync-page', { type: 'payable', skip });
+                if (!r.ok) throw new Error('Contas a pagar: ' + (r.error || 'erro'));
+                if (r.done) break;
+                skip = r.next_skip;
             }
+
+            // Contas a receber (crédito)
+            skip = 0; page = 0;
+            while (page < MAX_PAGES) {
+                page++;
+                setSyncStatus('Buscando contas a receber… (' + (skip) + '+)');
+                const r = await postJson('/admin/finance/sync-page', { type: 'receivable', skip });
+                if (!r.ok) throw new Error('Contas a receber: ' + (r.error || 'erro'));
+                if (r.done) break;
+                skip = r.next_skip;
+            }
+
+            setSyncStatus('Consolidando e salvando…');
+            const fin = await postJson('/admin/finance/sync-finish', {});
+            if (!fin.ok) throw new Error(fin.error || 'Falha ao finalizar.');
+
+            applyData(fin.data);
+            if (fin.synced_at) el('lastSyncLabel').textContent = 'Atualizado em ' + new Date(fin.synced_at.replace(' ','T')).toLocaleString('pt-BR');
         } catch (e) {
-            showError('Falha de conexão ao atualizar (a busca pode ter demorado demais). Abra a aba Diagnóstico para ver o log. Detalhe: ' + e.message);
+            showError('Não foi possível atualizar: ' + e.message + '. Veja a aba Diagnóstico. Os dados anteriores foram mantidos.');
         } finally {
             el('syncStatus').classList.add('d-none'); el('syncStatus').classList.remove('d-flex');
+            setSyncStatus('Sincronizando com o Nibo…');
             btn.disabled = false;
         }
     }

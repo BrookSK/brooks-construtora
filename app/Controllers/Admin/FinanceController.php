@@ -64,6 +64,162 @@ class FinanceController extends Controller
         ]);
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    // SYNC EM ETAPAS (evita timeout do proxy Apache/nginx)
+    // O navegador orquestra: syncStart → syncPage (várias) → syncFinish.
+    // Cada chamada é curta, então nenhuma estoura o limite do proxy.
+    // O acúmulo fica na sessão.
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Inicia a sincronização: zera o acumulador e busca só o saldo (rápido).
+     */
+    public function syncStart(): void
+    {
+        if (!$this->isPost()) { $this->json(['ok' => false, 'error' => 'Método inválido.'], 400); return; }
+        if (NiboService::token() === '') {
+            $this->json(['ok' => false, 'error' => 'Token do Nibo não configurado.'], 422);
+            return;
+        }
+        @set_time_limit(60);
+
+        $from = $this->input('from', '2025-12-01');
+        try {
+            $bal = NiboService::accountsBalance();
+        } catch (\Throwable $e) {
+            self::log('syncStart erro saldo: ' . $e->getMessage());
+            $bal = ['accounts' => [], 'balance' => 0];
+        }
+
+        $_SESSION['finance_sync'] = [
+            'from' => $from,
+            'accounts' => $bal['accounts'],
+            'balance' => $bal['balance'],
+            'payables' => [],
+            'receivables' => [],
+            'started_at' => date('Y-m-d H:i:s'),
+        ];
+        self::log("syncStart from={$from} contas=" . count($bal['accounts']) . " saldo={$bal['balance']}");
+        $this->json(['ok' => true, 'accounts' => count($bal['accounts']), 'balance' => $bal['balance']]);
+    }
+
+    /**
+     * Busca UMA página de um tipo (payable|receivable) e acumula na sessão.
+     * Retorna se há mais páginas (done=false) ou não (done=true).
+     */
+    public function syncPage(): void
+    {
+        if (!$this->isPost()) { $this->json(['ok' => false, 'error' => 'Método inválido.'], 400); return; }
+        if (empty($_SESSION['finance_sync'])) {
+            $this->json(['ok' => false, 'error' => 'Sessão de sincronização não iniciada.'], 409);
+            return;
+        }
+        @set_time_limit(60);
+
+        $type = $this->input('type', 'payable') === 'receivable' ? 'receivable' : 'payable';
+        $skip = max(0, (int) $this->input('skip', 0));
+        $pageSize = 100;
+        $from = $_SESSION['finance_sync']['from'] ?? '2025-12-01';
+
+        try {
+            $items = NiboService::schedulePage($type, $skip, $from, null, $pageSize);
+        } catch (\Throwable $e) {
+            self::log("syncPage {$type} skip={$skip} ERRO: " . $e->getMessage());
+            $this->json(['ok' => false, 'error' => $e->getMessage(), 'type' => $type, 'skip' => $skip], 502);
+            return;
+        }
+
+        $bucket = $type === 'receivable' ? 'receivables' : 'payables';
+        foreach ($items as $it) $_SESSION['finance_sync'][$bucket][] = $it;
+
+        $done = count($items) < $pageSize; // última página
+        $total = count($_SESSION['finance_sync'][$bucket]);
+        self::log("syncPage {$type} skip={$skip} +{$total} (done=" . ($done ? '1' : '0') . ')');
+        $this->json([
+            'ok' => true,
+            'type' => $type,
+            'received' => count($items),
+            'accumulated' => $total,
+            'next_skip' => $skip + $pageSize,
+            'done' => $done,
+        ]);
+    }
+
+    /**
+     * Finaliza: consolida os filtros, calcula totais e salva o snapshot.
+     */
+    public function syncFinish(): void
+    {
+        if (!$this->isPost()) { $this->json(['ok' => false, 'error' => 'Método inválido.'], 400); return; }
+        if (empty($_SESSION['finance_sync'])) {
+            $this->json(['ok' => false, 'error' => 'Sessão de sincronização não iniciada.'], 409);
+            return;
+        }
+        @set_time_limit(120);
+
+        $acc = $_SESSION['finance_sync'];
+        $payables = $acc['payables'] ?? [];
+        $receivables = $acc['receivables'] ?? [];
+        $accounts = $acc['accounts'] ?? [];
+        $balance = $acc['balance'] ?? 0;
+
+        // Monta filtros (centros de custo e contatos) a partir dos lançamentos
+        $ccMap = [];
+        $contactMap = [];
+        foreach (array_merge($payables, $receivables) as $x) {
+            if (!empty($x['cost_center_id']) && !empty($x['cost_center']) && $x['cost_center'] !== '—') {
+                $ccMap[(string) $x['cost_center_id']] = $x['cost_center'];
+            }
+            if (!empty($x['contact_id']) && !empty($x['contact_name']) && $x['contact_name'] !== '—') {
+                $contactMap[(string) $x['contact_id']] = $x['contact_name'];
+            }
+        }
+        $toList = function (array $m) {
+            $out = [];
+            foreach ($m as $id => $name) $out[] = ['id' => $id, 'name' => $name];
+            usort($out, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+            return $out;
+        };
+        $filters = [
+            'costcenters' => $toList($ccMap),
+            'contacts' => $toList($contactMap),
+        ];
+
+        $result = [
+            'ok' => true,
+            'generated_at' => date('Y-m-d H:i:s'),
+            'masters' => [],
+            'filters' => $filters,
+            'accounts' => $accounts,
+            'payables' => $payables,
+            'receivables' => $receivables,
+            'totals' => [
+                'balance' => $balance,
+                'payables' => count($payables),
+                'receivables' => count($receivables),
+            ],
+            'errors' => [],
+        ];
+
+        $createdBy = Auth::user()['name'] ?? 'Sistema';
+        try {
+            NiboSyncSnapshot::store($result, $createdBy);
+        } catch (\Throwable $e) {
+            self::log('syncFinish erro ao salvar: ' . $e->getMessage());
+            $this->json(['ok' => false, 'error' => 'Falha ao salvar os dados: ' . $e->getMessage()], 500);
+            return;
+        }
+
+        self::log(sprintf('syncFinish OK — payables=%d receivables=%d contas=%d', count($payables), count($receivables), count($accounts)));
+        unset($_SESSION['finance_sync']);
+
+        $this->json([
+            'ok' => true,
+            'synced_at' => $result['generated_at'],
+            'data' => $result,
+        ]);
+    }
+
     /**
      * Executa a sincronização (somente leitura). Antes de salvar o novo
      * snapshot, o anterior permanece intacto no histórico (preservação de

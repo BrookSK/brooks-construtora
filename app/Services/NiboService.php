@@ -653,6 +653,66 @@ class NiboService
         ];
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    // SYNC EM ETAPAS (evita timeout do proxy) — usado pelo dashboard
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Busca só os saldos das contas (rápido). Retorna [accounts, balance].
+     */
+    public static function accountsBalance(?string $token = null): array
+    {
+        $token = $token ?: self::token();
+        $raw = [];
+        try {
+            $raw = self::getAllPaged('/accounts/views/balance', 'accountName', [], $token);
+        } catch (\Throwable $e) {
+            try { $raw = self::getAllPaged('/accounts', 'name', [], $token); } catch (\Throwable $e2) { /* ignora */ }
+        }
+        $balance = 0.0;
+        $accounts = [];
+        foreach ($raw as $a) {
+            $b = (float) ($a['balance'] ?? $a['currentBalance'] ?? $a['bankBalance'] ?? $a['value'] ?? 0);
+            $balance += $b;
+            $accounts[] = [
+                'id' => $a['accountId'] ?? $a['id'] ?? null,
+                'name' => $a['accountName'] ?? $a['name'] ?? '(conta)',
+                'balance' => $b,
+            ];
+        }
+        return ['accounts' => $accounts, 'balance' => $balance];
+    }
+
+    /**
+     * Busca UMA página de agendamentos (débito/crédito) já enriquecida.
+     * Como cada agendamento traz stakeholder/category/costCenter embutidos,
+     * não é preciso baixar as listas mestras para enriquecer.
+     *
+     * @param string $type  'payable' (débito) ou 'receivable' (crédito)
+     * @return array Itens enriquecidos desta página
+     */
+    public static function schedulePage(string $type, int $skip, string $from, ?string $token = null, int $pageSize = 100): array
+    {
+        $token = $token ?: self::token();
+        $path = ($type === 'receivable') ? '/schedules/credit' : '/schedules/debit';
+        $query = [
+            '$orderby' => 'dueDate',
+            '$top' => (string) $pageSize,
+            '$skip' => (string) $skip,
+            '$filter' => 'dueDate ge ' . $from . 'T00:00:00Z',
+        ];
+        $res = self::request('GET', $path, $query, null, $token);
+        if (!$res['ok'] && self::isPagingOrOrderByError($res)) {
+            unset($query['$orderby'], $query['$skip']);
+            $res = self::request('GET', $path, $query, null, $token);
+        }
+        if (!$res['ok']) {
+            throw new \RuntimeException("HTTP {$res['status']} " . ($res['error'] ?? ''));
+        }
+        $items = self::extractItems($res['response']);
+        return array_map(fn($s) => self::enrichSchedule($s, [], [], [], $type), $items);
+    }
+
     /**
      * Cria um índice id => nome a partir de uma lista de mestres.
      */
