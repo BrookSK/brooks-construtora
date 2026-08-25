@@ -707,13 +707,13 @@
             const tipo = r.type === 'payable'
                 ? '<span class="badge bg-danger-subtle text-danger">Saída</span>'
                 : '<span class="badge bg-success-subtle text-success">Entrada</span>';
-            return '<tr><td>' + dateLabel(r.due_date) + '</td>'
+            return '<tr><td class="text-nowrap">' + dateLabel(r.due_date) + '</td>'
                 + '<td>' + tipo + '</td>'
                 + '<td>' + esc(r.contact_name) + '</td>'
-                + '<td class="text-truncate" style="max-width:240px;">' + esc(r.description) + '</td>'
+                + '<td style="min-width:260px; white-space:normal; word-break:break-word;">' + esc(r.description) + '</td>'
                 + '<td>' + esc(r.cost_center) + '</td>'
                 + '<td>' + esc(r.category) + '</td>'
-                + '<td class="text-end fw-semibold">' + fmtMoneyFull(r.value) + '</td>'
+                + '<td class="text-end fw-semibold text-nowrap">' + fmtMoneyFull(r.value) + '</td>'
                 + '<td>' + statusBadge(r.status) + '</td></tr>';
         }).join('');
     }
