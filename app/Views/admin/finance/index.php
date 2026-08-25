@@ -220,11 +220,11 @@
                 <div class="table-responsive" style="max-height:280px;">
                     <table class="table table-sm table-hover mb-0 align-middle">
                         <thead class="table-light" style="position:sticky;top:0;">
-                            <tr>
-                                <th>Vencimento</th>
-                                <th>Previsto inicial</th>
-                                <th>Postergado para</th>
-                                <th>Dias vencidos</th>
+                            <tr class="text-uppercase text-muted" style="font-size:.68rem; letter-spacing:.3px;">
+                                <th class="text-nowrap">Vencimento</th>
+                                <th class="text-nowrap">Previsto inicial</th>
+                                <th class="text-nowrap">Postergado p/</th>
+                                <th class="text-nowrap">Dias venc.</th>
                                 <th>Quem</th><th>Descrição</th><th>Centro de custo</th><th class="text-end">Quanto</th>
                             </tr>
                         </thead>
