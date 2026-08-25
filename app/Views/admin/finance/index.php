@@ -122,6 +122,7 @@
                         <option value="open">Em aberto</option>
                         <option value="overdue">Vencidas</option>
                         <option value="paid">Já pagas/recebidas</option>
+                        <option value="postponed">Postergadas (remanejadas)</option>
                     </select>
                 </div>
                 <div class="col-6 col-md-3 col-xl-2">
@@ -630,7 +631,11 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
     // Vale igualmente para TODAS as abas, evitando inconsistências.
     function matchesAll(x) {
         const f = getFilters();
-        if (f.status && x.status !== f.status) return false;
+        if (f.status === 'postponed') {
+            if (!x.date_changed) return false;
+        } else if (f.status) {
+            if (x.status !== f.status) return false;
+        }
         if (f.costCenter) {
             const byId = String(x.cost_center_id||'') === f.costCenter;
             const byName = ccNameById[f.costCenter] && (x.cost_center||'') === ccNameById[f.costCenter];
