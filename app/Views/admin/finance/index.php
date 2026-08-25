@@ -48,6 +48,7 @@
                 <div class="col-6 col-md-3 col-xl-2">
                     <label class="form-label small mb-1">Período</label>
                     <select id="filterPeriod" class="form-select form-select-sm">
+                        <option value="today">Hoje</option>
                         <option value="7">Próximos 7 dias</option>
                         <option value="15">Próximos 15 dias</option>
                         <option value="20">Próximos 20 dias</option>
@@ -167,6 +168,29 @@
 
         <!-- ═══ RESUMO ═══ -->
         <div class="tab-pane fade show active" id="tab-resumo" role="tabpanel">
+
+            <!-- VENCIDAS: independe do filtro de tempo; só sai quando for paga -->
+            <div class="card border-0 shadow-sm mb-3 border-start border-4 border-warning">
+                <div class="card-header bg-warning-subtle d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="fw-semibold text-warning-emphasis">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Contas vencidas (a pagar)
+                        <span class="badge bg-secondary ms-1" id="overdueCount">0</span>
+                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                        <small class="text-muted d-none d-md-inline">Ignora o filtro de tempo — só some quando for paga.</small>
+                        <span class="badge bg-warning text-dark" id="overdueTotal">R$ 0,00</span>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height:280px;">
+                    <table class="table table-sm table-hover mb-0 align-middle">
+                        <thead class="table-light" style="position:sticky;top:0;">
+                            <tr><th>Venceu em</th><th>Dias</th><th>Quem</th><th>Descrição</th><th>Centro de custo</th><th class="text-end">Quanto</th></tr>
+                        </thead>
+                        <tbody id="overdueList"><tr><td colspan="6" class="text-center text-muted py-3">—</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="row g-3 mb-3">
                 <div class="col-12 col-lg-6">
                     <div class="card border-0 shadow-sm h-100">
@@ -508,6 +532,9 @@
         if (val === 'all') {
             // Toda a base sincronizada
             return { start: new Date(2000,0,1), end: new Date(2100,0,1) };
+        } else if (val === 'today') {
+            // Apenas o dia de hoje
+            return { start: new Date(today), end: new Date(today) };
         } else if (val === 'this-month') {
             start = new Date(today.getFullYear(), today.getMonth(), 1);
             end = new Date(today.getFullYear(), today.getMonth()+1, 0);
@@ -562,6 +589,26 @@
     }
     function filteredPayables() { return state.payables.filter(matchesAll); }
     function filteredReceivables() { return state.receivables.filter(matchesAll); }
+
+    // Filtros SEM a janela de data (usado pelo quadro de Vencidas)
+    function matchesFiltersNoDate(x) {
+        const f = getFilters();
+        if (f.costCenter) {
+            const byId = String(x.cost_center_id||'') === f.costCenter;
+            const byName = ccNameById[f.costCenter] && (x.cost_center||'') === ccNameById[f.costCenter];
+            if (!byId && !byName) return false;
+        }
+        if (f.contact) {
+            const byId = String(x.contact_id||'') === f.contact;
+            const byName = contactNameById[f.contact] && (x.contact_name||'') === contactNameById[f.contact];
+            if (!byId && !byName) return false;
+        }
+        return true;
+    }
+    // Contas a pagar vencidas e ainda NÃO pagas — independem do filtro de tempo
+    function overduePayables() {
+        return state.payables.filter(x => x.status === 'overdue' && matchesFiltersNoDate(x));
+    }
     // Aliases usados pelas abas (mesma fonte, filtro único)
     const allPayables = filteredPayables;
     const allReceivables = filteredReceivables;
@@ -642,6 +689,30 @@
             const range = periodRange();
             el('periodRangeLabel').innerHTML = '<i class="bi bi-calendar-range"></i> Recorte atual: ' + range.start.toLocaleDateString('pt-BR') + ' até ' + range.end.toLocaleDateString('pt-BR');
         }
+    }
+
+    // ── Quadro de vencidas (ignora filtro de tempo) ───────────────────
+    function renderOverdue() {
+        const rows = overduePayables().sort((a,b) => (parseDate(a.due_date)||0) - (parseDate(b.due_date)||0));
+        el('overdueTotal').textContent = fmtMoneyFull(sum(rows));
+        el('overdueCount').textContent = rows.length;
+        const tb = el('overdueList');
+        if (!rows.length) {
+            tb.innerHTML = '<tr><td colspan="6" class="text-center text-success py-3"><i class="bi bi-check2-circle"></i> Nenhuma conta vencida em aberto.</td></tr>';
+            return;
+        }
+        const today = new Date(); today.setHours(0,0,0,0);
+        tb.innerHTML = rows.map(r => {
+            const d = parseDate(r.due_date);
+            const dias = d ? Math.round((today - d) / 86400000) : 0;
+            return '<tr>'
+                + '<td class="text-nowrap">' + dateLabel(r.due_date) + '</td>'
+                + '<td><span class="badge bg-danger">' + dias + ' d</span></td>'
+                + '<td>' + esc(r.contact_name) + '</td>'
+                + '<td style="min-width:220px; white-space:normal; word-break:break-word;">' + esc(r.description) + '</td>'
+                + '<td>' + esc(r.cost_center) + '</td>'
+                + '<td class="text-end fw-semibold text-danger">' + fmtMoneyFull(r.value) + '</td></tr>';
+        }).join('');
     }
 
     // ── Listas quem pagar / quem recebe ───────────────────────────────
@@ -985,6 +1056,7 @@
         // Resumo (respeita a janela do botão de período)
         const fpay = filteredPayables(), frec = filteredReceivables();
         renderCards(fpay, frec);
+        renderOverdue();
         renderSimpleList('payList', 'payListTotal', fpay, 'text-danger');
         renderSimpleList('recList', 'recListTotal', frec, 'text-success');
         renderRanking('topSuppliers', fpay, 'text-danger');
