@@ -20,7 +20,10 @@ class FinanceController extends Controller
             $this->redirect('/admin/login');
             exit;
         }
-        if (!Auth::hasPermission('orders')) {
+        // Acesso ao financeiro: apenas quem tem permissão de pagamento/financeiro
+        // (super_admin e admin já têm 'orders.payment'; role 'financeiro' também).
+        // PIN role 'payment' → 'financeiro' e 'all' → 'admin' são mapeados no login.
+        if (!Auth::hasPermission('orders.payment')) {
             $this->redirect('/admin/dashboard');
             exit;
         }
