@@ -795,8 +795,15 @@ class NiboService
      */
     private static function enrichSchedule(array $s, array $idxContact, array $idxCc, array $idxCat, string $type): array
     {
-        // Descobrir IDs (a API varia os nomes de campo)
-        $contactId = $s['stakeholderId'] ?? $s['stakeholder']['id'] ?? $s['customerId'] ?? $s['supplierId'] ?? null;
+        // Descobrir IDs (a API varia os nomes de campo). Atenção: muitos
+        // lançamentos trazem stakeholderId zerado (00000000-...), enquanto o ID
+        // real fica em stakeholder.id. Ignoramos IDs "zerados".
+        $zeroId = '00000000-0000-0000-0000-000000000000';
+        $contactId = $s['stakeholder']['id'] ?? null;
+        if (!$contactId) {
+            $sid = $s['stakeholderId'] ?? $s['customerId'] ?? $s['supplierId'] ?? null;
+            if ($sid && $sid !== $zeroId) $contactId = $sid;
+        }
         $contactName = $s['stakeholder']['name'] ?? null;
         if (!$contactName && $contactId !== null && isset($idxContact[(string) $contactId])) {
             $contactName = $idxContact[(string) $contactId];
