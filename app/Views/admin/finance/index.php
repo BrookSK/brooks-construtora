@@ -41,16 +41,56 @@
 
 <div id="dashboard" class="d-none">
 
-    <!-- Seletor de período (grande e simples) -->
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <span class="fw-semibold me-1">Ver os próximos:</span>
-        <div class="btn-group" role="group" id="periodButtons">
-            <button type="button" class="btn btn-outline-primary period-btn active" data-days="7">7 dias</button>
-            <button type="button" class="btn btn-outline-primary period-btn" data-days="15">15 dias</button>
-            <button type="button" class="btn btn-outline-primary period-btn" data-days="20">20 dias</button>
-            <button type="button" class="btn btn-outline-primary period-btn" data-days="30">30 dias</button>
+    <!-- BARRA ÚNICA DE FILTROS (vale para todas as abas) -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-6 col-md-3 col-xl-2">
+                    <label class="form-label small mb-1">Período</label>
+                    <select id="filterPeriod" class="form-select form-select-sm">
+                        <option value="7">Próximos 7 dias</option>
+                        <option value="15">Próximos 15 dias</option>
+                        <option value="20">Próximos 20 dias</option>
+                        <option value="30" selected>Próximos 30 dias</option>
+                        <option value="60">Próximos 60 dias</option>
+                        <option value="90">Próximos 90 dias</option>
+                        <option value="this-month">Este mês</option>
+                        <option value="this-year">Este ano</option>
+                        <option value="all">Tudo</option>
+                        <option value="custom">Datas personalizadas</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3 col-xl-2 filter-custom-date d-none">
+                    <label class="form-label small mb-1">De</label>
+                    <input type="date" id="filterStart" class="form-control form-control-sm">
+                </div>
+                <div class="col-6 col-md-3 col-xl-2 filter-custom-date d-none">
+                    <label class="form-label small mb-1">Até</label>
+                    <input type="date" id="filterEnd" class="form-control form-control-sm">
+                </div>
+                <div class="col-6 col-md-3 col-xl-2">
+                    <label class="form-label small mb-1">Fornecedor / Cliente</label>
+                    <select id="filterContact" class="form-select form-select-sm"><option value="">Todos</option></select>
+                </div>
+                <div class="col-6 col-md-3 col-xl-2">
+                    <label class="form-label small mb-1">Centro de custo</label>
+                    <select id="filterCostCenter" class="form-select form-select-sm"><option value="">Todos</option></select>
+                </div>
+                <div class="col-6 col-md-3 col-xl-2">
+                    <label class="form-label small mb-1">Situação</label>
+                    <select id="filterStatus" class="form-select form-select-sm">
+                        <option value="">Todas</option>
+                        <option value="open">Em aberto</option>
+                        <option value="overdue">Vencidas</option>
+                        <option value="paid">Já pagas/recebidas</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3 col-xl-2">
+                    <button id="btnClearFilters" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-x-lg"></i> Limpar filtros</button>
+                </div>
+            </div>
+            <div class="small text-muted mt-2" id="periodRangeLabel"></div>
         </div>
-        <span class="text-muted small ms-auto" id="periodRangeLabel"></span>
     </div>
 
     <!-- Cards grandes: a pergunta que todo mundo faz -->
@@ -111,38 +151,6 @@
         <div>Atenção: no período escolhido as saídas superam o que você tem mais o que vai receber. <strong id="negativeGap"></strong></div>
     </div>
 
-    <!-- Filtros opcionais (recolhidos, para não assustar leigos) -->
-    <div class="mb-3">
-        <button class="btn btn-sm btn-link text-decoration-none px-0" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters">
-            <i class="bi bi-funnel"></i> Filtrar por fornecedor, centro de custo ou situação
-        </button>
-        <div class="collapse" id="advancedFilters">
-            <div class="card card-body border-0 shadow-sm">
-                <div class="row g-2 align-items-end">
-                    <div class="col-6 col-md-3">
-                        <label class="form-label small mb-1">Fornecedor / Cliente</label>
-                        <select id="filterContact" class="form-select form-select-sm"><option value="">Todos</option></select>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label small mb-1">Centro de custo</label>
-                        <select id="filterCostCenter" class="form-select form-select-sm"><option value="">Todos</option></select>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label small mb-1">Situação</label>
-                        <select id="filterStatus" class="form-select form-select-sm">
-                            <option value="">Todas</option>
-                            <option value="open">Em aberto</option>
-                            <option value="overdue">Vencidas</option>
-                            <option value="paid">Já pagas/recebidas</option>
-                        </select>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <button id="btnClearFilters" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-x-lg"></i> Limpar filtros</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Abas -->
     <ul class="nav nav-tabs mb-3" id="financeTabs" role="tablist">
@@ -408,7 +416,6 @@
 .finance-flow .row-detail td:first-child { padding-left:1.25rem; font-weight:400; color:#444; }
 .finance-flow .balance-row td { background:#fff3cd; font-weight:700; }
 .finance-flow .zero { color:#bbb; }
-.period-btn.active { color:#fff; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -419,7 +426,6 @@
     const el = (id) => document.getElementById(id);
     const charts = {};
     let state = { payables: [], receivables: [], accounts: [], totals: {}, filters: {} };
-    let periodDays = 7;
 
     const WEEKDAYS = ['dom','seg','ter','qua','qui','sex','sáb'];
     const MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
@@ -441,14 +447,31 @@
         return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }) + ' <span class="text-muted small">' + WEEKDAYS[d.getDay()] + '</span>';
     }
 
-    // ── Janela de datas do período selecionado ────────────────────────
+    // ── Janela de datas do período selecionado (barra única) ──────────
     function periodRange() {
-        const start = new Date(); start.setHours(0,0,0,0);
-        const end = new Date(start); end.setDate(end.getDate() + periodDays);
+        const today = new Date(); today.setHours(0,0,0,0);
+        const val = el('filterPeriod').value;
+        let start = new Date(today), end = new Date(today);
+        if (val === 'all') {
+            // Toda a base sincronizada
+            return { start: new Date(2000,0,1), end: new Date(2100,0,1) };
+        } else if (val === 'this-month') {
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+            end = new Date(today.getFullYear(), today.getMonth()+1, 0);
+        } else if (val === 'this-year') {
+            start = new Date(today.getFullYear(), 0, 1);
+            end = new Date(today.getFullYear(), 11, 31);
+        } else if (val === 'custom') {
+            const s = parseDate(el('filterStart').value), e = parseDate(el('filterEnd').value);
+            start = s || new Date(2000,0,1);
+            end = e || new Date(2100,0,1);
+        } else {
+            end.setDate(end.getDate() + parseInt(val, 10));
+        }
         return { start, end };
     }
 
-    // ── Filtros (avançados, opcionais) ────────────────────────────────
+    // ── Filtros (barra única) ─────────────────────────────────────────
     function getFilters() {
         return {
             costCenter: el('filterCostCenter').value,
@@ -464,8 +487,9 @@
         (state.filters.contacts || []).forEach(c => { if (c.id) contactNameById[String(c.id)] = c.name; });
     }
 
-    // Aplica apenas os filtros de fornecedor/centro/situação (SEM janela de data)
-    function matchesFilters(x) {
+    // Filtro ÚNICO: fornecedor/centro/situação + janela de datas do período.
+    // Vale igualmente para TODAS as abas, evitando inconsistências.
+    function matchesAll(x) {
         const f = getFilters();
         if (f.status && x.status !== f.status) return false;
         if (f.costCenter) {
@@ -478,22 +502,16 @@
             const byName = contactNameById[f.contact] && (x.contact_name||'') === contactNameById[f.contact];
             if (!byId && !byName) return false;
         }
-        return true;
-    }
-    // Filtros + janela de data do botão de período (7/15/20/30)
-    function inPeriodAndFilters(x) {
-        if (!matchesFilters(x)) return false;
         const { start, end } = periodRange();
         const d = parseDate(x.due_date);
         if (!d) return false;
         return d >= start && d <= end;
     }
-    // Para as abas Resumo (janela do período)
-    function filteredPayables() { return state.payables.filter(inPeriodAndFilters); }
-    function filteredReceivables() { return state.receivables.filter(inPeriodAndFilters); }
-    // Para as abas Semanal/Mensal/Anual/Detalhado (só filtros, sem janela)
-    function allPayables() { return state.payables.filter(matchesFilters); }
-    function allReceivables() { return state.receivables.filter(matchesFilters); }
+    function filteredPayables() { return state.payables.filter(matchesAll); }
+    function filteredReceivables() { return state.receivables.filter(matchesAll); }
+    // Aliases usados pelas abas (mesma fonte, filtro único)
+    const allPayables = filteredPayables;
+    const allReceivables = filteredReceivables;
     const sum = (arr) => arr.reduce((a,x) => a + (Number(x.value)||0), 0);
 
     // Popula os seletores a partir dos CADASTROS completos vindos da API
@@ -564,8 +582,13 @@
         }
 
         // Rótulo do período
-        const { start, end } = periodRange();
-        el('periodRangeLabel').textContent = 'De ' + start.toLocaleDateString('pt-BR') + ' até ' + end.toLocaleDateString('pt-BR');
+        const val = el('filterPeriod').value;
+        if (val === 'all') {
+            el('periodRangeLabel').innerHTML = '<i class="bi bi-calendar-range"></i> Mostrando toda a base sincronizada';
+        } else {
+            const { start, end } = periodRange();
+            el('periodRangeLabel').innerHTML = '<i class="bi bi-calendar-range"></i> Recorte atual: ' + start.toLocaleDateString('pt-BR') + ' até ' + end.toLocaleDateString('pt-BR');
+        }
     }
 
     // ── Listas quem pagar / quem recebe ───────────────────────────────
@@ -601,8 +624,15 @@
 
     // ── Gráfico entradas x saídas ─────────────────────────────────────
     function renderChart(fpay, frec) {
-        const grouping = periodDays <= 15 ? 'day' : 'week';
-        const { start, end } = periodRange();
+        let { start, end } = periodRange();
+        // Se for "Tudo", ajusta a janela aos dados existentes
+        if (start.getFullYear() <= 2000 || end.getFullYear() >= 2100) {
+            const dates = [...fpay, ...frec].map(x => parseDate(x.due_date)).filter(Boolean).sort((a,b)=>a-b);
+            if (dates.length) { start = dates[0]; end = dates[dates.length-1]; }
+        }
+        // Escolhe o agrupamento conforme o tamanho da janela
+        const spanDays = Math.round((end - start) / 86400000);
+        const grouping = spanDays <= 20 ? 'day' : (spanDays <= 120 ? 'week' : 'month');
         const periods = buildPeriods(start, end, grouping);
         const map = {};
         periods.forEach(p => map[p.key] = { in:0, out:0 });
@@ -639,15 +669,10 @@
         if (grouping === 'month') { const [y,m] = key.split('-'); return MONTHS[parseInt(m,10)-1]+'/'+y; }
         return key; // ano
     }
-    function renderPeriodView(grouping, canvasId, tblId, limit) {
-        const fpay = allPayables(), frec = allReceivables();
+    function renderPeriodView(grouping, canvasId, tblId) {
+        // Usa o MESMO recorte (filtros + janela) das demais abas
+        const fpay = filteredPayables(), frec = filteredReceivables();
         let rows = groupInOut(fpay, frec, grouping);
-        // A partir de hoje/ano atual, limitado a N períodos
-        if (grouping !== 'year') {
-            const nowKey = periodKeyForDate(new Date(), grouping);
-            rows = rows.filter(r => r.key >= nowKey);
-        }
-        if (limit) rows = rows.slice(0, limit);
 
         const labels = rows.map(r => keyToLabel(r.key, grouping));
         if (charts[canvasId]) charts[canvasId].destroy();
@@ -793,14 +818,16 @@
 
     // ── Matriz detalhada ──────────────────────────────────────────────
     function renderFlow() {
-        const fpay = allPayables(), frec = allReceivables();
+        const fpay = filteredPayables(), frec = filteredReceivables();
         const grouping = el('flowGrouping').value;
-        // Janela da matriz: de hoje até +90 dias (dia), +12 semanas ou +12 meses
-        const start = new Date(); start.setHours(0,0,0,0);
-        const end = new Date(start);
-        if (grouping === 'day') end.setDate(end.getDate()+90);
-        else if (grouping === 'week') end.setDate(end.getDate()+7*12);
-        else end.setMonth(end.getMonth()+12);
+        // Usa a MESMA janela do período selecionado na barra de filtros
+        let { start, end } = periodRange();
+        // Se for "Tudo" (janela gigante), limita a matriz aos dados existentes
+        if (start.getFullYear() <= 2000 || end.getFullYear() >= 2100) {
+            const dates = [...fpay, ...frec].map(x => parseDate(x.due_date)).filter(Boolean).sort((a,b)=>a-b);
+            if (dates.length) { start = dates[0]; end = dates[dates.length-1]; }
+            else { start = new Date(); end = new Date(); }
+        }
         const periods = buildPeriods(start, end, grouping);
         const map = {};
         periods.forEach(p => map[p.key] = { in:0, out:0, inBy:{}, outBy:{} });
@@ -848,10 +875,10 @@
         renderRanking('topCustomers', frec, 'text-success');
         renderChart(fpay, frec);
 
-        // Semanal / Mensal / Anual (todos os dados filtrados, sem janela de dias)
-        renderPeriodView('week', 'chartWeekly', 'tblWeekly', 12);
-        renderPeriodView('month', 'chartMonthly', 'tblMonthly', 12);
-        renderPeriodView('year', 'chartYearly', 'tblYearly', 0);
+        // Semanal / Mensal / Anual (mesmo recorte da barra de filtros)
+        renderPeriodView('week', 'chartWeekly', 'tblWeekly');
+        renderPeriodView('month', 'chartMonthly', 'tblMonthly');
+        renderPeriodView('year', 'chartYearly', 'tblYearly');
 
         // Contas a pagar e receber (respeita filtros, sem janela de dias)
         renderContas();
@@ -915,26 +942,35 @@
     document.addEventListener('DOMContentLoaded', function () {
         el('btnSync').addEventListener('click', doSync);
 
-        // Botões de período (7/15/20/30)
-        document.querySelectorAll('.period-btn').forEach(b => b.addEventListener('click', function () {
-            document.querySelectorAll('.period-btn').forEach(x => x.classList.remove('active'));
-            this.classList.add('active');
-            periodDays = parseInt(this.dataset.days, 10);
-            refresh();
-        }));
+        // Mostra/esconde os campos de data personalizada
+        function toggleCustomDates() {
+            const custom = el('filterPeriod').value === 'custom';
+            document.querySelectorAll('.filter-custom-date').forEach(d => d.classList.toggle('d-none', !custom));
+        }
 
-        // Filtros avançados recalculam tudo
-        ['filterContact','filterCostCenter','filterStatus'].forEach(id => el(id).addEventListener('change', refresh));
-        // Agrupamento da matriz detalhada
+        // BARRA ÚNICA: qualquer filtro recalcula TODAS as abas
+        ['filterPeriod','filterStart','filterEnd','filterContact','filterCostCenter','filterStatus']
+            .forEach(id => el(id).addEventListener('change', function () {
+                toggleCustomDates();
+                refresh();
+            }));
+
+        // Agrupamento da matriz detalhada (só re-renderiza a matriz)
         el('flowGrouping').addEventListener('change', renderFlow);
-        // Buscas das listagens de contas
-        el('searchPay').addEventListener('input', () => renderFullList('fullPayList', 'ctaPayListTotal', allPayables(), el('searchPay').value));
-        el('searchRec').addEventListener('input', () => renderFullList('fullRecList', 'ctaRecListTotal', allReceivables(), el('searchRec').value));
+
+        // Buscas das listagens de contas (dentro do recorte atual)
+        el('searchPay').addEventListener('input', () => renderFullList('fullPayList', 'ctaPayListTotal', filteredPayables(), el('searchPay').value));
+        el('searchRec').addEventListener('input', () => renderFullList('fullRecList', 'ctaRecListTotal', filteredReceivables(), el('searchRec').value));
+
         el('btnClearFilters').addEventListener('click', function () {
+            el('filterPeriod').value = '30';
+            el('filterStart').value = ''; el('filterEnd').value = '';
             el('filterContact').value = ''; el('filterCostCenter').value = ''; el('filterStatus').value = '';
+            toggleCustomDates();
             refresh();
         });
 
+        toggleCustomDates();
         loadData();
     });
 })();
