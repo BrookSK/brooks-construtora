@@ -109,11 +109,15 @@
                 </div>
                 <div class="col-6 col-md-3 col-xl-2">
                     <label class="form-label small mb-1">Fornecedor / Cliente</label>
-                    <select id="filterContact" class="form-select form-select-sm"><option value="">Todos</option></select>
+                    <input id="filterContactInput" class="form-control form-control-sm" list="contactList" placeholder="Todos — digite para buscar" autocomplete="off">
+                    <datalist id="contactList"></datalist>
+                    <input type="hidden" id="filterContact" value="">
                 </div>
                 <div class="col-6 col-md-3 col-xl-2">
                     <label class="form-label small mb-1">Centro de custo</label>
-                    <select id="filterCostCenter" class="form-select form-select-sm"><option value="">Todos</option></select>
+                    <input id="filterCostCenterInput" class="form-control form-control-sm" list="costCenterList" placeholder="Todos — digite para buscar" autocomplete="off">
+                    <datalist id="costCenterList"></datalist>
+                    <input type="hidden" id="filterCostCenter" value="">
                 </div>
                 <div class="col-6 col-md-3 col-xl-2">
                     <label class="form-label small mb-1">Situação</label>
@@ -697,6 +701,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
     // Casa um lançamento com o valor do filtro (que pode ser um ID ou um nome)
     // kind: 'cost_center' | 'contact'
     function matchContact(x, filterValue, kind) {
+        if (filterValue === '__none__') return false; // texto digitado não bate com nada
         if (kind === 'cost_center') {
             return String(x.cost_center_id||'') === filterValue || (x.cost_center||'') === filterValue;
         }
@@ -756,18 +761,31 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         const contacts = Object.entries(kMap).map(([id,name]) => ({ id, name }))
             .sort((a,b) => a.name.localeCompare(b.name));
 
-        fillSelect('filterCostCenter', centers);
-        fillSelect('filterContact', contacts);
+        // Guarda as listas para casar nome→valor ao digitar
+        contactOptions = contacts;
+        costCenterOptions = centers;
+        fillDatalist('contactList', contacts);
+        fillDatalist('costCenterList', centers);
     }
-    // values = [{id, name}] — usa a KEY (id ou nome) como value do option
-    function fillSelect(id, values) {
-        const sel = el(id); const current = sel.value;
-        sel.innerHTML = '<option value="">Todos</option>' + values
-            .filter(v => v && (v.id || v.name))
-            .map(v => '<option value="'+esc(v.id || v.name)+'">'+esc(v.name)+'</option>').join('');
-        if (current) {
-            try { if (sel.querySelector('option[value="'+CSS.escape(current)+'"]')) sel.value = current; } catch(e){}
-        }
+    // Mapas de opções {id,name} para os campos digitáveis
+    let contactOptions = [], costCenterOptions = [];
+    // values = [{id, name}] — preenche o <datalist> com os NOMES
+    function fillDatalist(datalistId, values) {
+        const dl = el(datalistId);
+        dl.innerHTML = values
+            .filter(v => v && v.name)
+            .map(v => '<option value="'+esc(v.name)+'"></option>').join('');
+    }
+    // Ao digitar/escolher no campo, resolve o nome para a chave (id ou nome)
+    // e guarda no hidden correspondente. Vazio = Todos.
+    function resolveTypedFilter(inputId, hiddenId, options) {
+        const txt = (el(inputId).value || '').trim();
+        if (!txt) { el(hiddenId).value = ''; return; }
+        const low = txt.toLowerCase();
+        // match exato primeiro; senão, primeiro que contém
+        let opt = options.find(o => o.name.toLowerCase() === low)
+               || options.find(o => o.name.toLowerCase().includes(low));
+        el(hiddenId).value = opt ? (opt.id || opt.name) : '__none__'; // __none__ = nada encontrado
     }
 
     // ── Cards de resumo ───────────────────────────────────────────────
@@ -1262,28 +1280,48 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
     }
 
     // ── Recalcula tudo conforme período + filtros ─────────────────────
-    function refresh() {
-        // Resumo (respeita a janela do botão de período)
+    // Qual aba está ativa no momento
+    function activeTab() {
+        const btn = document.querySelector('#financeTabs .nav-link.active');
+        return btn ? btn.getAttribute('data-bs-target') : '#tab-resumo';
+    }
+
+    // Renderiza SOMENTE a aba visível (renderização preguiçosa) — evita
+    // desenhar milhares de linhas e 4 gráficos de uma vez a cada mudança.
+    function renderActiveTab() {
         const fpay = filteredPayables(), frec = filteredReceivables();
+        // KPIs e vencidas ficam fora das abas: sempre atualizam
         renderCards(fpay, frec);
         renderOverdue();
-        renderSimpleList('payList', 'payListTotal', fpay, 'text-danger');
-        renderSimpleList('recList', 'recListTotal', frec, 'text-success');
-        renderRanking('topSuppliers', fpay, 'text-danger');
-        renderRanking('topCustomers', frec, 'text-success');
-        renderChart(fpay, frec);
 
-        // Semanal / Mensal / Anual (mesmo recorte da barra de filtros)
-        renderPeriodView('week', 'chartWeekly', 'tblWeekly');
-        renderPeriodView('month', 'chartMonthly', 'tblMonthly');
-        renderPeriodView('year', 'chartYearly', 'tblYearly');
-
-        // Contas a pagar e receber (respeita filtros, sem janela de dias)
-        renderContas();
-
-        // Detalhado (matriz)
-        renderFlow();
+        switch (activeTab()) {
+            case '#tab-resumo':
+                renderSimpleList('payList', 'payListTotal', fpay, 'text-danger');
+                renderSimpleList('recList', 'recListTotal', frec, 'text-success');
+                renderRanking('topSuppliers', fpay, 'text-danger');
+                renderRanking('topCustomers', frec, 'text-success');
+                renderChart(fpay, frec);
+                break;
+            case '#tab-semanal':
+                renderPeriodView('week', 'chartWeekly', 'tblWeekly');
+                break;
+            case '#tab-mensal':
+                renderPeriodView('month', 'chartMonthly', 'tblMonthly');
+                break;
+            case '#tab-anual':
+                renderPeriodView('year', 'chartYearly', 'tblYearly');
+                break;
+            case '#tab-contas':
+                renderContas();
+                break;
+            case '#tab-detalhe':
+                renderFlow();
+                break;
+        }
     }
+
+    // Alias mantido: recalcula a aba ativa
+    function refresh() { renderActiveTab(); }
 
     function applyData(data) {
         state.payables = data.payables || [];
@@ -1522,11 +1560,21 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         }
 
         // BARRA ÚNICA: qualquer filtro recalcula TODAS as abas
-        ['filterPeriod','filterStart','filterEnd','filterContact','filterCostCenter']
+        ['filterPeriod','filterStart','filterEnd']
             .forEach(id => el(id).addEventListener('change', function () {
                 toggleCustomDates();
                 refresh();
             }));
+
+        // Campos digitáveis de Fornecedor/Cliente e Centro de custo (datalist)
+        el('filterContactInput').addEventListener('input', function () {
+            resolveTypedFilter('filterContactInput', 'filterContact', contactOptions);
+            refresh();
+        });
+        el('filterCostCenterInput').addEventListener('input', function () {
+            resolveTypedFilter('filterCostCenterInput', 'filterCostCenter', costCenterOptions);
+            refresh();
+        });
 
         // Multiseleção de Situação (checkboxes no dropdown)
         document.querySelectorAll('.status-opt').forEach(c => c.addEventListener('change', function () {
@@ -1550,6 +1598,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
             el('filterPeriod').value = 'this-year';
             el('filterStart').value = ''; el('filterEnd').value = '';
             el('filterContact').value = ''; el('filterCostCenter').value = '';
+            el('filterContactInput').value = ''; el('filterCostCenterInput').value = '';
             document.querySelectorAll('.status-opt').forEach(c => c.checked = false);
             updateStatusLabel();
             toggleCustomDates();
@@ -1666,6 +1715,11 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
             const custom = el('filterPeriod').value === 'custom';
             document.querySelectorAll('.filter-custom-date').forEach(d => d.classList.toggle('d-none', !custom));
         }
+
+        // Renderização preguiçosa: ao mostrar uma aba, renderiza só ela
+        document.querySelectorAll('#financeTabs [data-bs-toggle="tab"]').forEach(btn => {
+            btn.addEventListener('shown.bs.tab', function () { renderActiveTab(); });
+        });
 
         // ── Lupa em cada bloco: abre pop-up com o conteúdo completo ────
         setupExpandButtons();
