@@ -422,6 +422,40 @@
     </div>
 </div>
 
+<!-- Modal de detalhamento (lançamentos que compõem o ponto do gráfico) -->
+<div class="modal fade" id="drillModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="drillTitle"><i class="bi bi-list-ul"></i> Detalhamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap gap-2 mb-2" id="drillSummary"></div>
+                <div class="mb-2">
+                    <input type="search" id="drillSearch" class="form-control form-control-sm" placeholder="Buscar por fornecedor/cliente, descrição, centro de custo…">
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-light" style="position:sticky;top:0;">
+                            <tr>
+                                <th>Data</th><th>Tipo</th><th>Fornecedor / Cliente</th>
+                                <th>Descrição</th><th>Centro de custo</th><th>Categoria</th>
+                                <th class="text-end">Valor</th><th>Situação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="drillBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <span class="small text-muted">Clique em outra barra do gráfico para ver outro período.</span>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
 .finance-flow th, .finance-flow td { text-align:right; }
 .finance-flow th:first-child, .finance-flow td:first-child { text-align:left; position:sticky; left:0; background:#fff; z-index:2; min-width:230px; }
@@ -641,6 +675,49 @@
         ).join('');
     }
 
+    // ── Drill-down: abre modal com os lançamentos de um ponto ─────────
+    let drillModal = null;
+    let drillItems = [];
+    function openDrill(title, items) {
+        drillItems = items.slice().sort((a,b) => (parseDate(a.due_date)||0) - (parseDate(b.due_date)||0));
+        el('drillTitle').innerHTML = '<i class="bi bi-list-ul"></i> ' + esc(title);
+        renderDrill('');
+        if (!drillModal) drillModal = new bootstrap.Modal(el('drillModal'));
+        drillModal.show();
+    }
+    function renderDrill(search) {
+        let rows = drillItems;
+        if (search) {
+            const q = search.toLowerCase();
+            rows = rows.filter(r =>
+                (r.contact_name||'').toLowerCase().includes(q) ||
+                (r.description||'').toLowerCase().includes(q) ||
+                (r.cost_center||'').toLowerCase().includes(q) ||
+                (r.category||'').toLowerCase().includes(q));
+        }
+        const totIn = rows.filter(r => r.type === 'receivable').reduce((a,x)=>a+(Number(x.value)||0),0);
+        const totOut = rows.filter(r => r.type === 'payable').reduce((a,x)=>a+(Number(x.value)||0),0);
+        el('drillSummary').innerHTML =
+            '<span class="badge bg-success">Entradas: ' + fmtMoneyFull(totIn) + '</span>'
+            + '<span class="badge bg-danger">Saídas: ' + fmtMoneyFull(totOut) + '</span>'
+            + '<span class="badge bg-secondary">' + rows.length + ' lançamentos</span>';
+        const tb = el('drillBody');
+        if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">Nenhum lançamento.</td></tr>'; return; }
+        tb.innerHTML = rows.map(r => {
+            const tipo = r.type === 'payable'
+                ? '<span class="badge bg-danger-subtle text-danger">Saída</span>'
+                : '<span class="badge bg-success-subtle text-success">Entrada</span>';
+            return '<tr><td>' + dateLabel(r.due_date) + '</td>'
+                + '<td>' + tipo + '</td>'
+                + '<td>' + esc(r.contact_name) + '</td>'
+                + '<td class="text-truncate" style="max-width:240px;">' + esc(r.description) + '</td>'
+                + '<td>' + esc(r.cost_center) + '</td>'
+                + '<td>' + esc(r.category) + '</td>'
+                + '<td class="text-end fw-semibold">' + fmtMoneyFull(r.value) + '</td>'
+                + '<td>' + statusBadge(r.status) + '</td></tr>';
+        }).join('');
+    }
+
     // ── Gráfico entradas x saídas ─────────────────────────────────────
     function renderChart(fpay, frec) {
         let { start, end } = periodRange();
@@ -654,9 +731,9 @@
         const grouping = spanDays <= 20 ? 'day' : (spanDays <= 120 ? 'week' : 'month');
         const periods = buildPeriods(start, end, grouping);
         const map = {};
-        periods.forEach(p => map[p.key] = { in:0, out:0 });
-        frec.forEach(x => { const k = periodKeyForDate(parseDate(x.due_date), grouping); if (map[k]) map[k].in += Number(x.value)||0; });
-        fpay.forEach(x => { const k = periodKeyForDate(parseDate(x.due_date), grouping); if (map[k]) map[k].out += Number(x.value)||0; });
+        periods.forEach(p => map[p.key] = { in:0, out:0, inItems:[], outItems:[] });
+        frec.forEach(x => { const k = periodKeyForDate(parseDate(x.due_date), grouping); if (map[k]) { map[k].in += Number(x.value)||0; map[k].inItems.push(x); } });
+        fpay.forEach(x => { const k = periodKeyForDate(parseDate(x.due_date), grouping); if (map[k]) { map[k].out += Number(x.value)||0; map[k].outItems.push(x); } });
 
         const labels = periods.map(p => p.plain);
         if (charts.inOut) charts.inOut.destroy();
@@ -668,7 +745,15 @@
             ]},
             options: {
                 responsive: true, maintainAspectRatio: true,
-                plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': ' + fmtMoneyFull(c.raw) } } },
+                onClick: (evt, elements) => {
+                    if (!elements.length) return;
+                    const e = elements[0];
+                    const p = periods[e.index];
+                    const isIn = e.datasetIndex === 0;
+                    const items = isIn ? map[p.key].inItems : map[p.key].outItems;
+                    openDrill((isIn ? 'Entradas' : 'Saídas') + ' — ' + p.plain, items);
+                },
+                plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': ' + fmtMoneyFull(c.raw) + ' (clique para ver os lançamentos)' } } },
                 scales: { y: { ticks: { callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' } } }
             }
         });
@@ -678,10 +763,10 @@
     // Agrupa TODOS os lançamentos filtrados (sem a janela de dias) por período.
     function groupInOut(fpay, frec, grouping) {
         const map = {};
-        const ensure = k => { if (!map[k]) map[k] = { in:0, out:0 }; return map[k]; };
-        frec.forEach(x => { const d = parseDate(x.due_date); if (!d) return; ensure(periodKeyForDate(d, grouping)).in += Number(x.value)||0; });
-        fpay.forEach(x => { const d = parseDate(x.due_date); if (!d) return; ensure(periodKeyForDate(d, grouping)).out += Number(x.value)||0; });
-        return Object.keys(map).sort().map(k => ({ key:k, in:map[k].in, out:map[k].out }));
+        const ensure = k => { if (!map[k]) map[k] = { in:0, out:0, inItems:[], outItems:[] }; return map[k]; };
+        frec.forEach(x => { const d = parseDate(x.due_date); if (!d) return; const m = ensure(periodKeyForDate(d, grouping)); m.in += Number(x.value)||0; m.inItems.push(x); });
+        fpay.forEach(x => { const d = parseDate(x.due_date); if (!d) return; const m = ensure(periodKeyForDate(d, grouping)); m.out += Number(x.value)||0; m.outItems.push(x); });
+        return Object.keys(map).sort().map(k => ({ key:k, in:map[k].in, out:map[k].out, inItems:map[k].inItems, outItems:map[k].outItems }));
     }
     function keyToLabel(key, grouping) {
         if (grouping === 'week') { const d = parseDate(key); const e = new Date(d); e.setDate(e.getDate()+6); return d.getDate()+'/'+(d.getMonth()+1)+' a '+e.getDate()+'/'+(e.getMonth()+1); }
@@ -704,22 +789,34 @@
                 ]},
                 options: {
                     responsive: true, maintainAspectRatio: true,
-                    plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': ' + fmtMoneyFull(c.raw) } } },
+                    onClick: (evt, elements) => {
+                        if (!elements.length) return;
+                        const e = elements[0];
+                        const r = rows[e.index];
+                        const isIn = e.datasetIndex === 0;
+                        openDrill((isIn ? 'Entradas' : 'Saídas') + ' — ' + keyToLabel(r.key, grouping), isIn ? r.inItems : r.outItems);
+                    },
+                    plugins: { tooltip: { callbacks: { label: c => c.dataset.label + ': ' + fmtMoneyFull(c.raw) + ' (clique para ver os lançamentos)' } } },
                     scales: { y: { ticks: { callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' } } }
                 }
             });
         }
         const tb = el(tblId);
         if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Sem dados.</td></tr>'; return; }
-        tb.innerHTML = rows.map(r => {
+        tb.innerHTML = rows.map((r, i) => {
             const bal = r.in - r.out;
             const cls = bal >= 0 ? 'text-success' : 'text-danger';
-            return '<tr><td>'+esc(keyToLabel(r.key, grouping))+'</td>'
+            return '<tr class="drill-row" style="cursor:pointer" data-view="'+esc(grouping)+'" data-idx="'+i+'" title="Clique para ver os lançamentos">'
+                + '<td>'+esc(keyToLabel(r.key, grouping))+'</td>'
                 + '<td class="text-end text-success">'+fmtMoneyFull(r.in)+'</td>'
                 + '<td class="text-end text-danger">'+fmtMoneyFull(r.out)+'</td>'
                 + '<td class="text-end fw-semibold '+cls+'">'+fmtMoneyFull(bal)+'</td></tr>';
         }).join('');
+        // Guarda as linhas para o clique da tabela
+        periodRows[grouping] = rows;
     }
+    // Armazena as linhas por visão para os cliques nas tabelas
+    const periodRows = {};
 
     // ── Períodos (colunas) para gráfico e matriz ──────────────────────
     function startOfWeek(d) { const t = new Date(d); t.setHours(0,0,0,0); const day=(t.getDay()+6)%7; t.setDate(t.getDate()-day); return t; }
@@ -1054,6 +1151,22 @@
         });
         // Carrega o log ao abrir a aba de diagnóstico
         document.querySelector('[data-bs-target="#tab-diag"]').addEventListener('shown.bs.tab', loadLogs);
+
+        // Busca dentro do modal de detalhamento
+        el('drillSearch').addEventListener('input', function () { renderDrill(this.value); });
+
+        // Clique nas linhas das tabelas Semanal/Mensal/Anual abre o detalhamento
+        document.addEventListener('click', function (ev) {
+            const tr = ev.target.closest('.drill-row');
+            if (!tr) return;
+            const view = tr.dataset.view;
+            const idx = parseInt(tr.dataset.idx, 10);
+            const rows = periodRows[view];
+            if (!rows || !rows[idx]) return;
+            const r = rows[idx];
+            const all = (r.inItems || []).concat(r.outItems || []);
+            openDrill(keyToLabel(r.key, view) + ' — entradas e saídas', all);
+        });
 
         toggleCustomDates();
         loadData();
