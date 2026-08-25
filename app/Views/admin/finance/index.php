@@ -40,16 +40,14 @@
 <!-- Configuração de token (apenas nas abas de empresa específica) -->
 <div id="tokenConfig" class="card border-0 shadow-sm mb-3 d-none">
     <div class="card-body py-2">
-        <form id="tokenForm" class="row g-2 align-items-end">
-            <div class="col-12 col-md-8">
-                <label class="form-label small mb-1">Token da API Nibo — <span id="tokenCompanyLabel"></span></label>
-                <input type="text" id="tokenInput" class="form-control form-control-sm" placeholder="Cole aqui o ApiToken desta empresa (Nibo → Configurações → API)">
-                <small class="text-muted">Cada empresa usa seu próprio token. O token fica salvo no sistema.</small>
+        <form id="tokenForm">
+            <label class="form-label small mb-1">Token da API Nibo — <span id="tokenCompanyLabel"></span></label>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <input type="text" id="tokenInput" class="form-control form-control-sm" style="flex:1 1 320px; min-width:220px;" placeholder="Cole aqui o ApiToken desta empresa (Nibo → Configurações → API)">
+                <button type="submit" class="btn btn-sm btn-dark text-nowrap"><i class="bi bi-save"></i> Salvar token</button>
+                <span id="tokenStatus" class="small"></span>
             </div>
-            <div class="col-12 col-md-4 d-flex gap-2">
-                <button type="submit" class="btn btn-sm btn-dark"><i class="bi bi-save"></i> Salvar token</button>
-                <span id="tokenStatus" class="small align-self-center"></span>
-            </div>
+            <small class="text-muted d-block mt-1">Cada empresa usa seu próprio token. O token fica salvo no sistema.</small>
         </form>
     </div>
 </div>
