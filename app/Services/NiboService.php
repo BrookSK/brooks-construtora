@@ -402,4 +402,190 @@ class NiboService
         }
         return null;
     }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // LEITURA — helpers para o Dashboard Financeiro (somente GET)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * GET paginado com OData. Percorre $skip/$top (limite 500 por página)
+     * até esgotar os registros. Retorna a lista completa de itens.
+     */
+    public static function getAllPaged(string $path, string $orderBy = 'name', array $extraQuery = [], ?string $token = null, int $pageSize = 500, int $maxPages = 50): array
+    {
+        $all = [];
+        $skip = 0;
+        for ($page = 0; $page < $maxPages; $page++) {
+            $query = array_merge($extraQuery, [
+                '$orderby' => $orderBy,
+                '$top' => (string) $pageSize,
+                '$skip' => (string) $skip,
+            ]);
+            $res = self::request('GET', $path, $query, null, $token);
+            if (!$res['ok']) {
+                // Propaga erro para o chamador tratar (mantém dados antigos na tela)
+                throw new \RuntimeException("Falha ao ler {$path}: HTTP {$res['status']} " . ($res['error'] ?? ''));
+            }
+            $items = self::extractItems($res['response']);
+            $all = array_merge($all, $items);
+            if (count($items) < $pageSize) break; // última página
+            $skip += $pageSize;
+        }
+        return $all;
+    }
+
+    /**
+     * A API do Nibo retorna listas em formatos variados: às vezes um array
+     * direto, às vezes { items: [...] } ou { value: [...] } com "count".
+     */
+    private static function extractItems($response): array
+    {
+        if (is_array($response)) {
+            if (isset($response['items']) && is_array($response['items'])) return $response['items'];
+            if (isset($response['value']) && is_array($response['value'])) return $response['value'];
+            // array numérico simples
+            if (array_keys($response) === range(0, count($response) - 1)) return $response;
+        }
+        return [];
+    }
+
+    /**
+     * Executa o fluxo COMPLETO de sincronização (somente leitura):
+     *  1) listas mestres  2) saldos  3) agendamentos  4) consolidação.
+     * Retorna a estrutura pronta para o dashboard + eventuais erros parciais.
+     *
+     * @return array{ok:bool, generated_at:string, masters:array, accounts:array,
+     *                payables:array, receivables:array, totals:array, errors:array}
+     */
+    public static function syncAll(?string $token = null, ?string $from = null, ?string $to = null): array
+    {
+        $token = $token ?: self::token();
+        $errors = [];
+
+        // Janela padrão: 12 meses atrás até 12 meses à frente
+        $from = $from ?: date('Y-m-d', strtotime('-12 months'));
+        $to = $to ?: date('Y-m-d', strtotime('+12 months'));
+
+        // ── Etapa 1: listas mestres ─────────────────────────────────────
+        $suppliers = $customers = $costcenters = $categories = $accounts = [];
+        try { $suppliers = self::getAllPaged('/suppliers', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
+        try { $customers = self::getAllPaged('/customers', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
+        try { $costcenters = self::getAllPaged('/costcenters', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
+        try { $categories = self::getAllPaged('/categories', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
+
+        // ── Etapa 2: saldos das contas ──────────────────────────────────
+        try { $accounts = self::getAllPaged('/accounts', 'name', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
+
+        // Índices id→nome para enriquecimento
+        $idxSup = self::indexById($suppliers);
+        $idxCus = self::indexById($customers);
+        $idxCc  = self::indexById($costcenters);
+        $idxCat = self::indexById($categories);
+
+        // ── Etapa 3: agendamentos (débito/crédito) ──────────────────────
+        $payablesRaw = $receivablesRaw = [];
+        try { $payablesRaw = self::getAllPaged('/schedules/debit', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
+        try { $receivablesRaw = self::getAllPaged('/schedules/credit', 'dueDate', [], $token); } catch (\Throwable $e) { $errors[] = $e->getMessage(); }
+
+        // ── Etapa 4: consolidação (enriquecer + status) ─────────────────
+        $payables = array_map(fn($s) => self::enrichSchedule($s, $idxSup, $idxCc, $idxCat, 'payable'), $payablesRaw);
+        $receivables = array_map(fn($s) => self::enrichSchedule($s, $idxCus, $idxCc, $idxCat, 'receivable'), $receivablesRaw);
+
+        // Saldo total
+        $balance = 0.0;
+        foreach ($accounts as $a) {
+            $balance += (float) ($a['balance'] ?? $a['currentBalance'] ?? $a['value'] ?? 0);
+        }
+
+        return [
+            'ok' => empty($errors),
+            'generated_at' => date('Y-m-d H:i:s'),
+            'masters' => [
+                'suppliers' => $suppliers,
+                'customers' => $customers,
+                'costcenters' => $costcenters,
+                'categories' => $categories,
+            ],
+            'accounts' => $accounts,
+            'payables' => $payables,
+            'receivables' => $receivables,
+            'totals' => [
+                'balance' => $balance,
+                'suppliers' => count($suppliers),
+                'customers' => count($customers),
+                'payables' => count($payables),
+                'receivables' => count($receivables),
+            ],
+            'errors' => $errors,
+        ];
+    }
+
+    /**
+     * Cria um índice id => nome a partir de uma lista de mestres.
+     */
+    private static function indexById(array $list): array
+    {
+        $idx = [];
+        foreach ($list as $item) {
+            $id = $item['id'] ?? $item['Id'] ?? $item['costCenterId'] ?? $item['categoryId'] ?? null;
+            $name = $item['name'] ?? $item['Name'] ?? $item['description'] ?? '';
+            if ($id !== null) $idx[(string) $id] = $name;
+        }
+        return $idx;
+    }
+
+    /**
+     * Enriquate um agendamento com nomes legíveis e status derivado.
+     */
+    private static function enrichSchedule(array $s, array $idxContact, array $idxCc, array $idxCat, string $type): array
+    {
+        // Descobrir IDs (a API varia os nomes de campo)
+        $contactId = $s['stakeholderId'] ?? $s['stakeholder']['id'] ?? $s['customerId'] ?? $s['supplierId'] ?? null;
+        $contactName = $s['stakeholder']['name'] ?? null;
+        if (!$contactName && $contactId !== null && isset($idxContact[(string) $contactId])) {
+            $contactName = $idxContact[(string) $contactId];
+        }
+
+        $ccId = $s['costCenterId'] ?? $s['costCenter']['id'] ?? null;
+        $ccName = $s['costCenter']['name'] ?? ($ccId !== null ? ($idxCc[(string) $ccId] ?? null) : null);
+        // Alguns retornos trazem rateio de centros de custo em array
+        if (!$ccName && !empty($s['costCenters']) && is_array($s['costCenters'])) {
+            $first = $s['costCenters'][0] ?? null;
+            if ($first) {
+                $fid = $first['costCenterId'] ?? $first['id'] ?? null;
+                $ccName = $first['name'] ?? ($fid !== null ? ($idxCc[(string) $fid] ?? null) : null);
+            }
+        }
+
+        $catId = $s['categoryId'] ?? $s['category']['id'] ?? null;
+        $catName = $s['category']['name'] ?? ($catId !== null ? ($idxCat[(string) $catId] ?? null) : null);
+
+        $value = (float) ($s['value'] ?? $s['amount'] ?? 0);
+        $dueDate = $s['dueDate'] ?? $s['accrualDate'] ?? null;
+        $isPaid = !empty($s['isPaid']) || !empty($s['paid']) || !empty($s['paymentDate']) || !empty($s['isFullyPaid']);
+
+        // Status derivado (só leitura): pago / vencido / em aberto
+        $status = 'open';
+        if ($isPaid) {
+            $status = 'paid';
+        } elseif ($dueDate) {
+            $today = strtotime(date('Y-m-d'));
+            $due = strtotime(date('Y-m-d', strtotime($dueDate)));
+            if ($due !== false && $due < $today) $status = 'overdue';
+        }
+
+        return [
+            'id' => $s['scheduleId'] ?? $s['id'] ?? null,
+            'type' => $type,
+            'due_date' => $dueDate,
+            'value' => $value,
+            'description' => $s['description'] ?? '',
+            'contact_id' => $contactId,
+            'contact_name' => $contactName ?: '—',
+            'cost_center' => $ccName ?: '—',
+            'category' => $catName ?: '—',
+            'status' => $status,
+            'is_paid' => $isPaid,
+        ];
+    }
 }

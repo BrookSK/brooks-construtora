@@ -67,11 +67,50 @@
                 <span class="badge bg-danger" id="sumFail">0 falhas</span>
                 <span class="badge bg-warning text-dark" id="sumSkip">0 puladas</span>
             </div>
-            <div class="table-responsive">
-                <table class="table table-sm mb-0 align-middle">
-                    <thead class="table-light"><tr><th style="width:40px;"></th><th>Rota</th><th>Endpoint</th><th class="text-end">Status</th></tr></thead>
-                    <tbody id="runAllRows"></tbody>
-                </table>
+
+            <ul class="nav nav-tabs" id="runAllTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-resultados" type="button" role="tab">
+                        <i class="bi bi-list-check"></i> Resultados
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-erros" type="button" role="tab">
+                        <i class="bi bi-bug"></i> Logs de Erros <span class="badge bg-danger ms-1" id="errCount">0</span>
+                    </button>
+                </li>
+            </ul>
+            <div class="tab-content border border-top-0 rounded-bottom p-2">
+                <!-- Resultados -->
+                <div class="tab-pane fade show active" id="tab-resultados" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle">
+                            <thead class="table-light"><tr><th style="width:40px;"></th><th>Rota</th><th>Endpoint</th><th class="text-end">Status</th></tr></thead>
+                            <tbody id="runAllRows"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Logs de Erros -->
+                <div class="tab-pane fade" id="tab-erros" role="tabpanel">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                        <div class="text-muted small">
+                            Todas as rotas que falharam aparecem aqui com o request e a resposta completa.
+                            Use o botão para copiar tudo de uma vez.
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" id="copyErrorsBtn" class="btn btn-sm btn-outline-danger" disabled>
+                                <i class="bi bi-clipboard"></i> Copiar todos os erros
+                            </button>
+                            <button type="button" id="clearErrorsBtn" class="btn btn-sm btn-outline-secondary" disabled>
+                                <i class="bi bi-trash"></i> Limpar
+                            </button>
+                        </div>
+                    </div>
+                    <div id="errEmpty" class="text-muted small text-center py-4">
+                        <i class="bi bi-check2-circle text-success"></i> Nenhum erro registrado ainda.
+                    </div>
+                    <textarea id="errorLog" class="form-control font-monospace d-none" rows="16" readonly style="font-size:.75rem; white-space:pre;"></textarea>
+                </div>
             </div>
         </div>
     </div>
@@ -237,12 +276,12 @@
                 resultEl.textContent = out;
             }
             setHeadStatus(key, ok ? 'ok' : 'fail');
-            return { ok: ok, status: st, error: data.error || null };
+            return { ok: ok, status: st, error: data.error || null, url: data.url || '', request: data.request || null, response: data.response };
         } catch (e) {
             if (statusEl) statusEl.innerHTML = '<span class="text-danger">Erro</span>';
             if (resultEl) resultEl.textContent = 'Falha na requisição de teste: ' + e.message;
             setHeadStatus(key, 'fail');
-            return { ok: false, status: 0, error: e.message };
+            return { ok: false, status: 0, error: e.message, url: '', request: null, response: null };
         } finally {
             if (btn) btn.disabled = false;
         }
@@ -286,6 +325,8 @@
             }
 
             let total = 0, okCount = 0, failCount = 0, skipCount = 0;
+            const errorEntries = [];
+            resetErrorLog();
             this.disabled = true;
             const original = this.innerHTML;
             this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Testando...';
@@ -324,7 +365,11 @@
 
                 const res = await runTest(key);
                 total++;
-                if (res.ok) okCount++; else failCount++;
+                if (res.ok) okCount++; else {
+                    failCount++;
+                    errorEntries.push(buildErrorEntry(label, method, path, res));
+                    updateErrorLog(errorEntries);
+                }
 
                 tr.children[0].innerHTML = res.ok
                     ? '<i class="bi bi-check-circle-fill text-success"></i>'
@@ -340,6 +385,69 @@
             this.disabled = false;
             this.innerHTML = original;
         });
+    }
+
+    // ── Logs de erros ────────────────────────────────────────────────
+    function buildErrorEntry(label, method, path, res) {
+        const lines = [];
+        lines.push('═══════════════════════════════════════════════════════');
+        lines.push('ROTA: ' + label);
+        lines.push('ENDPOINT: ' + method + ' ' + path);
+        lines.push('STATUS: HTTP ' + (res.status || '—'));
+        if (res.error) lines.push('ERRO: ' + res.error);
+        if (res.url) lines.push('URL: ' + res.url);
+        if (res.request) lines.push('REQUEST: ' + JSON.stringify(res.request));
+        lines.push('RESPOSTA:');
+        lines.push(typeof res.response === 'string' ? res.response : JSON.stringify(res.response, null, 2));
+        lines.push('');
+        return lines.join('\n');
+    }
+
+    function resetErrorLog() {
+        const ta = document.getElementById('errorLog');
+        ta.value = '';
+        ta.classList.add('d-none');
+        document.getElementById('errEmpty').classList.remove('d-none');
+        document.getElementById('errCount').textContent = '0';
+        document.getElementById('copyErrorsBtn').disabled = true;
+        document.getElementById('clearErrorsBtn').disabled = true;
+    }
+
+    function updateErrorLog(entries) {
+        const ta = document.getElementById('errorLog');
+        const header = 'RELATÓRIO DE ERROS — Testador API Nibo\n'
+            + 'Gerado em: ' + new Date().toLocaleString('pt-BR') + '\n'
+            + 'Total de falhas: ' + entries.length + '\n\n';
+        ta.value = header + entries.join('\n');
+        ta.classList.remove('d-none');
+        document.getElementById('errEmpty').classList.add('d-none');
+        document.getElementById('errCount').textContent = String(entries.length);
+        document.getElementById('copyErrorsBtn').disabled = entries.length === 0;
+        document.getElementById('clearErrorsBtn').disabled = entries.length === 0;
+    }
+
+    const copyErrorsBtn = document.getElementById('copyErrorsBtn');
+    if (copyErrorsBtn) {
+        copyErrorsBtn.addEventListener('click', async function () {
+            const ta = document.getElementById('errorLog');
+            if (!ta.value.trim()) return;
+            try {
+                await navigator.clipboard.writeText(ta.value);
+            } catch (e) {
+                ta.classList.remove('d-none');
+                ta.select();
+                document.execCommand('copy');
+            }
+            const orig = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-check2"></i> Copiado!';
+            const self = this;
+            setTimeout(function () { self.innerHTML = orig; }, 1800);
+        });
+    }
+
+    const clearErrorsBtn = document.getElementById('clearErrorsBtn');
+    if (clearErrorsBtn) {
+        clearErrorsBtn.addEventListener('click', resetErrorLog);
     }
 })();
 </script>

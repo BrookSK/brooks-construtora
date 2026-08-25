@@ -286,6 +286,12 @@ class Router
             'dev/nibo' => ['DevController', 'nibo'],
             'dev/nibo/save-token' => ['DevController', 'niboSaveToken'],
             'dev/nibo/test' => ['DevController', 'niboTest'],
+
+            // Dashboard Financeiro (Nibo · somente leitura)
+            'finance' => ['FinanceController', 'index'],
+            'finance/data' => ['FinanceController', 'data'],
+            'finance/sync' => ['FinanceController', 'sync'],
+            'finance/history' => ['FinanceController', 'history'],
         ];
 
         $path = implode('/', $segments);

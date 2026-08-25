@@ -452,6 +452,11 @@
                     <i class="bi bi-calendar-week"></i> <span class="link-text">Lista Semanal</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'finance' ? 'active' : '' ?>" href="/admin/finance" data-title="Financeiro">
+                    <i class="bi bi-cash-coin"></i> <span class="link-text">Financeiro</span>
+                </a>
+            </li>
             <?php endif; ?>
 
             <?php // Veículo - qualquer usuário logado pode acessar ?>
