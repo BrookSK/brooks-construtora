@@ -987,7 +987,158 @@ class PurchaseOrderController extends Controller
 
         PurchaseOrderHistory::log($id, 'unmarked_purchased', "Desmarcado como comprado por: {$userName}", $userName, Auth::id());
 
+        // Desmarcar comprado remove também os estágios seguintes (transporte/chegou)
+        PurchaseOrder::updateById($id, [
+            'in_transport_at' => null,
+            'in_transport_by' => null,
+            'arrived_at' => null,
+            'arrived_by' => null,
+        ]);
+
         $this->setFlash('success', 'Marcação de comprado removida.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
+     * Marcar pedido como em transporte (após comprado)
+     */
+    public function markInTransport(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if (empty($order['purchased_at'])) {
+            $this->setFlash('error', 'Somente pedidos comprados podem ser marcados como em transporte.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Usuário';
+
+        PurchaseOrder::updateById($id, [
+            'in_transport_at' => date('Y-m-d H:i:s'),
+            'in_transport_by' => $userName,
+        ]);
+
+        PurchaseOrderHistory::log($id, 'marked_in_transport', "Marcado como em transporte por: {$userName}", $userName, Auth::id());
+
+        $this->setFlash('success', 'Pedido marcado como em transporte.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
+     * Desmarcar pedido como em transporte
+     */
+    public function unmarkInTransport(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Usuário';
+
+        // Desmarcar transporte remove também o estágio seguinte (chegou)
+        PurchaseOrder::updateById($id, [
+            'in_transport_at' => null,
+            'in_transport_by' => null,
+            'arrived_at' => null,
+            'arrived_by' => null,
+        ]);
+
+        PurchaseOrderHistory::log($id, 'unmarked_in_transport', "Desmarcado como em transporte por: {$userName}", $userName, Auth::id());
+
+        $this->setFlash('success', 'Marcação de em transporte removida.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
+     * Marcar pedido como chegou na obra (após em transporte)
+     */
+    public function markArrived(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        if (empty($order['in_transport_at'])) {
+            $this->setFlash('error', 'Somente pedidos em transporte podem ser marcados como chegou.');
+            $this->redirect('/admin/orders/show/' . $id);
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Usuário';
+
+        PurchaseOrder::updateById($id, [
+            'arrived_at' => date('Y-m-d H:i:s'),
+            'arrived_by' => $userName,
+        ]);
+
+        PurchaseOrderHistory::log($id, 'marked_arrived', "Marcado como chegou na obra por: {$userName}", $userName, Auth::id());
+
+        $this->setFlash('success', 'Pedido marcado como chegou na obra.');
+        $this->redirect('/admin/orders/show/' . $id);
+    }
+
+    /**
+     * Desmarcar pedido como chegou na obra
+     */
+    public function unmarkArrived(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $id = (int) $this->input('id', 0);
+        $order = PurchaseOrder::find($id);
+
+        if (!$order) {
+            $this->setFlash('error', 'Pedido não encontrado.');
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        $userName = Auth::user()['name'] ?? 'Usuário';
+
+        PurchaseOrder::updateById($id, [
+            'arrived_at' => null,
+            'arrived_by' => null,
+        ]);
+
+        PurchaseOrderHistory::log($id, 'unmarked_arrived', "Desmarcado como chegou na obra por: {$userName}", $userName, Auth::id());
+
+        $this->setFlash('success', 'Marcação de chegou removida.');
         $this->redirect('/admin/orders/show/' . $id);
     }
 

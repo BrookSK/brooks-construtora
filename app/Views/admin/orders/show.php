@@ -1343,6 +1343,48 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                         <i class="bi bi-arrow-counterclockwise"></i> Desmarcar Comprado
                     </button>
                 </form>
+
+                <!-- Em Transporte (só após comprado) -->
+                <?php if (empty($order['in_transport_at'])): ?>
+                <form method="POST" action="/admin/orders/mark-in-transport" class="mt-2">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn w-100" style="border-color:#0d6efd; color:#0d6efd;" onmouseover="this.style.backgroundColor='#0d6efd';this.style.color='#fff'" onmouseout="this.style.backgroundColor='transparent';this.style.color='#0d6efd'" onclick="return confirm('Marcar este pedido como em transporte?')">
+                        <i class="bi bi-truck"></i> Marcar como Em Transporte
+                    </button>
+                </form>
+                <?php else: ?>
+                <div class="alert py-2 px-3 small mb-2 mt-2" style="background-color: rgba(13, 110, 253, 0.1); border-color: #0d6efd; color: #0a58ca;">
+                    <i class="bi bi-truck"></i> Em transporte — <strong><?= htmlspecialchars($order['in_transport_by'] ?? '') ?></strong>
+                    <br><small class="text-muted"><?= date('d/m/Y H:i', strtotime($order['in_transport_at'])) ?></small>
+                </div>
+                <form method="POST" action="/admin/orders/unmark-in-transport">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100" onclick="return confirm('Desmarcar como em transporte?')">
+                        <i class="bi bi-arrow-counterclockwise"></i> Desmarcar Em Transporte
+                    </button>
+                </form>
+
+                <!-- Chegou na obra (só após em transporte) -->
+                <?php if (empty($order['arrived_at'])): ?>
+                <form method="POST" action="/admin/orders/mark-arrived" class="mt-2">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn w-100" style="border-color:#198754; color:#198754;" onmouseover="this.style.backgroundColor='#198754';this.style.color='#fff'" onmouseout="this.style.backgroundColor='transparent';this.style.color='#198754'" onclick="return confirm('Marcar este pedido como chegou na obra?')">
+                        <i class="bi bi-geo-alt-fill"></i> Marcar como Chegou
+                    </button>
+                </form>
+                <?php else: ?>
+                <div class="alert py-2 px-3 small mb-2 mt-2" style="background-color: rgba(25, 135, 84, 0.1); border-color: #198754; color: #146c43;">
+                    <i class="bi bi-geo-alt-fill"></i> Chegou na obra — <strong><?= htmlspecialchars($order['arrived_by'] ?? '') ?></strong>
+                    <br><small class="text-muted"><?= date('d/m/Y H:i', strtotime($order['arrived_at'])) ?></small>
+                </div>
+                <form method="POST" action="/admin/orders/unmark-arrived">
+                    <input type="hidden" name="id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100" onclick="return confirm('Desmarcar como chegou?')">
+                        <i class="bi bi-arrow-counterclockwise"></i> Desmarcar Chegou
+                    </button>
+                </form>
+                <?php endif; ?>
+                <?php endif; ?>
                 <?php endif; ?>
                 <?php endif; ?>
 

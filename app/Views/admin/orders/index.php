@@ -42,6 +42,8 @@
     <button class="btn btn-sm btn-outline-warning filter-btn" data-status="pending_quote">Cotação</button>
     <button class="btn btn-sm btn-outline-info filter-btn" data-status="pending_approval">Aprovação</button>
     <button class="btn btn-sm btn-outline-success filter-btn" data-status="approved">Aprovados</button>
+    <button class="btn btn-sm btn-outline-primary filter-btn" data-flag="in_transport">Em Transporte</button>
+    <button class="btn btn-sm btn-outline-success filter-btn" data-flag="arrived">Chegou</button>
     <button class="btn btn-sm btn-outline-danger filter-btn" data-status="rejected">Rejeitados</button>
     <button class="btn btn-sm btn-outline-dark filter-btn" data-status="cancelled">Cancelados</button>
     <span class="ms-2 border-start ps-2 d-flex align-items-center gap-1">
@@ -228,6 +230,8 @@
                         data-type="<?= htmlspecialchars($order['order_type'] ?? 'material') ?>"
                         data-financial="<?= !empty($order['financial_reviewed_at']) ? 'reviewed' : 'not_reviewed' ?>"
                         data-purchased="<?= !empty($order['purchased_at']) ? 'purchased' : 'not_purchased' ?>"
+                        data-in-transport="<?= !empty($order['in_transport_at']) ? 'in_transport' : 'not_in_transport' ?>"
+                        data-arrived="<?= !empty($order['arrived_at']) ? 'arrived' : 'not_arrived' ?>"
                         data-stock-dispatched="<?= !empty($order['stock_dispatched_at']) ? 'dispatched' : 'not_dispatched' ?>"
                         data-date="<?= date('Y-m-d', strtotime($order['created_at'])) ?>"
                         data-requester="<?= htmlspecialchars($order['created_by_name'] ?? '') ?>"
@@ -258,7 +262,11 @@
                             <?php if ($showFinancialReview && !empty($order['financial_reviewed_at'])): ?>
                             <span class="badge ms-1" style="font-size:0.6rem; background-color:#8b5cf6;" title="Revisado por <?= htmlspecialchars($order['financial_reviewed_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['financial_reviewed_at'])) ?>"><i class="bi bi-check2"></i> Financeiro</span>
                             <?php endif; ?>
-                            <?php if (!empty($order['purchased_at'])): ?>
+                            <?php if (!empty($order['arrived_at'])): ?>
+                            <span class="badge ms-1" style="font-size:0.6rem; background-color:#198754;" title="Chegou na obra — <?= htmlspecialchars($order['arrived_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['arrived_at'])) ?>"><i class="bi bi-geo-alt-fill"></i> Chegou</span>
+                            <?php elseif (!empty($order['in_transport_at'])): ?>
+                            <span class="badge ms-1" style="font-size:0.6rem; background-color:#0d6efd;" title="Em transporte — <?= htmlspecialchars($order['in_transport_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['in_transport_at'])) ?>"><i class="bi bi-truck"></i> Em Transporte</span>
+                            <?php elseif (!empty($order['purchased_at'])): ?>
                             <span class="badge ms-1" style="font-size:0.6rem; background-color:#e67e22;" title="Comprado por <?= htmlspecialchars($order['purchased_by'] ?? '') ?> em <?= date('d/m/Y', strtotime($order['purchased_at'])) ?>"><i class="bi bi-bag-check"></i> Comprado</span>
                             <?php endif; ?>
                             <?php if (!empty($order['stock_dispatched_at'])): ?>
@@ -335,6 +343,8 @@
        data-type="<?= htmlspecialchars($order['order_type'] ?? 'material') ?>"
        data-financial="<?= !empty($order['financial_reviewed_at']) ? 'reviewed' : 'not_reviewed' ?>"
        data-purchased="<?= !empty($order['purchased_at']) ? 'purchased' : 'not_purchased' ?>"
+       data-in-transport="<?= !empty($order['in_transport_at']) ? 'in_transport' : 'not_in_transport' ?>"
+       data-arrived="<?= !empty($order['arrived_at']) ? 'arrived' : 'not_arrived' ?>"
        data-stock-dispatched="<?= !empty($order['stock_dispatched_at']) ? 'dispatched' : 'not_dispatched' ?>"
        data-date="<?= date('Y-m-d', strtotime($order['created_at'])) ?>"
        data-requester="<?= htmlspecialchars($order['created_by_name'] ?? '') ?>"
@@ -354,7 +364,11 @@
                         <?php if ((\App\Core\Auth::isSuperAdmin() || \App\Core\Auth::hasPermission('orders.payment')) && !empty($order['financial_reviewed_at'])): ?>
                         <span class="badge" style="font-size:0.6rem; background-color:#8b5cf6;"><i class="bi bi-check2"></i></span>
                         <?php endif; ?>
-                        <?php if (!empty($order['purchased_at'])): ?>
+                        <?php if (!empty($order['arrived_at'])): ?>
+                        <span class="badge" style="font-size:0.6rem; background-color:#198754;" title="Chegou na obra"><i class="bi bi-geo-alt-fill"></i></span>
+                        <?php elseif (!empty($order['in_transport_at'])): ?>
+                        <span class="badge" style="font-size:0.6rem; background-color:#0d6efd;" title="Em transporte"><i class="bi bi-truck"></i></span>
+                        <?php elseif (!empty($order['purchased_at'])): ?>
                         <span class="badge" style="font-size:0.6rem; background-color:#e67e22;"><i class="bi bi-bag-check"></i></span>
                         <?php endif; ?>
                         <?php if (!empty($order['stock_dispatched_at'])): ?>
@@ -430,6 +444,7 @@
     const countEl = document.getElementById('filteredCount');
 
     let activeStatus = 'all';
+    let activeFlag = ''; // filtro rápido por flag: '', 'in_transport' ou 'arrived'
 
     // Restaurar filtros: prioridade 1 = URL, prioridade 2 = sessionStorage (fallback)
     function loadFilters() {
@@ -440,6 +455,7 @@
         if (params.toString()) {
             data = {
                 status: params.get('status') || 'all',
+                flag: params.get('flag') || '',
                 q: params.get('q') || '',
                 material: params.get('material') || '',
                 supplier: params.get('supplier') || '',
@@ -464,7 +480,12 @@
 
         if (!data) return;
 
-        if (data.status) {
+        activeFlag = data.flag || '';
+        if (activeFlag) {
+            // Filtro por flag (Em Transporte / Chegou) tem prioridade visual sobre o status
+            activeStatus = 'all';
+            statusBtns.forEach(b => b.classList.toggle('active', b.dataset.flag === activeFlag));
+        } else if (data.status) {
             activeStatus = data.status;
             statusBtns.forEach(b => b.classList.toggle('active', b.dataset.status === activeStatus));
         }
@@ -496,6 +517,7 @@
     function saveFilters() {
         const data = {
             status: activeStatus,
+            flag: activeFlag,
             q: searchInput ? searchInput.value.trim() : '',
             material: materialInput ? materialInput.value.trim() : '',
             supplier: supplierSelect ? supplierSelect.value : '',
@@ -516,6 +538,7 @@
         // Atualizar URL
         const params = new URLSearchParams();
         if (data.status !== 'all') params.set('status', data.status);
+        if (data.flag) params.set('flag', data.flag);
         if (data.q) params.set('q', data.q);
         if (data.material) params.set('material', data.material);
         if (data.supplier) params.set('supplier', data.supplier);
@@ -552,6 +575,8 @@
             let show = true;
 
             if (activeStatus !== 'all' && row.dataset.status !== activeStatus) show = false;
+            if (show && activeFlag === 'in_transport' && row.dataset.inTransport !== 'in_transport') show = false;
+            if (show && activeFlag === 'arrived' && row.dataset.arrived !== 'arrived') show = false;
             if (show && search && !(row.dataset.search || '').includes(search)) show = false;
             if (show && material && !(row.dataset.items || '').includes(material)) show = false;
             if (show && supplier && row.dataset.supplier !== supplier) show = false;
@@ -577,12 +602,19 @@
         saveFilters();
     }
 
-    // Status buttons
+    // Status buttons (inclui botões por flag: Em Transporte / Chegou)
     statusBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             statusBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            activeStatus = this.dataset.status;
+            if (this.dataset.flag) {
+                // Botão por flag: filtra por in_transport/arrived, sem restringir status
+                activeFlag = this.dataset.flag;
+                activeStatus = 'all';
+            } else {
+                activeStatus = this.dataset.status;
+                activeFlag = '';
+            }
             applyFilters();
         });
     });
@@ -619,6 +651,7 @@
             statusBtns.forEach(b => b.classList.remove('active'));
             statusBtns[0].classList.add('active');
             activeStatus = 'all';
+            activeFlag = '';
             applyFilters();
         });
     }
