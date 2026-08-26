@@ -152,8 +152,8 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 <option value="total_asc">Menor Valor Total</option>
                 <option value="unit_desc">Maior Preço Unitário</option>
                 <option value="unit_asc">Menor Preço Unitário</option>
-                <option value="qty_desc">Maior qtd. vendas</option>
-                <option value="qty_asc">Menor qtd. vendas</option>
+                <option value="qty_desc">Maior qtd. Vendas</option>
+                <option value="qty_asc">Menor qtd. Vendas</option>
             </select>
             <div class="input-group input-group-sm" style="max-width:260px;">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -222,8 +222,8 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 <option value="total_asc">Menor Valor Total</option>
                 <option value="unit_desc">Maior Preço Unitário</option>
                 <option value="unit_asc">Menor Preço Unitário</option>
-                <option value="qty_desc">Maior qtd. vendas</option>
-                <option value="qty_asc">Menor qtd. vendas</option>
+                <option value="qty_desc">Maior qtd. Vendas</option>
+                <option value="qty_asc">Menor qtd. Vendas</option>
             </select>
             <div class="input-group input-group-sm" style="max-width:260px;">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -278,8 +278,8 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 <option value="total_asc">Menor Valor Total</option>
                 <option value="unit_desc">Maior Preço Unitário</option>
                 <option value="unit_asc">Menor Preço Unitário</option>
-                <option value="qty_desc">Maior qtd. vendas</option>
-                <option value="qty_asc">Menor qtd. vendas</option>
+                <option value="qty_desc">Maior qtd. Vendas</option>
+                <option value="qty_asc">Menor qtd. Vendas</option>
             </select>
             <div class="input-group input-group-sm" style="max-width:260px;">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
