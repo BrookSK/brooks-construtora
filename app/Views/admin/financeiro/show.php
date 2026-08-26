@@ -145,15 +145,15 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="mb-0">Pedidos da Obra</h6>
         <?php if (!empty($orders)): ?>
-        <div class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-2 flex-md-nowrap flex-wrap align-items-center">
             <select class="form-select form-select-sm dash-sort" style="max-width:210px;">
                 <option value="">Ordenar por...</option>
                 <option value="total_desc">Maior Valor Total</option>
                 <option value="total_asc">Menor Valor Total</option>
                 <option value="unit_desc">Maior Preço Unitário</option>
                 <option value="unit_asc">Menor Preço Unitário</option>
-                <option value="qty_desc">Maior quantidade</option>
-                <option value="qty_asc">Menor quantidade</option>
+                <option value="qty_desc">Maior qtd. vendas</option>
+                <option value="qty_asc">Menor qtd. vendas</option>
             </select>
             <div class="input-group input-group-sm" style="max-width:260px;">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -215,15 +215,15 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="mb-0">Materiais da Obra</h6>
         <?php if (!empty($materials)): ?>
-        <div class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-2 flex-md-nowrap flex-wrap align-items-center">
             <select class="form-select form-select-sm dash-sort" style="max-width:210px;">
                 <option value="">Ordenar por...</option>
                 <option value="total_desc">Maior Valor Total</option>
                 <option value="total_asc">Menor Valor Total</option>
                 <option value="unit_desc">Maior Preço Unitário</option>
                 <option value="unit_asc">Menor Preço Unitário</option>
-                <option value="qty_desc">Maior quantidade</option>
-                <option value="qty_asc">Menor quantidade</option>
+                <option value="qty_desc">Maior qtd. vendas</option>
+                <option value="qty_asc">Menor qtd. vendas</option>
             </select>
             <div class="input-group input-group-sm" style="max-width:260px;">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -271,15 +271,15 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="mb-0">Fornecedores da Obra</h6>
         <?php if (!empty($suppliers)): ?>
-        <div class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-2 flex-md-nowrap flex-wrap align-items-center">
             <select class="form-select form-select-sm dash-sort" style="max-width:210px;">
                 <option value="">Ordenar por...</option>
                 <option value="total_desc">Maior Valor Total</option>
                 <option value="total_asc">Menor Valor Total</option>
                 <option value="unit_desc">Maior Preço Unitário</option>
                 <option value="unit_asc">Menor Preço Unitário</option>
-                <option value="qty_desc">Maior quantidade</option>
-                <option value="qty_asc">Menor quantidade</option>
+                <option value="qty_desc">Maior qtd. vendas</option>
+                <option value="qty_asc">Menor qtd. vendas</option>
             </select>
             <div class="input-group input-group-sm" style="max-width:260px;">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -366,7 +366,7 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="mb-0">Estoque da Obra</h6>
         <?php if (!empty($stock)): ?>
-        <div class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-2 flex-md-nowrap flex-wrap align-items-center">
             <select class="form-select form-select-sm dash-sort" style="max-width:210px;">
                 <option value="">Ordenar por...</option>
                 <option value="total_desc">Maior Valor Total</option>
