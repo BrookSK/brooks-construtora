@@ -34,9 +34,14 @@ $sortOptions = [
         <h4 class="mb-1">Dashboard de Obras</h4>
         <p class="text-muted mb-0">Acompanhamento financeiro e de consumo por obra.</p>
     </div>
-    <a href="/admin/obras" class="btn btn-sm btn-outline-primary">
-        <i class="bi bi-buildings"></i> Ver Obras
-    </a>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="/admin/financeiro/export<?= ($currentStatus || $currentSort !== 'name') ? '?status=' . urlencode($currentStatus) . '&sort=' . urlencode($currentSort) : '' ?>" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-file-earmark-spreadsheet"></i> Exportar para Excel
+        </a>
+        <a href="/admin/obras" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-buildings"></i> Ver Obras
+        </a>
+    </div>
 </div>
 
 <!-- Filtros e ordenação -->

@@ -152,6 +152,8 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 <option value="total_asc">Menor Valor Total</option>
                 <option value="unit_desc">Maior Preço Unitário</option>
                 <option value="unit_asc">Menor Preço Unitário</option>
+                <option value="qty_desc">Maior quantidade</option>
+                <option value="qty_asc">Menor quantidade</option>
             </select>
             <div class="input-group input-group-sm" style="max-width:260px;">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -173,11 +175,23 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                     </tr>
                 </thead>
                 <tbody>
+                    <?php
+                    $orderStatusMap = [
+                        'draft' => ['Rascunho', 'secondary'],
+                        'pending_quote' => ['Aguard. Cotação', 'warning'],
+                        'quoted' => ['Cotado', 'info'],
+                        'pending_approval' => ['Aguard. Aprovação', 'primary'],
+                        'approved' => ['Aprovado', 'success'],
+                        'rejected' => ['Rejeitado', 'danger'],
+                        'cancelled' => ['Cancelado', 'dark'],
+                    ];
+                    ?>
                     <?php foreach ($orders as $o): ?>
-                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($o['code'] ?? '') . ' ' . ($o['supplier_name'] ?? '') . ' ' . ($o['status'] ?? ''))) ?>" data-total="<?= (float) ($o['total_estimated'] ?? 0) ?>" data-unit="0">
+                    <?php $ost = $orderStatusMap[$o['status'] ?? ''] ?? [ucfirst(str_replace('_', ' ', $o['status'] ?? '')), 'secondary']; ?>
+                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($o['code'] ?? '') . ' ' . ($o['supplier_name'] ?? '') . ' ' . ($ost[0] ?? ''))) ?>" data-total="<?= (float) ($o['total_estimated'] ?? 0) ?>" data-unit="0" data-qty="<?= (float) ($o['total_estimated'] ?? 0) ?>">
                         <td><a href="/admin/orders/show/<?= (int) $o['id'] ?>" class="text-decoration-none"><?= htmlspecialchars($o['code'] ?? ('#' . $o['id'])) ?></a></td>
                         <td><?= htmlspecialchars($o['supplier_name'] ?? '—') ?></td>
-                        <td class="text-center"><span class="badge bg-secondary"><?= htmlspecialchars($o['status'] ?? '') ?></span></td>
+                        <td class="text-center"><span class="badge bg-<?= $ost[1] ?>"><?= htmlspecialchars($ost[0]) ?></span></td>
                         <td><?= !empty($o['created_at']) ? date('d/m/Y', strtotime($o['created_at'])) : '—' ?></td>
                         <td class="text-end"><?= $fmtMoney($o['total_estimated'] ?? 0) ?></td>
                         <td class="text-end text-success"><?= $fmtMoney($o['paid'] ?? 0) ?></td>
@@ -208,6 +222,8 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 <option value="total_asc">Menor Valor Total</option>
                 <option value="unit_desc">Maior Preço Unitário</option>
                 <option value="unit_asc">Menor Preço Unitário</option>
+                <option value="qty_desc">Maior quantidade</option>
+                <option value="qty_asc">Menor quantidade</option>
             </select>
             <div class="input-group input-group-sm" style="max-width:260px;">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -230,7 +246,7 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 </thead>
                 <tbody>
                     <?php foreach ($materials as $m): ?>
-                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower($m['material_name'] ?? '')) ?>" data-total="<?= (float) ($m['total_price'] ?? 0) ?>" data-unit="<?= (float) ($m['unit_price'] ?? 0) ?>">
+                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower($m['material_name'] ?? '')) ?>" data-total="<?= (float) ($m['total_price'] ?? 0) ?>" data-unit="<?= (float) ($m['unit_price'] ?? 0) ?>" data-qty="<?= (float) ($m['quantity'] ?? 0) ?>">
                         <td><?= htmlspecialchars($m['material_name'] ?? '—') ?></td>
                         <td class="text-center"><?= $fmtQty($m['quantity'] ?? 0) ?></td>
                         <td class="text-end"><?= !empty($m['unit_price']) ? $fmtMoney($m['unit_price']) : '<span class="text-muted">Não informado</span>' ?></td>
@@ -262,6 +278,8 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 <option value="total_asc">Menor Valor Total</option>
                 <option value="unit_desc">Maior Preço Unitário</option>
                 <option value="unit_asc">Menor Preço Unitário</option>
+                <option value="qty_desc">Maior quantidade</option>
+                <option value="qty_asc">Menor quantidade</option>
             </select>
             <div class="input-group input-group-sm" style="max-width:260px;">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -284,7 +302,7 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
                 </thead>
                 <tbody>
                     <?php foreach ($suppliers as $sup): ?>
-                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($sup['supplier_name'] ?? '') . ' ' . ($sup['cnpj'] ?? ''))) ?>" data-total="<?= (float) ($sup['approved_total'] ?? 0) ?>" data-unit="0">
+                    <tr class="dash-row" data-search="<?= htmlspecialchars(mb_strtolower(($sup['supplier_name'] ?? '') . ' ' . ($sup['cnpj'] ?? ''))) ?>" data-total="<?= (float) ($sup['approved_total'] ?? 0) ?>" data-unit="0" data-qty="<?= (int) ($sup['orders_count'] ?? 0) ?>">
                         <td><?= htmlspecialchars($sup['supplier_name'] ?? '—') ?></td>
                         <td><?= htmlspecialchars($sup['cnpj'] ?? '—') ?></td>
                         <td class="text-center"><?= (int) ($sup['orders_count'] ?? 0) ?></td>
@@ -417,7 +435,7 @@ $st = $statusLabels[$site['status'] ?? ''] ?? [ucfirst((string) ($site['status']
             if (!sortEl || !tbody) return;
             const mode = sortEl.value;
             if (!mode) return; // "Ordenar por..." mantem a ordem original
-            const key = mode.indexOf('unit') === 0 ? 'unit' : 'total';
+            const key = mode.indexOf('unit') === 0 ? 'unit' : (mode.indexOf('qty') === 0 ? 'qty' : 'total');
             const dir = mode.indexOf('asc') !== -1 ? 1 : -1;
             const sorted = rows.slice().sort(function (a, b) {
                 const va = parseFloat(a.getAttribute('data-' + key)) || 0;

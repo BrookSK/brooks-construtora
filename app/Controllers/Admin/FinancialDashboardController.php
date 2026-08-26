@@ -312,6 +312,76 @@ class FinancialDashboardController extends Controller
     }
 
     /**
+     * Exporta o Dashboard de Obras para Excel (.xlsx) usando o XlsxService já existente.
+     */
+    public function export(): void
+    {
+        $sites = [];
+        try {
+            if ($this->tablesReady()) {
+                $sites = $this->buildSiteIndicators();
+            }
+        } catch (\Exception $e) {
+            $sites = [];
+        }
+
+        // Aplicar filtro/ordenação se passados via query string (mesma lógica do index).
+        $status = (string) $this->input('status', '');
+        if ($status !== '') {
+            $sites = array_values(array_filter($sites, static fn($s) => ($s['status'] ?? '') === $status));
+        }
+        $sort = (string) $this->input('sort', 'name');
+        $sites = $this->sortSites($sites, $sort);
+
+        $statusLabels = [
+            'active'    => 'Ativa',
+            'inactive'  => 'Inativa',
+            'completed' => 'Concluída',
+        ];
+
+        $xlsx = new \App\Services\XlsxService();
+        $xlsx->setSheetName('Dashboard de Obras');
+        $xlsx->setColumnWidths([30, 12, 12, 10, 16, 16, 16, 16, 16]);
+
+        $xlsx->addRow(['Dashboard de Obras — Exportado em ' . date('d/m/Y H:i')], 'title');
+        $xlsx->addEmptyRow();
+        $xlsx->addRow([
+            'Obra', 'Código', 'Cidade/UF', 'Status',
+            'Pedidos', 'Preço Mín.', 'Preço Máx.',
+            'Valor Gasto', 'Valor Pago', 'Valor Consumido',
+        ], 'header');
+
+        $totOrders = 0; $totSpent = 0; $totPaid = 0; $totConsumed = 0;
+
+        foreach ($sites as $s) {
+            $stLabel = $statusLabels[$s['status'] ?? ''] ?? ucfirst((string) ($s['status'] ?? ''));
+            $city = ($s['city'] ?? '') . (!empty($s['state']) ? '/' . $s['state'] : '');
+            $orders = (int) ($s['orders_count'] ?? 0);
+            $pMin = ($s['price_min'] ?? null) !== null ? (float) $s['price_min'] : '';
+            $pMax = ($s['price_max'] ?? null) !== null ? (float) $s['price_max'] : '';
+            $spent = (float) ($s['spent'] ?? 0);
+            $paid = (float) ($s['paid'] ?? 0);
+            $consumed = (float) ($s['consumed'] ?? 0);
+
+            $xlsx->addRow([
+                $s['name'] ?? '', $s['code'] ?? '', $city, $stLabel,
+                $orders, $pMin, $pMax, $spent, $paid, $consumed,
+            ]);
+
+            $totOrders += $orders;
+            $totSpent += $spent;
+            $totPaid += $paid;
+            $totConsumed += $consumed;
+        }
+
+        $xlsx->addRow([
+            'TOTAL', '', '', '', $totOrders, '', '', $totSpent, $totPaid, $totConsumed,
+        ], 'total');
+
+        $xlsx->download('dashboard_obras_' . date('Y-m-d') . '.xlsx');
+    }
+
+    /**
      * Confere se as tabelas mínimas existem para montar o dashboard.
      */
     private function tablesReady(): bool
