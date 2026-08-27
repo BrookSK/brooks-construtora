@@ -258,6 +258,8 @@
             z-index: 999;
         }
         .sidebar-overlay.show { display: block; }
+        /* Urgência "Alta" usa bg-orange (não existe no Bootstrap) */
+        .badge.bg-orange, .bg-orange { background-color: #fd7e14 !important; color: #fff !important; }
     </style>
 </head>
 <body>

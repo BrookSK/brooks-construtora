@@ -35,6 +35,7 @@ $contractorId=(int)($briefing['contractor_company_id']??0);
 <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
     <a href="/admin/briefing" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
     <h5 class="mb-0 fw-semibold"><?=$isCreate?'Novo Briefing':'Editar — '.bval($project['client_name']??'')?></h5>
+    <?php if($isEdit && $projectId):?><a href="/admin/briefing/export-pdf/<?=$projectId?>" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf me-1"></i> Exportar PDF</a><?php endif;?>
     <span id="save-indicator" class="ms-auto badge bg-secondary d-none">Salvando…</span>
 </div>
 

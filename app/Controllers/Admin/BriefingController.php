@@ -178,6 +178,31 @@ class BriefingController extends Controller
     }
 
     // =================================================================
+    // EXPORTAR PDF (dados brutos do formulário)
+    // =================================================================
+
+    public function exportPdf(string $id = ''): void
+    {
+        $pid = (int)($id ?: $this->input('id'));
+        $project = ClientProject::find($pid);
+        if (!$project) { $this->setFlash('error','Projeto não encontrado.'); $this->redirect('/admin/briefing'); return; }
+
+        $briefing = Briefing::findByProject($pid) ?: [];
+
+        try {
+            $contractor = (!empty($briefing['contractor_company_id'])) ? ContractorCompany::find((int)$briefing['contractor_company_id']) : null;
+        } catch (\PDOException $e) {
+            $contractor = null;
+        }
+
+        $this->view('admin.briefing.pdf', [
+            'project'    => $project,
+            'briefing'   => $briefing,
+            'contractor' => $contractor,
+        ]);
+    }
+
+    // =================================================================
     // UPDATE
     // =================================================================
 
