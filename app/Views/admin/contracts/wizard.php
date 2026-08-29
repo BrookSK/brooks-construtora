@@ -142,7 +142,7 @@
                     </div>
                     <div class="col-md-3"><label class="form-label small">Cidade de assinatura</label><input class="form-control form-control-sm" name="assinatura_cidade" placeholder="São Paulo/SP"></div>
                     <div class="col-md-3"><label class="form-label small">Data de assinatura</label><input type="date" class="form-control form-control-sm" name="assinatura_data"></div>
-                    <div class="col-md-6"><label class="form-label small">Foro (comarca)</label><input class="form-control form-control-sm" name="foro_comarca" placeholder="São Paulo/SP"></div>
+                    <div class="col-md-6"><label class="form-label small">Foro (comarca)</label><input class="form-control form-control-sm" name="foro_comarca" placeholder="São Paulo/SP" value="<?= htmlspecialchars($conditionDefaults['foro_comarca'] ?? '') ?>"></div>
                 </div>
                 <hr>
                 <div class="row g-2">
@@ -150,6 +150,23 @@
                     <div class="col-md-6"><label class="form-label small">Testemunha 1 — CPF</label><input class="form-control form-control-sm" name="test1_cpf"></div>
                     <div class="col-md-6"><label class="form-label small">Testemunha 2 — Nome</label><input class="form-control form-control-sm" name="test2_nome"></div>
                     <div class="col-md-6"><label class="form-label small">Testemunha 2 — CPF</label><input class="form-control form-control-sm" name="test2_cpf"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header py-2"><i class="bi bi-shield-check"></i> Condições Contratuais <span class="text-muted small">(padrões da empresa — ajuste se necessário)</span></div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-3"><label class="form-label small">Multa por mora (Cl. 3.5)</label><input class="form-control form-control-sm" name="multa_mora_pct" value="<?= htmlspecialchars($conditionDefaults['multa_mora_pct'] ?? '') ?>"></div>
+                    <div class="col-md-3"><label class="form-label small">Juros de mora ao mês</label><input class="form-control form-control-sm" name="multa_juros_pct" value="<?= htmlspecialchars($conditionDefaults['multa_juros_pct'] ?? '') ?>"></div>
+                    <div class="col-md-3"><label class="form-label small">Multa diária por atraso</label><input class="form-control form-control-sm" name="multa_atraso_diario_pct" value="<?= htmlspecialchars($conditionDefaults['multa_atraso_diario_pct'] ?? '') ?>"></div>
+                    <div class="col-md-3"><label class="form-label small">Teto da multa</label><input class="form-control form-control-sm" name="multa_teto_pct" value="<?= htmlspecialchars($conditionDefaults['multa_teto_pct'] ?? '') ?>"></div>
+                    <div class="col-md-6"><label class="form-label small">Prazo garantia de solidez (Cl. 4.2)</label><input class="form-control form-control-sm" name="garantia_solidez_prazo" value="<?= htmlspecialchars($conditionDefaults['garantia_solidez_prazo'] ?? '') ?>"></div>
+                    <div class="col-md-6"><label class="form-label small">Nome do sistema (Cl. 4.5/6.2/10.2)</label><input class="form-control form-control-sm" name="sistema_nome" value="<?= htmlspecialchars($conditionDefaults['sistema_nome'] ?? '') ?>"></div>
+                </div>
+                <div class="form-text">
+                    Estes campos não vêm da proposta. Os padrões são definidos em <a href="/admin/contracts/settings" target="_blank">Configurações</a>.
                 </div>
             </div>
         </div>
@@ -582,6 +599,14 @@
             condominio: { nome: f('condominio_nome') },
             assinatura: { cidade: f('assinatura_cidade'), data: f('assinatura_data') },
             foro: { comarca: f('foro_comarca') },
+            multa: {
+                mora_pct: f('multa_mora_pct'),
+                juros_pct: f('multa_juros_pct'),
+                atraso_diario_pct: f('multa_atraso_diario_pct'),
+                teto_pct: f('multa_teto_pct'),
+            },
+            garantia: { solidez_prazo: f('garantia_solidez_prazo') },
+            sistema: { nome: f('sistema_nome') },
             testemunhas: [
                 { nome: f('test1_nome'), cpf: f('test1_cpf') },
                 { nome: f('test2_nome'), cpf: f('test2_cpf') },
@@ -744,6 +769,11 @@
         setName('condominio_nome', (c.condominio || {}).nome);
         setName('assinatura_cidade', (c.assinatura || {}).cidade); setName('assinatura_data', (c.assinatura || {}).data);
         setName('foro_comarca', (c.foro || {}).comarca);
+        const mu = c.multa || {};
+        setName('multa_mora_pct', mu.mora_pct); setName('multa_juros_pct', mu.juros_pct);
+        setName('multa_atraso_diario_pct', mu.atraso_diario_pct); setName('multa_teto_pct', mu.teto_pct);
+        setName('garantia_solidez_prazo', (c.garantia || {}).solidez_prazo);
+        setName('sistema_nome', (c.sistema || {}).nome);
         const t = c.testemunhas || [];
         if (t[0]) { setName('test1_nome', t[0].nome); setName('test1_cpf', t[0].cpf); }
         if (t[1]) { setName('test2_nome', t[1].nome); setName('test2_cpf', t[1].cpf); }

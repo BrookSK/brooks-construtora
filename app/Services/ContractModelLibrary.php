@@ -97,9 +97,10 @@ h)      Engenharia e Logística: Serviços de coordenação, planejamento, engen
         a) Uma parcela aproximada de {{fiscal.pct_construtora}} ({{fiscal.pct_construtora_extenso}}) do faturamento total será emitida diretamente pela CONTRATADA, que atuará contratualmente como administradora da obra.
         b) O presente contrato contempla a emissão de Nota Fiscal pela {{contratada.nome_fantasia}} correspondente a {{fiscal.pct_construtora}} do valor contratual, referente exclusivamente aos serviços administrativos e de engenharia, {{fiscal.pct_material}} do valor será emitido para materiais de construção e os {{fiscal.pct_fornecedores}} restantes serão destinados a fornecedores e prestadores, com pagamentos realizados diretamente pelo CONTRATANTE, conforme orientação do setor financeiro. A relação comercial e documental referente a esses valores ocorrerá diretamente entre o CONTRATANTE e cada loja, fornecedor ou prestador, de acordo com as condições próprias de cada contratação.
 
-<!-- CONDICIONAL: se a proposta não trouxer Notas de Negociação com segregação
-     fiscal, suprimir integralmente o item 2.2 e sua alínea b), mantendo
-     apenas o item 2.1. -->
+<!-- CONDICIONAL: incluir o item 2.2 (e alíneas a e b) SOMENTE se os três
+     percentuais de segregação fiscal estiverem preenchidos. Se qualquer um
+     estiver vazio/zero, suprimir todo o item 2.2 e manter apenas o 2.1.
+     Não gerar [[PENDENTE]] para esses percentuais. -->
 
 ┌──────────────────────────────────────────────────────────────────────┐
 │   CLÁUSULA 3ª – DO PREÇO, DAS CONDIÇÕES DE PAGAMENTO E DO             │
@@ -311,6 +312,18 @@ MAPEAMENTO CAMPO A CAMPO (proposta → contrato)
 - Nota de ar-condicionado (o que não está incluso) → Cl. 7.1.2
 - Nota de coordenação/terceirizados → Cl. 1.2 h)
 
+MAPEAMENTO A PARTIR DE DADOS_COMPLEMENTARES (não vêm da proposta)
+- contratante(s) → bloco PARTES e assinatura (nome, nacionalidade, estado civil, CPF, endereço, e-mail)
+- obra → Cl. 1.1 (logradouro, número, unidade, bairro, cidade/UF, CEP)
+- condominio.nome → Cl. 5.2.f e 6.1
+- contratada (razao_social, cnpj, endereco_sede, nome_fantasia) → bloco PARTES, Cl. 2.2 b), assinatura
+- multa.mora_pct / multa.juros_pct / multa.atraso_diario_pct / multa.teto_pct → Cl. 3.5 ({{multa.mora_pct}}, {{multa.juros_pct}}, {{multa.atraso_diario_pct}}, {{multa.teto_pct}})
+- garantia.solidez_prazo → Cl. 4.2 a) ({{garantia.solidez_prazo}})
+- sistema.nome → Cl. 4.5, 5.1.e, 6.2, 10.2 ({{sistema.nome}})
+- foro.comarca → Cl. 11.1 ({{foro.comarca}})
+- assinatura.cidade / assinatura.data → fecho do contrato
+- Para os percentuais (multa/juros/teto/fiscal), gere também o valor por extenso entre parênteses, como manda a regra 5. Se um desses campos vier vazio em DADOS_COMPLEMENTARES, use [[PENDENTE: descrição]].
+
 CONSTRUÇÃO DA CLÁUSULA 1.2 (ESCOPO)
 - Percorra os grupos da proposta na ordem: Serviços Preliminares → Serviços Iniciais/Canteiro → Fase 1 (Demolições, Construção/Alvenaria, Infras Secas e Instalações, Impermeabilização) → Fase 2 (Acabamentos) → Serviços de Engenharia.
 - Gere uma alínea (a, b, c...) por grupo que tenha valor maior que zero.
@@ -331,7 +344,7 @@ CONSTRUÇÃO DA CLÁUSULA 3.2.2 (PARCELAS)
 CONDICIONAIS
 - Sem condomínio informado: suprimir a menção ao condomínio nas Cl. 5.2.f e 6.1 e ajustar a redação para citar apenas Prefeitura e demais órgãos.
 - Dois contratantes: replicar o bloco de qualificação em PARTES e o bloco de assinatura, e usar "CONTRATANTES" no plural em todo o documento.
-- Se a proposta não trouxer Notas de Negociação com segregação fiscal, suprimir a Cláusula 2.2 b) e manter apenas a atuação como administradora.
+- SEGREGAÇÃO FISCAL (Cl. 2.2): só inclua o item 2.2 e suas alíneas a) e b) se os três percentuais (fiscal.pct_construtora, fiscal.pct_material, fiscal.pct_fornecedores) vierem PREENCHIDOS com valor. Se qualquer um deles estiver vazio, nulo ou zero, SUPRIMA integralmente o item 2.2 (a e b), mantendo apenas o item 2.1 (atuação como administradora). Nunca escreva [[PENDENTE]] para os percentuais fiscais — a ausência significa que a cláusula não se aplica e deve ser omitida.
 
 SAÍDA
 Retorne dois blocos separados:

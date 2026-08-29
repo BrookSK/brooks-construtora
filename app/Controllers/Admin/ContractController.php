@@ -73,6 +73,24 @@ class ContractController extends Controller
     public const DEFAULT_MODEL = 'gpt-4o';
 
     /**
+     * Condições contratuais padrão (multas, garantia, sistema, foro).
+     * Não vêm da proposta; são valores fixos da empresa, editáveis em
+     * Configurações e ajustáveis por contrato no formulário.
+     */
+    public function conditionDefaults(): array
+    {
+        return [
+            'multa_mora_pct'          => Setting::get('contract_multa_mora_pct', '2,00%'),
+            'multa_juros_pct'         => Setting::get('contract_multa_juros_pct', '1,00%'),
+            'multa_atraso_diario_pct' => Setting::get('contract_multa_atraso_diario_pct', '0,10%'),
+            'multa_teto_pct'          => Setting::get('contract_multa_teto_pct', '10,00%'),
+            'garantia_solidez_prazo'  => Setting::get('contract_garantia_solidez_prazo', '5 (cinco) anos'),
+            'sistema_nome'            => Setting::get('contract_sistema_nome', ''),
+            'foro_comarca'            => Setting::get('contract_foro_comarca', ''),
+        ];
+    }
+
+    /**
      * Persiste o diagnóstico da última chamada à IA.
      */
     private function logAi(OpenAIService $ai, ?int $contractId, string $context): void
@@ -182,11 +200,12 @@ class ContractController extends Controller
         }
 
         $this->view('admin.contracts.wizard', [
-            'user'         => Auth::user(),
-            'flash'        => $this->getFlash(),
-            'templates'    => ContractBaseTemplate::allActive(),
-            'contractors'  => ContractorCompany::allActive(),
-            'draft'        => $draft,
+            'user'          => Auth::user(),
+            'flash'         => $this->getFlash(),
+            'templates'     => ContractBaseTemplate::allActive(),
+            'contractors'   => ContractorCompany::allActive(),
+            'draft'         => $draft,
+            'conditionDefaults' => $this->conditionDefaults(),
         ]);
     }
 
@@ -541,14 +560,24 @@ class ContractController extends Controller
             'models'       => $models,
             'hasKey'       => $hasKey,
             'logoUrl'      => Setting::get('contract_logo', ''),
+            'conditions'   => $this->conditionDefaults(),
         ]);
     }
 
     public function saveSettings(): void
     {
         if (!$this->isPost()) { $this->redirect('/admin/contracts/settings'); return; }
-        $model = trim($this->input('contract_openai_model', ''));
-        Setting::set('contract_openai_model', $model);
+        Setting::set('contract_openai_model', trim($this->input('contract_openai_model', '')));
+
+        // Condições contratuais padrão
+        Setting::set('contract_multa_mora_pct', trim($this->input('multa_mora_pct', '')));
+        Setting::set('contract_multa_juros_pct', trim($this->input('multa_juros_pct', '')));
+        Setting::set('contract_multa_atraso_diario_pct', trim($this->input('multa_atraso_diario_pct', '')));
+        Setting::set('contract_multa_teto_pct', trim($this->input('multa_teto_pct', '')));
+        Setting::set('contract_garantia_solidez_prazo', trim($this->input('garantia_solidez_prazo', '')));
+        Setting::set('contract_sistema_nome', trim($this->input('sistema_nome', '')));
+        Setting::set('contract_foro_comarca', trim($this->input('foro_comarca', '')));
+
         $this->setFlash('success', 'Configurações salvas.');
         $this->redirect('/admin/contracts/settings');
     }

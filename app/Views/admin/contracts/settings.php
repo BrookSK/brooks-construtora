@@ -61,6 +61,27 @@
                         Modelos "mini" reduzem custo, mas podem extrair com menos precisão em propostas complexas.
                     </div>
 
+                    <hr>
+                    <h6 class="small text-uppercase text-muted"><i class="bi bi-shield-check"></i> Condições contratuais padrão</h6>
+                    <p class="text-muted small">
+                        Valores fixos da empresa que não vêm da proposta (multas, garantia, sistema, foro).
+                        São usados como padrão em cada contrato e podem ser ajustados no formulário antes de gerar.
+                    </p>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3"><label class="form-label small">Multa por mora (Cl. 3.5)</label><input class="form-control form-control-sm" name="multa_mora_pct" value="<?= htmlspecialchars($conditions['multa_mora_pct'] ?? '') ?>"></div>
+                        <div class="col-md-3"><label class="form-label small">Juros de mora / mês</label><input class="form-control form-control-sm" name="multa_juros_pct" value="<?= htmlspecialchars($conditions['multa_juros_pct'] ?? '') ?>"></div>
+                        <div class="col-md-3"><label class="form-label small">Multa diária por atraso</label><input class="form-control form-control-sm" name="multa_atraso_diario_pct" value="<?= htmlspecialchars($conditions['multa_atraso_diario_pct'] ?? '') ?>"></div>
+                        <div class="col-md-3"><label class="form-label small">Teto da multa</label><input class="form-control form-control-sm" name="multa_teto_pct" value="<?= htmlspecialchars($conditions['multa_teto_pct'] ?? '') ?>"></div>
+                        <div class="col-md-4"><label class="form-label small">Prazo garantia de solidez (Cl. 4.2)</label><input class="form-control form-control-sm" name="garantia_solidez_prazo" value="<?= htmlspecialchars($conditions['garantia_solidez_prazo'] ?? '') ?>"></div>
+                        <div class="col-md-4"><label class="form-label small">Nome do sistema (Cl. 4.5/6.2/10.2)</label><input class="form-control form-control-sm" name="sistema_nome" value="<?= htmlspecialchars($conditions['sistema_nome'] ?? '') ?>" placeholder="ex.: Portal do Cliente"></div>
+                        <div class="col-md-4"><label class="form-label small">Foro padrão (comarca)</label><input class="form-control form-control-sm" name="foro_comarca" value="<?= htmlspecialchars($conditions['foro_comarca'] ?? '') ?>" placeholder="ex.: São Paulo/SP"></div>
+                    </div>
+                    <div class="alert alert-warning small">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        O prazo de garantia de solidez tem prazo legal mínimo (art. 618 do Código Civil, 5 anos para edifícios).
+                        Confirme com o jurídico antes de reduzir.
+                    </div>
+
                     <button class="btn btn-primary"><i class="bi bi-save"></i> Salvar</button>
                 </form>
             </div>
