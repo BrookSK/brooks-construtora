@@ -172,6 +172,31 @@
         </div>
 
         <div class="card mb-3">
+            <div class="card-header py-2"><i class="bi bi-image"></i> Logo do contrato</div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">
+                    A logo aparece no topo esquerdo do contrato. Formatos: PNG, WEBP, JPG ou SVG (até 5 MB).
+                </p>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div id="wizLogoPreviewWrap" style="<?= empty($conditionDefaults['logo_url']) ? 'display:none;' : '' ?>">
+                        <img id="wizLogoPreview" src="<?= htmlspecialchars($conditionDefaults['logo_url'] ?? '') ?>" alt="Logo"
+                             style="max-height:52px; max-width:200px; border:1px solid #e3e6ea; border-radius:6px; padding:6px; background:#fff;">
+                    </div>
+                    <div>
+                        <input type="file" id="wizLogoInput" accept="image/png,image/webp,image/jpeg,image/svg+xml" hidden>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="wizBtnUploadLogo">
+                            <i class="bi bi-upload"></i> Enviar logo
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" id="wizBtnRemoveLogo" style="<?= empty($conditionDefaults['logo_url']) ? 'display:none;' : '' ?>">
+                            <i class="bi bi-trash"></i> Remover
+                        </button>
+                        <div class="small text-muted mt-1" id="wizLogoMsg"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
             <div class="card-header py-2"><i class="bi bi-briefcase"></i> Contratada (empresa)</div>
             <div class="card-body">
                 <div class="mb-2">
@@ -780,6 +805,50 @@
         const cd = c.contratada || {};
         setName('contratada_razao_social', cd.razao_social); setName('contratada_nome_fantasia', cd.nome_fantasia);
         setName('contratada_cnpj', cd.cnpj); setName('contratada_endereco_sede', cd.endereco_sede);
+    }
+
+    // =================================================================
+    // LOGO DO CONTRATO (upload dentro do formulário)
+    // =================================================================
+    const wizLogoInput = $('#wizLogoInput');
+    const wizBtnUpload = $('#wizBtnUploadLogo');
+    const wizBtnRemove = $('#wizBtnRemoveLogo');
+    const wizLogoWrap = $('#wizLogoPreviewWrap');
+    const wizLogoPreview = $('#wizLogoPreview');
+    const wizLogoMsg = $('#wizLogoMsg');
+
+    if (wizBtnUpload) {
+        wizBtnUpload.addEventListener('click', () => wizLogoInput.click());
+        wizLogoInput.addEventListener('change', function () {
+            if (!this.files.length) return;
+            const fd = new FormData();
+            fd.append('contract_logo', this.files[0]);
+            wizLogoMsg.textContent = 'Enviando…';
+            fetch('/admin/contracts/settings/upload-logo', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.error) { wizLogoMsg.innerHTML = '<span class="text-danger">' + res.error + '</span>'; return; }
+                    wizLogoPreview.src = res.url + '?t=' + Date.now();
+                    wizLogoWrap.style.display = '';
+                    wizBtnRemove.style.display = '';
+                    wizLogoMsg.innerHTML = '<span class="text-success">Logo atualizada.</span>';
+                })
+                .catch(() => { wizLogoMsg.innerHTML = '<span class="text-danger">Erro no upload.</span>'; });
+        });
+    }
+    if (wizBtnRemove) {
+        wizBtnRemove.addEventListener('click', function () {
+            if (!confirm('Remover a logo do contrato?')) return;
+            fetch('/admin/contracts/settings/remove-logo', { method: 'POST' })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.error) { wizLogoMsg.innerHTML = '<span class="text-danger">' + res.error + '</span>'; return; }
+                    wizLogoWrap.style.display = 'none';
+                    wizBtnRemove.style.display = 'none';
+                    wizLogoMsg.innerHTML = '<span class="text-muted">Logo removida.</span>';
+                })
+                .catch(() => { wizLogoMsg.innerHTML = '<span class="text-danger">Erro ao remover.</span>'; });
+        });
     }
 
     // Boot: se veio rascunho, retoma; senão, fluxo normal de upload

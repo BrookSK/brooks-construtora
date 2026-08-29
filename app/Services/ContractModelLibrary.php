@@ -129,6 +129,9 @@ h)      Engenharia e Logística: Serviços de coordenação, planejamento, engen
 
 3.5.    Penalidades por Atraso nos Pagamentos: Qualquer atraso no pagamento de qualquer das parcelas sujeitará o CONTRATANTE à incidência de multa moratória de {{multa.mora_pct}} ({{multa.mora_pct_extenso}}) sobre o valor em aberto, acrescida de juros de mora de {{multa.juros_pct}} ({{multa.juros_pct_extenso}}) ao mês pro rata die e correção monetária.
 
+<!-- CONDICIONAL: incluir o parágrafo abaixo SOMENTE se multa.atraso_diario_pct
+     E multa.teto_pct estiverem preenchidos. Se qualquer um estiver vazio/zero,
+     suprimir todo este parágrafo. Não gerar [[PENDENTE]] para esses campos. -->
 Penalidade por Atraso Injustificado na Obra: O atraso injustificado e imputável exclusivamente à CONTRATADA na entrega da obra sujeitará a construtora à multa diária equivalente a {{multa.atraso_diario_pct}} ({{multa.atraso_diario_pct_extenso}}) do valor contratual, limitada ao teto global de {{multa.teto_pct}} ({{multa.teto_pct_extenso}}).
 
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -345,6 +348,7 @@ CONDICIONAIS
 - Sem condomínio informado: suprimir a menção ao condomínio nas Cl. 5.2.f e 6.1 e ajustar a redação para citar apenas Prefeitura e demais órgãos.
 - Dois contratantes: replicar o bloco de qualificação em PARTES e o bloco de assinatura, e usar "CONTRATANTES" no plural em todo o documento.
 - SEGREGAÇÃO FISCAL (Cl. 2.2): só inclua o item 2.2 e suas alíneas a) e b) se os três percentuais (fiscal.pct_construtora, fiscal.pct_material, fiscal.pct_fornecedores) vierem PREENCHIDOS com valor. Se qualquer um deles estiver vazio, nulo ou zero, SUPRIMA integralmente o item 2.2 (a e b), mantendo apenas o item 2.1 (atuação como administradora). Nunca escreva [[PENDENTE]] para os percentuais fiscais — a ausência significa que a cláusula não se aplica e deve ser omitida.
+- PENALIDADE POR ATRASO NA OBRA (Cl. 3.5, parágrafo "Penalidade por Atraso Injustificado na Obra"): só inclua esse parágrafo se AMBOS multa.atraso_diario_pct e multa.teto_pct vierem PREENCHIDOS com valor. Se qualquer um estiver vazio, nulo ou zero, SUPRIMA integralmente esse parágrafo, mantendo o restante do item 3.5 (multa moratória e juros). Nunca escreva [[PENDENTE]] para a multa diária ou o teto — a ausência significa que essa penalidade não se aplica e o parágrafo deve ser omitido.
 
 SAÍDA
 Retorne dois blocos separados:

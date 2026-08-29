@@ -82,11 +82,12 @@ class ContractController extends Controller
         return [
             'multa_mora_pct'          => Setting::get('contract_multa_mora_pct', '2,00%'),
             'multa_juros_pct'         => Setting::get('contract_multa_juros_pct', '1,00%'),
-            'multa_atraso_diario_pct' => Setting::get('contract_multa_atraso_diario_pct', '0,10%'),
-            'multa_teto_pct'          => Setting::get('contract_multa_teto_pct', '10,00%'),
+            'multa_atraso_diario_pct' => Setting::get('contract_multa_atraso_diario_pct', ''),
+            'multa_teto_pct'          => Setting::get('contract_multa_teto_pct', ''),
             'garantia_solidez_prazo'  => Setting::get('contract_garantia_solidez_prazo', '5 (cinco) anos'),
             'sistema_nome'            => Setting::get('contract_sistema_nome', ''),
             'foro_comarca'            => Setting::get('contract_foro_comarca', ''),
+            'logo_url'                => Setting::get('contract_logo', ''),
         ];
     }
 
