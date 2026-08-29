@@ -23,8 +23,18 @@
 </style>
 
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-    <h5 class="mb-0"><i class="bi bi-magic"></i> Elaboração de Contrato</h5>
-    <a href="/admin/contracts" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+    <h5 class="mb-0">
+        <i class="bi bi-magic"></i> Elaboração de Contrato
+        <?php if (!empty($draft)): ?>
+            <span class="badge bg-secondary">Retomando <?= htmlspecialchars($draft['proposal']['capa']['projeto_codigo'] ?? 'rascunho') ?></span>
+        <?php endif; ?>
+    </h5>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-success btn-sm" id="saveDraftBtn" style="display:none;">
+            <i class="bi bi-save"></i> Salvar rascunho
+        </button>
+        <a href="/admin/contracts" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
 </div>
 
 <div class="wiz-steps">
@@ -213,11 +223,16 @@
 </div>
 
 <script>
+    // Dados de retomada (rascunho / contrato iniciado), quando houver
+    window.CONTRACT_DRAFT = <?= json_encode($draft ?? null, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+</script>
+<script>
 (function () {
     'use strict';
     let proposal = null;      // JSON extraído da proposta
     let sourcePdf = '';
     let contratanteCount = 0;
+    let contractId = 0;       // id do rascunho/contrato em edição
 
     const $ = (s, r = document) => r.querySelector(s);
     const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -289,6 +304,7 @@
             sourcePdf = res.source_pdf || file.name;
             setProg(100, 'Montando formulário…');
             renderReview(res.low_confidence || []);
+            showDraftButton();
             if (res.suggested_template_id) {
                 const opt = $('#templateSelect').querySelector('option[value="' + res.suggested_template_id + '"]');
                 if (opt) $('#templateSelect').value = res.suggested_template_id;
@@ -603,6 +619,7 @@
         fd.append('complementary', JSON.stringify(complementary));
         fd.append('template_id', $('#templateSelect').value);
         fd.append('source_pdf', sourcePdf);
+        fd.append('contract_id', contractId || '');
 
         fetch('/admin/contracts/generate', { method: 'POST', body: fd })
             .then(r => r.json())
@@ -638,6 +655,107 @@
     }
 
     function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+    // =================================================================
+    // SALVAR RASCUNHO
+    // =================================================================
+    const saveDraftBtn = $('#saveDraftBtn');
+
+    function showDraftButton() { if (saveDraftBtn) saveDraftBtn.style.display = ''; }
+
+    if (saveDraftBtn) {
+        saveDraftBtn.addEventListener('click', function () {
+            if (!proposal) { showAlert('Faça o upload da proposta antes de salvar.', 'warning'); return; }
+            commitReview();
+            collectComplementary();
+            this.disabled = true;
+            const original = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando…';
+
+            const fd = new FormData();
+            fd.append('proposal', JSON.stringify(proposal));
+            fd.append('complementary', JSON.stringify(complementary));
+            fd.append('template_id', $('#templateSelect') ? $('#templateSelect').value : '');
+            fd.append('source_pdf', sourcePdf);
+            fd.append('contract_id', contractId || '');
+
+            fetch('/admin/contracts/save-draft', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(res => {
+                    this.disabled = false;
+                    this.innerHTML = original;
+                    if (res.error) { showAlert(res.error); return; }
+                    contractId = res.contract_id;
+                    showAlert('Rascunho salvo. Você pode continuar depois pela listagem de contratos.', 'success');
+                })
+                .catch(() => { this.disabled = false; this.innerHTML = original; showAlert('Erro ao salvar rascunho.'); });
+        });
+    }
+
+    // =================================================================
+    // RETOMADA DE RASCUNHO / CONTRATO INICIADO
+    // =================================================================
+    function resumeDraft(d) {
+        if (!d || !d.proposal) return;
+        proposal = d.proposal;
+        sourcePdf = d.source_pdf || '';
+        contractId = d.id || 0;
+
+        // Etapa 2 já preenchida a partir do JSON salvo
+        renderReview(proposal.confianca_baixa || []);
+
+        // Etapa 3 — dados complementares
+        prefillComplementary(d.complementary || {});
+
+        // Etapa 4 — modelo-base
+        if (d.base_template_id && $('#templateSelect')) {
+            const opt = $('#templateSelect').querySelector('option[value="' + d.base_template_id + '"]');
+            if (opt) $('#templateSelect').value = d.base_template_id;
+        }
+        if (typeof updateTemplateHint === 'function') updateTemplateHint();
+
+        showDraftButton();
+        goStep(2); // pula o upload — já temos os dados
+    }
+
+    function prefillComplementary(c) {
+        // Contratantes
+        $('#contratantesWrap').innerHTML = '';
+        contratanteCount = 0;
+        const list = (c.contratantes && c.contratantes.length) ? c.contratantes
+                    : (c.contratante ? [c.contratante] : []);
+        if (!list.length) { addContratante({}); }
+        list.forEach(ct => {
+            addContratante({ nome: ct.nome || '' });
+            const block = $$('.contratante-block').slice(-1)[0];
+            if (!block) return;
+            const set = (sel, val) => { const el = block.querySelector(sel); if (el) el.value = val || ''; };
+            set('.c-nome', ct.nome); set('.c-nac', ct.nacionalidade); set('.c-civil', ct.estado_civil);
+            set('.c-prof', ct.profissao); set('.c-cpf', ct.cpf); set('.c-rg', ct.rg);
+            set('.c-log', ct.logradouro); set('.c-num', ct.numero); set('.c-uni', ct.unidade);
+            set('.c-bairro', ct.bairro); set('.c-cidade', ct.cidade); set('.c-uf', ct.uf);
+            set('.c-cep', ct.cep); set('.c-email', ct.email); set('.c-tel', ct.telefone);
+        });
+
+        const setName = (n, v) => { const el = $('[name=' + n + ']'); if (el) el.value = v || ''; };
+        const o = c.obra || {};
+        setName('obra_logradouro', o.logradouro); setName('obra_numero', o.numero); setName('obra_unidade', o.unidade);
+        setName('obra_bairro', o.bairro); setName('obra_cidade_uf', o.cidade_uf); setName('obra_cep', o.cep);
+        setName('condominio_nome', (c.condominio || {}).nome);
+        setName('assinatura_cidade', (c.assinatura || {}).cidade); setName('assinatura_data', (c.assinatura || {}).data);
+        setName('foro_comarca', (c.foro || {}).comarca);
+        const t = c.testemunhas || [];
+        if (t[0]) { setName('test1_nome', t[0].nome); setName('test1_cpf', t[0].cpf); }
+        if (t[1]) { setName('test2_nome', t[1].nome); setName('test2_cpf', t[1].cpf); }
+        const cd = c.contratada || {};
+        setName('contratada_razao_social', cd.razao_social); setName('contratada_nome_fantasia', cd.nome_fantasia);
+        setName('contratada_cnpj', cd.cnpj); setName('contratada_endereco_sede', cd.endereco_sede);
+    }
+
+    // Boot: se veio rascunho, retoma; senão, fluxo normal de upload
+    if (window.CONTRACT_DRAFT) {
+        resumeDraft(window.CONTRACT_DRAFT);
+    }
 })();
 </script>
 

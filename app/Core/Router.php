@@ -196,6 +196,7 @@ class Router
             'contracts' => ['ContractController', 'index'],
             'contracts/wizard' => ['ContractController', 'wizard'],
             'contracts/extract' => ['ContractController', 'extract'],
+            'contracts/save-draft' => ['ContractController', 'saveDraft'],
             'contracts/generate' => ['ContractController', 'generate'],
             'contracts/show' => ['ContractController', 'show'],
             'contracts/save' => ['ContractController', 'save'],

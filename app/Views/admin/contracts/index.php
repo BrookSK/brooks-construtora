@@ -24,7 +24,8 @@ function c_status_badge(string $s): string {
 <div class="alert alert-light border small">
     <i class="bi bi-info-circle"></i>
     Faça upload do PDF da Proposta Comercial e o sistema monta o Contrato de Empreitada preenchido,
-    seguindo o modelo-base da empresa. Cada geração cria uma nova versão — o histórico nunca é sobrescrito.
+    seguindo o modelo-base da empresa. Você pode <strong>salvar como rascunho</strong> e continuar depois;
+    cada geração cria uma nova versão — o histórico nunca é sobrescrito.
 </div>
 
 <div class="card">
@@ -52,13 +53,20 @@ function c_status_badge(string $s): string {
                     $val = json_decode($c['validation_json'] ?? 'null', true);
                     $blocked = !empty($val['blocked']);
                     $issues = $val['issues'] ?? [];
+                    $isDraft = ($c['status'] ?? '') === 'draft';
                 ?>
                     <tr>
                         <td>
                             <strong><?= htmlspecialchars($c['project_code'] ?? '—') ?></strong>
                             <div class="small text-muted"><?= htmlspecialchars($c['project_name'] ?? '') ?></div>
                         </td>
-                        <td><span class="badge bg-dark">v<?= (int)$c['version'] ?></span></td>
+                        <td>
+                            <?php if ($isDraft): ?>
+                                <span class="badge bg-secondary"><i class="bi bi-pencil"></i> rascunho</span>
+                            <?php else: ?>
+                                <span class="badge bg-dark">v<?= (int)$c['version'] ?></span>
+                            <?php endif; ?>
+                        </td>
                         <td class="d-none d-md-table-cell small"><?= htmlspecialchars($c['template_name'] ?? '—') ?></td>
                         <td class="d-none d-md-table-cell small"><?= htmlspecialchars($c['proposal_revision'] ?? '—') ?></td>
                         <td>
@@ -76,9 +84,16 @@ function c_status_badge(string $s): string {
                         <td class="d-none d-lg-table-cell small"><?= htmlspecialchars($c['created_by_name'] ?? '—') ?></td>
                         <td class="d-none d-md-table-cell small text-muted"><?= c_date($c['created_at'] ?? null) ?></td>
                         <td class="text-end">
-                            <a href="/admin/contracts/show/<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-primary" title="Abrir"><i class="bi bi-eye"></i></a>
-                            <a href="/admin/contracts/export/<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-secondary" title="Exportar"><i class="bi bi-download"></i></a>
-                            <form method="POST" action="/admin/contracts/delete" class="d-inline" onsubmit="return confirm('Excluir esta versão do contrato?');">
+                            <?php if ($isDraft): ?>
+                                <a href="/admin/contracts/wizard/<?= (int)$c['id'] ?>" class="btn btn-sm btn-primary" title="Continuar edição">
+                                    <i class="bi bi-pencil-square"></i> Continuar
+                                </a>
+                            <?php else: ?>
+                                <a href="/admin/contracts/show/<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-primary" title="Abrir e editar"><i class="bi bi-pencil-square"></i></a>
+                                <a href="/admin/contracts/wizard/<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-info" title="Reabrir dados e regerar"><i class="bi bi-arrow-repeat"></i></a>
+                                <a href="/admin/contracts/export/<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-secondary" title="Exportar"><i class="bi bi-download"></i></a>
+                            <?php endif; ?>
+                            <form method="POST" action="/admin/contracts/delete" class="d-inline" onsubmit="return confirm('<?= $isDraft ? 'Excluir este rascunho?' : 'Excluir esta versão do contrato?' ?>');">
                                 <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
                                 <button class="btn btn-sm btn-outline-danger" title="Excluir"><i class="bi bi-trash"></i></button>
                             </form>

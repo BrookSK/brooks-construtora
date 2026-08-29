@@ -160,16 +160,83 @@ class ContractController extends Controller
     // WIZARD — 4 etapas
     // =================================================================
 
-    public function wizard(): void
+    public function wizard(string $id = ''): void
     {
         $this->ensureReady();
+
+        // Retomada de um rascunho / contrato já iniciado
+        $draft = null;
+        $draftId = (int)($id ?: $this->input('draft', 0));
+        if ($draftId > 0) {
+            $row = GeneratedContract::find($draftId);
+            if ($row) {
+                $draft = [
+                    'id'               => (int)$row['id'],
+                    'status'           => $row['status'],
+                    'source_pdf'       => $row['source_pdf'],
+                    'base_template_id' => $row['base_template_id'],
+                    'proposal'         => json_decode($row['extraction_json'] ?? '{}', true) ?: [],
+                    'complementary'    => json_decode($row['complementary_json'] ?? '{}', true) ?: [],
+                ];
+            }
+        }
 
         $this->view('admin.contracts.wizard', [
             'user'         => Auth::user(),
             'flash'        => $this->getFlash(),
             'templates'    => ContractBaseTemplate::allActive(),
             'contractors'  => ContractorCompany::allActive(),
+            'draft'        => $draft,
         ]);
+    }
+
+    // =================================================================
+    // SALVAR RASCUNHO — persiste o progresso sem chamar a IA
+    // =================================================================
+
+    public function saveDraft(): void
+    {
+        if (!$this->isPost()) { $this->json(['error' => 'Método inválido.'], 400); return; }
+        $this->ensureReady();
+
+        $proposal = $this->decodeJsonInput('proposal');
+        $complementary = $this->decodeJsonInput('complementary');
+        $templateId = (int)$this->input('template_id', 0);
+        $sourcePdf = trim($this->input('source_pdf', ''));
+        $contractId = (int)$this->input('contract_id', 0);
+
+        if (empty($proposal)) {
+            $this->json(['error' => 'Nada para salvar: faça o upload da proposta primeiro.'], 422); return;
+        }
+
+        $projectCode = trim((string)($proposal['capa']['projeto_codigo'] ?? '')) ?: null;
+        $projectName = trim((string)($proposal['capa']['projeto_nome'] ?? '')) ?: null;
+
+        $data = [
+            'project_code'       => $projectCode,
+            'project_name'       => $projectName,
+            'base_template_id'   => $templateId ?: null,
+            'proposal_revision'  => trim((string)($proposal['capa']['revisao'] ?? '')) ?: null,
+            'source_pdf'         => $sourcePdf ?: null,
+            'extraction_json'    => json_encode($proposal, JSON_UNESCAPED_UNICODE),
+            'complementary_json' => json_encode($complementary, JSON_UNESCAPED_UNICODE),
+            'status'             => 'draft',
+            'updated_at'         => date('Y-m-d H:i:s'),
+        ];
+
+        // Atualiza rascunho existente ou cria um novo (versão 0 = não gera número)
+        $existing = $contractId > 0 ? GeneratedContract::find($contractId) : null;
+        if ($existing && $existing['status'] === 'draft') {
+            GeneratedContract::updateById($contractId, $data);
+            $id = $contractId;
+        } else {
+            $data['version'] = 0;
+            $data['created_by'] = (int)Auth::id();
+            $data['created_at'] = date('Y-m-d H:i:s');
+            $id = GeneratedContract::create($data);
+        }
+
+        $this->json(['success' => true, 'contract_id' => $id]);
     }
 
     // =================================================================
@@ -234,6 +301,7 @@ class ContractController extends Controller
         $complementary = $this->decodeJsonInput('complementary');
         $templateId = (int)$this->input('template_id', 0);
         $sourcePdf = trim($this->input('source_pdf', ''));
+        $draftId = (int)$this->input('contract_id', 0);
 
         if (empty($proposal)) {
             $this->json(['error' => 'Dados da proposta ausentes.'], 422); return;
@@ -262,7 +330,7 @@ class ContractController extends Controller
             $projectName = trim((string)($proposal['capa']['projeto_nome'] ?? '')) ?: null;
             $version = GeneratedContract::nextVersion($projectCode);
 
-            $id = GeneratedContract::create([
+            $payload = [
                 'project_code'       => $projectCode,
                 'project_name'       => $projectName,
                 'base_template_id'   => $template['id'],
@@ -275,9 +343,19 @@ class ContractController extends Controller
                 'report_json'        => $gen['report'],
                 'validation_json'    => json_encode($validation, JSON_UNESCAPED_UNICODE),
                 'status'             => 'generated',
-                'created_by'         => (int)Auth::id(),
-                'created_at'         => date('Y-m-d H:i:s'),
-            ]);
+                'updated_at'         => date('Y-m-d H:i:s'),
+            ];
+
+            // Se veio de um rascunho, promove o próprio registro (não duplica)
+            $draft = $draftId > 0 ? GeneratedContract::find($draftId) : null;
+            if ($draft && $draft['status'] === 'draft') {
+                GeneratedContract::updateById($draftId, $payload);
+                $id = $draftId;
+            } else {
+                $payload['created_by'] = (int)Auth::id();
+                $payload['created_at'] = date('Y-m-d H:i:s');
+                $id = GeneratedContract::create($payload);
+            }
 
             $this->logAi($ai, $id, trim(($projectCode ?? '') . ' ' . ($projectName ?? '')));
 

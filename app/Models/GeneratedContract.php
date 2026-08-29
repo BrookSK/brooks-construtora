@@ -34,7 +34,7 @@ class GeneratedContract extends Model
             "SELECT gc.*, u.name AS created_by_name
              FROM generated_contracts gc
              LEFT JOIN users u ON gc.created_by = u.id
-             WHERE gc.project_code = ?
+             WHERE gc.project_code = ? AND gc.status <> 'draft'
              ORDER BY gc.version DESC",
             [$projectCode]
         );
