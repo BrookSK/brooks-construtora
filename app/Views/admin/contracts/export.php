@@ -127,20 +127,74 @@ function render_contract_html(string $md): string
 
         document.getElementById('btnPdf').addEventListener('click', async function () {
             this.disabled = true;
-            const { jsPDF } = window.jspdf;
-            const canvas = await html2canvas(docEl, { scale: 2, useCORS: true });
-            const img = canvas.toDataURL('image/jpeg', 0.95);
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pw = pdf.internal.pageSize.getWidth();
-            const ph = pdf.internal.pageSize.getHeight();
-            const imgH = canvas.height * pw / canvas.width;
-            let left = imgH, pos = 0;
-            pdf.addImage(img, 'JPEG', 0, pos, pw, imgH);
-            left -= ph;
-            while (left > 0) { pos = left - imgH; pdf.addPage(); pdf.addImage(img, 'JPEG', 0, pos, pw, imgH); left -= ph; }
-            pdf.save(fileName + '.pdf');
+            const original = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando…';
+            try {
+                await buildPdf();
+            } catch (e) {
+                console.error(e);
+                alert('Erro ao gerar o PDF.');
+            }
+            this.innerHTML = original;
             this.disabled = false;
         });
+
+        // Paginação por blocos: rasteriza cada elemento e nunca corta um bloco
+        // no meio; quando não cabe na página atual, abre uma nova. Blocos mais
+        // altos que uma página são fatiados por linhas de pixel (fallback).
+        async function buildPdf() {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageW = pdf.internal.pageSize.getWidth();
+            const pageH = pdf.internal.pageSize.getHeight();
+            const margin = 18;                       // mm
+            const contentW = pageW - margin * 2;
+            const usableH = pageH - margin * 2;      // altura útil por página em mm
+            let cursorY = margin;
+
+            const blocks = Array.from(docEl.children);
+
+            for (const el of blocks) {
+                if (!el.textContent.trim() && !el.querySelector('img')) continue;
+
+                const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+                const imgH = canvas.height * contentW / canvas.width; // altura do bloco em mm
+
+                if (imgH <= usableH) {
+                    // Bloco cabe inteiro: nova página se não couber no resto.
+                    if (cursorY + imgH > pageH - margin) {
+                        pdf.addPage();
+                        cursorY = margin;
+                    }
+                    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', margin, cursorY, contentW, imgH);
+                    cursorY += imgH + 1.5;
+                } else {
+                    // Bloco maior que a página: fatia o canvas em pedaços de página.
+                    if (cursorY > margin) { pdf.addPage(); cursorY = margin; }
+                    const pxPerMm = canvas.width / contentW;
+                    const pageHpx = Math.floor(usableH * pxPerMm);
+                    let offset = 0;
+                    while (offset < canvas.height) {
+                        const sliceHpx = Math.min(pageHpx, canvas.height - offset);
+                        const part = document.createElement('canvas');
+                        part.width = canvas.width;
+                        part.height = sliceHpx;
+                        const ctx = part.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, part.width, part.height);
+                        ctx.drawImage(canvas, 0, offset, canvas.width, sliceHpx, 0, 0, canvas.width, sliceHpx);
+                        const sliceHmm = sliceHpx / pxPerMm;
+                        if (offset > 0) { pdf.addPage(); }
+                        pdf.addImage(part.toDataURL('image/jpeg', 0.95), 'JPEG', margin, margin, contentW, sliceHmm);
+                        offset += sliceHpx;
+                    }
+                    cursorY = margin + ((canvas.height % pageHpx) / pxPerMm) + 1.5;
+                    if (cursorY > pageH - margin) { pdf.addPage(); cursorY = margin; }
+                }
+            }
+
+            pdf.save(fileName + '.pdf');
+        }
 
         document.getElementById('btnDocx').addEventListener('click', function () {
             const header = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
