@@ -95,7 +95,7 @@ function render_contract_html(string $md): string
         .doc { background:#fff; max-width:820px; margin:0 auto 2rem; padding:2.5cm 2.5cm 2cm; box-shadow:0 4px 20px rgba(0,0,0,.12); }
         .doc-header { text-align:left; margin-bottom:1.6rem; }
         .doc-header img { max-height:52px; }
-        .clause-title { text-align:center; font-weight:700; text-transform:uppercase; margin:1.4rem 0 .9rem; font-size:.95rem; letter-spacing:.5px; }
+        .clause-title { text-align:center; font-weight:700; text-transform:uppercase; margin:1.4rem 0 .9rem; font-size:12pt; letter-spacing:.5px; }
         .doc p { font-size:12pt; line-height:1.7; text-align:justify; margin:0 0 8pt; color:#000; }
         .doc p.alinea { padding-left:1.8rem; text-indent:0; }
         .pendente { background:#ffe08a; color:#8a5a00; font-weight:600; padding:0 3px; border-radius:3px; }
@@ -151,9 +151,12 @@ function render_contract_html(string $md): string
             const marginY = 22;                      // margem sup/inf (mm)
             const contentW = pageW - marginX * 2;
             const usableH = pageH - marginY * 2;     // altura útil por página em mm
-            const gap = 4;                           // respiro entre blocos (mm)
-            const gapBeforeTitle = 8;                // respiro extra antes de títulos de cláusula
+            const gap = 7;                           // respiro entre parágrafos/itens (mm)
+            const gapItem = 9;                       // respiro antes de item numerado (1.1, 3.2.1…)
+            const gapBeforeTitle = 14;               // respiro extra antes de títulos de cláusula
+            const gapAfterTitle = 5;                 // respiro depois do título de cláusula
             let cursorY = marginY;
+            let prevWasTitle = false;
 
             const blocks = Array.from(docEl.children);
 
@@ -162,13 +165,16 @@ function render_contract_html(string $md): string
 
                 const isTitle = el.classList.contains('clause-title');
                 const isHeader = el.classList.contains('doc-header');
+                const isItem = el.classList.contains('item');
 
                 const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
                 const imgH = canvas.height * contentW / canvas.width; // altura do bloco em mm
 
-                // espaço extra antes de um título de cláusula (se não for o topo da página)
-                if (isTitle && cursorY > marginY) {
-                    cursorY += gapBeforeTitle;
+                // respiro antes deste bloco
+                if (cursorY > marginY) {
+                    if (isTitle) cursorY += gapBeforeTitle;
+                    else if (prevWasTitle) cursorY += gapAfterTitle;
+                    else if (isItem) cursorY += gapItem;
                 }
 
                 if (imgH <= usableH) {
@@ -179,6 +185,7 @@ function render_contract_html(string $md): string
                     }
                     pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', marginX, cursorY, contentW, imgH);
                     cursorY += imgH + (isHeader ? gap * 2 : gap);
+                    prevWasTitle = isTitle;
                 } else {
                     // Bloco maior que a página: fatia o canvas em pedaços de página.
                     if (cursorY > marginY) { pdf.addPage(); cursorY = marginY; }
@@ -201,6 +208,7 @@ function render_contract_html(string $md): string
                     }
                     cursorY = marginY + ((canvas.height % pageHpx) / pxPerMm) + gap;
                     if (cursorY > pageH - marginY) { pdf.addPage(); cursorY = marginY; }
+                    prevWasTitle = false;
                 }
             }
 
@@ -209,7 +217,7 @@ function render_contract_html(string $md): string
 
         document.getElementById('btnDocx').addEventListener('click', function () {
             const header = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
-                'body{font-family:Poppins,Arial,sans-serif;font-size:11pt;}' +
+                'body{font-family:Poppins,Arial,sans-serif;font-size:12pt;}' +
                 'p{text-align:justify;line-height:1.5;margin:0 0 6pt;}' +
                 '.clause-title{text-align:center;font-weight:bold;text-transform:uppercase;margin:14px 0 8px;}' +
                 '.alinea{margin-left:24px;}.pendente{background:#ffe08a;font-weight:bold;}' +
