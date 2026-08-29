@@ -421,7 +421,8 @@ class ContractController extends Controller
 
         GeneratedContract::updateById($cid, ['status' => 'exported', 'updated_at' => date('Y-m-d H:i:s')]);
 
-        $logoUrl = Setting::get('magazine_logo', '/assets/images/wp/2024/11/logo-brooks-1400x396.webp');
+        // Logo específica do módulo de contratos (configurável em Configurações).
+        $logoUrl = Setting::get('contract_logo', '');
 
         $this->view('admin.contracts.export', [
             'contract' => $contract,
@@ -461,6 +462,7 @@ class ContractController extends Controller
             'defaultModel' => self::DEFAULT_MODEL,
             'models'       => $models,
             'hasKey'       => $hasKey,
+            'logoUrl'      => Setting::get('contract_logo', ''),
         ]);
     }
 
@@ -471,6 +473,53 @@ class ContractController extends Controller
         Setting::set('contract_openai_model', $model);
         $this->setFlash('success', 'Configurações salvas.');
         $this->redirect('/admin/contracts/settings');
+    }
+
+    /**
+     * Upload da logo do contrato (aparece no topo esquerdo do documento).
+     */
+    public function uploadLogo(): void
+    {
+        if (!$this->isPost()) { $this->json(['error' => 'Método inválido.'], 400); return; }
+        if (!isset($_FILES['contract_logo']) || $_FILES['contract_logo']['error'] !== UPLOAD_ERR_OK) {
+            $this->json(['error' => 'Erro no upload do arquivo.'], 400); return;
+        }
+        $file = $_FILES['contract_logo'];
+        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+        if (!in_array($file['type'], $allowed, true)) {
+            $this->json(['error' => 'Tipo não permitido. Use PNG, WEBP, JPG ou SVG.'], 400); return;
+        }
+        if ($file['size'] > 5 * 1024 * 1024) {
+            $this->json(['error' => 'Tamanho máximo: 5 MB.'], 400); return;
+        }
+
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = 'contract_logo_' . time() . '.' . $ext;
+        $uploadDir = ROOT_PATH . '/public/uploads/settings/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
+        if (move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
+            $old = Setting::get('contract_logo', '');
+            if (!empty($old) && file_exists(ROOT_PATH . '/public' . $old)) {
+                @unlink(ROOT_PATH . '/public' . $old);
+            }
+            $url = '/uploads/settings/' . $filename;
+            Setting::set('contract_logo', $url);
+            $this->json(['success' => true, 'url' => $url]);
+        } else {
+            $this->json(['error' => 'Erro ao salvar arquivo.'], 500);
+        }
+    }
+
+    public function removeLogo(): void
+    {
+        if (!$this->isPost()) { $this->json(['error' => 'Método inválido.'], 400); return; }
+        $old = Setting::get('contract_logo', '');
+        if (!empty($old) && file_exists(ROOT_PATH . '/public' . $old)) {
+            @unlink(ROOT_PATH . '/public' . $old);
+        }
+        Setting::set('contract_logo', '');
+        $this->json(['success' => true]);
     }
 
     /**

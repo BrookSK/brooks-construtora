@@ -3,7 +3,7 @@
 // Exportação do Contrato — DOCX e PDF client-side, com identidade visual
 // =====================================================================
 $contract = $contract ?? [];
-$logoUrl  = $logoUrl  ?? '/assets/images/wp/2024/11/logo-brooks-1400x396.webp';
+$logoUrl  = $logoUrl  ?? '';
 $markdown = (string)($contract['contract_markdown'] ?? '');
 
 $projectCode = $contract['project_code'] ?? 'Contrato';
@@ -47,9 +47,9 @@ function render_contract_html(string $md): string
             continue;
         }
 
-        // Comentários do modelo não vão para o documento
+        // Comentários do modelo e marcadores de logo não vão para o corpo
+        // (a logo aparece uma única vez no topo da página, à esquerda).
         if (str_starts_with($t, '<!--') || str_starts_with($t, '[LOGO]')) {
-            if (str_starts_with($t, '[LOGO]')) $html .= '<div class="logo-inline"></div>';
             continue;
         }
 
@@ -93,16 +93,14 @@ function render_contract_html(string $md): string
         body { background:#f4f6f9; font-family:'Poppins', sans-serif; }
         .toolbar { text-align:center; margin:1rem 0 1.5rem; }
         .doc { background:#fff; max-width:820px; margin:0 auto 2rem; padding:2.5cm 2.5cm 2cm; box-shadow:0 4px 20px rgba(0,0,0,.12); }
-        .doc-header { display:flex; align-items:center; border-bottom:2px solid #3a3b4e; padding-bottom:.6rem; margin-bottom:1.4rem; }
-        .doc-header img { max-height:48px; }
-        .clause-title { border:1px solid #333; text-align:center; font-weight:700; text-transform:uppercase; padding:.5rem; margin:1.3rem 0 .8rem; font-size:.82rem; letter-spacing:.5px; }
+        .doc-header { text-align:left; margin-bottom:1.6rem; }
+        .doc-header img { max-height:52px; }
+        .clause-title { text-align:center; font-weight:700; text-transform:uppercase; margin:1.4rem 0 .9rem; font-size:.9rem; letter-spacing:.5px; }
         .doc p { font-size:11pt; line-height:1.5; text-align:justify; margin:0 0 6pt; color:#000; }
-        .doc p.item { }
         .doc p.alinea { padding-left:1.5rem; text-indent:0; }
         .pendente { background:#ffe08a; color:#8a5a00; font-weight:600; padding:0 3px; border-radius:3px; }
         .assinatura-linha { text-align:center; margin-top:1.2rem; white-space:pre; font-family:monospace; }
         .spacer { height:6pt; }
-        .logo-inline { height:40px; background:url('<?= e_($logoUrl) ?>') no-repeat center; background-size:contain; margin:1rem 0; }
         @media print { .toolbar { display:none; } body { background:#fff; } .doc { box-shadow:none; margin:0; max-width:100%; } }
     </style>
 </head>
@@ -115,9 +113,11 @@ function render_contract_html(string $md): string
     </div>
 
     <div class="doc" id="docContent">
+        <?php if (!empty($logoUrl)): ?>
         <div class="doc-header">
-            <img src="<?= e_($logoUrl) ?>" alt="Brooks Construtora">
+            <img src="<?= e_($logoUrl) ?>" alt="Logo">
         </div>
+        <?php endif; ?>
         <?= render_contract_html($markdown) ?>
     </div>
 
@@ -146,7 +146,7 @@ function render_contract_html(string $md): string
             const header = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
                 'body{font-family:Poppins,Arial,sans-serif;font-size:11pt;}' +
                 'p{text-align:justify;line-height:1.5;margin:0 0 6pt;}' +
-                '.clause-title{border:1px solid #333;text-align:center;font-weight:bold;text-transform:uppercase;padding:6px;margin:14px 0 8px;}' +
+                '.clause-title{text-align:center;font-weight:bold;text-transform:uppercase;margin:14px 0 8px;}' +
                 '.alinea{margin-left:24px;}.pendente{background:#ffe08a;font-weight:bold;}' +
                 '.assinatura-linha{text-align:center;margin-top:16px;}' +
                 '</style></head><body>';

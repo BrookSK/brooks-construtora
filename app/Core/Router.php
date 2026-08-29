@@ -205,6 +205,8 @@ class Router
             'contracts/validate-cpf' => ['ContractController', 'validateCpf'],
             'contracts/settings' => ['ContractController', 'settings'],
             'contracts/settings/save' => ['ContractController', 'saveSettings'],
+            'contracts/settings/upload-logo' => ['ContractController', 'uploadLogo'],
+            'contracts/settings/remove-logo' => ['ContractController', 'removeLogo'],
             'contracts/diagnostics' => ['ContractController', 'diagnostics'],
             'contracts/diagnostics/detail' => ['ContractController', 'logDetail'],
             'contracts/diagnostics/clear' => ['ContractController', 'clearLogs'],

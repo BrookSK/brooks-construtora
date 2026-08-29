@@ -65,6 +65,32 @@
                 </form>
             </div>
         </div>
+
+        <div class="card mt-3">
+            <div class="card-header py-2"><i class="bi bi-image"></i> Logo do contrato</div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    A logo aparece uma única vez, no <strong>topo esquerdo</strong> da primeira página do contrato.
+                    Formatos: PNG, WEBP, JPG ou SVG (até 5 MB). Se nenhuma logo for enviada, o documento é gerado sem logo.
+                </p>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div id="logoPreviewWrap" style="<?= empty($logoUrl) ? 'display:none;' : '' ?>">
+                        <img id="logoPreview" src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo"
+                             style="max-height:56px; max-width:220px; border:1px solid #e3e6ea; border-radius:6px; padding:6px; background:#fff;">
+                    </div>
+                    <div>
+                        <input type="file" id="logoInput" accept="image/png,image/webp,image/jpeg,image/svg+xml" hidden>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnUploadLogo">
+                            <i class="bi bi-upload"></i> Enviar logo
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" id="btnRemoveLogo" style="<?= empty($logoUrl) ? 'display:none;' : '' ?>">
+                            <i class="bi bi-trash"></i> Remover
+                        </button>
+                        <div class="small text-muted mt-1" id="logoMsg"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="col-lg-5">
         <div class="card">
@@ -106,6 +132,46 @@
             sel.insertAdjacentHTML('beforeend', '<option value="' + custom.value.trim() + '" selected></option>');
             sel.value = custom.value.trim();
         }
+    });
+
+    // ---- Logo do contrato ----
+    const logoInput = document.getElementById('logoInput');
+    const btnUpload = document.getElementById('btnUploadLogo');
+    const btnRemove = document.getElementById('btnRemoveLogo');
+    const previewWrap = document.getElementById('logoPreviewWrap');
+    const preview = document.getElementById('logoPreview');
+    const logoMsg = document.getElementById('logoMsg');
+
+    btnUpload.addEventListener('click', () => logoInput.click());
+
+    logoInput.addEventListener('change', function () {
+        if (!this.files.length) return;
+        const fd = new FormData();
+        fd.append('contract_logo', this.files[0]);
+        logoMsg.textContent = 'Enviando…';
+        fetch('/admin/contracts/settings/upload-logo', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(res => {
+                if (res.error) { logoMsg.innerHTML = '<span class="text-danger">' + res.error + '</span>'; return; }
+                preview.src = res.url + '?t=' + Date.now();
+                previewWrap.style.display = '';
+                btnRemove.style.display = '';
+                logoMsg.innerHTML = '<span class="text-success">Logo atualizada.</span>';
+            })
+            .catch(() => { logoMsg.innerHTML = '<span class="text-danger">Erro no upload.</span>'; });
+    });
+
+    btnRemove.addEventListener('click', function () {
+        if (!confirm('Remover a logo do contrato?')) return;
+        fetch('/admin/contracts/settings/remove-logo', { method: 'POST' })
+            .then(r => r.json())
+            .then(res => {
+                if (res.error) { logoMsg.innerHTML = '<span class="text-danger">' + res.error + '</span>'; return; }
+                previewWrap.style.display = 'none';
+                btnRemove.style.display = 'none';
+                logoMsg.innerHTML = '<span class="text-muted">Logo removida.</span>';
+            })
+            .catch(() => { logoMsg.innerHTML = '<span class="text-danger">Erro ao remover.</span>'; });
     });
 })();
 </script>
