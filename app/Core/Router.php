@@ -192,6 +192,23 @@ class Router
             'briefing/store-contractor' => ['BriefingController', 'storeContractor'],
             'briefing/export-pdf' => ['BriefingController', 'exportPdf'],
 
+            // Elaboração de Contrato (proposta PDF → contrato preenchido)
+            'contracts' => ['ContractController', 'index'],
+            'contracts/wizard' => ['ContractController', 'wizard'],
+            'contracts/extract' => ['ContractController', 'extract'],
+            'contracts/generate' => ['ContractController', 'generate'],
+            'contracts/show' => ['ContractController', 'show'],
+            'contracts/save' => ['ContractController', 'save'],
+            'contracts/regenerate' => ['ContractController', 'regenerate'],
+            'contracts/export' => ['ContractController', 'export'],
+            'contracts/delete' => ['ContractController', 'delete'],
+            'contracts/validate-cpf' => ['ContractController', 'validateCpf'],
+            'contracts/settings' => ['ContractController', 'settings'],
+            'contracts/settings/save' => ['ContractController', 'saveSettings'],
+            'contracts/diagnostics' => ['ContractController', 'diagnostics'],
+            'contracts/diagnostics/detail' => ['ContractController', 'logDetail'],
+            'contracts/diagnostics/clear' => ['ContractController', 'clearLogs'],
+
             // Obras
             'obras' => ['ConstructionSiteController', 'index'],
             'obras/create' => ['ConstructionSiteController', 'create'],

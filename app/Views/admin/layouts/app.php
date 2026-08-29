@@ -317,6 +317,11 @@
                     <i class="bi bi-file-earmark-text"></i> <span class="link-text">Briefing & Contratos</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'contracts' ? 'active' : '' ?>" href="/admin/contracts" data-title="Elaboração de Contrato">
+                    <i class="bi bi-file-earmark-ruled"></i> <span class="link-text">Elaboração de Contrato</span>
+                </a>
+            </li>
             <?php endif; ?>
 
             <?php if (\App\Core\Auth::hasPermission('orders')): ?>

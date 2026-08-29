@@ -1,0 +1,163 @@
+<?php
+// =====================================================================
+// Exportação do Contrato — DOCX e PDF client-side, com identidade visual
+// =====================================================================
+$contract = $contract ?? [];
+$logoUrl  = $logoUrl  ?? '/assets/images/wp/2024/11/logo-brooks-1400x396.webp';
+$markdown = (string)($contract['contract_markdown'] ?? '');
+
+$projectCode = $contract['project_code'] ?? 'Contrato';
+$version = (int)($contract['version'] ?? 1);
+$fileSafe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $projectCode . '_v' . $version) ?: 'Contrato';
+
+function e_($v): string { return htmlspecialchars((string)($v ?? ''), ENT_QUOTES); }
+
+/**
+ * Converte o Markdown do contrato em HTML diagramado.
+ * As linhas de caixa (┌ │ └) viram títulos de cláusula centralizados;
+ * numeração 1.1 / a) recebe recuo; **negrito** é respeitado.
+ */
+function render_contract_html(string $md): string
+{
+    $lines = preg_split('/\r\n|\r|\n/', $md);
+    $html = '';
+    $boxBuffer = [];
+    $inBox = false;
+
+    $flushBox = function () use (&$boxBuffer, &$html) {
+        if (!$boxBuffer) return;
+        $title = trim(implode(' ', $boxBuffer));
+        $title = trim($title, " |");
+        if ($title !== '') {
+            $html .= '<div class="clause-title">' . e_($title) . '</div>';
+        }
+        $boxBuffer = [];
+    };
+
+    foreach ($lines as $raw) {
+        $line = rtrim($raw);
+        $t = trim($line);
+
+        // Bordas das caixas de título de cláusula
+        if (mb_strpos($t, '┌') !== false) { $inBox = true; $boxBuffer = []; continue; }
+        if (mb_strpos($t, '└') !== false) { $inBox = false; $flushBox(); continue; }
+        if ($inBox) {
+            $content = trim(str_replace('│', '', $t));
+            if ($content !== '') $boxBuffer[] = $content;
+            continue;
+        }
+
+        // Comentários do modelo não vão para o documento
+        if (str_starts_with($t, '<!--') || str_starts_with($t, '[LOGO]')) {
+            if (str_starts_with($t, '[LOGO]')) $html .= '<div class="logo-inline"></div>';
+            continue;
+        }
+
+        if ($t === '') { $html .= '<div class="spacer"></div>'; continue; }
+
+        $safe = e_($t);
+        // negrito **...**
+        $safe = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $safe);
+        // CONTRATANTE / CONTRATADA em negrito
+        $safe = preg_replace('/\b(CONTRATANTES?|CONTRATADA)\b/u', '<strong>$1</strong>', $safe);
+        // marcadores de pendência destacados
+        $safe = preg_replace('/(\[\[PENDENTE[^\]]*\]\])/', '<span class="pendente">$1</span>', $safe);
+
+        if (preg_match('/^\d+\.\d+(\.\d+)?\.?\s/', $t)) {
+            $html .= '<p class="item">' . $safe . '</p>';
+        } elseif (preg_match('/^[a-z]\)\s/i', $t)) {
+            $html .= '<p class="alinea">' . $safe . '</p>';
+        } elseif (preg_match('/^_{3,}$/', $t) || strpos($t, '________') !== false) {
+            $html .= '<div class="assinatura-linha">' . $safe . '</div>';
+        } else {
+            $html .= '<p class="corpo">' . $safe . '</p>';
+        }
+    }
+    $flushBox();
+    return $html;
+}
+?>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contrato — <?= e_($projectCode) ?> v<?= $version ?> | Brooks Construtora</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
+    <style>
+        body { background:#f4f6f9; font-family:'Poppins', sans-serif; }
+        .toolbar { text-align:center; margin:1rem 0 1.5rem; }
+        .doc { background:#fff; max-width:820px; margin:0 auto 2rem; padding:2.5cm 2.5cm 2cm; box-shadow:0 4px 20px rgba(0,0,0,.12); }
+        .doc-header { display:flex; align-items:center; border-bottom:2px solid #3a3b4e; padding-bottom:.6rem; margin-bottom:1.4rem; }
+        .doc-header img { max-height:48px; }
+        .clause-title { border:1px solid #333; text-align:center; font-weight:700; text-transform:uppercase; padding:.5rem; margin:1.3rem 0 .8rem; font-size:.82rem; letter-spacing:.5px; }
+        .doc p { font-size:11pt; line-height:1.5; text-align:justify; margin:0 0 6pt; color:#000; }
+        .doc p.item { }
+        .doc p.alinea { padding-left:1.5rem; text-indent:0; }
+        .pendente { background:#ffe08a; color:#8a5a00; font-weight:600; padding:0 3px; border-radius:3px; }
+        .assinatura-linha { text-align:center; margin-top:1.2rem; white-space:pre; font-family:monospace; }
+        .spacer { height:6pt; }
+        .logo-inline { height:40px; background:url('<?= e_($logoUrl) ?>') no-repeat center; background-size:contain; margin:1rem 0; }
+        @media print { .toolbar { display:none; } body { background:#fff; } .doc { box-shadow:none; margin:0; max-width:100%; } }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button class="btn btn-primary" id="btnPdf"><i class="bi bi-file-earmark-pdf"></i> Baixar PDF</button>
+        <button class="btn btn-dark" id="btnDocx"><i class="bi bi-file-earmark-word"></i> Baixar DOCX</button>
+        <button class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+        <a class="btn btn-outline-secondary" href="/admin/contracts/show/<?= (int)($contract['id'] ?? 0) ?>"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+
+    <div class="doc" id="docContent">
+        <div class="doc-header">
+            <img src="<?= e_($logoUrl) ?>" alt="Brooks Construtora">
+        </div>
+        <?= render_contract_html($markdown) ?>
+    </div>
+
+    <script>
+        const fileName = '<?= $fileSafe ?>';
+        const docEl = document.getElementById('docContent');
+
+        document.getElementById('btnPdf').addEventListener('click', async function () {
+            this.disabled = true;
+            const { jsPDF } = window.jspdf;
+            const canvas = await html2canvas(docEl, { scale: 2, useCORS: true });
+            const img = canvas.toDataURL('image/jpeg', 0.95);
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pw = pdf.internal.pageSize.getWidth();
+            const ph = pdf.internal.pageSize.getHeight();
+            const imgH = canvas.height * pw / canvas.width;
+            let left = imgH, pos = 0;
+            pdf.addImage(img, 'JPEG', 0, pos, pw, imgH);
+            left -= ph;
+            while (left > 0) { pos = left - imgH; pdf.addPage(); pdf.addImage(img, 'JPEG', 0, pos, pw, imgH); left -= ph; }
+            pdf.save(fileName + '.pdf');
+            this.disabled = false;
+        });
+
+        document.getElementById('btnDocx').addEventListener('click', function () {
+            const header = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
+                'body{font-family:Poppins,Arial,sans-serif;font-size:11pt;}' +
+                'p{text-align:justify;line-height:1.5;margin:0 0 6pt;}' +
+                '.clause-title{border:1px solid #333;text-align:center;font-weight:bold;text-transform:uppercase;padding:6px;margin:14px 0 8px;}' +
+                '.alinea{margin-left:24px;}.pendente{background:#ffe08a;font-weight:bold;}' +
+                '.assinatura-linha{text-align:center;margin-top:16px;}' +
+                '</style></head><body>';
+            const html = header + docEl.innerHTML + '</body></html>';
+            const blob = window.htmlDocx.asBlob(html);
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = fileName + '.docx';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        });
+    </script>
+</body>
+</html>

@@ -10,6 +10,15 @@ class OpenAIService
     private string $model;
     private string $imageModel;
 
+    /**
+     * Diagnóstico da última chamada de contrato (extração/geração).
+     * Preenchido por extractProposalFromPdf() e generateContract() para o
+     * módulo de Diagnóstico registrar em contract_ai_logs.
+     *
+     * @var array{model:string,http_status:?int,duration_ms:int,success:bool,request_payload:string,response_body:string,error_message:?string}|null
+     */
+    public ?array $lastDiagnostics = null;
+
     public function __construct()
     {
         $this->apiKey = Setting::get('openai_api_key', '');
@@ -19,6 +28,22 @@ class OpenAIService
         if (empty($this->apiKey)) {
             throw new \Exception('Chave da API OpenAI não configurada. Acesse Configurações para definir.');
         }
+    }
+
+    /**
+     * Sobrescreve o modelo GPT em uso (ex.: modelo específico do módulo de
+     * contratos, definido em Configurações).
+     */
+    public function setModel(string $model): void
+    {
+        if (trim($model) !== '') {
+            $this->model = trim($model);
+        }
+    }
+
+    public function getModel(): string
+    {
+        return $this->model;
     }
 
     public function generateTopics(int $quantity = 10, string $customPrompt = '', string $sourceUrls = ''): array
@@ -419,6 +444,206 @@ JSON puro sem markdown:
 }
 
 Regras: datas em YYYY-MM-DD, valores numéricos sem R$/%, documentos somente números.';
+    }
+
+    // ---------------------------------------------------------------
+    // Módulo Elaboração de Contrato
+    // ---------------------------------------------------------------
+
+    /**
+     * Extrai os dados estruturados da Proposta Comercial (PDF do orçamento).
+     *
+     * @return array JSON decodificado da proposta.
+     */
+    public function extractProposalFromPdf(string $filePath, string $fileName): array
+    {
+        if (!file_exists($filePath)) {
+            throw new \Exception("Arquivo PDF não encontrado: {$filePath}");
+        }
+
+        $prompt = \App\Services\ContractModelLibrary::EXTRACTION_PROMPT;
+        $start = microtime(true);
+        $fileId = $this->uploadPdfToOpenAI($filePath, $fileName);
+
+        $data = [
+            'model' => $this->model,
+            'input' => [
+                [
+                    'role' => 'user',
+                    'content' => [
+                        ['type' => 'file', 'file' => ['file_id' => $fileId]],
+                        ['type' => 'text', 'text' => $prompt],
+                    ],
+                ],
+            ],
+            'temperature' => 0.1,
+        ];
+
+        $ch = curl_init('https://api.openai.com/v1/responses');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($data),
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $this->apiKey,
+            ],
+            CURLOPT_TIMEOUT => 180,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if (curl_errno($ch)) {
+            $error = curl_error($ch);
+            curl_close($ch);
+            $this->setDiagnostics('extract', $httpCode, $start, false, $prompt, (string)$response, "Erro ao processar PDF: {$error}");
+            throw new \Exception("Erro ao processar PDF: {$error}");
+        }
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            return $this->extractProposalFallback($filePath, $prompt, $start);
+        }
+
+        $result = json_decode($response, true);
+        $text = '';
+        if (isset($result['output'])) {
+            foreach ($result['output'] as $block) {
+                if (isset($block['content'])) {
+                    foreach ($block['content'] as $c) {
+                        if (($c['type'] ?? '') === 'output_text') $text = $c['text'] ?? '';
+                    }
+                }
+            }
+        }
+
+        if (empty($text)) {
+            $this->setDiagnostics('extract', $httpCode, $start, false, $prompt, (string)$response, 'A IA não retornou dados da proposta.');
+            throw new \Exception('A IA não retornou dados da proposta.');
+        }
+
+        $this->setDiagnostics('extract', $httpCode, $start, true, $prompt, (string)$response, null);
+        return $this->parseJsonResponse($text);
+    }
+
+    /**
+     * Preenche $this->lastDiagnostics para o módulo de Diagnóstico.
+     */
+    private function setDiagnostics(string $op, ?int $status, float $start, bool $success, string $request, string $response, ?string $error): void
+    {
+        $this->lastDiagnostics = [
+            'operation'       => $op,
+            'model'           => $this->model,
+            'http_status'     => $status,
+            'duration_ms'     => (int)round((microtime(true) - $start) * 1000),
+            'success'         => $success,
+            'request_payload' => $request,
+            'response_body'   => $response,
+            'error_message'   => $error,
+        ];
+    }
+
+    private function extractProposalFallback(string $filePath, string $prompt, float $start): array
+    {
+        $base64 = base64_encode(file_get_contents($filePath));
+        $data = [
+            'model'    => $this->model,
+            'messages' => [
+                ['role' => 'system', 'content' => 'Extraia os dados da proposta comercial do PDF. Responda APENAS com JSON válido.'],
+                ['role' => 'user', 'content' => [
+                    ['type' => 'text', 'text' => $prompt],
+                    ['type' => 'file', 'file' => ['filename' => 'proposta.pdf', 'file_data' => 'data:application/pdf;base64,' . $base64]],
+                ]],
+            ],
+            'temperature' => 0.1,
+            'max_tokens'  => 8192,
+        ];
+        try {
+            $response = $this->request('https://api.openai.com/v1/chat/completions', $data);
+        } catch (\Exception $e) {
+            $this->setDiagnostics('extract', null, $start, false, $prompt, '', 'Fallback: ' . $e->getMessage());
+            throw $e;
+        }
+        $result = json_decode($response, true);
+        $text = $result['choices'][0]['message']['content'] ?? '';
+        $this->setDiagnostics('extract', 200, $start, $text !== '', $prompt, (string)$response, $text === '' ? 'Fallback não retornou conteúdo.' : null);
+        return $this->parseJsonResponse($text);
+    }
+
+    /**
+     * Gera o contrato a partir do modelo-base + dados. Retorna os blocos
+     * <CONTRATO> e <RELATORIO> separados.
+     *
+     * @return array{markdown:string, report:string, raw:string}
+     */
+    public function generateContract(string $systemPrompt, string $modelText, array $proposal, array $complementary): array
+    {
+        $userContent = "<MODELO_CONTRATO>\n" . $modelText . "\n</MODELO_CONTRATO>\n\n"
+            . "DADOS_PROPOSTA:\n" . json_encode($proposal, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n\n"
+            . "DADOS_COMPLEMENTARES:\n" . json_encode($complementary, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n\n"
+            . "Gere agora os blocos <CONTRATO> e <RELATORIO> conforme as regras.";
+
+        $data = [
+            'model'    => $this->model,
+            'messages' => [
+                ['role' => 'system', 'content' => $systemPrompt],
+                ['role' => 'user', 'content' => $userContent],
+            ],
+            'temperature' => 0.2,
+            'max_tokens'  => 8192,
+        ];
+
+        $start = microtime(true);
+        // registro do payload sem repetir o modelo inteiro (economia de espaço)
+        $reqLog = "SYSTEM PROMPT:\n" . $systemPrompt . "\n\nDADOS_PROPOSTA:\n"
+            . json_encode($proposal, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n\nDADOS_COMPLEMENTARES:\n"
+            . json_encode($complementary, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+        try {
+            $response = $this->request('https://api.openai.com/v1/chat/completions', $data);
+        } catch (\Exception $e) {
+            $this->setDiagnostics('generate', null, $start, false, $reqLog, '', $e->getMessage());
+            throw $e;
+        }
+        $result = json_decode($response, true);
+        $raw = $result['choices'][0]['message']['content'] ?? '';
+        if (trim($raw) === '') {
+            $this->setDiagnostics('generate', 200, $start, false, $reqLog, (string)$response, 'A IA não retornou o contrato.');
+            throw new \Exception('A IA não retornou o contrato.');
+        }
+        $this->setDiagnostics('generate', 200, $start, true, $reqLog, (string)$response, null);
+
+        $markdown = '';
+        $report = '';
+        if (preg_match('/<CONTRATO>(.*?)<\/CONTRATO>/s', $raw, $m)) {
+            $markdown = trim($m[1]);
+        }
+        if (preg_match('/<RELATORIO>(.*?)<\/RELATORIO>/s', $raw, $m)) {
+            $report = trim($m[1]);
+        }
+        // fallback: se a IA não usou as tags, considera tudo como contrato
+        if ($markdown === '') {
+            $markdown = trim(preg_replace('/<\/?RELATORIO>.*/s', '', $raw));
+        }
+
+        return ['markdown' => $markdown, 'report' => $report, 'raw' => $raw];
+    }
+
+    private function parseJsonResponse(string $text): array
+    {
+        $text = trim($text);
+        $text = preg_replace('/^```json\s*/i', '', $text);
+        $text = preg_replace('/\s*```$/i', '', $text);
+        // recorta do primeiro { ao último }
+        $start = strpos($text, '{');
+        $end = strrpos($text, '}');
+        if ($start !== false && $end !== false && $end > $start) {
+            $text = substr($text, $start, $end - $start + 1);
+        }
+        $data = json_decode($text, true);
+        if (!is_array($data)) {
+            throw new \Exception('Resposta da IA não é JSON válido.');
+        }
+        return $data;
     }
 
     private function downloadImage(string $url): ?string
