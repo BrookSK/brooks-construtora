@@ -17,9 +17,18 @@ $blocked = !empty($validation['blocked']);
     </h5>
     <div class="d-flex gap-2">
         <a href="/admin/contracts" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+        <a href="/admin/contracts/wizard/<?= (int)$contract['id'] ?>" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-ui-checks-grid"></i> Editar informações
+        </a>
         <button class="btn btn-outline-primary btn-sm" id="regenBtn"><i class="bi bi-arrow-repeat"></i> Regerar (nova versão)</button>
         <a href="/admin/contracts/export/<?= (int)$contract['id'] ?>" class="btn btn-primary btn-sm" id="exportBtn"><i class="bi bi-download"></i> Exportar</a>
     </div>
+</div>
+
+<div class="alert alert-light border small mb-3">
+    <i class="bi bi-info-circle"></i>
+    Abaixo você edita o <strong>texto final do contrato</strong>. Para alterar os dados extraídos da proposta
+    (valores, escopo, contratante, obra) e gerar de novo, use <strong>Editar informações</strong>.
 </div>
 
 <div class="row">

@@ -89,8 +89,8 @@ function c_status_badge(string $s): string {
                                     <i class="bi bi-pencil-square"></i> Continuar
                                 </a>
                             <?php else: ?>
-                                <a href="/admin/contracts/show/<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-primary" title="Abrir e editar"><i class="bi bi-pencil-square"></i></a>
-                                <a href="/admin/contracts/wizard/<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-info" title="Reabrir dados e regerar"><i class="bi bi-arrow-repeat"></i></a>
+                                <a href="/admin/contracts/show/<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-primary" title="Abrir contrato / editar texto"><i class="bi bi-eye"></i></a>
+                                <a href="/admin/contracts/wizard/<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-info" title="Editar informações (formulário)"><i class="bi bi-ui-checks-grid"></i></a>
                                 <a href="/admin/contracts/export/<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-secondary" title="Exportar"><i class="bi bi-download"></i></a>
                             <?php endif; ?>
                             <form method="POST" action="/admin/contracts/delete" class="d-inline" onsubmit="return confirm('<?= $isDraft ? 'Excluir este rascunho?' : 'Excluir esta versão do contrato?' ?>');">
