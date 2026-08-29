@@ -95,9 +95,9 @@ function render_contract_html(string $md): string
         .doc { background:#fff; max-width:820px; margin:0 auto 2rem; padding:2.5cm 2.5cm 2cm; box-shadow:0 4px 20px rgba(0,0,0,.12); }
         .doc-header { text-align:left; margin-bottom:1.6rem; }
         .doc-header img { max-height:52px; }
-        .clause-title { text-align:center; font-weight:700; text-transform:uppercase; margin:1.4rem 0 .9rem; font-size:.9rem; letter-spacing:.5px; }
-        .doc p { font-size:11pt; line-height:1.5; text-align:justify; margin:0 0 6pt; color:#000; }
-        .doc p.alinea { padding-left:1.5rem; text-indent:0; }
+        .clause-title { text-align:center; font-weight:700; text-transform:uppercase; margin:1.4rem 0 .9rem; font-size:.95rem; letter-spacing:.5px; }
+        .doc p { font-size:12pt; line-height:1.7; text-align:justify; margin:0 0 8pt; color:#000; }
+        .doc p.alinea { padding-left:1.8rem; text-indent:0; }
         .pendente { background:#ffe08a; color:#8a5a00; font-weight:600; padding:0 3px; border-radius:3px; }
         .assinatura-linha { text-align:center; margin-top:1.2rem; white-space:pre; font-family:monospace; }
         .spacer { height:6pt; }
@@ -147,30 +147,41 @@ function render_contract_html(string $md): string
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pageW = pdf.internal.pageSize.getWidth();
             const pageH = pdf.internal.pageSize.getHeight();
-            const margin = 18;                       // mm
-            const contentW = pageW - margin * 2;
-            const usableH = pageH - margin * 2;      // altura útil por página em mm
-            let cursorY = margin;
+            const marginX = 22;                      // margem lateral (mm)
+            const marginY = 22;                      // margem sup/inf (mm)
+            const contentW = pageW - marginX * 2;
+            const usableH = pageH - marginY * 2;     // altura útil por página em mm
+            const gap = 4;                           // respiro entre blocos (mm)
+            const gapBeforeTitle = 8;                // respiro extra antes de títulos de cláusula
+            let cursorY = marginY;
 
             const blocks = Array.from(docEl.children);
 
             for (const el of blocks) {
                 if (!el.textContent.trim() && !el.querySelector('img')) continue;
 
+                const isTitle = el.classList.contains('clause-title');
+                const isHeader = el.classList.contains('doc-header');
+
                 const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
                 const imgH = canvas.height * contentW / canvas.width; // altura do bloco em mm
 
+                // espaço extra antes de um título de cláusula (se não for o topo da página)
+                if (isTitle && cursorY > marginY) {
+                    cursorY += gapBeforeTitle;
+                }
+
                 if (imgH <= usableH) {
                     // Bloco cabe inteiro: nova página se não couber no resto.
-                    if (cursorY + imgH > pageH - margin) {
+                    if (cursorY + imgH > pageH - marginY) {
                         pdf.addPage();
-                        cursorY = margin;
+                        cursorY = marginY;
                     }
-                    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', margin, cursorY, contentW, imgH);
-                    cursorY += imgH + 1.5;
+                    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', marginX, cursorY, contentW, imgH);
+                    cursorY += imgH + (isHeader ? gap * 2 : gap);
                 } else {
                     // Bloco maior que a página: fatia o canvas em pedaços de página.
-                    if (cursorY > margin) { pdf.addPage(); cursorY = margin; }
+                    if (cursorY > marginY) { pdf.addPage(); cursorY = marginY; }
                     const pxPerMm = canvas.width / contentW;
                     const pageHpx = Math.floor(usableH * pxPerMm);
                     let offset = 0;
@@ -185,11 +196,11 @@ function render_contract_html(string $md): string
                         ctx.drawImage(canvas, 0, offset, canvas.width, sliceHpx, 0, 0, canvas.width, sliceHpx);
                         const sliceHmm = sliceHpx / pxPerMm;
                         if (offset > 0) { pdf.addPage(); }
-                        pdf.addImage(part.toDataURL('image/jpeg', 0.95), 'JPEG', margin, margin, contentW, sliceHmm);
+                        pdf.addImage(part.toDataURL('image/jpeg', 0.95), 'JPEG', marginX, marginY, contentW, sliceHmm);
                         offset += sliceHpx;
                     }
-                    cursorY = margin + ((canvas.height % pageHpx) / pxPerMm) + 1.5;
-                    if (cursorY > pageH - margin) { pdf.addPage(); cursorY = margin; }
+                    cursorY = marginY + ((canvas.height % pageHpx) / pxPerMm) + gap;
+                    if (cursorY > pageH - marginY) { pdf.addPage(); cursorY = marginY; }
                 }
             }
 
