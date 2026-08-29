@@ -158,9 +158,9 @@
             <div class="card-header py-2"><i class="bi bi-briefcase"></i> Contratada (empresa)</div>
             <div class="card-body">
                 <div class="mb-2">
-                    <label class="form-label small">Selecione a empresa cadastrada</label>
+                    <label class="form-label small">Selecione uma empresa cadastrada <span class="text-muted">(opcional — preenche os campos automaticamente)</span></label>
                     <select class="form-select form-select-sm" id="contractorSelect" name="contratada_id">
-                        <option value="">— selecione —</option>
+                        <option value="">— selecione ou preencha manualmente abaixo —</option>
                         <?php foreach ($contractors as $co): ?>
                             <option value="<?= (int)$co['id'] ?>"
                                 data-razao="<?= htmlspecialchars($co['company_name'] ?? '') ?>"
@@ -173,10 +173,10 @@
                     </select>
                 </div>
                 <div class="row g-2">
-                    <div class="col-md-6"><label class="form-label small">Razão Social</label><input class="form-control form-control-sm" name="contratada_razao_social" readonly></div>
-                    <div class="col-md-6"><label class="form-label small">Nome Fantasia</label><input class="form-control form-control-sm" name="contratada_nome_fantasia" readonly></div>
-                    <div class="col-md-4"><label class="form-label small">CNPJ</label><input class="form-control form-control-sm" name="contratada_cnpj" readonly></div>
-                    <div class="col-md-8"><label class="form-label small">Endereço da sede</label><input class="form-control form-control-sm" name="contratada_endereco_sede" readonly></div>
+                    <div class="col-md-6"><label class="form-label small">Razão Social</label><input class="form-control form-control-sm" name="contratada_razao_social"></div>
+                    <div class="col-md-6"><label class="form-label small">Nome Fantasia</label><input class="form-control form-control-sm" name="contratada_nome_fantasia"></div>
+                    <div class="col-md-4"><label class="form-label small">CNPJ</label><input class="form-control form-control-sm" name="contratada_cnpj"></div>
+                    <div class="col-md-8"><label class="form-label small">Endereço da sede</label><input class="form-control form-control-sm" name="contratada_endereco_sede"></div>
                 </div>
             </div>
         </div>
