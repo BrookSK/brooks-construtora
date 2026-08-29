@@ -23,13 +23,14 @@
                 <form method="POST" action="/admin/contracts/settings/save">
                     <p class="text-muted small">
                         Escolha o modelo usado para <strong>ler o PDF da proposta</strong> e
-                        <strong>redigir o contrato</strong>. Se deixar em branco, o módulo usa o modelo
-                        global do sistema (<code><?= htmlspecialchars($globalModel) ?></code>).
+                        <strong>redigir o contrato</strong>. Se deixar em branco, o módulo usa
+                        <code><?= htmlspecialchars($defaultModel) ?></code> — necessário porque a leitura
+                        do PDF exige um modelo com suporte a arquivos e contexto grande.
                     </p>
 
                     <label class="form-label small">Modelo para este módulo</label>
                     <select class="form-select" id="modelSelect" name="contract_openai_model">
-                        <option value="">— usar modelo global (<?= htmlspecialchars($globalModel) ?>) —</option>
+                        <option value="">— padrão do módulo (<?= htmlspecialchars($defaultModel) ?>) —</option>
                         <?php
                         $known = false;
                         foreach ($models as $val => $label):
@@ -71,7 +72,7 @@
             <div class="card-body small">
                 <div class="d-flex justify-content-between mb-1">
                     <span class="text-muted">Módulo de contratos</span>
-                    <strong><?= htmlspecialchars($currentModel !== '' ? $currentModel : $globalModel . ' (global)') ?></strong>
+                    <strong><?= htmlspecialchars($currentModel !== '' ? $currentModel : $defaultModel . ' (padrão)') ?></strong>
                 </div>
                 <div class="d-flex justify-content-between">
                     <span class="text-muted">Chave da API</span>

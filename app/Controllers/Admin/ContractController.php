@@ -59,12 +59,18 @@ class ContractController extends Controller
     private function ai(): OpenAIService
     {
         $ai = new OpenAIService();
-        $model = Setting::get('contract_openai_model', '');
-        if (!empty($model)) {
-            $ai->setModel($model);
+        $model = trim((string)Setting::get('contract_openai_model', ''));
+        // O modelo global do sistema costuma ser gpt-4 (8k, sem suporte a PDF).
+        // A leitura da proposta exige contexto grande + arquivos → gpt-4o por padrão.
+        if ($model === '') {
+            $model = self::DEFAULT_MODEL;
         }
+        $ai->setModel($model);
         return $ai;
     }
+
+    /** Modelo padrão do módulo: capaz de ler PDF e com contexto grande. */
+    public const DEFAULT_MODEL = 'gpt-4o';
 
     /**
      * Persiste o diagnóstico da última chamada à IA.
@@ -444,7 +450,6 @@ class ContractController extends Controller
         $this->ensureReady();
 
         $current = Setting::get('contract_openai_model', '');
-        $globalModel = Setting::get('openai_model', 'gpt-4');
         $hasKey = !empty(Setting::get('openai_api_key', ''));
 
         $models = $this->availableModels();
@@ -453,7 +458,7 @@ class ContractController extends Controller
             'user'         => Auth::user(),
             'flash'        => $this->getFlash(),
             'currentModel' => $current,
-            'globalModel'  => $globalModel,
+            'defaultModel' => self::DEFAULT_MODEL,
             'models'       => $models,
             'hasKey'       => $hasKey,
         ]);

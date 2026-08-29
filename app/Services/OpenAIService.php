@@ -501,7 +501,9 @@ Regras: datas em YYYY-MM-DD, valores numéricos sem R$/%, documentos somente nú
         curl_close($ch);
 
         if ($httpCode !== 200) {
-            return $this->extractProposalFallback($filePath, $prompt, $start);
+            $primaryErr = json_decode((string)$response, true);
+            $primaryMsg = $primaryErr['error']['message'] ?? ('HTTP ' . $httpCode);
+            return $this->extractProposalFallback($filePath, $prompt, $start, $primaryMsg);
         }
 
         $result = json_decode($response, true);
@@ -542,7 +544,7 @@ Regras: datas em YYYY-MM-DD, valores numéricos sem R$/%, documentos somente nú
         ];
     }
 
-    private function extractProposalFallback(string $filePath, string $prompt, float $start): array
+    private function extractProposalFallback(string $filePath, string $prompt, float $start, string $primaryMsg = ''): array
     {
         $base64 = base64_encode(file_get_contents($filePath));
         $data = [
@@ -557,15 +559,18 @@ Regras: datas em YYYY-MM-DD, valores numéricos sem R$/%, documentos somente nú
             'temperature' => 0.1,
             'max_tokens'  => 8192,
         ];
+        $prefix = $primaryMsg !== '' ? "[API principal falhou: {$primaryMsg}] " : '';
         try {
             $response = $this->request('https://api.openai.com/v1/chat/completions', $data);
         } catch (\Exception $e) {
-            $this->setDiagnostics('extract', null, $start, false, $prompt, '', 'Fallback: ' . $e->getMessage());
-            throw $e;
+            $msg = $prefix . $e->getMessage();
+            $this->setDiagnostics('extract', null, $start, false, $prompt, '', $msg);
+            throw new \Exception($msg);
         }
         $result = json_decode($response, true);
         $text = $result['choices'][0]['message']['content'] ?? '';
-        $this->setDiagnostics('extract', 200, $start, $text !== '', $prompt, (string)$response, $text === '' ? 'Fallback não retornou conteúdo.' : null);
+        $err = $text === '' ? ($prefix . 'Fallback não retornou conteúdo.') : null;
+        $this->setDiagnostics('extract', 200, $start, $text !== '', $prompt, (string)$response, $err);
         return $this->parseJsonResponse($text);
     }
 
