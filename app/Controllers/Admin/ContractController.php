@@ -343,6 +343,8 @@ class ContractController extends Controller
                 $complementary
             );
 
+            $gen['markdown'] = $this->applyConditionalClauses($gen['markdown'], $complementary, $proposal);
+
             $validator = new ContractValidator();
             $validation = $validator->validate($proposal, $complementary, $gen['markdown']);
 
@@ -466,6 +468,7 @@ class ContractController extends Controller
         $ai = $this->ai();
         try {
             $gen = $ai->generateContract($template['system_prompt'], $template['model_text'], $proposal, $complementary);
+            $gen['markdown'] = $this->applyConditionalClauses($gen['markdown'], $complementary, $proposal);
 
             $validator = new ContractValidator();
             $validation = $validator->validate($proposal, $complementary, $gen['markdown']);
@@ -733,5 +736,95 @@ class ContractController extends Controller
         if (is_array($raw)) return $raw;
         $decoded = json_decode((string)$raw, true);
         return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * Aplica supressões condicionais de forma determinística no Markdown gerado,
+     * independentemente de a IA ter respeitado as instruções do prompt.
+     *
+     * - Remove o parágrafo "Penalidade por Atraso Injustificado na Obra" (Cl. 3.5)
+     *   quando multa diária OU teto estiverem vazios/zero.
+     * - Remove o item 2.2 (segregação fiscal) quando os percentuais fiscais
+     *   estiverem vazios/zero.
+     */
+    private function applyConditionalClauses(string $md, array $complementary, array $proposal): string
+    {
+        $filled = function ($v): bool {
+            $s = trim((string)$v);
+            if ($s === '') return false;
+            $n = (float)str_replace(['%', ' ', '.'], ['', '', ''], str_replace(',', '.', $s));
+            return $n != 0.0;
+        };
+
+        // ---- Cl. 3.5: penalidade por atraso na obra ----
+        $multa = $complementary['multa'] ?? [];
+        $hasDiaria = $filled($multa['atraso_diario_pct'] ?? '');
+        $hasTeto = $filled($multa['teto_pct'] ?? '');
+        if (!$hasDiaria || !$hasTeto) {
+            $md = $this->removeParagraph($md, 'Penalidade por Atraso Injustificado na Obra');
+        }
+
+        // ---- Cl. 2.2: segregação fiscal ----
+        $nn = $proposal['notas_negociacao'] ?? [];
+        $fiscalOk = $filled($nn['pct_construtora'] ?? '')
+                 && $filled($nn['pct_material'] ?? '')
+                 && $filled($nn['pct_fornecedores'] ?? '');
+        if (!$fiscalOk) {
+            $md = $this->removeClauseItem($md, '2.2');
+        }
+
+        return $md;
+    }
+
+    /**
+     * Remove um parágrafo (bloco de texto delimitado por linhas em branco)
+     * cujo início contenha o rótulo informado.
+     */
+    private function removeParagraph(string $md, string $label): string
+    {
+        $blocks = preg_split('/(\R{2,})/', $md, -1, PREG_SPLIT_DELIM_CAPTURE);
+        $out = '';
+        foreach ($blocks as $b) {
+            if (mb_stripos($b, $label) !== false) {
+                continue; // descarta o parágrafo e o separador cai fora naturalmente
+            }
+            $out .= $b;
+        }
+        // normaliza múltiplas quebras que possam ter sobrado
+        return preg_replace('/\R{3,}/', "\n\n", $out);
+    }
+
+    /**
+     * Remove um item de cláusula (ex.: "2.2") e suas alíneas, do rótulo até o
+     * próximo item numérico do mesmo nível ou próxima cláusula/caixa.
+     */
+    private function removeClauseItem(string $md, string $item): string
+    {
+        $lines = preg_split('/\R/', $md);
+        $out = [];
+        $removing = false;
+        $itemEsc = preg_quote($item, '/');
+        foreach ($lines as $line) {
+            $t = ltrim($line);
+            if (!$removing) {
+                if (preg_match('/^' . $itemEsc . '[\.\s]/', $t)) {
+                    $removing = true;
+                    continue;
+                }
+                $out[] = $line;
+            } else {
+                // encerra a remoção ao encontrar o próximo item numérico, título
+                // de cláusula (caixa) ou linha "CLÁUSULA"
+                if (preg_match('/^\d+\.\d+[\.\s]/', $t)
+                    || preg_match('/^\d+\.\s/', $t)
+                    || mb_stripos($t, 'CLÁUSULA') !== false
+                    || mb_strpos($t, '┌') !== false) {
+                    $removing = false;
+                    $out[] = $line;
+                }
+                // caso contrário, continua descartando (alíneas a, b, etc.)
+            }
+        }
+        return preg_replace('/\R{3,}/', "\n\n", implode("\n", $out));
     }
 }
