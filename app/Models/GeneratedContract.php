@@ -55,6 +55,20 @@ class GeneratedContract extends Model
         return (int)($row['v'] ?? 0) + 1;
     }
 
+    /**
+     * Busca um contrato pelo token de compartilhamento público (link ativo).
+     */
+    public static function findByShareToken(string $token): ?array
+    {
+        if ($token === '') {
+            return null;
+        }
+        return Database::fetch(
+            "SELECT * FROM generated_contracts WHERE share_token = ? AND share_enabled = 1 LIMIT 1",
+            [$token]
+        );
+    }
+
     public static function findWithMeta(int $id): ?array
     {
         return Database::fetch(

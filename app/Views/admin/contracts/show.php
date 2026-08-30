@@ -15,10 +15,13 @@ $blocked = !empty($validation['blocked']);
         <span class="text-muted">— <?= htmlspecialchars($contract['project_name'] ?? '') ?></span>
         <span class="badge bg-dark">v<?= (int)$contract['version'] ?></span>
     </h5>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
         <a href="/admin/contracts" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
         <a href="/admin/contracts/wizard/<?= (int)$contract['id'] ?>" class="btn btn-outline-primary btn-sm">
             <i class="bi bi-ui-checks-grid"></i> Editar informações
+        </a>
+        <a href="/admin/contracts/editor/<?= (int)$contract['id'] ?>" target="_blank" class="btn btn-success btn-sm">
+            <i class="bi bi-arrows-fullscreen"></i> Editar contrato
         </a>
         <button class="btn btn-outline-primary btn-sm" id="regenBtn"><i class="bi bi-arrow-repeat"></i> Regerar (nova versão)</button>
         <a href="/admin/contracts/export/<?= (int)$contract['id'] ?>" class="btn btn-primary btn-sm" id="exportBtn"><i class="bi bi-download"></i> Exportar</a>
@@ -52,12 +55,18 @@ $blocked = !empty($validation['blocked']);
 
         <div class="card">
             <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-pencil-square"></i> Contrato (edição)</span>
-                <button class="btn btn-sm btn-success" id="saveBtn"><i class="bi bi-save"></i> Salvar</button>
+                <span><i class="bi bi-pencil-square"></i> Contrato (edição rápida)</span>
+                <div class="d-flex gap-2">
+                    <a href="/admin/contracts/editor/<?= (int)$contract['id'] ?>" target="_blank" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-arrows-fullscreen"></i> Abrir em tela cheia
+                    </a>
+                    <button class="btn btn-sm btn-success" id="saveBtn"><i class="bi bi-save"></i> Salvar</button>
+                </div>
             </div>
             <div class="card-body">
-                <textarea id="markdownEditor" class="form-control" rows="30" style="font-family:ui-monospace,Consolas,monospace; font-size:.82rem;"><?= htmlspecialchars($mk) ?></textarea>
+                <textarea id="markdownEditor" class="form-control" rows="30" style="font-family:ui-monospace,Consolas,monospace; font-size:.9rem; line-height:1.6;"><?= htmlspecialchars($mk) ?></textarea>
                 <div class="form-text">
+                    Para editar com mais espaço, use <strong>Abrir em tela cheia</strong>.
                     Apenas os campos variáveis devem mudar. Marcadores <code>[[PENDENTE: ...]]</code> bloqueiam a exportação.
                 </div>
             </div>
@@ -74,6 +83,31 @@ $blocked = !empty($validation['blocked']);
                 <div class="d-flex justify-content-between"><span class="text-muted">PDF de origem</span><span class="text-truncate ms-2" style="max-width:150px;" title="<?= htmlspecialchars($contract['source_pdf'] ?? '') ?>"><?= htmlspecialchars($contract['source_pdf'] ?? '—') ?></span></div>
                 <div class="d-flex justify-content-between"><span class="text-muted">Gerado por</span><span><?= htmlspecialchars($contract['created_by_name'] ?? '—') ?></span></div>
                 <div class="d-flex justify-content-between"><span class="text-muted">Em</span><span><?= !empty($contract['created_at']) ? date('d/m/Y H:i', strtotime($contract['created_at'])) : '—' ?></span></div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header py-2"><i class="bi bi-link-45deg"></i> Link público de edição</div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">
+                    Gere um link para o jurídico (ou terceiros) editar e salvar o contrato sem acesso à plataforma.
+                </p>
+                <?php $shareEnabled = !empty($contract['share_enabled']); $shareToken = $contract['share_token'] ?? ''; ?>
+                <div id="shareActive" style="<?= $shareEnabled ? '' : 'display:none;' ?>">
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" class="form-control" id="shareUrl" readonly
+                               value="<?= $shareEnabled ? htmlspecialchars((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . '/contrato/editar/' . $shareToken) : '' ?>">
+                        <button class="btn btn-outline-secondary" id="copyShare" title="Copiar"><i class="bi bi-clipboard"></i></button>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="#" target="_blank" id="openShare" class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up-right"></i> Abrir</a>
+                        <button class="btn btn-sm btn-outline-danger" id="disableShare"><i class="bi bi-slash-circle"></i> Desativar link</button>
+                    </div>
+                    <div class="form-text text-success" id="shareMsg"></div>
+                </div>
+                <div id="shareInactive" style="<?= $shareEnabled ? 'display:none;' : '' ?>">
+                    <button class="btn btn-sm btn-primary" id="enableShare"><i class="bi bi-link"></i> Gerar link compartilhável</button>
+                </div>
             </div>
         </div>
 
@@ -136,6 +170,63 @@ $blocked = !empty($validation['blocked']);
                 location.href = res.show_url;
             }).catch(() => { this.disabled = false; alert('Erro ao regerar.'); });
     });
+
+    // ---- Link público de edição ----
+    const enableShare = document.getElementById('enableShare');
+    const disableShare = document.getElementById('disableShare');
+    const shareActive = document.getElementById('shareActive');
+    const shareInactive = document.getElementById('shareInactive');
+    const shareUrl = document.getElementById('shareUrl');
+    const openShare = document.getElementById('openShare');
+    const copyShare = document.getElementById('copyShare');
+    const shareMsg = document.getElementById('shareMsg');
+
+    function setShareUrl(url) {
+        shareUrl.value = url;
+        openShare.href = url;
+    }
+    if (openShare && shareUrl.value) openShare.href = shareUrl.value;
+
+    function shareRequest(action) {
+        const fd = new FormData();
+        fd.append('contract_id', cid);
+        fd.append('action', action);
+        return fetch('/admin/contracts/share', { method: 'POST', body: fd }).then(r => r.json());
+    }
+
+    if (enableShare) {
+        enableShare.addEventListener('click', function () {
+            this.disabled = true;
+            shareRequest('enable').then(res => {
+                this.disabled = false;
+                if (res.error) { alert(res.error); return; }
+                setShareUrl(res.url);
+                shareInactive.style.display = 'none';
+                shareActive.style.display = '';
+            }).catch(() => { this.disabled = false; alert('Erro ao gerar link.'); });
+        });
+    }
+    if (disableShare) {
+        disableShare.addEventListener('click', function () {
+            if (!confirm('Desativar o link? Quem tiver o endereço não conseguirá mais editar.')) return;
+            this.disabled = true;
+            shareRequest('disable').then(res => {
+                this.disabled = false;
+                if (res.error) { alert(res.error); return; }
+                shareActive.style.display = 'none';
+                shareInactive.style.display = '';
+            }).catch(() => { this.disabled = false; alert('Erro ao desativar.'); });
+        });
+    }
+    if (copyShare) {
+        copyShare.addEventListener('click', function () {
+            shareUrl.select();
+            navigator.clipboard.writeText(shareUrl.value).then(() => {
+                shareMsg.textContent = 'Link copiado!';
+                setTimeout(() => shareMsg.textContent = '', 2500);
+            }).catch(() => { document.execCommand('copy'); });
+        });
+    }
 })();
 </script>
 

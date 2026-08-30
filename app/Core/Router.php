@@ -199,7 +199,9 @@ class Router
             'contracts/save-draft' => ['ContractController', 'saveDraft'],
             'contracts/generate' => ['ContractController', 'generate'],
             'contracts/show' => ['ContractController', 'show'],
+            'contracts/editor' => ['ContractController', 'editor'],
             'contracts/save' => ['ContractController', 'save'],
+            'contracts/share' => ['ContractController', 'share'],
             'contracts/regenerate' => ['ContractController', 'regenerate'],
             'contracts/export' => ['ContractController', 'export'],
             'contracts/delete' => ['ContractController', 'delete'],
@@ -474,6 +476,10 @@ class Router
             'pedido/upload-audio' => ['PurchaseOrderController', 'uploadAudioPublic'],
             'pedido/delete-audio' => ['PurchaseOrderController', 'deleteAudioPublic'],
             'pedido/list-audios' => ['PurchaseOrderController', 'listAudiosPublic'],
+
+            // Edição pública de contrato (link compartilhável — jurídico externo)
+            'contrato/editar/salvar' => ['ContractController', 'save'],
+            'contrato/editar' => ['ContractController', 'edit'],
 
             // Lista Semanal de Materiais (público)
             'lista-semanal' => ['WeeklyMaterialController', 'form'],

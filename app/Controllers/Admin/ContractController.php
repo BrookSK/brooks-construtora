@@ -33,6 +33,7 @@ class ContractController extends Controller
         $files = [
             ROOT_PATH . '/database/migrations/039_create_contract_generation.sql',
             ROOT_PATH . '/database/migrations/040_create_contract_ai_logs.sql',
+            ROOT_PATH . '/database/migrations/041_add_contract_share_token.sql',
         ];
         $pdo = Database::getConnection();
         foreach ($files as $file) {
@@ -423,6 +424,25 @@ class ContractController extends Controller
     }
 
     // =================================================================
+    // EDITOR EM TELA CHEIA — janela dedicada só para edição do texto
+    // =================================================================
+
+    public function editor(string $id = ''): void
+    {
+        $cid = (int)($id ?: $this->input('id'));
+        $contract = GeneratedContract::findWithMeta($cid);
+        if (!$contract) {
+            $this->setFlash('error', 'Contrato não encontrado.');
+            $this->redirect('/admin/contracts'); return;
+        }
+
+        $this->view('admin.contracts.editor', [
+            'contract'   => $contract,
+            'validation' => json_decode($contract['validation_json'] ?? 'null', true),
+        ]);
+    }
+
+    // =================================================================
     // SAVE — salva edição do markdown (WYSIWYG) sem criar nova versão
     // =================================================================
 
@@ -447,6 +467,51 @@ class ContractController extends Controller
         ]);
 
         $this->json(['success' => true, 'validation' => $validation]);
+    }
+
+    // =================================================================
+    // LINK PÚBLICO DE EDIÇÃO — gerar / revogar (para o jurídico externo)
+    // =================================================================
+
+    public function share(): void
+    {
+        if (!$this->isPost()) { $this->json(['error' => 'Método inválido.'], 400); return; }
+        $this->ensureReady();
+
+        $cid = (int)$this->input('contract_id');
+        $action = trim($this->input('action', 'enable'));
+        $contract = GeneratedContract::find($cid);
+        if (!$contract) { $this->json(['error' => 'Não encontrado.'], 404); return; }
+
+        if ($action === 'disable') {
+            GeneratedContract::updateById($cid, ['share_enabled' => 0, 'updated_at' => date('Y-m-d H:i:s')]);
+            $this->json(['success' => true, 'enabled' => false]);
+            return;
+        }
+
+        // habilita: mantém o token existente ou gera um novo
+        $token = trim((string)($contract['share_token'] ?? ''));
+        if ($token === '') {
+            $token = bin2hex(random_bytes(24));
+        }
+        GeneratedContract::updateById($cid, [
+            'share_token'   => $token,
+            'share_enabled' => 1,
+            'updated_at'    => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->json([
+            'success' => true,
+            'enabled' => true,
+            'url'     => $this->publicBaseUrl() . '/contrato/editar/' . $token,
+        ]);
+    }
+
+    private function publicBaseUrl(): string
+    {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        return $scheme . '://' . $host;
     }
 
     // =================================================================
