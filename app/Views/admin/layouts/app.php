@@ -471,11 +471,11 @@
 
             <?php // Veículo - qualquer usuário logado pode acessar ?>
             <li class="nav-item mt-2" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
-                <small class="text-uppercase px-3 opacity-50 nav-section-label" style="font-size:0.65rem; letter-spacing:1px;">Veículo</small>
+                <small class="text-uppercase px-3 opacity-50 nav-section-label" style="font-size:0.65rem; letter-spacing:1px;">Veículos</small>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= ($currentPage ?? '') === 'vehicle' ? 'active' : '' ?>" href="/admin/vehicle" data-title="Saveiro">
-                    <i class="bi bi-truck-front"></i> <span class="link-text">Saveiro</span>
+                <a class="nav-link <?= ($currentPage ?? '') === 'vehicle' ? 'active' : '' ?>" href="/admin/vehicle" data-title="Veículos">
+                    <i class="bi bi-truck-front"></i> <span class="link-text">Veículos</span>
                 </a>
             </li>
 

@@ -1,4 +1,4 @@
-<?php $pageTitle = 'Controle do Saveiro'; $currentPage = 'vehicle'; ?>
+<?php $pageTitle = 'Veículos'; $currentPage = 'vehicle'; ?>
 <?php ob_start(); ?>
 
 <?php

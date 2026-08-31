@@ -31,7 +31,7 @@ class VehicleController extends Controller
             'stats' => $stats,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
-            'pageTitle' => 'Controle do Saveiro',
+            'pageTitle' => 'Veículos',
             'currentPage' => 'vehicle',
         ]);
     }
