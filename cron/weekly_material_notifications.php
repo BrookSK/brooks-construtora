@@ -57,11 +57,12 @@ function wm_log(string $msg): void
 wm_log("[weekly-cron:$action] Iniciando");
 
 /**
- * Gera o próximo ciclo e envia os links agrupados por responsável.
+ * Gera o ciclo de hoje e envia os links agrupados por responsável.
+ * O ciclo SEMPRE usa a data de hoje como week_start (não projeta futuro).
  */
 function wm_notify(string $baseUrl, string $webhookUrl): int
 {
-    $nextCycle = WeeklyMaterialRequest::nextCycleStart();
+    $nextCycle = date('Y-m-d'); // ciclo = hoje
 
     // Diagnóstico: quantos gerentes são responsáveis pela lista semanal?
     // (marcados com is_weekly_manager OU vinculados a obra na fase 'weekly')
@@ -139,7 +140,12 @@ function wm_deadlineTs(string $notifiedAt, string $deadlineCfg): int
  */
 function wm_remind(string $baseUrl, string $webhookUrl): int
 {
-    $cycle = WeeklyMaterialRequest::latestCycleStart() ?: WeeklyMaterialRequest::nextCycleStart();
+    // Cobra o ciclo mais recente já existente (não cria nada novo)
+    $cycle = WeeklyMaterialRequest::latestCycleStart();
+    if (!$cycle) {
+        wm_log("Nenhum ciclo existente para cobrar.");
+        return 0;
+    }
     $requests = WeeklyMaterialRequest::getByWeek($cycle);
 
     $deadlineCfg = Setting::get('weekly_response_deadline', 'same_day_18');
@@ -243,44 +249,36 @@ if ($action === 'notify') {
     $autoReminder = Setting::get('weekly_auto_reminder', '1') === '1';
     $autoOverdue = Setting::get('weekly_auto_overdue', '1') === '1';
 
-    $todayDow = (int) date('N'); // 1=Seg ... 7=Dom
-    $currentHour = (int) date('H');
-    $sendHour = (int) explode(':', $sendTime)[0];
-
-    $latest = WeeklyMaterialRequest::latestCycleStart();
+    $today = date('Y-m-d');
     $interval = WeeklyMaterialRequest::cycleIntervalDays();
-    $daysSinceLatest = $latest ? (int) ((strtotime(date('Y-m-d')) - strtotime($latest)) / 86400) : PHP_INT_MAX;
+    $latest = WeeklyMaterialRequest::latestCycleStart();
+    $daysSinceLatest = $latest ? (int) ((strtotime($today) - strtotime($latest)) / 86400) : PHP_INT_MAX;
 
-    // Deve gerar/enviar novo ciclo?
-    // Regra base: só gera um novo ciclo quando o intervalo configurado já passou
-    // desde o último ciclo. Isso evita criar ciclo/enviar link repetidamente.
-    $intervalPassed = ($daysSinceLatest >= $interval);
-    $shouldNotify = false;
-
-    $createdToday = ($latest === date('Y-m-d'));
+    // Horário de envio (comparação exata HH:MM)
     $currentMinutes = (int) date('H') * 60 + (int) date('i');
     $sendParts = explode(':', $sendTime);
-    $sendMinutes = ((int) ($sendParts[0] ?? 0)) * 60 + ((int) ($sendParts[1] ?? 0));
+    $sendMinutes = ((int) ($sendParts[0] ?? 8)) * 60 + ((int) ($sendParts[1] ?? 0));
     $timeReached = ($currentMinutes >= $sendMinutes);
 
-    if ($cycleMode === 'hourly') {
-        // Modo teste: gera no máximo 1 ciclo por dia (não a cada hora).
-        $shouldNotify = !$createdToday;
-    } elseif ($cycleMode === 'interval') {
-        // A cada X dias, a partir do horário configurado. Nunca 2x no mesmo dia.
-        $shouldNotify = $intervalPassed && $timeReached && !$createdToday;
-    } else {
-        // daily (todos os dias): gera 1 ciclo por dia, no horário configurado.
-        $shouldNotify = $timeReached && !$createdToday;
-    }
+    // Já existe ciclo criado HOJE? (nunca cria 2 no mesmo dia)
+    $createdToday = ($latest === $today);
+
+    // Intervalo já passou desde o último ciclo?
+    // hourly (teste) ignora intervalo; demais respeitam.
+    $intervalPassed = ($cycleMode === 'hourly') ? true : ($daysSinceLatest >= $interval);
+
+    // REGRA ÚNICA: gera 1 ciclo por período, no horário configurado, nunca 2x no mesmo dia.
+    $shouldNotify = $timeReached && !$createdToday && $intervalPassed;
 
     if ($shouldNotify) {
-        wm_log("Agendamento atingido → gerando e enviando ciclo (mode={$cycleMode}, hora={$sendTime})");
+        wm_log("Agendamento atingido → gerando e enviando ciclo de HOJE ({$today}) — mode={$cycleMode}, horário={$sendTime}");
         wm_notify($baseUrl, $webhookUrl);
     } elseif ($createdToday) {
-        wm_log("Ciclo já foi gerado hoje ({$latest}). Não gera outro no mesmo dia.");
+        wm_log("Ciclo já foi gerado hoje ({$today}). Não gera outro no mesmo dia.");
+    } elseif (!$intervalPassed) {
+        wm_log("Intervalo de {$interval} dia(s) ainda não passou (últimoCiclo={$latest}, diasDesde={$daysSinceLatest}). Aguardando.");
     } else {
-        wm_log("Aguardando horário de envio (mode={$cycleMode}, horário={$sendTime}, agora=" . date('H:i') . ", intervalo={$interval}d, diasDesdeÚltimo={$daysSinceLatest})");
+        wm_log("Aguardando horário de envio (horário={$sendTime}, agora=" . date('H:i') . ").");
     }
 
     // Cobrança automática dos pendentes do ciclo atual
