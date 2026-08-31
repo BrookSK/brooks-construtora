@@ -172,8 +172,8 @@ class MagazineController extends Controller
                 'created_at' => date('Y-m-d H:i:s'),
             ];
             // Preenche defaults para cover/subcover/backcover/guest_column
-            if ($layout === 'cover') { $pageData['title'] = 'NÚCLEO'; $pageData['subtitle'] = 'CONSTRUÇÃO — SUSTENTÁVEL'; }
-            if ($layout === 'subcover') { $pageData['title'] = 'ECO'; $pageData['subtitle'] = 'CONSTRUÇÃO — CONSCIENTE'; }
+            if ($layout === 'cover') { $pageData['title'] = 'ALICERCE'; $pageData['subtitle'] = 'CONSTRUÇÃO — ALTO PADRÃO'; }
+            if ($layout === 'subcover') { $pageData['title'] = 'ECO BROOKS'; $pageData['subtitle'] = 'CONSTRUÇÃO — SUSTENTÁVEL'; }
             if ($layout === 'guest_column') { $pageData['caption'] = 'Coluna do Convidado'; }
             if ($layout === 'backcover') { $pageData['content'] = 'Construção consciente do zero ao acabamento. Comprometidos com o meio ambiente, com as pessoas e com o futuro.'; }
             

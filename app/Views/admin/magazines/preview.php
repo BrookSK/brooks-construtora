@@ -162,9 +162,9 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
     <div class="content">
         <div class="title"><?= htmlspecialchars($page['title'] ?? $magazine['title']) ?></div>
         <div class="sub-line">
-            <span><?= htmlspecialchars(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — SUSTENTÁVEL')[0] ?? 'CONSTRUÇÃO') ?></span>
+            <span><?= htmlspecialchars(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — ALTO PADRÃO')[0] ?? 'CONSTRUÇÃO') ?></span>
             <span class="ln"></span>
-            <span><?= htmlspecialchars(trim(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — SUSTENTÁVEL')[1] ?? 'SUSTENTÁVEL')) ?></span>
+            <span><?= htmlspecialchars(trim(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — ALTO PADRÃO')[1] ?? 'ALTO PADRÃO')) ?></span>
         </div>
         <img src="<?= $magazineLogo ?>" class="logo" alt="Brooks">
         <div class="topic"><?= htmlspecialchars($magazine['subtitle'] ?? 'tema e assunto da revista') ?></div>
@@ -182,13 +182,13 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
     <div class="overlay"></div>
     <div class="content">
         <div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap-reverse;padding:0 20px;">
-            <span style="font-size:3.5rem;font-weight:900;color:#fff;text-align:center;"><?= htmlspecialchars($page['title'] ?? 'ECO') ?></span>
+            <span style="font-size:3.5rem;font-weight:900;color:#fff;text-align:center;"><?= htmlspecialchars($page['title'] ?? 'ECO BROOKS') ?></span>
             <img src="<?= $magazineLogo ?>" style="max-width:180px" alt="Brooks">
         </div>
         <div class="sub-line" style="margin-top:12px">
-            <span><?= htmlspecialchars(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — CONSCIENTE')[0] ?? 'CONSTRUÇÃO') ?></span>
+            <span><?= htmlspecialchars(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — SUSTENTÁVEL')[0] ?? 'CONSTRUÇÃO') ?></span>
             <span class="ln"></span>
-            <span><?= htmlspecialchars(trim(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — CONSCIENTE')[1] ?? 'CONSCIENTE')) ?></span>
+            <span><?= htmlspecialchars(trim(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — SUSTENTÁVEL')[1] ?? 'SUSTENTÁVEL')) ?></span>
         </div>
         <div style="flex:1"></div>
         <div class="topic"><?= htmlspecialchars($magazine['subtitle'] ?? 'tema e assunto da revista') ?></div>

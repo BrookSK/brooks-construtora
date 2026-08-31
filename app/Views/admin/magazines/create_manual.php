@@ -12,11 +12,11 @@
                 <form method="POST" action="/admin/magazines/store-manual">
                     <div class="mb-3">
                         <label class="form-label">Título da Revista *</label>
-                        <input type="text" class="form-control" name="title" required placeholder="Ex: Tendências de Construção Sustentável 2026">
+                        <input type="text" class="form-control" name="title" required value="BROOKS JOURNAL" placeholder="Ex: Tendências de Construção Sustentável 2026">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Subtítulo / Tema</label>
-                        <input type="text" class="form-control" name="subtitle" placeholder="Breve descrição do tema abordado">
+                        <input type="text" class="form-control" name="subtitle" value="Revista Alicerce by Brooks" placeholder="Breve descrição do tema abordado">
                     </div>
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-success btn-lg">
