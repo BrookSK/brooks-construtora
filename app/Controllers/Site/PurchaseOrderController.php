@@ -1599,6 +1599,15 @@ class PurchaseOrderController extends Controller
                 return;
             }
 
+            // Modelos antigos (gpt-4 clássico / gpt-3.5) não leem PDF nem imagem
+            // via Responses API / vision. Quando há arquivo, garantir um modelo capaz.
+            if ($hasFile) {
+                $modelsWithoutFileSupport = ['gpt-4', 'gpt-4-32k', 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k'];
+                if (in_array($model, $modelsWithoutFileSupport, true)) {
+                    $model = 'gpt-4o';
+                }
+            }
+
             $today = date('d/m/Y');
             $prompt = "Você é um assistente especializado em extrair informações de orçamentos de materiais de construção.\n\n"
                 . "DATA DE HOJE: {$today}\n\n"
@@ -1717,8 +1726,11 @@ class PurchaseOrderController extends Controller
                         $this->deleteOpenAIFile($apiKey, $fileId);
 
                         if ($httpCode !== 200) {
-                            error_log("[BROOKS_AI] Responses API failed: HTTP {$httpCode} - {$response}");
-                            $this->json(['error' => 'Erro na API da IA (HTTP ' . $httpCode . ').'], 500);
+                            error_log("[BROOKS_AI] Responses API failed: HTTP {$httpCode} (model={$model}) - {$response}");
+                            $apiErr = json_decode((string) $response, true);
+                            $apiMsg = $apiErr['error']['message'] ?? '';
+                            $detail = $apiMsg ? ' ' . $apiMsg : '';
+                            $this->json(['error' => 'Erro na API da IA (HTTP ' . $httpCode . ').' . $detail], 500);
                             return;
                         }
 
@@ -1863,7 +1875,7 @@ class PurchaseOrderController extends Controller
     {
         $ch = curl_init('https://api.openai.com/v1/files');
         $postFields = [
-            'purpose' => 'assistants',
+            'purpose' => 'user_data',
             'file' => new \CURLFile($filePath, 'application/pdf', $fileName),
         ];
 
