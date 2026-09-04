@@ -1617,9 +1617,9 @@ class PurchaseOrderController extends Controller
                 . "ITENS DO PEDIDO que precisam de preço (referência):\n";
 
             foreach ($itemsList as $i => $item) {
-                $prompt .= ($i + 1) . ". {$item['name']}"
-                    . ($item['specification'] ? " - {$item['specification']}" : '')
-                    . " - Qtd: {$item['quantity']}\n";
+                $prompt .= "- id=" . $item['id'] . " | " . $item['name']
+                    . ($item['specification'] ? " ({$item['specification']})" : '')
+                    . " | Qtd: {$item['quantity']}\n";
             }
 
             $prompt .= "\nMENSAGENS DO FORNECEDOR (orçamento recebido via WhatsApp):\n"
@@ -1648,9 +1648,23 @@ class PurchaseOrderController extends Controller
                 . "  \"notes\": \"observações adicionais\"\n"
                 . "}\n\n"
                 . "REGRAS:\n"
-                . "- unit_price deve ser o preço UNITÁRIO em reais (número decimal)\n"
-                . "- matched_item_id deve corresponder ao id do item do pedido, se possível\n"
-                . "- Se não encontrar preço para um item, omita-o do array\n"
+                . "- unit_price deve ser o preço UNITÁRIO em reais (número decimal), NUNCA o valor total da linha.\n"
+                . "- ATENÇÃO A UNITÁRIO x TOTAL: orçamentos costumam ter colunas 'Unitário' e 'Total' (ou 'Valor Total'). "
+                . "Use SEMPRE o valor UNITÁRIO. Se o documento só traz o TOTAL da linha, calcule unit_price = total_da_linha / quantidade_do_documento. "
+                . "Ex.: se a linha diz Qtd 20 e Total 149,80, então unit_price = 7,49 (149,80/20), não 149,80.\n"
+                . "- matched_item_id: SEMPRE preencha com o id (da lista 'ITENS DO PEDIDO' acima) do item correspondente. "
+                . "Faça o match pelo tipo E pela BITOLA/MEDIDA exata.\n"
+                . "- NÃO TROQUE BITOLAS: 16mm, 20mm, 25mm, 40mm, 50mm, 100mm, 3/4, 1/2 são DIFERENTES. "
+                . "'união de 16 mm' é diferente de 'união de 20 mm'. 'joelho/cotovelo 45 graus' é diferente de 'joelho/cotovelo 90 graus'. "
+                . "Só faça o match se a medida bater; na dúvida, prefira omitir a trocar por um parecido.\n"
+                . "- LINHAS REPETIDAS: se o mesmo material do pedido aparecer em várias linhas do documento (ex.: parafuso + bucha vendidos separados, "
+                . "ou o mesmo código em 2 linhas), some os valores para chegar ao unit_price correto daquele item.\n"
+                . "- COERÊNCIA DE VALOR: materiais pequenos (parafuso, bucha, anel, luva, cotovelo) têm preço unitário baixo (centavos a poucos reais). "
+                . "Se um unit_price resultar em algo absurdo (ex.: parafuso a R$ 60 ou R$ 1000), você provavelmente confundiu total com unitário ou trocou de item. Reconfira.\n"
+                . "- Barra/tubo vendido por barra: se o pedido pede uma quantidade em metros mas o documento cota por BARRA, "
+                . "informe o unit_price POR BARRA e mantenha o match; não multiplique nem divida sozinho.\n"
+                . "- Só inclua no array itens que você realmente encontrou no documento. Se não encontrar preço para um item, OMITA-o (não coloque 0).\n"
+                . "- NÃO invente preços nem repita o preço de um item em outro parecido.\n"
                 . "- freight em reais (0 se incluso ou não mencionado)\n"
                 . "- delivery_days: apenas o NÚMERO de dias (ex: \"5\", \"7\"). Se disser 'amanhã', calcule baseado na data de hoje\n"
                 . "- payment_method: use EXATAMENTE um destes valores: 'pix', 'boleto', 'cartao', 'transferencia', 'dinheiro', 'outro'\n"
@@ -1703,7 +1717,10 @@ class PurchaseOrderController extends Controller
                                 ['role' => 'user', 'content' => $inputContent],
                             ],
                             'temperature' => 0.2,
-                            'instructions' => 'Você extrai dados de orçamentos de construção e retorna JSON válido. Responda APENAS com JSON, sem markdown.',
+                            'instructions' => 'Você extrai dados de orçamentos de construção e retorna JSON válido. '
+                                . 'Use SEMPRE o preço UNITÁRIO (nunca o total da linha); se só houver total, divida pela quantidade do documento. '
+                                . 'Respeite as bitolas/medidas exatas ao associar itens (16mm != 20mm, 45° != 90°) e não troque itens parecidos. '
+                                . 'Responda APENAS com JSON, sem markdown.',
                         ];
 
                         $ch = curl_init('https://api.openai.com/v1/responses');
@@ -1806,7 +1823,10 @@ class PurchaseOrderController extends Controller
             $data = [
                 'model' => $model,
                 'messages' => [
-                    ['role' => 'system', 'content' => 'Você extrai dados de orçamentos de construção e retorna JSON válido. Responda APENAS com JSON.'],
+                    ['role' => 'system', 'content' => 'Você extrai dados de orçamentos de construção e retorna JSON válido. '
+                        . 'Use SEMPRE o preço UNITÁRIO (nunca o total da linha); se só houver total, divida pela quantidade do documento. '
+                        . 'Respeite as bitolas/medidas exatas ao associar itens (16mm != 20mm, 45° != 90°) e não troque itens parecidos. '
+                        . 'Responda APENAS com JSON.'],
                     ['role' => 'user', 'content' => $userContent],
                 ],
                 'temperature' => 0.2,
