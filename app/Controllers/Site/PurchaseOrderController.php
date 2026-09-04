@@ -1873,6 +1873,14 @@ class PurchaseOrderController extends Controller
      */
     private function uploadFileToOpenAI(string $apiKey, string $filePath, string $fileName): ?string
     {
+        // A OpenAI valida a extensão do nome do arquivo e exige minúsculas
+        // (ex.: aceita ".pdf" mas rejeita ".PDF"). Normalizar a extensão.
+        $ext = pathinfo($fileName, PATHINFO_EXTENSION);
+        if ($ext !== '') {
+            $base = pathinfo($fileName, PATHINFO_FILENAME);
+            $fileName = $base . '.' . strtolower($ext);
+        }
+
         $ch = curl_init('https://api.openai.com/v1/files');
         $postFields = [
             'purpose' => 'user_data',
