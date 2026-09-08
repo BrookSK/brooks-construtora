@@ -428,31 +428,52 @@ class MagazineController extends Controller
             $suggestion = $page['image_suggestion'] ?? null;
             $suggestion2 = $page['image_suggestion_2'] ?? null;
             $oneImageLayouts = ['internal_04', 'internal_07'];
+            $threeImageLayouts = ['internal_05', 'internal_06'];
 
-            if ($suggestion && empty($page['image_url'])) {
+            // Descrição de fallback quando a página não tem image_suggestion salvo
+            // (ex.: revistas criadas manualmente). Usa título > conteúdo > título da revista.
+            $fallbackParts = array_filter([
+                trim($page['title'] ?? ''),
+                trim($page['subtitle'] ?? ''),
+            ]);
+            $fallbackDesc = trim(implode(' — ', $fallbackParts));
+            if ($fallbackDesc === '') {
+                $content = trim(strip_tags($page['content'] ?? ''));
+                $fallbackDesc = $content !== '' ? mb_substr($content, 0, 200) : '';
+            }
+            if ($fallbackDesc === '') {
+                $fallbackDesc = $magazine['title'] ?: 'Construção de alto padrão';
+            }
+
+            // Imagem 1
+            $desc1 = $suggestion ?: $fallbackDesc;
+            if ($desc1 && empty($page['image_url'])) {
                 $pending[] = [
                     'page_id' => $page['id'],
                     'page_number' => $page['page_number'],
                     'field' => 'image_url',
-                    'description' => $suggestion,
+                    'description' => $desc1,
                     'layout_type' => $page['layout_type'],
                 ];
             }
 
-            if ($suggestion2 && empty($page['image_url_2']) && !in_array($page['layout_type'], $oneImageLayouts)) {
-                $pending[] = [
-                    'page_id' => $page['id'],
-                    'page_number' => $page['page_number'],
-                    'field' => 'image_url_2',
-                    'description' => $suggestion2,
-                    'layout_type' => $page['layout_type'],
-                ];
+            // Imagem 2 — layouts com 2 ou 3 imagens
+            if (!in_array($page['layout_type'], $oneImageLayouts) && empty($page['image_url_2'])) {
+                $desc2 = $suggestion2 ?: $fallbackDesc;
+                if ($desc2) {
+                    $pending[] = [
+                        'page_id' => $page['id'],
+                        'page_number' => $page['page_number'],
+                        'field' => 'image_url_2',
+                        'description' => $desc2,
+                        'layout_type' => $page['layout_type'],
+                    ];
+                }
             }
 
             // Imagem 3 — para layouts com 3 imagens (internal_05, internal_06)
-            $threeImageLayouts = ['internal_05', 'internal_06'];
             if (in_array($page['layout_type'], $threeImageLayouts) && empty($page['image_url_3'] ?? null)) {
-                $desc3 = $suggestion2 ?: $suggestion;
+                $desc3 = $suggestion2 ?: $suggestion ?: $fallbackDesc;
                 if ($desc3) {
                     $pending[] = [
                         'page_id' => $page['id'],
