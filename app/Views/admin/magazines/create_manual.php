@@ -18,6 +18,11 @@
                         <label class="form-label">Subtítulo / Tema</label>
                         <input type="text" class="form-control" name="subtitle" value="Revista Alicerce by Brooks" placeholder="Breve descrição do tema abordado">
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fontes e Referências (opcional)</label>
+                        <textarea class="form-control" name="sources_bulk" rows="5" placeholder="Uma fonte por linha. Ex:&#10;IBGE — SINAPI/Índice Nacional da Construção Civil&#10;CBIC — Qualificação, produtividade e mão de obra 2026-2029&#10;Fonte com link | https://exemplo.com"></textarea>
+                        <small class="text-muted">Uma por linha. Para incluir um link use <code>Título | https://url</code>. Você também pode editar depois.</small>
+                    </div>
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-success btn-lg">
                             <i class="bi bi-plus-circle"></i> Criar Revista

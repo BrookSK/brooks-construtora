@@ -180,8 +180,57 @@ class MagazineController extends Controller
             Magazine::addPage($magazineId, $pageData);
         }
 
+        // Grava fontes coladas em massa (uma por linha, "Título | URL" opcional)
+        $this->storeBulkSources($magazineId, $this->input('sources_bulk', ''));
+
         $this->setFlash('success', 'Revista criada! Preencha o conteúdo das páginas.');
         $this->redirect('/admin/magazines/edit/' . $magazineId);
+    }
+
+    /**
+     * Parseia um texto de fontes coladas (uma por linha) e grava em magazine_sources.
+     * Formato aceito por linha: "Título" ou "Título | https://url".
+     * Também extrai uma URL solta no fim da linha quando não há separador "|".
+     */
+    private function storeBulkSources(int $magazineId, string $bulk): void
+    {
+        $bulk = trim($bulk);
+        if ($bulk === '') {
+            return;
+        }
+
+        $lines = preg_split('/\r\n|\r|\n/', $bulk);
+        $order = 0;
+
+        foreach ($lines as $raw) {
+            $line = trim($raw);
+            if ($line === '') continue;
+
+            $title = $line;
+            $url = null;
+
+            if (strpos($line, '|') !== false) {
+                $parts = explode('|', $line, 2);
+                $title = trim($parts[0]);
+                $url = trim($parts[1] ?? '') ?: null;
+            } elseif (preg_match('/\s(https?:\/\/\S+)$/i', $line, $m, PREG_OFFSET_CAPTURE)) {
+                $url = trim($m[1][0]);
+                $title = trim(substr($line, 0, $m[1][1]));
+            }
+
+            if ($title === '') continue;
+
+            Database::insert('magazine_sources', [
+                'magazine_id' => $magazineId,
+                'title' => $title,
+                'url' => $url,
+                'author' => null,
+                'accessed_at' => null,
+                'sort_order' => $order,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+            $order++;
+        }
     }
 
     /**

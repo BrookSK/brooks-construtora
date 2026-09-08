@@ -375,7 +375,20 @@
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 small"><i class="bi bi-journal-bookmark"></i> Fontes e Referências</h6>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSource()"><i class="bi bi-plus"></i> Adicionar</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#bulkSourcesBox"><i class="bi bi-clipboard-plus"></i> Colar lista</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSource()"><i class="bi bi-plus"></i> Adicionar</button>
+                    </div>
+                </div>
+                <div class="collapse border-bottom" id="bulkSourcesBox">
+                    <div class="p-3 bg-light">
+                        <label class="form-label small mb-1">Cole a lista de fontes (uma por linha)</label>
+                        <textarea id="bulkSourcesText" class="form-control form-control-sm" rows="5" placeholder="IBGE — SINAPI/Índice Nacional da Construção Civil&#10;CBIC — Qualificação, produtividade e mão de obra 2026-2029&#10;Fonte com link | https://exemplo.com"></textarea>
+                        <small class="text-muted d-block mt-1">Formato: <code>Título</code> por linha. Para incluir um link, use <code>Título | https://url</code>. Linhas vazias são ignoradas.</small>
+                        <div class="text-end mt-2">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="importBulkSources()"><i class="bi bi-check2"></i> Importar</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body" id="sourcesContainer">
                     <?php
@@ -623,18 +636,67 @@ document.querySelectorAll('.generate-img-btn').forEach(btn=>{
 
 // Fontes
 let sourceIndex = <?= count($sources ?? []) ?>;
-function addSource() {
+
+function escapeAttr(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Cria uma linha de fonte, opcionalmente pré-preenchida com {title, url}
+function addSource(data) {
+    data = data || {};
     document.getElementById('noSourcesMsg')?.remove();
     const container = document.getElementById('sourcesContainer');
+    const title = escapeAttr(data.title || '');
+    const url = escapeAttr(data.url || '');
     const html = `<div class="source-row row g-2 mb-2 align-items-center" data-index="${sourceIndex}">
-        <div class="col-md-4"><input type="text" class="form-control form-control-sm" name="sources[${sourceIndex}][title]" placeholder="Título *"></div>
-        <div class="col-md-4"><input type="url" class="form-control form-control-sm" name="sources[${sourceIndex}][url]" placeholder="URL"></div>
+        <div class="col-md-4"><input type="text" class="form-control form-control-sm" name="sources[${sourceIndex}][title]" value="${title}" placeholder="Título *"></div>
+        <div class="col-md-4"><input type="url" class="form-control form-control-sm" name="sources[${sourceIndex}][url]" value="${url}" placeholder="URL"></div>
         <div class="col-md-2"><input type="text" class="form-control form-control-sm" name="sources[${sourceIndex}][author]" placeholder="Autor"></div>
         <div class="col-md-1"><input type="date" class="form-control form-control-sm" name="sources[${sourceIndex}][accessed_at]" title="Data de acesso"></div>
         <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.source-row').remove()"><i class="bi bi-trash"></i></button></div>
     </div>`;
     container.insertAdjacentHTML('beforeend', html);
     sourceIndex++;
+}
+
+// Importa várias fontes coladas em texto (uma por linha; "Título | URL" opcional)
+function importBulkSources() {
+    const ta = document.getElementById('bulkSourcesText');
+    const lines = ta.value.split('\n');
+    let added = 0;
+
+    lines.forEach(function(raw) {
+        const line = raw.trim();
+        if (!line) return;
+
+        let title = line;
+        let url = '';
+        // Separa "Título | URL" — ou extrai URL solta no fim da linha
+        if (line.includes('|')) {
+            const parts = line.split('|');
+            title = parts[0].trim();
+            url = (parts[1] || '').trim();
+        } else {
+            const m = line.match(/\s(https?:\/\/\S+)$/i);
+            if (m) {
+                url = m[1].trim();
+                title = line.slice(0, m.index).trim();
+            }
+        }
+
+        if (title) {
+            addSource({ title: title, url: url });
+            added++;
+        }
+    });
+
+    if (added > 0) {
+        ta.value = '';
+        bootstrap.Collapse.getOrCreateInstance(document.getElementById('bulkSourcesBox')).hide();
+        alert(added + ' fonte(s) adicionada(s). Não esqueça de clicar em "Salvar Alterações".');
+    } else {
+        alert('Nenhuma fonte válida encontrada. Verifique o texto colado.');
+    }
 }
 
 // Gerar TODAS as imagens pendentes em background
