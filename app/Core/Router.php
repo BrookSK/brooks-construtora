@@ -85,6 +85,7 @@ class Router
             'magazines/create-manual' => ['MagazineController', 'createManual'],
             'magazines/store-manual' => ['MagazineController', 'storeManual'],
             'magazines/sources' => ['MagazineController', 'updateSources'],
+            'magazines/enrich-sources' => ['MagazineController', 'enrichSources'],
             'magazines/edit' => ['MagazineController', 'edit'],
             'magazines/update' => ['MagazineController', 'update'],
             'magazines/upload-cover' => ['MagazineController', 'uploadCover'],

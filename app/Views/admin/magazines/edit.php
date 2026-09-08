@@ -384,8 +384,9 @@
                     <div class="p-3 bg-light">
                         <label class="form-label small mb-1">Cole a lista de fontes (uma por linha)</label>
                         <textarea id="bulkSourcesText" class="form-control form-control-sm" rows="5" placeholder="IBGE — SINAPI/Índice Nacional da Construção Civil&#10;CBIC — Qualificação, produtividade e mão de obra 2026-2029&#10;Fonte com link | https://exemplo.com"></textarea>
-                        <small class="text-muted d-block mt-1">Formato: <code>Título</code> por linha. Para incluir um link, use <code>Título | https://url</code>. Linhas vazias são ignoradas.</small>
-                        <div class="text-end mt-2">
+                        <small class="text-muted d-block mt-1">Uma por linha. <strong>Importar</strong> adiciona só os títulos. <strong>Preencher com IA</strong> separa autor/título e sugere URL e data de acesso.</small>
+                        <div class="text-end mt-2 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnEnrichSources" onclick="enrichBulkSources()"><i class="bi bi-stars"></i> Preencher com IA</button>
                             <button type="button" class="btn btn-sm btn-primary" onclick="importBulkSources()"><i class="bi bi-check2"></i> Importar</button>
                         </div>
                     </div>
@@ -641,22 +642,58 @@ function escapeAttr(str) {
     return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Cria uma linha de fonte, opcionalmente pré-preenchida com {title, url}
+// Cria uma linha de fonte, opcionalmente pré-preenchida com {title, url, author, accessed_at}
 function addSource(data) {
     data = data || {};
     document.getElementById('noSourcesMsg')?.remove();
     const container = document.getElementById('sourcesContainer');
     const title = escapeAttr(data.title || '');
     const url = escapeAttr(data.url || '');
+    const author = escapeAttr(data.author || '');
+    const accessedAt = escapeAttr(data.accessed_at || '');
     const html = `<div class="source-row row g-2 mb-2 align-items-center" data-index="${sourceIndex}">
         <div class="col-md-4"><input type="text" class="form-control form-control-sm" name="sources[${sourceIndex}][title]" value="${title}" placeholder="Título *"></div>
         <div class="col-md-4"><input type="url" class="form-control form-control-sm" name="sources[${sourceIndex}][url]" value="${url}" placeholder="URL"></div>
-        <div class="col-md-2"><input type="text" class="form-control form-control-sm" name="sources[${sourceIndex}][author]" placeholder="Autor"></div>
-        <div class="col-md-1"><input type="date" class="form-control form-control-sm" name="sources[${sourceIndex}][accessed_at]" title="Data de acesso"></div>
+        <div class="col-md-2"><input type="text" class="form-control form-control-sm" name="sources[${sourceIndex}][author]" value="${author}" placeholder="Autor"></div>
+        <div class="col-md-1"><input type="date" class="form-control form-control-sm" name="sources[${sourceIndex}][accessed_at]" value="${accessedAt}" title="Data de acesso"></div>
         <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.source-row').remove()"><i class="bi bi-trash"></i></button></div>
     </div>`;
     container.insertAdjacentHTML('beforeend', html);
     sourceIndex++;
+}
+
+// Envia a lista colada para a IA estruturar (autor, título, URL, data) e cria as linhas
+async function enrichBulkSources() {
+    const ta = document.getElementById('bulkSourcesText');
+    const text = ta.value.trim();
+    if (!text) { alert('Cole a lista de fontes primeiro.'); return; }
+
+    const btn = document.getElementById('btnEnrichSources');
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processando...';
+
+    try {
+        const fd = new FormData();
+        fd.append('sources_text', text);
+        const resp = await fetch('/admin/magazines/enrich-sources', { method: 'POST', body: fd });
+        const data = await resp.json();
+
+        if (!data.success || !data.sources || data.sources.length === 0) {
+            alert(data.error || 'A IA não retornou fontes. Tente novamente.');
+            return;
+        }
+
+        data.sources.forEach(function(s) { addSource(s); });
+        ta.value = '';
+        bootstrap.Collapse.getOrCreateInstance(document.getElementById('bulkSourcesBox')).hide();
+        alert(data.sources.length + ' fonte(s) preenchida(s) pela IA. Revise os dados e clique em "Salvar Alterações".');
+    } catch (e) {
+        alert('Erro ao processar com IA: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = original;
+    }
 }
 
 // Importa várias fontes coladas em texto (uma por linha; "Título | URL" opcional)

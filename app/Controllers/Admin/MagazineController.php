@@ -234,6 +234,38 @@ class MagazineController extends Controller
     }
 
     /**
+     * Estrutura uma lista de fontes coladas usando IA (separa autor/título,
+     * sugere URL oficial e data de acesso). Retorna JSON sem gravar no banco —
+     * o frontend preenche os campos e o usuário salva depois.
+     */
+    public function enrichSources(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $bulk = trim($this->input('sources_text', ''));
+        if ($bulk === '') {
+            $this->json(['error' => 'Nenhuma fonte informada.'], 400);
+            return;
+        }
+
+        try {
+            $openai = new OpenAIService();
+            $sources = $openai->enrichSources($bulk);
+
+            $this->json([
+                'success' => true,
+                'total' => count($sources),
+                'sources' => $sources,
+            ]);
+        } catch (\Exception $e) {
+            $this->json(['error' => 'Erro ao processar fontes com IA: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Atualizar fontes de uma revista (AJAX)
      */
     public function updateSources(): void

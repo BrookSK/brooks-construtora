@@ -739,6 +739,73 @@ Regras: datas em YYYY-MM-DD, valores numéricos sem R$/%, documentos somente nú
         return trim($result['choices'][0]['message']['content']);
     }
 
+    /**
+     * Recebe uma lista de fontes cruas (uma por linha, ex.: "IBGE — SINAPI / Índice ...")
+     * e retorna cada fonte estruturada em title, author, url e accessed_at.
+     *
+     * Regras aplicadas: separa o autor/instituição (parte antes do "—") do título;
+     * sugere a URL oficial APENAS quando conhecida com segurança (senão vazio);
+     * define accessed_at como a data de hoje.
+     *
+     * @param string $bulkText  Texto com uma fonte por linha
+     * @return array<int, array{title:string, author:string, url:string, accessed_at:string}>
+     */
+    public function enrichSources(string $bulkText): array
+    {
+        $bulkText = trim($bulkText);
+        if ($bulkText === '') {
+            return [];
+        }
+
+        $today = date('Y-m-d');
+
+        $prompt = "Você recebe uma lista de fontes/referências de uma revista de construção civil brasileira, uma por linha. "
+            . "Para CADA linha, estruture os dados separando o autor/instituição do título.\n\n"
+            . "REGRAS:\n"
+            . "- \"author\": a instituição/veículo responsável (ex.: IBGE, CBIC, ABRAINC, Governo Federal / MDIC). Normalmente é a parte antes do traço \"—\".\n"
+            . "- \"title\": o nome do estudo/publicação (a parte depois do traço). Se não houver separação clara, use a linha inteira como title e deixe author vazio.\n"
+            . "- \"url\": o endereço OFICIAL da instituição SOMENTE se você tiver certeza de que existe (ex.: https://www.ibge.gov.br, https://cbic.org.br). NUNCA invente URLs específicas de artigos ou com códigos. Se não tiver certeza, use string vazia \"\".\n"
+            . "- \"accessed_at\": use exatamente \"{$today}\".\n\n"
+            . "Mantenha a MESMA ordem e a MESMA quantidade de itens da lista recebida.\n\n"
+            . "LISTA:\n{$bulkText}\n\n"
+            . "Retorne APENAS JSON puro no formato: {\"sources\":[{\"title\":\"\",\"author\":\"\",\"url\":\"\",\"accessed_at\":\"{$today}\"}]}";
+
+        $response = $this->chatCompletion($prompt);
+
+        $response = trim($response);
+        $response = preg_replace('/^```json\s*/i', '', $response);
+        $response = preg_replace('/\s*```$/i', '', $response);
+
+        $data = json_decode($response, true);
+        $items = $data['sources'] ?? (is_array($data) ? $data : []);
+
+        if (!is_array($items)) {
+            throw new \Exception('Resposta inválida da IA ao estruturar fontes.');
+        }
+
+        $result = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) continue;
+            $title = trim((string)($item['title'] ?? ''));
+            if ($title === '') continue;
+
+            $url = trim((string)($item['url'] ?? ''));
+            // Descarta URLs que não sejam http(s) válidas para evitar lixo
+            if ($url !== '' && !preg_match('#^https?://#i', $url)) {
+                $url = '';
+            }
+
+            $result[] = [
+                'title' => $title,
+                'author' => trim((string)($item['author'] ?? '')),
+                'url' => $url,
+                'accessed_at' => $today,
+            ];
+        }
+
+        return $result;
+    }
+
     private function request(string $url, array $data): string
     {
         $ch = curl_init($url);
