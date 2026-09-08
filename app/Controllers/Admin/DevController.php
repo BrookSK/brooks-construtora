@@ -6,6 +6,7 @@ use App\Core\Controller;
 use App\Core\Auth;
 use App\Models\Setting;
 use App\Services\NiboService;
+use App\Services\PurchaseOrderReportService;
 
 /**
  * Área de desenvolvimento/testes de integrações.
@@ -134,5 +135,31 @@ class DevController extends Controller
 
         $result = NiboService::request($endpoint['method'], $path, $query, $body, $token);
         $this->json($result);
+    }
+
+    /**
+     * Gera e faz o download do relatório analítico de pedidos de compra (.xlsx).
+     * Rota: /admin/dev/relatorio-pedidos
+     */
+    public function purchaseOrdersReport(): void
+    {
+        try {
+            $binary = PurchaseOrderReportService::buildXlsx();
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'Erro ao gerar o relatório: ' . $e->getMessage();
+            exit;
+        }
+
+        $filename = PurchaseOrderReportService::suggestedFilename();
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($binary));
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        echo $binary;
+        exit;
     }
 }

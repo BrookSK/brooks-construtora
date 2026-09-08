@@ -382,6 +382,11 @@
                     <i class="bi bi-graph-up"></i> <span class="link-text">Histórico Preços</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/dev/relatorio-pedidos" data-title="Relatório de Pedidos (Excel)">
+                    <i class="bi bi-file-earmark-spreadsheet"></i> <span class="link-text">Relatório (Excel)</span>
+                </a>
+            </li>
             <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('orders.payment') || \App\Core\Auth::isAdmin()): ?>
             <li class="nav-item">

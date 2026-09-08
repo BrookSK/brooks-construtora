@@ -313,6 +313,7 @@ class Router
             'dev/nibo' => ['DevController', 'nibo'],
             'dev/nibo/save-token' => ['DevController', 'niboSaveToken'],
             'dev/nibo/test' => ['DevController', 'niboTest'],
+            'dev/relatorio-pedidos' => ['DevController', 'purchaseOrdersReport'],
 
             // Dashboard Financeiro (Nibo · somente leitura)
             'finance' => ['FinanceController', 'index'],
