@@ -26,6 +26,7 @@ function h($s) { return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8'); }
 function verdict_badge(string $status): string {
     [$label, $fg, $bg] = match ($status) {
         'ok'         => ['✔ Certo', '#166534', '#dcfce7'],
+        'so_epi'     => ['Só EPI, falta engenheiro', '#b91c1c', '#fee2e2'],
         'falta'      => ['Falta alguém', '#b91c1c', '#fee2e2'],
         'extra'      => ['Tem a mais', '#92400e', '#fef3c7'],
         'divergente' => ['Divergente', '#b91c1c', '#fee2e2'],

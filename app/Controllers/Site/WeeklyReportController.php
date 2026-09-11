@@ -212,13 +212,23 @@ class WeeklyReportController extends Controller
             $missing = array_values(array_diff($expected, $current)); // deveria ter e não tem
             $extra   = array_values(array_diff($current, $expected)); // tem mas não era esperado
 
+            // Gerentes/engenheiros de fato presentes (exclui o Eduardo Carvalho,
+            // que é EPI e NÃO conta como responsável técnico da obra).
+            $engineers = array_values(array_filter($current, fn($n) => $n !== 'Eduardo Carvalho'));
+
             if (empty($expected)) {
                 // Não temos regra declarada para esta obra.
                 if (empty($current)) {
                     $status = $active ? 'sem_ninguem' : 'sem_regra';
+                } elseif ($active && empty($engineers)) {
+                    // Só o Eduardo (EPI), sem engenheiro → errado numa obra ativa.
+                    $status = 'so_epi';
                 } else {
                     $status = 'sem_regra';
                 }
+            } elseif ($active && empty($engineers)) {
+                // Regra existe, mas na prática só o EPI está marcado: falta engenheiro.
+                $status = 'so_epi';
             } elseif (empty($missing) && empty($extra)) {
                 $status = 'ok';
             } elseif (!empty($missing) && empty($extra)) {
