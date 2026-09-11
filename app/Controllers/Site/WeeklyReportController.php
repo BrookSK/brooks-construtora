@@ -226,17 +226,30 @@ class WeeklyReportController extends Controller
             fn($w) => strlen($w) > 2 && !preg_match('/^p?0*\d+$/', $w)
         ));
 
+        // 1) Se o termo tem código de projeto (ex.: P032), o match é EXCLUSIVO
+        //    por código: casa apenas as obras cujo nome/código contém aquele
+        //    código exato (com fronteira), ignorando correspondências por palavra.
+        //    Isso evita que "Mariana P032" pegue "P009" ou "P033" só porque
+        //    compartilham a palavra "mariana".
+        if ($projCode !== null) {
+            $found = [];
+            foreach ($sites as $s) {
+                $nm = ' ' . $this->norm(($s['name'] ?? '') . ' ' . ($s['code'] ?? '')) . ' ';
+                if (preg_match('/(^|\D)' . preg_quote($projCode, '/') . '(\D|$)/', $nm)) {
+                    $found[] = $s;
+                }
+            }
+            return $found;
+        }
+
+        // 2) Sem código: casa por palavras-chave (todas precisam aparecer).
         $found = [];
+        if (!$words) return $found;
         foreach ($sites as $s) {
             $nm = $this->norm(($s['name'] ?? '') . ' ' . ($s['code'] ?? ''));
-            $hit = false;
-            if ($projCode !== null && strpos($nm, $projCode) !== false) $hit = true;
-            if (!$hit && $words) {
-                $ok = true;
-                foreach ($words as $w) if (strpos($nm, $w) === false) { $ok = false; break; }
-                if ($ok) $hit = true;
-            }
-            if ($hit) $found[] = $s;
+            $ok = true;
+            foreach ($words as $w) if (strpos($nm, $w) === false) { $ok = false; break; }
+            if ($ok) $found[] = $s;
         }
         return $found;
     }
