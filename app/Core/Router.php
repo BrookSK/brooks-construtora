@@ -536,6 +536,7 @@ class Router
             'historico-presenca' => ['PresenceController', 'history'],
 
             // Relatório visual (link solto, sem menu) — lista semanal x obras x gerentes
+            'relatorio-lista-semanal/salvar' => ['WeeklyReportController', 'save'],
             'relatorio-lista-semanal' => ['WeeklyReportController', 'index'],
 
             // Painel de pedidos com PIN

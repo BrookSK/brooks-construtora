@@ -78,6 +78,9 @@ class WeeklyReportController extends Controller
              WHERE csa.phase = 'weekly'"
         );
 
+        // Resolve o pin_user id de cada gerente (para o editor gravar no banco).
+        $managerPinId = $this->resolveManagerPinIds();
+
         // Mapa: site_id -> [ 'Nome Gerente' ou 'pin_name cru' ]
         $weeklyBySite = [];      // site_id => [managerFriendly => true]
         $weeklyRawBySite = [];   // site_id => [pin_name => true]  (todos, inclusive não-gerentes)
@@ -248,10 +251,109 @@ class WeeklyReportController extends Controller
             'onlyEpi' => $onlyEpi,
             'strangers' => $strangers,
             'verdictBySite' => $verdictBySite,
+            'managerPinId' => $managerPinId,
+            'managerNames' => array_keys($this->managers),
+            'token' => self::TOKEN,
             'generatedAt' => date('d/m/Y H:i'),
         ];
 
         $this->view('site.weekly_report.index', $data);
+    }
+
+    /**
+     * Salva os ajustes feitos na tela (marcar/desmarcar quem está na semanal).
+     * Recebe POST JSON: { token, site_id, managers: ["Gerente A", ...] }
+     * e sincroniza os vínculos phase='weekly' daquela obra APENAS para os
+     * gerentes conhecidos (não mexe em eventuais outras pessoas marcadas).
+     */
+    public function save(): void
+    {
+        $raw = file_get_contents('php://input');
+        $payload = json_decode($raw, true) ?: [];
+
+        $token = $payload['token'] ?? '';
+        if (!hash_equals(self::TOKEN, (string) $token)) {
+            $this->json(['ok' => false, 'error' => 'Token inválido'], 403);
+        }
+
+        $siteId = (int) ($payload['site_id'] ?? 0);
+        $selected = $payload['managers'] ?? [];
+        if (!is_array($selected)) $selected = [];
+
+        if ($siteId <= 0) {
+            $this->json(['ok' => false, 'error' => 'Obra inválida'], 422);
+        }
+
+        // Confere se a obra existe.
+        $site = Database::fetch("SELECT id, code, name FROM construction_sites WHERE id = ?", [$siteId]);
+        if (!$site) {
+            $this->json(['ok' => false, 'error' => 'Obra não encontrada'], 404);
+        }
+
+        $managerPinId = $this->resolveManagerPinIds();
+
+        // Só aceitamos nomes de gerentes conhecidos que tenham pin_user.
+        $selectedPinIds = [];
+        foreach ($selected as $name) {
+            if (isset($managerPinId[$name])) {
+                $selectedPinIds[$managerPinId[$name]] = $name;
+            }
+        }
+
+        // pin_ids de TODOS os gerentes conhecidos (universo que o editor controla).
+        $knownPinIds = array_filter(array_values($managerPinId), fn($v) => $v > 0);
+
+        try {
+            // 1) Remove vínculos weekly APENAS dos gerentes conhecidos nesta obra.
+            if (!empty($knownPinIds)) {
+                $place = implode(',', array_fill(0, count($knownPinIds), '?'));
+                $params = array_merge([$siteId], $knownPinIds);
+                Database::query(
+                    "DELETE FROM construction_site_approvers
+                     WHERE construction_site_id = ? AND phase = 'weekly'
+                       AND pin_user_id IN ($place)",
+                    $params
+                );
+            }
+
+            // 2) Insere os selecionados.
+            foreach (array_keys($selectedPinIds) as $pinId) {
+                Database::insert('construction_site_approvers', [
+                    'construction_site_id' => $siteId,
+                    'pin_user_id' => (int) $pinId,
+                    'phase' => 'weekly',
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            $this->json(['ok' => false, 'error' => 'Erro ao salvar: ' . $e->getMessage()], 500);
+        }
+
+        $this->json([
+            'ok' => true,
+            'site_id' => $siteId,
+            'saved' => array_values($selectedPinIds),
+        ]);
+    }
+
+    /**
+     * Descobre o pin_user id de cada gerente configurado, casando por e-mail
+     * (prioridade) ou por nome normalizado. Retorna [ 'Gerente' => pinId ].
+     */
+    private function resolveManagerPinIds(): array
+    {
+        $pins = Database::fetchAll("SELECT id, name, email FROM pin_users WHERE active = 1");
+        $out = [];
+        foreach ($this->managers as $mg => $cfg) {
+            $out[$mg] = 0;
+        }
+        foreach ($pins as $p) {
+            $mg = $this->matchManager((string) $p['name'], $p['email'] ?? null);
+            if ($mg !== null && empty($out[$mg])) {
+                $out[$mg] = (int) $p['id'];
+            }
+        }
+        return $out;
     }
 
     /** Retorna o nome amigável do gerente para um pin_user, ou null. */

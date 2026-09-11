@@ -77,6 +77,22 @@ function verdict_badge(string $status): string {
     .alert.info { background: #eff6ff; border-color: #3b82f6; }
     .refresh { color:#cbd5e1; font-size:12px; text-decoration:none; border:1px solid #334155; padding:5px 12px; border-radius:8px; }
     .refresh:hover { background:#1e293b; }
+    /* editor de chips */
+    .chips { display:flex; flex-wrap:wrap; gap:6px; }
+    .chip { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border:1px solid #cbd5e1; border-radius:999px; font-size:12px; cursor:pointer; user-select:none; background:#fff; color:#475569; }
+    .chip input { margin:0; cursor:pointer; }
+    .chip.on { background:#dcfce7; border-color:#86efac; color:#166534; font-weight:600; }
+    .chip.disabled { opacity:.45; cursor:not-allowed; }
+    .rowactions { margin-top:8px; display:flex; align-items:center; gap:8px; }
+    .btn-save, .btn-fix { font-size:12px; font-weight:600; border-radius:8px; padding:5px 12px; cursor:pointer; border:1px solid transparent; }
+    .btn-save { background:#0f172a; color:#fff; }
+    .btn-save:disabled { background:#e2e8f0; color:#94a3b8; cursor:default; }
+    .btn-fix { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+    .btn-fix:hover { background:#dbeafe; }
+    .save-status { font-size:12px; }
+    .save-status.ok { color:#16a34a; }
+    .save-status.err { color:#dc2626; }
+    tr.dirty { background:#fffdf5; }
 </style>
 </head>
 <body>
@@ -243,52 +259,163 @@ function verdict_badge(string $status): string {
         <div class="body">
             <table>
                 <tr>
-                    <th style="width:100px">Código</th>
+                    <th style="width:90px">Código</th>
                     <th>Obra</th>
-                    <th style="width:110px">Status</th>
-                    <th>Na semanal (atual)</th>
+                    <th style="width:100px">Status</th>
                     <th style="width:110px">Situação</th>
                     <th>Certo (esperado)</th>
+                    <th style="min-width:360px">Ajustar (marcar quem fica na semanal)</th>
                 </tr>
                 <?php foreach ($sites as $s):
                     $sid = (int) $s['id'];
-                    $names = array_keys($weeklyBySite[$sid] ?? []);
-                    $names = array_map(fn($n) => strpos($n, '__outro__:') === 0 ? substr($n, strlen('__outro__:')) . ' *' : $n, $names);
+                    $current = $weeklyBySite[$sid] ?? [];
                     $v = $verdictBySite[$sid] ?? null;
                     $expected = $v['expected'] ?? [];
                     $missing  = $v['missing'] ?? [];
                     $extra    = $v['extra'] ?? [];
+                    // pessoas fora da lista de gerentes (para exibir como aviso)
+                    $others = [];
+                    foreach (array_keys($current) as $n) {
+                        if (strpos($n, '__outro__:') === 0) $others[] = substr($n, strlen('__outro__:'));
+                    }
                 ?>
-                    <tr>
+                    <tr data-site="<?= $sid ?>" data-expected="<?= h(implode('|', $expected)) ?>">
                         <td class="code"><?= h($s['code'] ?: '—') ?></td>
                         <td><?= h($s['name']) ?></td>
                         <td><?= badge($s['status']) ?></td>
-                        <td><?= $names ? h(implode(', ', $names)) : '<span class="muted">ninguém</span>' ?></td>
-                        <td><?= $v ? verdict_badge($v['status']) : '—' ?></td>
-                        <td>
+                        <td class="cell-verdict"><?= $v ? verdict_badge($v['status']) : '—' ?></td>
+                        <td class="cell-expected">
                             <?php if (empty($expected)): ?>
                                 <span class="muted">—</span>
                             <?php else: ?>
                                 <?= h(implode(', ', $expected)) ?>
-                                <?php if ($missing): ?>
-                                    <br><span class="tag falta" style="margin-top:3px">falta: <?= h(implode(', ', $missing)) ?></span>
-                                <?php endif; ?>
-                                <?php if ($extra): ?>
-                                    <br><span class="tag extra" style="margin-top:3px">tirar: <?= h(implode(', ', $extra)) ?></span>
-                                <?php endif; ?>
+                                <?php if ($missing): ?><br><span class="tag falta" style="margin-top:3px">falta: <?= h(implode(', ', $missing)) ?></span><?php endif; ?>
+                                <?php if ($extra): ?><br><span class="tag extra" style="margin-top:3px">tirar: <?= h(implode(', ', $extra)) ?></span><?php endif; ?>
                             <?php endif; ?>
+                        </td>
+                        <td class="cell-edit">
+                            <div class="chips">
+                                <?php foreach ($managerNames as $mg):
+                                    $pinId = $managerPinId[$mg] ?? 0;
+                                    $checked = isset($current[$mg]);
+                                    $disabled = $pinId <= 0;
+                                ?>
+                                    <label class="chip<?= $checked ? ' on' : '' ?><?= $disabled ? ' disabled' : '' ?>"
+                                           title="<?= $disabled ? 'Sem PIN cadastrado — não é possível marcar' : '' ?>">
+                                        <input type="checkbox"
+                                               data-manager="<?= h($mg) ?>"
+                                               <?= $checked ? 'checked' : '' ?>
+                                               <?= $disabled ? 'disabled' : '' ?>>
+                                        <?= h($mg) ?>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php if ($others): ?>
+                                <div class="legend" style="margin-top:4px">também marcado (fora da lista): <?= h(implode(', ', $others)) ?></div>
+                            <?php endif; ?>
+                            <div class="rowactions">
+                                <button type="button" class="btn-save" disabled>Salvar</button>
+                                <button type="button" class="btn-fix" title="Marca exatamente o esperado">Aplicar o certo</button>
+                                <span class="save-status"></span>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>
             </table>
             <div class="legend" style="margin-top:10px">
-                * pessoa que não está na lista de gerentes informados.<br>
                 <strong>Situação:</strong> compara quem está na semanal hoje com o "certo" (declarações dos gerentes + Eduardo Carvalho/EPI em toda obra ativa).
-                <em>Sem regra</em> = obra que nenhum gerente declarou tomar conta, então não dá pra dizer o certo.
+                <em>Sem regra</em> = obra que nenhum gerente declarou.<br>
+                <strong>Ajustar:</strong> marque/desmarque os gerentes e clique <em>Salvar</em>. "Aplicar o certo" marca automaticamente o esperado. As mudanças gravam direto no banco (lista semanal).
             </div>
         </div>
     </div>
 
 </div>
+
+<script>
+(function () {
+    var SAVE_URL = '/relatorio-lista-semanal/salvar';
+    var TOKEN = <?= json_encode($token) ?>;
+
+    function chipsOf(tr) { return Array.prototype.slice.call(tr.querySelectorAll('.chip input[type=checkbox]')); }
+    function selectedManagers(tr) {
+        return chipsOf(tr).filter(function (c) { return c.checked; }).map(function (c) { return c.getAttribute('data-manager'); });
+    }
+    function markDirty(tr, dirty) {
+        tr.classList.toggle('dirty', dirty);
+        var btn = tr.querySelector('.btn-save');
+        if (btn) btn.disabled = !dirty;
+    }
+    function setStatus(tr, msg, kind) {
+        var el = tr.querySelector('.save-status');
+        if (!el) return;
+        el.textContent = msg || '';
+        el.className = 'save-status' + (kind ? ' ' + kind : '');
+    }
+
+    // Sincroniza o visual do chip (classe .on) com o checkbox
+    function syncChip(input) {
+        var label = input.closest('.chip');
+        if (label) label.classList.toggle('on', input.checked);
+    }
+
+    document.querySelectorAll('tr[data-site]').forEach(function (tr) {
+        // baseline inicial para saber se houve mudança
+        tr._baseline = selectedManagers(tr).sort().join('|');
+
+        chipsOf(tr).forEach(function (input) {
+            input.addEventListener('change', function () {
+                syncChip(input);
+                var now = selectedManagers(tr).sort().join('|');
+                markDirty(tr, now !== tr._baseline);
+                setStatus(tr, '', '');
+            });
+        });
+
+        // "Aplicar o certo": marca exatamente o esperado
+        var fix = tr.querySelector('.btn-fix');
+        if (fix) fix.addEventListener('click', function () {
+            var expected = (tr.getAttribute('data-expected') || '').split('|').filter(Boolean);
+            chipsOf(tr).forEach(function (input) {
+                if (input.disabled) return;
+                input.checked = expected.indexOf(input.getAttribute('data-manager')) !== -1;
+                syncChip(input);
+            });
+            var now = selectedManagers(tr).sort().join('|');
+            markDirty(tr, now !== tr._baseline);
+            setStatus(tr, 'Pré-selecionado o esperado. Clique em Salvar.', '');
+        });
+
+        // Salvar
+        var save = tr.querySelector('.btn-save');
+        if (save) save.addEventListener('click', function () {
+            var siteId = parseInt(tr.getAttribute('data-site'), 10);
+            var managers = selectedManagers(tr);
+            save.disabled = true;
+            setStatus(tr, 'Salvando…', '');
+            fetch(SAVE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: TOKEN, site_id: siteId, managers: managers })
+            })
+            .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+            .then(function (res) {
+                if (res.ok && res.j && res.j.ok) {
+                    tr._baseline = managers.slice().sort().join('|');
+                    markDirty(tr, false);
+                    setStatus(tr, '✔ Salvo', 'ok');
+                } else {
+                    save.disabled = false;
+                    setStatus(tr, '✕ ' + ((res.j && res.j.error) || 'Erro ao salvar'), 'err');
+                }
+            })
+            .catch(function () {
+                save.disabled = false;
+                setStatus(tr, '✕ Falha de conexão', 'err');
+            });
+        });
+    });
+})();
+</script>
 </body>
 </html>
