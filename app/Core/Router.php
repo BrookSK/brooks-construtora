@@ -314,7 +314,10 @@ class Router
             'dev/nibo' => ['DevController', 'nibo'],
             'dev/nibo/save-token' => ['DevController', 'niboSaveToken'],
             'dev/nibo/test' => ['DevController', 'niboTest'],
-            'dev/relatorio-pedidos' => ['DevController', 'purchaseOrdersReport'],
+
+            // Painel analítico de pedidos de compra (admin ou PIN "completo")
+            'relatorio-pedidos' => ['AnalyticsController', 'index'],
+            'relatorio-pedidos/download' => ['AnalyticsController', 'download'],
 
             // Dashboard Financeiro (Nibo · somente leitura)
             'finance' => ['FinanceController', 'index'],

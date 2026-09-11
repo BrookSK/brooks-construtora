@@ -4,7 +4,7 @@
  * RELATÓRIO DE PEDIDOS DE COMPRA -> EXCEL (.xlsx)  — versão CLI
  * =====================================================================
  *
- * Gera o mesmo arquivo do endpoint /admin/dev/relatorio-pedidos, mas
+ * Gera o mesmo arquivo do endpoint /admin/relatorio-pedidos/download, mas
  * pela linha de comando (útil para rodar no servidor via SSH/cron).
  *
  * USO (rodar no servidor, onde o banco MySQL está acessível):

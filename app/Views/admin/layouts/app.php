@@ -383,8 +383,8 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/admin/dev/relatorio-pedidos" data-title="Relatório de Pedidos (Excel)">
-                    <i class="bi bi-file-earmark-spreadsheet"></i> <span class="link-text">Relatório (Excel)</span>
+                <a class="nav-link <?= ($currentPage ?? '') === 'analytics_orders' ? 'active' : '' ?>" href="/admin/relatorio-pedidos" data-title="Relatório de Pedidos">
+                    <i class="bi bi-bar-chart-line"></i> <span class="link-text">Relatório de Pedidos</span>
                 </a>
             </li>
             <?php endif; ?>

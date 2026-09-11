@@ -42,6 +42,18 @@ class PurchaseOrderReportService
     }
 
     /**
+     * Devolve os mesmos dados usados no Excel, em forma estruturada,
+     * para renderização na tela (dashboard). Cada chave é uma aba/seção
+     * com 'headers' e 'rows'.
+     *
+     * @return array<string,array{headers:string[],rows:array<int,array<int,string>>}>
+     */
+    public static function collectData(): array
+    {
+        return self::collect();
+    }
+
+    /**
      * Nome de arquivo sugerido para download.
      */
     public static function suggestedFilename(): string
