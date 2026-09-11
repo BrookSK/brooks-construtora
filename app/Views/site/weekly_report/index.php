@@ -22,6 +22,17 @@ function badge(string $status): string {
 }
 function h($s) { return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8'); }
 
+/** Indica se o status representa uma obra ativa (em andamento). */
+function is_active_status(string $s): bool {
+    return in_array($s, ['active', 'em_andamento'], true);
+}
+/** Badge Ativa / Inativa. */
+function active_badge(string $status): string {
+    if (is_active_status($status)) {
+        return '<span class="badge" style="color:#065f46;background:#d1fae5">● Ativa</span>';
+    }
+    return '<span class="badge" style="color:#6b7280;background:#e5e7eb">○ Inativa</span>';
+}
 /** Rótulo + cor do veredito (certo/errado) de uma obra. */
 function verdict_badge(string $status): string {
     [$label, $fg, $bg] = match ($status) {
@@ -94,6 +105,13 @@ function verdict_badge(string $status): string {
     .save-status.ok { color:#16a34a; }
     .save-status.err { color:#dc2626; }
     tr.dirty { background:#fffdf5; }
+    /* filtros */
+    .filters { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+    .filters .flabel { font-size:12px; color:#64748b; font-weight:600; margin-right:2px; }
+    .fbtn { font-size:12px; border:1px solid #cbd5e1; background:#fff; color:#475569; border-radius:999px; padding:4px 12px; cursor:pointer; }
+    .fbtn.active { background:#0f172a; color:#fff; border-color:#0f172a; }
+    .fcount { color:#94a3b8; font-size:12px; margin-left:auto; }
+    tr.hidden-row { display:none; }
 </style>
 </head>
 <body>
@@ -258,12 +276,20 @@ function verdict_badge(string $status): string {
     <div class="card">
         <h2>Todas as obras × responsáveis na semanal <span class="count"><?= count($sites) ?></span></h2>
         <div class="body">
+            <div class="filters">
+                <span class="flabel">Mostrar:</span>
+                <button type="button" class="fbtn active" data-filter="all">Todas</button>
+                <button type="button" class="fbtn" data-filter="active">Só ativas</button>
+                <button type="button" class="fbtn" data-filter="inactive">Só inativas</button>
+                <button type="button" class="fbtn" data-filter="problem">Com problema</button>
+                <span class="fcount"></span>
+            </div>
             <table>
                 <tr>
                     <th style="width:90px">Código</th>
                     <th>Obra</th>
-                    <th style="width:100px">Status</th>
-                    <th style="width:110px">Situação</th>
+                    <th style="width:150px">Situação da obra</th>
+                    <th style="width:110px">Semanal</th>
                     <th>Certo (esperado)</th>
                     <th style="min-width:360px">Ajustar (marcar quem fica na semanal)</th>
                 </tr>
@@ -274,16 +300,23 @@ function verdict_badge(string $status): string {
                     $expected = $v['expected'] ?? [];
                     $missing  = $v['missing'] ?? [];
                     $extra    = $v['extra'] ?? [];
+                    $vstatus  = $v['status'] ?? '';
+                    $activeFlag = is_active_status($s['status']) ? 'active' : 'inactive';
+                    $problemFlag = in_array($vstatus, ['so_epi','falta','divergente','sem_ninguem','extra'], true) ? '1' : '0';
                     // pessoas fora da lista de gerentes (para exibir como aviso)
                     $others = [];
                     foreach (array_keys($current) as $n) {
                         if (strpos($n, '__outro__:') === 0) $others[] = substr($n, strlen('__outro__:'));
                     }
                 ?>
-                    <tr data-site="<?= $sid ?>" data-expected="<?= h(implode('|', $expected)) ?>">
+                    <tr data-site="<?= $sid ?>" data-expected="<?= h(implode('|', $expected)) ?>"
+                        data-active="<?= $activeFlag ?>" data-problem="<?= $problemFlag ?>">
                         <td class="code"><?= h($s['code'] ?: '—') ?></td>
                         <td><?= h($s['name']) ?></td>
-                        <td><?= badge($s['status']) ?></td>
+                        <td>
+                            <?= active_badge($s['status']) ?><br>
+                            <span style="margin-top:3px;display:inline-block"><?= badge($s['status']) ?></span>
+                        </td>
                         <td class="cell-verdict"><?= $v ? verdict_badge($v['status']) : '—' ?></td>
                         <td class="cell-expected">
                             <?php if (empty($expected)): ?>
@@ -416,6 +449,31 @@ function verdict_badge(string $status): string {
             });
         });
     });
+
+    // ---- Filtros da tabela geral ----
+    var fbtns = document.querySelectorAll('.filters .fbtn');
+    var fcount = document.querySelector('.filters .fcount');
+    var allRows = document.querySelectorAll('tr[data-site]');
+    function applyFilter(kind) {
+        var shown = 0;
+        allRows.forEach(function (tr) {
+            var show = true;
+            if (kind === 'active') show = tr.getAttribute('data-active') === 'active';
+            else if (kind === 'inactive') show = tr.getAttribute('data-active') === 'inactive';
+            else if (kind === 'problem') show = tr.getAttribute('data-problem') === '1';
+            tr.classList.toggle('hidden-row', !show);
+            if (show) shown++;
+        });
+        if (fcount) fcount.textContent = shown + ' obra(s)';
+    }
+    fbtns.forEach(function (b) {
+        b.addEventListener('click', function () {
+            fbtns.forEach(function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+            applyFilter(b.getAttribute('data-filter'));
+        });
+    });
+    applyFilter('all');
 })();
 </script>
 </body>
