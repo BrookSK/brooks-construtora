@@ -21,6 +21,20 @@ function badge(string $status): string {
     return '<span class="badge" style="color:' . $fg . ';background:' . $bg . '">' . htmlspecialchars($label) . '</span>';
 }
 function h($s) { return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8'); }
+
+/** Rótulo + cor do veredito (certo/errado) de uma obra. */
+function verdict_badge(string $status): string {
+    [$label, $fg, $bg] = match ($status) {
+        'ok'         => ['✔ Certo', '#166534', '#dcfce7'],
+        'falta'      => ['Falta alguém', '#b91c1c', '#fee2e2'],
+        'extra'      => ['Tem a mais', '#92400e', '#fef3c7'],
+        'divergente' => ['Divergente', '#b91c1c', '#fee2e2'],
+        'sem_ninguem'=> ['Sem ninguém', '#b91c1c', '#fee2e2'],
+        'sem_regra'  => ['Sem regra', '#64748b', '#e2e8f0'],
+        default      => [$status, '#64748b', '#e2e8f0'],
+    };
+    return '<span class="tag" style="color:' . $fg . ';background:' . $bg . '">' . h($label) . '</span>';
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -228,21 +242,50 @@ function h($s) { return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8'); }
         <h2>Todas as obras × responsáveis na semanal <span class="count"><?= count($sites) ?></span></h2>
         <div class="body">
             <table>
-                <tr><th style="width:110px">Código</th><th>Obra</th><th style="width:120px">Status</th><th>Na semanal</th></tr>
+                <tr>
+                    <th style="width:100px">Código</th>
+                    <th>Obra</th>
+                    <th style="width:110px">Status</th>
+                    <th>Na semanal (atual)</th>
+                    <th style="width:110px">Situação</th>
+                    <th>Certo (esperado)</th>
+                </tr>
                 <?php foreach ($sites as $s):
                     $sid = (int) $s['id'];
                     $names = array_keys($weeklyBySite[$sid] ?? []);
                     $names = array_map(fn($n) => strpos($n, '__outro__:') === 0 ? substr($n, strlen('__outro__:')) . ' *' : $n, $names);
+                    $v = $verdictBySite[$sid] ?? null;
+                    $expected = $v['expected'] ?? [];
+                    $missing  = $v['missing'] ?? [];
+                    $extra    = $v['extra'] ?? [];
                 ?>
                     <tr>
                         <td class="code"><?= h($s['code'] ?: '—') ?></td>
                         <td><?= h($s['name']) ?></td>
                         <td><?= badge($s['status']) ?></td>
                         <td><?= $names ? h(implode(', ', $names)) : '<span class="muted">ninguém</span>' ?></td>
+                        <td><?= $v ? verdict_badge($v['status']) : '—' ?></td>
+                        <td>
+                            <?php if (empty($expected)): ?>
+                                <span class="muted">—</span>
+                            <?php else: ?>
+                                <?= h(implode(', ', $expected)) ?>
+                                <?php if ($missing): ?>
+                                    <br><span class="tag falta" style="margin-top:3px">falta: <?= h(implode(', ', $missing)) ?></span>
+                                <?php endif; ?>
+                                <?php if ($extra): ?>
+                                    <br><span class="tag extra" style="margin-top:3px">tirar: <?= h(implode(', ', $extra)) ?></span>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
             </table>
-            <div class="legend" style="margin-top:10px">* pessoa que não está na lista de gerentes informados.</div>
+            <div class="legend" style="margin-top:10px">
+                * pessoa que não está na lista de gerentes informados.<br>
+                <strong>Situação:</strong> compara quem está na semanal hoje com o "certo" (declarações dos gerentes + Eduardo Carvalho/EPI em toda obra ativa).
+                <em>Sem regra</em> = obra que nenhum gerente declarou tomar conta, então não dá pra dizer o certo.
+            </div>
         </div>
     </div>
 

@@ -180,6 +180,61 @@ class WeeklyReportController extends Controller
             }
         }
 
+        // ---------------- "Esperado" por obra (o que seria o certo) ----------------
+        // Monta, para cada obra, o conjunto de gerentes que DEVERIAM estar na
+        // semanal, a partir das listagens declaradas pelos gerentes.
+        $expectedBySite = []; // site_id => [ 'Gerente' => true ]
+        foreach ($this->declared as $mg => $termos) {
+            foreach ($termos as $termo) {
+                foreach ($this->findSites($termo, $sites) as $s) {
+                    $expectedBySite[(int) $s['id']][$mg] = true;
+                }
+            }
+        }
+        // Eduardo Carvalho (EPI) é esperado em TODA obra ativa.
+        foreach ($activeSites as $s) {
+            $expectedBySite[(int) $s['id']]['Eduardo Carvalho'] = true;
+        }
+
+        // Veredito por obra: compara esperado x atual (só gerentes conhecidos).
+        $verdictBySite = []; // site_id => ['status'=>ok|falta|extra|divergente|sem_regra|revisar, 'expected'=>[], 'missing'=>[], 'extra'=>[]]
+        foreach ($sites as $s) {
+            $sid = (int) $s['id'];
+            $active = $isActive($s);
+
+            $currentAll = array_keys($weeklyBySite[$sid] ?? []);
+            $current = array_values(array_filter($currentAll, fn($n) => strpos($n, '__outro__:') !== 0));
+            $expected = array_keys($expectedBySite[$sid] ?? []);
+
+            $missing = array_values(array_diff($expected, $current)); // deveria ter e não tem
+            $extra   = array_values(array_diff($current, $expected)); // tem mas não era esperado
+
+            if (empty($expected)) {
+                // Não temos regra declarada para esta obra.
+                if (empty($current)) {
+                    $status = $active ? 'sem_ninguem' : 'sem_regra';
+                } else {
+                    $status = 'sem_regra';
+                }
+            } elseif (empty($missing) && empty($extra)) {
+                $status = 'ok';
+            } elseif (!empty($missing) && empty($extra)) {
+                $status = 'falta';
+            } elseif (empty($missing) && !empty($extra)) {
+                $status = 'extra';
+            } else {
+                $status = 'divergente';
+            }
+
+            $verdictBySite[$sid] = [
+                'status'   => $status,
+                'active'   => $active,
+                'expected' => $expected,
+                'missing'  => $missing,
+                'extra'    => $extra,
+            ];
+        }
+
         // ---------------- Render ----------------
         $data = [
             'sites' => $sites,
@@ -192,6 +247,7 @@ class WeeklyReportController extends Controller
             'noResponsible' => $noResponsible,
             'onlyEpi' => $onlyEpi,
             'strangers' => $strangers,
+            'verdictBySite' => $verdictBySite,
             'generatedAt' => date('d/m/Y H:i'),
         ];
 
