@@ -395,6 +395,80 @@ class WeeklyReportController extends Controller
     }
 
     /**
+     * Sincroniza os logins duplicados: para cada gerente que tem mais de um
+     * pin_user (ex.: Jefferson com 2 logins), garante que TODOS os logins dele
+     * estejam na semanal de TODA obra onde pelo menos um deles já está.
+     *
+     * Não muda de quem é a obra — só faz os logins do mesmo gerente andarem
+     * juntos. Aplica de uma vez em todas as obras.
+     * Recebe POST JSON: { token }.
+     */
+    public function syncLogins(): void
+    {
+        $raw = file_get_contents('php://input');
+        $payload = json_decode($raw, true) ?: [];
+        if (!hash_equals(self::TOKEN, (string) ($payload['token'] ?? ''))) {
+            $this->json(['ok' => false, 'error' => 'Token inválido'], 403);
+        }
+
+        $managerPinIds = $this->resolveManagerPinIds(); // ['Gerente' => [id1, id2, ...]]
+
+        // Vínculos weekly atuais: site_id => [pin_id => true]
+        $rows = Database::fetchAll(
+            "SELECT construction_site_id AS site_id, pin_user_id AS pin_id
+             FROM construction_site_approvers WHERE phase = 'weekly'"
+        );
+        $current = [];
+        foreach ($rows as $r) {
+            $current[(int) $r['site_id']][(int) $r['pin_id']] = true;
+        }
+
+        $inserted = 0;
+        $affectedSites = [];
+        $details = [];
+
+        try {
+            foreach ($managerPinIds as $mg => $ids) {
+                $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($v) => $v > 0)));
+                if (count($ids) < 2) continue; // só interessa quem tem 2+ logins
+
+                foreach ($current as $siteId => $pins) {
+                    // Algum login desse gerente está nesta obra?
+                    $temAlgum = false;
+                    foreach ($ids as $pid) {
+                        if (isset($pins[$pid])) { $temAlgum = true; break; }
+                    }
+                    if (!$temAlgum) continue;
+
+                    // Insere os que faltam.
+                    foreach ($ids as $pid) {
+                        if (!isset($pins[$pid])) {
+                            Database::insert('construction_site_approvers', [
+                                'construction_site_id' => $siteId,
+                                'pin_user_id' => $pid,
+                                'phase' => 'weekly',
+                                'created_at' => date('Y-m-d H:i:s'),
+                            ]);
+                            $inserted++;
+                            $affectedSites[$siteId] = true;
+                            $details[$mg] = ($details[$mg] ?? 0) + 1;
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->json(['ok' => false, 'error' => 'Erro: ' . $e->getMessage()], 500);
+        }
+
+        $this->json([
+            'ok' => true,
+            'inserted' => $inserted,
+            'sites' => count($affectedSites),
+            'by_manager' => $details,
+        ]);
+    }
+
+    /**
      * Descobre o pin_user id de cada gerente configurado, casando por e-mail
      * (prioridade) ou por nome normalizado. Retorna [ 'Gerente' => pinId ].
      */

@@ -129,7 +129,13 @@ function verdict_badge(string $status): string {
             <h1>Relação — Lista Semanal de Materiais</h1>
             <p>Dados ao vivo do banco · gerado em <?= h($generatedAt) ?></p>
         </div>
-        <a class="refresh" href="">↻ Atualizar</a>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button type="button" id="btn-sync-logins" class="refresh" style="cursor:pointer;background:#1d4ed8;border-color:#1d4ed8;color:#fff">
+                ⇄ Sincronizar logins duplicados
+            </button>
+            <span id="sync-msg" style="font-size:12px;color:#cbd5e1"></span>
+            <a class="refresh" href="">↻ Atualizar</a>
+        </div>
     </div>
 </header>
 
@@ -522,6 +528,34 @@ function verdict_badge(string $status): string {
         });
     });
     applyFilter('all');
+
+    // ---- Sincronizar logins duplicados (ex.: os 2 logins do Jefferson) ----
+    var syncBtn = document.getElementById('btn-sync-logins');
+    var syncMsg = document.getElementById('sync-msg');
+    if (syncBtn) syncBtn.addEventListener('click', function () {
+        if (!confirm('Isto vai garantir que gerentes com mais de um login (ex.: Jefferson) tenham TODOS os logins marcados em todas as obras onde já estão. Continuar?')) return;
+        syncBtn.disabled = true;
+        if (syncMsg) syncMsg.textContent = 'Sincronizando…';
+        fetch('/relatorio-lista-semanal/sync-logins', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: TOKEN })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+            if (j && j.ok) {
+                if (syncMsg) syncMsg.textContent = '✔ ' + j.inserted + ' vínculo(s) em ' + j.sites + ' obra(s). Recarregando…';
+                setTimeout(function () { location.reload(); }, 900);
+            } else {
+                syncBtn.disabled = false;
+                if (syncMsg) syncMsg.textContent = '✕ ' + ((j && j.error) || 'Erro');
+            }
+        })
+        .catch(function () {
+            syncBtn.disabled = false;
+            if (syncMsg) syncMsg.textContent = '✕ Falha de conexão';
+        });
+    });
 })();
 </script>
 </body>
