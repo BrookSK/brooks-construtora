@@ -346,17 +346,18 @@ function verdict_badge(string $status): string {
                         <td class="cell-edit">
                             <div class="chips">
                                 <?php foreach ($managerNames as $mg):
-                                    $pinId = $managerPinId[$mg] ?? 0;
+                                    $pinIds = $managerPinId[$mg] ?? [];
+                                    $loginCount = is_array($pinIds) ? count($pinIds) : 0;
                                     $checked = isset($current[$mg]);
-                                    $disabled = $pinId <= 0;
+                                    $disabled = $loginCount <= 0;
                                 ?>
                                     <label class="chip<?= $checked ? ' on' : '' ?><?= $disabled ? ' disabled' : '' ?>"
-                                           title="<?= $disabled ? 'Sem PIN cadastrado — não é possível marcar' : '' ?>">
+                                           title="<?= $disabled ? 'Sem PIN cadastrado — não é possível marcar' : ($loginCount > 1 ? $loginCount . ' logins — marca todos' : '') ?>">
                                         <input type="checkbox"
                                                data-manager="<?= h($mg) ?>"
                                                <?= $checked ? 'checked' : '' ?>
                                                <?= $disabled ? 'disabled' : '' ?>>
-                                        <?= h($mg) ?>
+                                        <?= h($mg) ?><?php if ($loginCount > 1): ?> <span style="opacity:.6">×<?= $loginCount ?></span><?php endif; ?>
                                     </label>
                                 <?php endforeach; ?>
                             </div>

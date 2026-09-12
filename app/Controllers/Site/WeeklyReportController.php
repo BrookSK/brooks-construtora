@@ -302,18 +302,24 @@ class WeeklyReportController extends Controller
             $this->json(['ok' => false, 'error' => 'Obra não encontrada'], 404);
         }
 
-        $managerPinId = $this->resolveManagerPinIds();
+        $managerPinIds = $this->resolveManagerPinIds(); // ['Gerente' => [id1, id2, ...]]
 
-        // Só aceitamos nomes de gerentes conhecidos que tenham pin_user.
-        $selectedPinIds = [];
+        // Só aceitamos nomes de gerentes conhecidos. Um gerente pode ter vários
+        // logins (pin_users) → ao marcar, marcamos TODOS os logins dele.
+        $selectedPinIds = []; // pinId => nome do gerente
         foreach ($selected as $name) {
-            if (isset($managerPinId[$name])) {
-                $selectedPinIds[$managerPinId[$name]] = $name;
+            foreach (($managerPinIds[$name] ?? []) as $pid) {
+                $selectedPinIds[(int) $pid] = $name;
             }
         }
 
-        // pin_ids de TODOS os gerentes conhecidos (universo que o editor controla).
-        $knownPinIds = array_filter(array_values($managerPinId), fn($v) => $v > 0);
+        // pin_ids de TODOS os logins de TODOS os gerentes conhecidos
+        // (universo que o editor controla).
+        $knownPinIds = [];
+        foreach ($managerPinIds as $ids) {
+            foreach ($ids as $pid) $knownPinIds[] = (int) $pid;
+        }
+        $knownPinIds = array_values(array_unique(array_filter($knownPinIds, fn($v) => $v > 0)));
 
         try {
             // 1) Remove vínculos weekly APENAS dos gerentes conhecidos nesta obra.
@@ -397,12 +403,12 @@ class WeeklyReportController extends Controller
         $pins = Database::fetchAll("SELECT id, name, email FROM pin_users WHERE active = 1");
         $out = [];
         foreach ($this->managers as $mg => $cfg) {
-            $out[$mg] = 0;
+            $out[$mg] = []; // um gerente pode ter VÁRIOS logins (pin_users)
         }
         foreach ($pins as $p) {
             $mg = $this->matchManager((string) $p['name'], $p['email'] ?? null);
-            if ($mg !== null && empty($out[$mg])) {
-                $out[$mg] = (int) $p['id'];
+            if ($mg !== null) {
+                $out[$mg][] = (int) $p['id']; // acumula todos os logins do gerente
             }
         }
         return $out;
@@ -418,7 +424,14 @@ class WeeklyReportController extends Controller
                 if ($e !== '' && $e === strtolower($em)) return $mg;
             }
             foreach (($cfg['names'] ?? []) as $nm) {
-                if ($n === $this->norm($nm)) return $mg;
+                $target = $this->norm($nm);
+                if ($target === '') continue;
+                // Igualdade exata OU o nome do banco contém o configurado como
+                // sequência de palavras (ex.: "jefferson duarte" casa com
+                // "jefferson duarte do nascimento"). Usa espaços nas bordas para
+                // não casar pedaços de palavra.
+                if ($n === $target) return $mg;
+                if (strpos(' ' . $n . ' ', ' ' . $target . ' ') !== false) return $mg;
             }
         }
         return null;
