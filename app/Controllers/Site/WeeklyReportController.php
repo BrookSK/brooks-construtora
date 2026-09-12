@@ -347,6 +347,46 @@ class WeeklyReportController extends Controller
     }
 
     /**
+     * Altera o status de uma obra (concluir / reabrir) direto pela tela.
+     * Recebe POST JSON: { token, site_id, status: 'completed'|'active' }.
+     * Ao concluir, grava completed_at; ao reabrir, limpa.
+     */
+    public function setStatus(): void
+    {
+        $raw = file_get_contents('php://input');
+        $payload = json_decode($raw, true) ?: [];
+
+        if (!hash_equals(self::TOKEN, (string) ($payload['token'] ?? ''))) {
+            $this->json(['ok' => false, 'error' => 'Token inválido'], 403);
+        }
+
+        $siteId = (int) ($payload['site_id'] ?? 0);
+        $status = (string) ($payload['status'] ?? '');
+
+        if ($siteId <= 0) {
+            $this->json(['ok' => false, 'error' => 'Obra inválida'], 422);
+        }
+        if (!in_array($status, ['completed', 'active'], true)) {
+            $this->json(['ok' => false, 'error' => 'Status inválido'], 422);
+        }
+
+        $site = Database::fetch("SELECT id FROM construction_sites WHERE id = ?", [$siteId]);
+        if (!$site) {
+            $this->json(['ok' => false, 'error' => 'Obra não encontrada'], 404);
+        }
+
+        try {
+            $data = ['status' => $status];
+            $data['completed_at'] = ($status === 'completed') ? date('Y-m-d') : null;
+            Database::update('construction_sites', $data, 'id = ?', [$siteId]);
+        } catch (\Throwable $e) {
+            $this->json(['ok' => false, 'error' => 'Erro ao atualizar: ' . $e->getMessage()], 500);
+        }
+
+        $this->json(['ok' => true, 'site_id' => $siteId, 'status' => $status]);
+    }
+
+    /**
      * Descobre o pin_user id de cada gerente configurado, casando por e-mail
      * (prioridade) ou por nome normalizado. Retorna [ 'Gerente' => pinId ].
      */

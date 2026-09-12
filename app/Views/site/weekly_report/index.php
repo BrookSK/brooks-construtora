@@ -112,6 +112,14 @@ function verdict_badge(string $status): string {
     .fbtn.active { background:#0f172a; color:#fff; border-color:#0f172a; }
     .fcount { color:#94a3b8; font-size:12px; margin-left:auto; }
     tr.hidden-row { display:none; }
+    .btn-conclude, .btn-reopen { font-size:11px; font-weight:600; border-radius:7px; padding:4px 10px; cursor:pointer; border:1px solid transparent; }
+    .btn-conclude { background:#dcfce7; color:#166534; border-color:#86efac; }
+    .btn-conclude:hover { background:#bbf7d0; }
+    .btn-reopen { background:#f1f5f9; color:#475569; border-color:#cbd5e1; }
+    .btn-reopen:hover { background:#e2e8f0; }
+    .status-msg { font-size:11px; margin-left:4px; }
+    .status-msg.ok { color:#16a34a; }
+    .status-msg.err { color:#dc2626; }
 </style>
 </head>
 <body>
@@ -313,9 +321,17 @@ function verdict_badge(string $status): string {
                         data-active="<?= $activeFlag ?>" data-problem="<?= $problemFlag ?>">
                         <td class="code"><?= h($s['code'] ?: '—') ?></td>
                         <td><?= h($s['name']) ?></td>
-                        <td>
-                            <?= active_badge($s['status']) ?><br>
-                            <span style="margin-top:3px;display:inline-block"><?= badge($s['status']) ?></span>
+                        <td class="cell-status">
+                            <span class="active-badge-wrap"><?= active_badge($s['status']) ?></span><br>
+                            <span class="status-badge-wrap" style="margin-top:3px;display:inline-block"><?= badge($s['status']) ?></span>
+                            <div class="statusactions" style="margin-top:6px">
+                                <?php if (is_active_status($s['status'])): ?>
+                                    <button type="button" class="btn-conclude" data-target="completed">✓ Concluir obra</button>
+                                <?php else: ?>
+                                    <button type="button" class="btn-reopen" data-target="active">↺ Reabrir</button>
+                                <?php endif; ?>
+                                <span class="status-msg"></span>
+                            </div>
                         </td>
                         <td class="cell-verdict"><?= $v ? verdict_badge($v['status']) : '—' ?></td>
                         <td class="cell-expected">
@@ -446,6 +462,37 @@ function verdict_badge(string $status): string {
             .catch(function () {
                 save.disabled = false;
                 setStatus(tr, '✕ Falha de conexão', 'err');
+            });
+        });
+
+        // Concluir / Reabrir obra
+        var stBtn = tr.querySelector('.btn-conclude, .btn-reopen');
+        if (stBtn) stBtn.addEventListener('click', function () {
+            var target = stBtn.getAttribute('data-target');
+            if (target === 'completed' && !confirm('Marcar esta obra como CONCLUÍDA?')) return;
+            var siteId = parseInt(tr.getAttribute('data-site'), 10);
+            var msg = tr.querySelector('.status-msg');
+            stBtn.disabled = true;
+            if (msg) { msg.textContent = 'Salvando…'; msg.className = 'status-msg'; }
+            fetch('/relatorio-lista-semanal/status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: TOKEN, site_id: siteId, status: target })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (j) {
+                if (j && j.ok) {
+                    if (msg) { msg.textContent = '✔ Atualizado'; msg.className = 'status-msg ok'; }
+                    // Recarrega para refletir badges, veredito e filtros
+                    setTimeout(function () { location.reload(); }, 500);
+                } else {
+                    stBtn.disabled = false;
+                    if (msg) { msg.textContent = '✕ ' + ((j && j.error) || 'Erro'); msg.className = 'status-msg err'; }
+                }
+            })
+            .catch(function () {
+                stBtn.disabled = false;
+                if (msg) { msg.textContent = '✕ Falha de conexão'; msg.className = 'status-msg err'; }
             });
         });
     });
