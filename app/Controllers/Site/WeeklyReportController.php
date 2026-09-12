@@ -35,6 +35,8 @@ class WeeklyReportController extends Controller
         'Gleice Aline'      => ['emails' => ['g.a.b.interiores@gmail.com'], 'names' => ['gleice aline', 'gleice aline bernardi']],
         'Eduardo Andrade'   => ['emails' => ['engeduardoandradebrooks@gmail.com'], 'names' => ['eduardo andrade', 'eduardo henrique melo andrade']],
         'Mayara Alves'      => ['emails' => ['mayaraengenheira306@gmail.com'], 'names' => ['mayara alves', 'mayara alves da silva']],
+        'Alex Brilhante'    => ['emails' => ['alexengenharia@brooksconstrutora.com.br'], 'names' => ['alex brilhante', 'alex brilhante freitas', 'alex']],
+        'Bianca'            => ['emails' => [], 'names' => ['bianca']],
     ];
 
     /** Listagem que cada gerente declarou (texto livre informado por eles). */
