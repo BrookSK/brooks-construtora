@@ -125,6 +125,40 @@
                 </div>
             </div>
 
+            <!-- Aplicar lista pré-definida -->
+            <?php if (!empty($materialLists)): ?>
+            <div class="card mb-3 border-primary border-opacity-25" id="materialListCard">
+                <div class="card-header bg-primary bg-opacity-10"><i class="bi bi-list-stars"></i> Aplicar Lista Pré-definida <small class="text-muted">(opcional)</small></div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">Selecione uma lista para carregar os materiais já com quantidades sugeridas. Depois é só ativar/desativar itens e ajustar as quantidades.</p>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-8">
+                            <select class="form-select form-select-sm" id="materialListSelect">
+                                <option value="">-- Selecione uma lista --</option>
+                                <?php foreach ($materialLists as $ml): ?>
+                                <option value="<?= (int) $ml['id'] ?>"><?= htmlspecialchars($ml['name']) ?> (<?= (int) ($ml['item_count'] ?? 0) ?> itens)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-grid">
+                            <button type="button" class="btn btn-sm btn-primary" id="applyListBtn" onclick="applyMaterialList()">
+                                <i class="bi bi-download"></i> Carregar itens
+                            </button>
+                        </div>
+                    </div>
+                    <div class="alert alert-warning small mt-3 mb-0 d-flex align-items-start gap-2">
+                        <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                        <div>
+                            <strong>Atenção:</strong> a lista é apenas uma sugestão. É por conta e risco do gerente
+                            revisar item por item, ativar somente o que realmente precisa e ajustar as quantidades
+                            antes de enviar. Evite pedir a mais ou itens que não serão usados.
+                        </div>
+                    </div>
+                    <div id="listApplyStatus" class="mt-2" style="display:none;"></div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Itens do pedido -->
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -307,6 +341,57 @@ const materials = <?= json_encode($materials) ?>;
 let itemCount = 0;
 
 document.getElementById('addItemBtn').addEventListener('click', () => addItem());
+
+// ─── Aplicar lista de materiais pré-definida ─────────────────────────────
+async function applyMaterialList() {
+    const sel = document.getElementById('materialListSelect');
+    const statusEl = document.getElementById('listApplyStatus');
+    if (!sel || !sel.value) { alert('Selecione uma lista primeiro.'); return; }
+
+    const btn = document.getElementById('applyListBtn');
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    try {
+        const resp = await fetch('/admin/material-lists/items?template_id=' + encodeURIComponent(sel.value));
+        const data = await resp.json();
+
+        if (!data.success || !Array.isArray(data.items)) {
+            statusEl.style.display = 'block';
+            statusEl.innerHTML = '<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ' + (data.error || 'Não foi possível carregar a lista.') + '</div>';
+            return;
+        }
+
+        if (data.items.length === 0) {
+            statusEl.style.display = 'block';
+            statusEl.innerHTML = '<div class="alert alert-info small py-2 mb-0"><i class="bi bi-info-circle"></i> Esta lista não tem itens ativos.</div>';
+            return;
+        }
+
+        let added = 0;
+        data.items.forEach(it => {
+            addItem({
+                id: it.id || '',
+                name: it.name || '',
+                specification: it.specification || '',
+                classification: it.classification || '',
+                unit: it.unit || '',
+                quantity: it.quantity || 1,
+            });
+            added++;
+        });
+
+        statusEl.style.display = 'block';
+        statusEl.innerHTML = '<div class="alert alert-success small py-2 mb-0"><i class="bi bi-check-circle"></i> <strong>' + added + ' item(ns)</strong> carregados da lista <strong>' + (data.template?.name || '') + '</strong>. Revise, desative o que não precisa e ajuste as quantidades antes de enviar.</div>';
+    } catch (e) {
+        statusEl.style.display = 'block';
+        statusEl.innerHTML = '<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> Erro de conexão ao carregar a lista.</div>';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+}
 
 // ─── Urgência automática pela data do pedido x necessidade ───────────────
 // A urgência não é escolhida manualmente: é classificada pela antecedência.

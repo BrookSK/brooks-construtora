@@ -355,6 +355,13 @@
                 </a>
             </li>
             <?php endif; ?>
+            <?php if (\App\Core\Auth::isAdmin() || (($_SESSION['pin_user_role'] ?? null) === 'all')): ?>
+            <li class="nav-item">
+                <a class="nav-link <?= ($currentPage ?? '') === 'material_lists' ? 'active' : '' ?>" href="/admin/material-lists" data-title="Listas de Materiais">
+                    <i class="bi bi-list-stars"></i> <span class="link-text">Listas de Materiais</span>
+                </a>
+            </li>
+            <?php endif; ?>
             <?php if (\App\Core\Auth::hasPermission('orders.settings')): ?>
             <li class="nav-item">
                 <a class="nav-link <?= ($currentPage ?? '') === 'orders_settings' ? 'active' : '' ?>" href="/admin/orders/settings" data-title="Config. Pedidos">

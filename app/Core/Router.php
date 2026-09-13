@@ -235,6 +235,16 @@ class Router
             'suppliers/search' => ['SupplierController', 'search'],
             'suppliers/quick-store' => ['SupplierController', 'quickStore'],
 
+            // Listas de Materiais Pré-definidas (templates)
+            'material-lists' => ['MaterialTemplateController', 'index'],
+            'material-lists/store' => ['MaterialTemplateController', 'store'],
+            'material-lists/update' => ['MaterialTemplateController', 'update'],
+            'material-lists/delete' => ['MaterialTemplateController', 'delete'],
+            'material-lists/items' => ['MaterialTemplateController', 'items'],
+            'material-lists/store-item' => ['MaterialTemplateController', 'storeItem'],
+            'material-lists/update-item' => ['MaterialTemplateController', 'updateItem'],
+            'material-lists/delete-item' => ['MaterialTemplateController', 'deleteItem'],
+
             // Materiais
             'materials' => ['MaterialController', 'index'],
             'materials/store' => ['MaterialController', 'store'],
