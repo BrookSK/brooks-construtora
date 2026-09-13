@@ -318,17 +318,28 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <!-- PÁG INTERNA 05: 2 imagens + 2 colunas texto -->
 <div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
+    <?php if($img1 || $img2 || $showImages): ?>
     <div style="display:flex;gap:10px;margin-bottom:10px">
         <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
         <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
     </div>
-    <?php if($page['caption']??''): ?><div class="caption"><?= htmlspecialchars($page['caption']) ?></div><div class="caption-sub"><?= htmlspecialchars($page['subtitle']??'') ?></div><?php endif; ?>
+    <?php endif; ?>
+    <?php if($page['caption']??''): ?><div class="caption"><?= htmlspecialchars($page['caption']) ?></div><?php endif; ?>
     <div style="margin-top:15px"><div class="title-big" style="font-size:1.8rem"><?= htmlspecialchars($page['title'] ?? '') ?></div></div>
+    <?php if($page['subtitle']??''): ?><div class="subtitle"><?= htmlspecialchars($page['subtitle']) ?></div><?php endif; ?>
+    <?php
+    // Se tem imagens visíveis, usa 2 colunas. Se não (texto longo/sem imagem), usa coluna única que pagina melhor.
+    $usarDuasColunas = ($img1 || $img2 || $showImages);
+    if ($usarDuasColunas):
+    ?>
     <div class="two-col">
         <?php $cols = explode('|||', $page['content']??''); if(count($cols) < 2) { $lines = explode("\n", $cols[0] ?? ''); $mid = (int)ceil(count($lines)/2); $cols = [implode("\n", array_slice($lines, 0, $mid)), implode("\n", array_slice($lines, $mid))]; } ?>
         <div class="col"><?php foreach(explode("\n",$cols[0]??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
         <div class="col"><?php foreach(explode("\n",$cols[1]??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
     </div>
+    <?php else: ?>
+        <?php foreach(explode("\n", str_replace('|||', "\n", $page['content']??'')) as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
+    <?php endif; ?>
 </div>
 
 <?php elseif ($layout === 'internal_06'): ?>
