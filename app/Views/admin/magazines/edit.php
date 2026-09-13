@@ -120,6 +120,9 @@
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
                     <h6 class="mb-0 small">Página <?= $page['page_number'] ?> — <span class="text-muted"><?= $page['layout_type'] === 'guest_column' ? 'Coluna do Convidado' : ($page['layout_type'] === 'construction_stories' ? 'Causos de Obra' : $page['layout_type']) ?></span></h6>
+                    <?php if (!in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])): ?>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.7rem;" onclick="deletePage(<?= $page['id'] ?>)" title="Excluir página"><i class="bi bi-trash"></i></button>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body">
                     <?php if ($page['layout_type'] === 'guest_column'): ?>
@@ -543,6 +546,22 @@ async function deletePageImage(pageId, field, btn) {
         btn.remove();
     } else {
         alert(data.error || 'Erro ao remover.');
+    }
+}
+
+// Deletar página inteira
+async function deletePage(pageId) {
+    if (!confirm('Tem certeza que deseja excluir esta página? Esta ação não pode ser desfeita.')) return;
+    const resp = await fetch('/admin/magazines/delete-page', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({ page_id: pageId, magazine_id: <?= $magazine['id'] ?> })
+    });
+    const data = await resp.json();
+    if (data.success) {
+        location.reload();
+    } else {
+        alert(data.error || 'Erro ao excluir página.');
     }
 }
 

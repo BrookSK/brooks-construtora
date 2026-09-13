@@ -887,6 +887,61 @@ class MagazineController extends Controller
     }
 
     /**
+     * Deletar uma página inteira (AJAX)
+     */
+    public function deletePage(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        $pageId = (int) $this->input('page_id', 0);
+        $magazineId = (int) $this->input('magazine_id', 0);
+
+        if (!$pageId) {
+            $this->json(['error' => 'Página inválida.'], 400);
+            return;
+        }
+
+        // Busca a página pra validar que existe e não é estrutural
+        $page = Database::fetch("SELECT * FROM magazine_pages WHERE id = ?", [$pageId]);
+        if (!$page) {
+            $this->json(['error' => 'Página não encontrada.'], 404);
+            return;
+        }
+
+        // Não permite excluir capa, subcapa ou contracapa
+        if (in_array($page['layout_type'], ['cover', 'subcover', 'backcover'])) {
+            $this->json(['error' => 'Esta página não pode ser excluída.'], 403);
+            return;
+        }
+
+        // Remove arquivos de imagem associados
+        foreach (['image_url', 'image_url_2', 'image_url_3'] as $field) {
+            if (!empty($page[$field])) {
+                $filePath = ROOT_PATH . '/public' . $page[$field];
+                if (file_exists($filePath)) {
+                    @unlink($filePath);
+                }
+            }
+        }
+
+        // Deleta a página
+        Magazine::deletePage($pageId);
+
+        // Resequencia os page_number das páginas restantes
+        $remaining = Magazine::getPages($page['magazine_id']);
+        $num = 1;
+        foreach ($remaining as $p) {
+            Database::update('magazine_pages', ['page_number' => $num], 'id = ?', [$p['id']]);
+            $num++;
+        }
+
+        $this->json(['success' => true]);
+    }
+
+    /**
      * Deletar imagem de uma página (AJAX)
      */
     public function deletePageImage(): void

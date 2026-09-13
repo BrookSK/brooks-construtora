@@ -92,6 +92,7 @@ class Router
             'magazines/upload-image' => ['MagazineController', 'uploadImage'],
             'magazines/delete-page-image' => ['MagazineController', 'deletePageImage'],
             'magazines/add-page' => ['MagazineController', 'addPage'],
+            'magazines/delete-page' => ['MagazineController', 'deletePage'],
             'magazines/generate-image' => ['MagazineController', 'generatePageImage'],
             'magazines/image-proxy' => ['MagazineController', 'imageProxy'],
             'magazines/pending-images' => ['MagazineController', 'pendingImages'],
