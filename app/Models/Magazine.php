@@ -14,6 +14,7 @@ class Magazine extends Model
     const STATUS_REVIEW = 'review';
     const STATUS_APPROVED = 'approved';
     const STATUS_PUBLISHED = 'published';
+    const STATUS_TEST = 'test';
 
     public static function getByStatus(string $status): array
     {

@@ -1169,6 +1169,39 @@ class MagazineController extends Controller
         $this->redirect('/admin/magazines');
     }
 
+    /**
+     * Publicar em MODO DE TESTE: revista fica visível apenas para usuários logados
+     * e a notificação (e-mail + WhatsApp) é enviada somente para os contatos de teste.
+     */
+    public function publishTest(): void
+    {
+        if (!$this->isPost() || !Auth::hasPermission('magazines.publish')) {
+            $this->redirect('/admin/magazines');
+            return;
+        }
+
+        $id = (int) $this->input('magazine_id');
+        $magazine = Magazine::find($id);
+
+        if (!$magazine) {
+            $this->setFlash('error', 'Revista não encontrada.');
+            $this->redirect('/admin/magazines');
+            return;
+        }
+
+        Magazine::updateById($id, [
+            'status' => Magazine::STATUS_TEST,
+            'published_at' => date('Y-m-d H:i:s'),
+            'published_by' => Auth::id(),
+        ]);
+
+        // Envia notificação SOMENTE para os contatos de teste
+        $this->sendMagazineNewsletter($id, true);
+
+        $this->setFlash('success', 'Revista publicada em MODO TESTE! Visível apenas para usuários logados. Notificação enviada só para os contatos de teste.');
+        $this->redirect('/admin/magazines/edit/' . $id);
+    }
+
     public function preview(string $id = ''): void
     {
         $id = (int) ($id ?: $this->input('id'));
@@ -1603,7 +1636,7 @@ class MagazineController extends Controller
         }
     }
 
-    private function sendMagazineNewsletter(int $magazineId): void
+    private function sendMagazineNewsletter(int $magazineId, bool $testMode = false): void
     {
         try {
             $magazine = Magazine::find($magazineId);
@@ -1615,12 +1648,19 @@ class MagazineController extends Controller
                 $topicTitle = $topic['title'] ?? '';
             }
             
-            $subscribers = \App\Models\Newsletter::getActiveSubscribers();
+            // Em modo teste, usa apenas os contatos de teste configurados.
+            // Caso contrário, todos os assinantes ativos.
+            $subscribers = $testMode
+                ? $this->getTestSubscribers()
+                : \App\Models\Newsletter::getActiveSubscribers();
+
             $mail = new MailService();
             $displayTitle = $topicTitle ?: $magazine['title'];
+            $subjectPrefix = $testMode ? '[TESTE] ' : '';
 
             // Enviar e-mails
             foreach ($subscribers as $subscriber) {
+                if (empty($subscriber['email'])) continue;
                 $htmlBody = \App\Services\EmailTemplate::magazinePublished(
                     $magazine['title'],
                     $magazineId,
@@ -1631,14 +1671,14 @@ class MagazineController extends Controller
 
                 $mail->send(
                     $subscriber['email'],
-                    'Nova Revista: ' . $displayTitle . ' - Brooks Construtora',
+                    $subjectPrefix . 'Nova Revista: ' . $displayTitle . ' - Brooks Construtora',
                     $htmlBody,
                     true
                 );
             }
 
             // Enviar webhook WhatsApp
-            $this->sendMagazineWebhook($magazineId, $magazine, $displayTitle, $subscribers);
+            $this->sendMagazineWebhook($magazineId, $magazine, $displayTitle, $subscribers, $testMode);
 
         } catch (\Exception $e) {
             error_log('Erro ao enviar newsletter: ' . $e->getMessage());
@@ -1646,9 +1686,44 @@ class MagazineController extends Controller
     }
 
     /**
+     * Retorna a lista de contatos de teste (você, Mariana, etc.)
+     * configurada em Configurações. Formato: um contato por linha "Nome|email|telefone"
+     * ou apenas e-mails/telefones separados por vírgula.
+     */
+    private function getTestSubscribers(): array
+    {
+        $emailsRaw = Setting::get('magazine_test_emails', '');
+        $phonesRaw = Setting::get('magazine_test_phones', '');
+
+        $subscribers = [];
+
+        // E-mails de teste (separados por vírgula)
+        foreach (array_map('trim', explode(',', $emailsRaw)) as $email) {
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $subscribers[] = ['name' => 'Teste', 'email' => $email, 'phone' => null];
+            }
+        }
+
+        // Telefones de teste (separados por vírgula) — anexa ao primeiro contato ou cria novos
+        $phones = array_filter(array_map('trim', explode(',', $phonesRaw)));
+        foreach ($phones as $i => $phone) {
+            $digits = preg_replace('/\D/', '', $phone);
+            if (strlen($digits) < 10) continue;
+            // Se já existe um subscriber sem telefone, adiciona nele; senão cria novo
+            if (isset($subscribers[$i]) && empty($subscribers[$i]['phone'])) {
+                $subscribers[$i]['phone'] = $digits;
+            } else {
+                $subscribers[] = ['name' => 'Teste', 'email' => null, 'phone' => $digits];
+            }
+        }
+
+        return $subscribers;
+    }
+
+    /**
      * Enviar webhook de nova revista para assinantes com WhatsApp
      */
-    private function sendMagazineWebhook(int $magazineId, array $magazine, string $displayTitle, array $subscribers): void
+    private function sendMagazineWebhook(int $magazineId, array $magazine, string $displayTitle, array $subscribers, bool $testMode = false): void
     {
         $webhookUrl = \App\Models\Setting::get('magazine_webhook_url', '');
         if (empty(trim($webhookUrl))) return;
@@ -1658,7 +1733,8 @@ class MagazineController extends Controller
         $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'www.brooksconstrutora.com.br');
         $magazineUrl = "{$baseUrl}/revista/ver/{$magazineId}";
 
-        $message = "*Nova Revista Brooks!*\n\n"
+        $titlePrefix = $testMode ? "*[TESTE] Nova Revista Brooks!*\n\n" : "*Nova Revista Brooks!*\n\n";
+        $message = $titlePrefix
             . "*{$displayTitle}*\n\n"
             . "Uma nova edição da Revista Brooks acabou de ser publicada!\n\n"
             . "*Leia agora:*\n{$magazineUrl}";
@@ -1676,9 +1752,10 @@ class MagazineController extends Controller
             }
         }
 
-        // Se nenhum assinante tem telefone, usar o padrão
+        // Se nenhum contato tem telefone, usar o padrão — EXCETO em modo teste
+        // (no teste não queremos disparar para o telefone padrão da empresa)
         if (empty($phones)) {
-            if (!empty($defaultPhone)) {
+            if (!$testMode && !empty($defaultPhone)) {
                 $phones[] = $defaultPhone;
                 $phoneNames[] = $defaultPhoneName ?: $defaultPhone;
             } else {
@@ -1691,14 +1768,15 @@ class MagazineController extends Controller
             $recipientName = $phoneNames[$i] ?? $phone;
 
             \App\Services\NotificationService::queueWebhook($webhookUrl, [
-                'event' => 'magazine_published',
+                'event' => $testMode ? 'magazine_test' : 'magazine_published',
+                'test_mode' => $testMode,
                 'magazine_id' => $magazineId,
                 'title' => $displayTitle,
                 'magazine_url' => $magazineUrl,
                 'phone' => $phone,
                 'phone_name' => $recipientName,
                 'message' => $message,
-            ], null, 'magazine_published');
+            ], null, $testMode ? 'magazine_test' : 'magazine_published');
         }
     }
 }
