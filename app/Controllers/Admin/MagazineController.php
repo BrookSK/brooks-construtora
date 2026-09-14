@@ -1205,6 +1205,35 @@ class MagazineController extends Controller
         $this->redirect('/admin/magazines/edit/' . $id);
     }
 
+    /**
+     * Reverte uma revista publicada/em teste de volta para "Aprovada",
+     * permitindo publicar novamente (útil para repetir o teste).
+     * NÃO reenvia notificação — apenas muda o status.
+     */
+    public function unpublish(): void
+    {
+        if (!$this->isPost() || !Auth::hasPermission('magazines.publish')) {
+            $this->redirect('/admin/magazines');
+            return;
+        }
+
+        $id = (int) $this->input('magazine_id');
+        $magazine = Magazine::find($id);
+
+        if (!$magazine) {
+            $this->setFlash('error', 'Revista não encontrada.');
+            $this->redirect('/admin/magazines');
+            return;
+        }
+
+        Magazine::updateById($id, [
+            'status' => Magazine::STATUS_APPROVED,
+        ]);
+
+        $this->setFlash('success', 'Revista voltou para "Aprovada". Você já pode publicar ou testar novamente.');
+        $this->redirect('/admin/magazines/edit/' . $id);
+    }
+
     public function preview(string $id = ''): void
     {
         $id = (int) ($id ?: $this->input('id'));

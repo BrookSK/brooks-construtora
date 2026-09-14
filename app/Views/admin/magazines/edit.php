@@ -63,6 +63,20 @@
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>
+
+                <?php if (in_array($magazine['status'], ['published', 'test']) && \App\Core\Auth::hasPermission('magazines.publish')): ?>
+                <?php if ($magazine['status'] === 'published'): ?>
+                <div class="d-grid gap-2 mb-2">
+                    <a href="/admin/magazines/preview/<?= $magazine['id'] ?>" class="btn btn-outline-info" target="_blank"><i class="bi bi-eye"></i> Preview</a>
+                </div>
+                <?php endif; ?>
+                <div class="d-grid gap-2">
+                    <form method="POST" action="/admin/magazines/unpublish">
+                        <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
+                        <button type="submit" class="btn btn-outline-warning w-100" onclick="return confirm('Voltar esta revista para \'Aprovada\'?\n\nIsso permite publicar ou testar de novo. Nenhuma notificação será reenviada agora.')"><i class="bi bi-arrow-counterclockwise"></i> Voltar para Aprovada (testar de novo)</button>
+                    </form>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
 
