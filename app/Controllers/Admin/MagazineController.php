@@ -1195,13 +1195,19 @@ class MagazineController extends Controller
             'published_by' => Auth::id(),
         ]);
 
-        // Gera/garante o token de preview (link abre sem login)
-        Magazine::ensurePreviewToken($id);
+        // Gera/garante o token de preview e envia notificação de teste.
+        // Tudo protegido: se algo falhar (PDF, e-mail, banco), NÃO derruba a página.
+        // O status já foi salvo como 'test', então a revista fica testável mesmo
+        // que a notificação falhe.
+        try {
+            Magazine::ensurePreviewToken($id);
+            $this->sendMagazineNewsletter($id, true);
+            $this->setFlash('success', 'Revista publicada em MODO TESTE! Notificação enviada só para os contatos de teste, com link de acesso direto e o PDF da revista.');
+        } catch (\Throwable $e) {
+            error_log('[MAGAZINE_TEST] Falha ao notificar teste: ' . $e->getMessage());
+            $this->setFlash('error', 'Revista marcada como TESTE, mas houve um problema ao enviar a notificação: ' . $e->getMessage());
+        }
 
-        // Envia notificação SOMENTE para os contatos de teste (com link de preview + PDF)
-        $this->sendMagazineNewsletter($id, true);
-
-        $this->setFlash('success', 'Revista publicada em MODO TESTE! Notificação enviada só para os contatos de teste, com link de acesso direto e o PDF da revista.');
         $this->redirect('/admin/magazines/edit/' . $id);
     }
 
@@ -1738,8 +1744,12 @@ class MagazineController extends Controller
             // Enviar webhook WhatsApp
             $this->sendMagazineWebhook($magazineId, $magazine, $displayTitle, $subscribers, $testMode, $previewToken);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             error_log('Erro ao enviar newsletter: ' . $e->getMessage());
+            // Em modo teste, propaga para o chamador mostrar a mensagem ao usuário
+            if ($testMode) {
+                throw $e;
+            }
         }
     }
 

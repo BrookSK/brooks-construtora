@@ -22,53 +22,70 @@ class MagazinePdfService
      */
     public static function generate(int $magazineId): ?string
     {
-        $magazine = Magazine::find($magazineId);
-        if (!$magazine) return null;
+        // Nunca deve lançar erro fatal: em qualquer falha retorna null
+        // (o chamador cai no plano B — botão de download no e-mail).
+        try {
+            $magazine = Magazine::find($magazineId);
+            if (!$magazine) return null;
 
-        $pages = Magazine::getPages($magazineId);
-        if (empty($pages)) return null;
+            $pages = Magazine::getPages($magazineId);
+            if (empty($pages)) return null;
 
-        // Descobrir o binário do wkhtmltopdf
-        $binary = self::findBinary();
-        if (!$binary) {
-            error_log('[MAGAZINE_PDF] wkhtmltopdf não encontrado no servidor.');
+            // exec() precisa estar disponível no servidor
+            if (!function_exists('exec')) {
+                error_log('[MAGAZINE_PDF] exec() desabilitado no servidor.');
+                return null;
+            }
+
+            // Descobrir o binário do wkhtmltopdf
+            $binary = self::findBinary();
+            if (!$binary) {
+                error_log('[MAGAZINE_PDF] wkhtmltopdf não encontrado no servidor.');
+                return null;
+            }
+
+            // Montar HTML standalone
+            $html = self::buildHtml($magazine, $pages);
+
+            // Arquivos temporários
+            $tmpDir = ROOT_PATH . '/public/uploads/magazine_pdfs';
+            if (!is_dir($tmpDir)) @mkdir($tmpDir, 0755, true);
+            if (!is_dir($tmpDir) || !is_writable($tmpDir)) {
+                error_log('[MAGAZINE_PDF] Diretório temporário não gravável: ' . $tmpDir);
+                return null;
+            }
+
+            $htmlFile = $tmpDir . '/mag_' . $magazineId . '_' . time() . '.html';
+            $pdfFile  = $tmpDir . '/Revista_Brooks_' . $magazineId . '_' . time() . '.pdf';
+
+            file_put_contents($htmlFile, $html);
+
+            // Executar a conversão
+            $cmd = escapeshellcmd($binary)
+                . ' --enable-local-file-access'
+                . ' --print-media-type'
+                . ' --page-size A4'
+                . ' --margin-top 0 --margin-bottom 0 --margin-left 0 --margin-right 0'
+                . ' ' . escapeshellarg($htmlFile)
+                . ' ' . escapeshellarg($pdfFile)
+                . ' 2>&1';
+
+            @exec($cmd, $output, $returnCode);
+
+            // Limpar HTML temporário
+            @unlink($htmlFile);
+
+            if ($returnCode !== 0 || !is_file($pdfFile) || filesize($pdfFile) === 0) {
+                error_log('[MAGAZINE_PDF] Falha na conversão. code=' . $returnCode . ' out=' . implode(' ', (array) $output));
+                @unlink($pdfFile);
+                return null;
+            }
+
+            return $pdfFile;
+        } catch (\Throwable $e) {
+            error_log('[MAGAZINE_PDF] Exceção ao gerar PDF: ' . $e->getMessage());
             return null;
         }
-
-        // Montar HTML standalone
-        $html = self::buildHtml($magazine, $pages);
-
-        // Arquivos temporários
-        $tmpDir = ROOT_PATH . '/public/uploads/magazine_pdfs';
-        if (!is_dir($tmpDir)) @mkdir($tmpDir, 0755, true);
-
-        $htmlFile = $tmpDir . '/mag_' . $magazineId . '_' . time() . '.html';
-        $pdfFile  = $tmpDir . '/Revista_Brooks_' . $magazineId . '_' . time() . '.pdf';
-
-        file_put_contents($htmlFile, $html);
-
-        // Executar a conversão
-        $cmd = escapeshellcmd($binary)
-            . ' --enable-local-file-access'
-            . ' --print-media-type'
-            . ' --page-size A4'
-            . ' --margin-top 0 --margin-bottom 0 --margin-left 0 --margin-right 0'
-            . ' ' . escapeshellarg($htmlFile)
-            . ' ' . escapeshellarg($pdfFile)
-            . ' 2>&1';
-
-        @exec($cmd, $output, $returnCode);
-
-        // Limpar HTML temporário
-        @unlink($htmlFile);
-
-        if ($returnCode !== 0 || !is_file($pdfFile) || filesize($pdfFile) === 0) {
-            error_log('[MAGAZINE_PDF] Falha na conversão. code=' . $returnCode . ' out=' . implode(' ', (array) $output));
-            @unlink($pdfFile);
-            return null;
-        }
-
-        return $pdfFile;
     }
 
     /**
