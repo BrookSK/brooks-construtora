@@ -181,87 +181,105 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff}
 .img-placeholder{background:linear-gradient(135deg,#e3f0e8,#b8d4c8);display:flex;align-items:center;justify-content:center;color:#2e7d32;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
 CSS;
 
-        ob_start();
-        ?><!DOCTYPE html>
-<html lang="pt-BR"><head><meta charset="UTF-8"><style><?= $css ?></style></head><body>
-<?php
+        // Monta o HTML por concatenação de string pura (sem misturar tags PHP/HTML,
+        // que causava erro de parsing "unexpected token '<'"). Robusto e previsível.
+        $html  = '<!DOCTYPE html>';
+        $html .= '<html lang="pt-BR"><head><meta charset="UTF-8"><style>' . $css . '</style></head><body>';
+
+        // Helper para renderizar parágrafos de texto
+        $renderText = function ($content) use ($esc) {
+            $out = '';
+            foreach (explode("\n", (string) $content) as $p) {
+                if (trim($p) !== '') $out .= '<p class="text">' . $esc(trim($p)) . '</p>';
+            }
+            return $out;
+        };
+
         $intNum = 0;
-        foreach ($pages as $page):
-            $img1 = ($page['show_images'] ?? '1') !== '0' ? $toLocal($page['image_url'] ?? '') : '';
-            $img2 = ($page['show_images'] ?? '1') !== '0' ? $toLocal($page['image_url_2'] ?? '') : '';
-            $img3 = ($page['show_images'] ?? '1') !== '0' ? $toLocal($page['image_url_3'] ?? '') : '';
+        foreach ($pages as $page) {
+            $showImages = ($page['show_images'] ?? '1') !== '0';
+            $img1 = $showImages ? $toLocal($page['image_url'] ?? '') : '';
+            $img2 = $showImages ? $toLocal($page['image_url_2'] ?? '') : '';
+            $img3 = $showImages ? $toLocal($page['image_url_3'] ?? '') : '';
             $layout = $page['layout_type'] ?? 'internal_01';
-            if (!in_array($layout, ['cover','subcover','backcover'])) $intNum++;
-            $displayPageNum = str_pad((string) $intNum, 2, '0', STR_PAD_LEFT);
-            $renderText = function($content) use ($esc) {
-                $out = '';
-                foreach (explode("\n", (string) $content) as $p) {
-                    if (trim($p) !== '') $out .= '<p class="text">' . $esc(trim($p)) . '</p>';
-                }
-                return $out;
-            };
-?>
-<?php if ($layout === 'cover'): ?>
-<div class="page pg-cover" <?= $coverImage ? 'style="background-image:url(\'' . $coverImage . '\');background-size:cover;background-position:center;"' : '' ?>>
-    <div class="overlay"></div>
-    <div class="content">
-        <div class="title"><?= $esc($page['title'] ?? $magazine['title']) ?></div>
-        <div class="sub-line"><span><?= $esc(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — SUSTENTÁVEL')[0] ?? 'CONSTRUÇÃO') ?></span><span class="ln"></span><span><?= $esc(trim(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — SUSTENTÁVEL')[1] ?? 'SUSTENTÁVEL')) ?></span></div>
-        <img src="<?= $magazineLogo ?>" class="logo" alt="Brooks">
-        <div class="topic"><?= $esc($magazine['subtitle'] ?? '') ?></div>
-        <div class="foot"><span>&copy; <?= $year ?> BROOKS CONSTRUTORA. TODOS OS DIREITOS RESERVADOS.</span><span><?= $siteUrl ?></span></div>
-    </div>
-</div>
-<?php elseif ($layout === 'subcover'): ?>
-<div class="page pg-cover" <?= $coverImage ? 'style="background-image:url(\'' . $coverImage . '\');background-size:cover;background-position:center;"' : '' ?>>
-    <div class="overlay"></div>
-    <div class="content">
-        <div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-top:20px;"><span style="font-size:3.5rem;font-weight:900;color:#fff;"><?= $esc($page['title'] ?? 'ECO') ?></span><img src="<?= $magazineLogo ?>" style="max-width:180px" alt="Brooks"></div>
-        <div class="sub-line" style="margin-top:12px"><span><?= $esc(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — CONSCIENTE')[0] ?? 'CONSTRUÇÃO') ?></span><span class="ln"></span><span><?= $esc(trim(explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — CONSCIENTE')[1] ?? 'CONSCIENTE')) ?></span></div>
-        <div style="flex:1"></div>
-        <div class="topic"><?= $esc($magazine['subtitle'] ?? '') ?></div>
-        <div class="foot"><span>&copy; <?= $year ?> BROOKS CONSTRUTORA. TODOS OS DIREITOS RESERVADOS.</span><span><?= $siteUrl ?></span></div>
-    </div>
-</div>
-<?php elseif ($layout === 'internal_02'): ?>
-<div class="page pg-int">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <div class="two-col" style="margin-bottom:15px"><div class="col"><?php if($img1): ?><img src="<?= $img1 ?>" style="width:100%;height:250px;object-fit:cover" alt=""><?php endif; ?></div><div class="col"><?php if($page['title']): ?><div class="title-upper" style="margin-top:10px"><?= $esc($page['title']) ?></div><?php endif; ?><p class="text-sm"><?= $esc($page['subtitle'] ?? '') ?></p></div></div>
-    <div class="title-big"><?= $esc($page['title'] ?? '') ?></div>
-    <div class="two-col"><div class="col"><?= $renderText($page['content'] ?? '') ?></div><div class="col"><?php if($img2): ?><img src="<?= $img2 ?>" style="width:100%;height:150px;object-fit:cover" alt=""><?php endif; ?></div></div>
-</div>
-<?php elseif ($layout === 'internal_03'): ?>
-<div class="page pg-int">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <div class="title-big"><?= $esc($page['title'] ?? '') ?></div>
-    <?php if($page['subtitle']??''): ?><div class="subtitle"><?= $esc($page['subtitle']) ?></div><?php endif; ?>
-    <?= $renderText($page['content'] ?? '') ?>
-    <div style="display:flex;gap:10px;margin-top:15px"><?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php endif; ?><?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php endif; ?></div>
-    <?php if($page['caption']??''): ?><div class="caption"><?= $esc($page['caption']) ?></div><?php endif; ?>
-</div>
-<?php elseif ($layout === 'internal_04'): ?>
-<div class="page pg-int">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <div class="overlay-section"><?php if($img1): ?><img src="<?= $img1 ?>" alt=""><?php endif; ?><div class="ov"><h2><?= $esc($page['title'] ?? '') ?></h2><?php if($page['subtitle']??''): ?><p><?= $esc($page['subtitle']) ?></p><?php endif; ?></div></div>
-    <?= $renderText($page['content'] ?? '') ?>
-</div>
-<?php elseif ($layout === 'backcover'): ?>
-<div class="page pg-back">
-    <img src="<?= $magazineLogo ?>" class="logo" alt="Brooks Construtora">
-    <div class="txt"><?= nl2br($esc($page['content'] ?? 'Construção consciente do zero ao acabamento.')) ?></div>
-    <div class="bar"><span>&copy; <?= $year ?> BROOKS CONSTRUTORA.</span><span><?= $siteUrl ?></span></div>
-</div>
-<?php else: /* internal_01 e fallback */ ?>
-<div class="page pg-int">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <?php if($img1): ?><img src="<?= $img1 ?>" class="img-full" style="height:300px;margin-bottom:18px" alt=""><?php endif; ?>
-    <?php if($page['title']): ?><div class="title-upper"><?= $esc($page['title']) ?></div><?php endif; ?>
-    <div class="two-col"><div class="col"><?= $renderText($page['content'] ?? '') ?></div><div class="col"><?php if($img2): ?><img src="<?= $img2 ?>" style="width:100%;height:280px;object-fit:cover" alt=""><?php endif; ?></div></div>
-</div>
-<?php endif; ?>
-<?php endforeach; ?>
-</body></html>
-<?php
-        return ob_get_clean();
+            if (!in_array($layout, ['cover', 'subcover', 'backcover'])) $intNum++;
+            $pn = str_pad((string) $intNum, 2, '0', STR_PAD_LEFT);
+
+            $coverStyle = $coverImage
+                ? ' style="background-image:url(\'' . $coverImage . '\');background-size:cover;background-position:center;"'
+                : '';
+            $subParts = explode('—', $page['subtitle'] ?? 'CONSTRUÇÃO — SUSTENTÁVEL');
+            $sub0 = $esc($subParts[0] ?? 'CONSTRUÇÃO');
+            $sub1 = $esc(trim($subParts[1] ?? 'SUSTENTÁVEL'));
+            $header = '<div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn">' . $pn . '</div></div>';
+
+            if ($layout === 'cover') {
+                $html .= '<div class="page pg-cover"' . $coverStyle . '>';
+                $html .= '<div class="overlay"></div><div class="content">';
+                $html .= '<div class="title">' . $esc($page['title'] ?? $magazine['title']) . '</div>';
+                $html .= '<div class="sub-line"><span>' . $sub0 . '</span><span class="ln"></span><span>' . $sub1 . '</span></div>';
+                $html .= '<img src="' . $magazineLogo . '" class="logo" alt="Brooks">';
+                $html .= '<div class="topic">' . $esc($magazine['subtitle'] ?? '') . '</div>';
+                $html .= '<div class="foot"><span>&copy; ' . $year . ' BROOKS CONSTRUTORA. TODOS OS DIREITOS RESERVADOS.</span><span>' . $siteUrl . '</span></div>';
+                $html .= '</div></div>';
+            } elseif ($layout === 'subcover') {
+                $html .= '<div class="page pg-cover"' . $coverStyle . '>';
+                $html .= '<div class="overlay"></div><div class="content">';
+                $html .= '<div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-top:20px;"><span style="font-size:3.5rem;font-weight:900;color:#fff;">' . $esc($page['title'] ?? 'ECO') . '</span><img src="' . $magazineLogo . '" style="max-width:180px" alt="Brooks"></div>';
+                $html .= '<div class="sub-line" style="margin-top:12px"><span>' . $sub0 . '</span><span class="ln"></span><span>' . $sub1 . '</span></div>';
+                $html .= '<div style="flex:1"></div>';
+                $html .= '<div class="topic">' . $esc($magazine['subtitle'] ?? '') . '</div>';
+                $html .= '<div class="foot"><span>&copy; ' . $year . ' BROOKS CONSTRUTORA. TODOS OS DIREITOS RESERVADOS.</span><span>' . $siteUrl . '</span></div>';
+                $html .= '</div></div>';
+            } elseif ($layout === 'internal_02') {
+                $html .= '<div class="page pg-int">' . $header;
+                $html .= '<div class="two-col" style="margin-bottom:15px"><div class="col">';
+                if ($img1) $html .= '<img src="' . $img1 . '" style="width:100%;height:250px;object-fit:cover" alt="">';
+                $html .= '</div><div class="col">';
+                if (!empty($page['title'])) $html .= '<div class="title-upper" style="margin-top:10px">' . $esc($page['title']) . '</div>';
+                $html .= '<p class="text-sm">' . $esc($page['subtitle'] ?? '') . '</p></div></div>';
+                $html .= '<div class="title-big">' . $esc($page['title'] ?? '') . '</div>';
+                $html .= '<div class="two-col"><div class="col">' . $renderText($page['content'] ?? '') . '</div><div class="col">';
+                if ($img2) $html .= '<img src="' . $img2 . '" style="width:100%;height:150px;object-fit:cover" alt="">';
+                $html .= '</div></div></div>';
+            } elseif ($layout === 'internal_03') {
+                $html .= '<div class="page pg-int">' . $header;
+                $html .= '<div class="title-big">' . $esc($page['title'] ?? '') . '</div>';
+                if (!empty($page['subtitle'])) $html .= '<div class="subtitle">' . $esc($page['subtitle']) . '</div>';
+                $html .= $renderText($page['content'] ?? '');
+                $html .= '<div style="display:flex;gap:10px;margin-top:15px">';
+                if ($img1) $html .= '<img src="' . $img1 . '" class="img-half" style="height:260px" alt="">';
+                if ($img2) $html .= '<img src="' . $img2 . '" class="img-half" style="height:260px" alt="">';
+                $html .= '</div>';
+                if (!empty($page['caption'])) $html .= '<div class="caption">' . $esc($page['caption']) . '</div>';
+                $html .= '</div>';
+            } elseif ($layout === 'internal_04') {
+                $html .= '<div class="page pg-int">' . $header;
+                $html .= '<div class="overlay-section">';
+                if ($img1) $html .= '<img src="' . $img1 . '" alt="">';
+                $html .= '<div class="ov"><h2>' . $esc($page['title'] ?? '') . '</h2>';
+                if (!empty($page['subtitle'])) $html .= '<p>' . $esc($page['subtitle']) . '</p>';
+                $html .= '</div></div>';
+                $html .= $renderText($page['content'] ?? '');
+                $html .= '</div>';
+            } elseif ($layout === 'backcover') {
+                $html .= '<div class="page pg-back">';
+                $html .= '<img src="' . $magazineLogo . '" class="logo" alt="Brooks Construtora">';
+                $html .= '<div class="txt">' . nl2br($esc($page['content'] ?? 'Construção consciente do zero ao acabamento.')) . '</div>';
+                $html .= '<div class="bar"><span>&copy; ' . $year . ' BROOKS CONSTRUTORA.</span><span>' . $siteUrl . '</span></div>';
+                $html .= '</div>';
+            } else { // internal_01 e fallback
+                $html .= '<div class="page pg-int">' . $header;
+                if ($img1) $html .= '<img src="' . $img1 . '" class="img-full" style="height:300px;margin-bottom:18px" alt="">';
+                if (!empty($page['title'])) $html .= '<div class="title-upper">' . $esc($page['title']) . '</div>';
+                $html .= '<div class="two-col"><div class="col">' . $renderText($page['content'] ?? '') . '</div><div class="col">';
+                if ($img2) $html .= '<img src="' . $img2 . '" style="width:100%;height:280px;object-fit:cover" alt="">';
+                $html .= '</div></div></div>';
+            }
+        }
+
+        $html .= '</body></html>';
+
+        return $html;
     }
 }
