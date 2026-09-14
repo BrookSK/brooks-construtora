@@ -306,6 +306,7 @@
     window.WEEKLY_CYCLE_END = <?= json_encode($cycleEndDate ?? '') ?>;
     window.WEEKLY_MATERIALS = <?= json_encode(array_values($materials)) ?>;
     </script>
-    <script src="/assets/js/weekly-material-form.js"></script>
+    <?php $wmJs = ROOT_PATH . '/public/assets/js/weekly-material-form.js'; $wmJsVer = is_file($wmJs) ? filemtime($wmJs) : time(); ?>
+    <script src="/assets/js/weekly-material-form.js?v=<?= $wmJsVer ?>"></script>
 </body>
 </html>
