@@ -22,20 +22,43 @@
     <div class="container py-4" style="max-width:600px;">
         <div class="card text-center">
             <div class="card-body py-5">
+                <?php $isNoItems = !empty($noItems); ?>
                 <div class="mb-3">
+                    <?php if ($isNoItems): ?>
+                    <i class="bi bi-slash-circle text-secondary" style="font-size:3rem;"></i>
+                    <?php else: ?>
                     <i class="bi bi-check-circle-fill text-success" style="font-size:3rem;"></i>
+                    <?php endif; ?>
                 </div>
+
+                <?php if ($isNoItems): ?>
+                <h5 class="mb-2">Ciclo encerrado sem itens</h5>
+                <p class="text-muted">
+                    <?= htmlspecialchars($request['manager_name']) ?>, você informou que
+                    <strong>não tem itens a solicitar</strong> no ciclo da semana de
+                    <strong><?= date('d/m/Y', strtotime($request['week_start'])) ?></strong>.
+                    <?php if (!empty($request['filled_at'])): ?>
+                    Encerrado em <?= date('d/m/Y H:i', strtotime($request['filled_at'])) ?>.
+                    <?php endif; ?>
+                </p>
+                <div class="alert alert-secondary d-inline-block">
+                    <i class="bi bi-info-circle"></i> Nenhum pedido foi gerado. Se precisar solicitar algo, será no próximo ciclo.
+                </div>
+                <?php else: ?>
                 <h5 class="mb-2">Solicitação enviada com sucesso!</h5>
                 <p class="text-muted">
                     <?= htmlspecialchars($request['manager_name']) ?>, sua lista da semana de
                     <strong><?= date('d/m/Y', strtotime($request['week_start'])) ?></strong>
+                    <?php if (!empty($request['filled_at'])): ?>
                     foi preenchida em <?= date('d/m/Y H:i', strtotime($request['filled_at'])) ?>.
+                    <?php endif; ?>
                 </p>
 
                 <?php if (!empty($order)): ?>
                 <div class="alert alert-success d-inline-block">
                     <i class="bi bi-receipt"></i> Pedido <strong>#<?= htmlspecialchars($order['code']) ?></strong> criado.
                 </div>
+                <?php endif; ?>
                 <?php endif; ?>
 
                 <?php if (!empty($items)): ?>

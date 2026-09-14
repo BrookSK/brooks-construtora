@@ -76,6 +76,13 @@ $critical = (int) ($stats['critical_count'] ?? 0);
     </div>
     <div class="col-6 col-md-4 col-xl-2">
         <div class="card h-100"><div class="card-body py-2 px-3">
+            <small class="text-muted d-block">Sem itens</small>
+            <div class="fw-bold text-info" style="font-size:1.8rem; line-height:1;"><?= (int) ($stats['no_items'] ?? 0) ?></div>
+            <small class="text-muted">encerrado sem pedido</small>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card h-100"><div class="card-body py-2 px-3">
             <small class="text-muted d-block">Pendentes</small>
             <div class="fw-bold text-warning" style="font-size:1.8rem; line-height:1;"><?= (int) ($stats['pending'] ?? 0) ?></div>
             <small class="text-muted">sem resposta</small>
@@ -133,6 +140,7 @@ $critical = (int) ($stats['critical_count'] ?? 0);
                         <select id="mgrStatusFilter" class="form-select form-select-sm">
                             <option value="">Todos os status</option>
                             <option value="filled">Com preenchidas</option>
+                            <option value="no_items">Com "sem itens"</option>
                             <option value="pending">Com pendentes</option>
                             <option value="overdue">Com atrasadas</option>
                         </select>
@@ -162,10 +170,12 @@ $critical = (int) ($stats['critical_count'] ?? 0);
                             // Chave de status agregada para o filtro
                             $statusFlags = [];
                             if ($mc['filled'] > 0) $statusFlags[] = 'filled';
+                            if (!empty($mc['no_items']) && $mc['no_items'] > 0) $statusFlags[] = 'no_items';
                             if ($mc['pending'] > 0) $statusFlags[] = 'pending';
                             if ($mc['overdue'] > 0) $statusFlags[] = 'overdue';
                             $resumo = [];
                             if ($mc['filled'] > 0)   $resumo[] = '<span class="badge bg-success">' . $mc['filled'] . ' preench.</span>';
+                            if (!empty($mc['no_items']) && $mc['no_items'] > 0) $resumo[] = '<span class="badge bg-info text-dark">' . $mc['no_items'] . ' sem itens</span>';
                             if ($mc['pending'] > 0)  $resumo[] = '<span class="badge bg-warning text-dark">' . $mc['pending'] . ' pend.</span>';
                             if ($mc['overdue'] > 0)  $resumo[] = '<span class="badge bg-danger">' . $mc['overdue'] . ' atras.</span>';
                             if ($mc['not_sent'] > 0) $resumo[] = '<span class="badge bg-secondary">' . $mc['not_sent'] . ' não env.</span>';
@@ -179,7 +189,7 @@ $critical = (int) ($stats['critical_count'] ?? 0);
                                 <td class="text-center"><?= implode(' ', $resumo) ?: '—' ?></td>
                                 <td class="text-center" style="white-space:nowrap;">
                                     <?php foreach (array_reverse($mc['recent_cycles']) as $c): ?>
-                                    <?php $dot = $c['status'] === 'filled' ? 'text-success' : ($c['status'] === 'overdue' ? 'text-danger' : 'text-warning'); ?>
+                                    <?php $dot = $c['status'] === 'filled' ? 'text-success' : ($c['status'] === 'overdue' ? 'text-danger' : ($c['status'] === 'no_items' ? 'text-info' : 'text-warning')); ?>
                                     <i class="bi bi-circle-fill <?= $dot ?>" style="font-size:.6rem;" title="<?= date('d/m', strtotime($c['week_start'])) ?>: <?= $c['status'] ?>"></i>
                                     <?php endforeach; ?>
                                 </td>
@@ -215,9 +225,11 @@ $critical = (int) ($stats['critical_count'] ?? 0);
                                                 <?php foreach ($mc['sites'] as $s):
                                                     $sBadge = $s['status'] === 'filled'
                                                         ? '<span class="badge bg-success">Preenchido</span>'
-                                                        : ($s['status'] === 'overdue'
-                                                            ? '<span class="badge bg-danger">Atrasado</span>'
-                                                            : (empty($s['notified_at']) ? '<span class="badge bg-secondary">Não enviado</span>' : '<span class="badge bg-warning text-dark">Pendente</span>'));
+                                                        : ($s['status'] === 'no_items'
+                                                            ? '<span class="badge bg-info text-dark">Sem itens</span>'
+                                                            : ($s['status'] === 'overdue'
+                                                                ? '<span class="badge bg-danger">Atrasado</span>'
+                                                                : (empty($s['notified_at']) ? '<span class="badge bg-secondary">Não enviado</span>' : '<span class="badge bg-warning text-dark">Pendente</span>')));
                                                     $formUrl = $baseUrlCtrl . '/lista-semanal/' . $s['token'];
                                                 ?>
                                                 <tr>

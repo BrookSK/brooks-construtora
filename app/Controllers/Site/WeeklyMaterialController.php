@@ -65,10 +65,15 @@ class WeeklyMaterialController extends Controller
             $request['manager_name'] = 'Responsável';
         }
 
-        // Já preenchido → confirmação com o pedido gerado
-        if ($request['status'] === 'filled') {
-            $items = WeeklyMaterialRequest::getItems($request['id']);
-            $order = !empty($request['order_id']) ? \App\Models\PurchaseOrder::find((int) $request['order_id']) : null;
+        // Já respondido → tela de confirmação.
+        //  - 'filled'   : preencheu e gerou pedido
+        //  - 'no_items' : encerrou o ciclo sem itens (stand-by)
+        if (in_array($request['status'], ['filled', 'no_items'], true)) {
+            $noItems = $request['status'] === 'no_items';
+            $items = $noItems ? [] : WeeklyMaterialRequest::getItems($request['id']);
+            $order = (!$noItems && !empty($request['order_id']))
+                ? \App\Models\PurchaseOrder::find((int) $request['order_id'])
+                : null;
             require ROOT_PATH . '/app/Views/site/weekly_materials/filled.php';
             return;
         }
@@ -189,10 +194,35 @@ class WeeklyMaterialController extends Controller
             return;
         }
 
-        // IDEMPOTÊNCIA: se já foi preenchido/tem pedido, apenas redireciona
-        if ($request['status'] === 'filled' || !empty($request['order_id'])) {
+        // IDEMPOTÊNCIA: se já foi respondido (preenchido, com pedido ou
+        // encerrado sem itens), apenas redireciona para a confirmação.
+        if (in_array($request['status'], ['filled', 'no_items'], true) || !empty($request['order_id'])) {
             header('Location: /lista-semanal/' . $token);
             exit;
+        }
+
+        // Modo de envio: "no_items" encerra o ciclo do link SEM gerar pedido.
+        $submitMode = $this->input('submit_mode', 'normal');
+        if ($submitMode === 'no_items') {
+            $notes = trim($this->input('notes', '')) ?: null;
+            // Transição condicional (só a partir de 'pending'): idempotente.
+            $closed = WeeklyMaterialRequest::markNoItems((int) $request['id'], $notes);
+            if ($closed) {
+                WeeklyMaterialLog::record(
+                    WeeklyMaterialLog::ACTION_CLOSED_NO_ITEMS,
+                    (int) $request['id'],
+                    'Responsável encerrou o ciclo sem itens a solicitar',
+                    $request['week_start'] ?? null
+                );
+            }
+            header('Location: /lista-semanal/' . $token);
+            exit;
+        }
+
+        // Tipo do pedido: material (padrão) ou service.
+        $orderType = $this->input('order_type', 'material');
+        if (!in_array($orderType, ['material', 'service'], true)) {
+            $orderType = 'material';
         }
 
         $items = $_POST['items'] ?? [];
@@ -204,7 +234,7 @@ class WeeklyMaterialController extends Controller
 
         // Validações
         if (empty($validItems)) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Adicione pelo menos um material.'];
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Adicione pelo menos um item.'];
             header('Location: /lista-semanal/' . $token);
             exit;
         }
@@ -251,6 +281,7 @@ class WeeklyMaterialController extends Controller
 
         // CRIAÇÃO DO PEDIDO — ponto único, idempotente
         $result = WeeklyMaterialService::createOrderFromRequest($freshRequest, $validItems, [
+            'order_type' => $orderType,
             'urgency' => $urgency,
             'needed_date' => $neededDate,
             'deadline' => $neededDate,

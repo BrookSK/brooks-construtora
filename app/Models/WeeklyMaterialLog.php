@@ -24,6 +24,7 @@ class WeeklyMaterialLog extends Model
     const ACTION_ORDER_CREATED = 'order_created';
     const ACTION_ORDER_FAILED = 'order_failed';
     const ACTION_MARKED_OVERDUE = 'marked_overdue';
+    const ACTION_CLOSED_NO_ITEMS = 'closed_no_items';
 
     public static function record(
         string $action,

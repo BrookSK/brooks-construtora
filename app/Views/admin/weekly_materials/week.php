@@ -103,6 +103,7 @@
                     // Resumo de status do responsável no ciclo
                     $resumo = [];
                     if ($mc['filled'] > 0)   $resumo[] = '<span class="badge bg-success">' . $mc['filled'] . ' preench.</span>';
+                    if (!empty($mc['no_items']) && $mc['no_items'] > 0) $resumo[] = '<span class="badge bg-info text-dark">' . $mc['no_items'] . ' sem itens</span>';
                     if ($mc['pending'] > 0)  $resumo[] = '<span class="badge bg-warning text-dark">' . $mc['pending'] . ' pend.</span>';
                     if ($mc['overdue'] > 0)  $resumo[] = '<span class="badge bg-danger">' . $mc['overdue'] . ' atras.</span>';
                     if ($mc['not_sent'] > 0) $resumo[] = '<span class="badge bg-secondary">' . $mc['not_sent'] . ' não env.</span>';
@@ -114,7 +115,7 @@
                         <td class="text-center"><?= implode(' ', $resumo) ?: '—' ?></td>
                         <td class="text-center">
                             <?php foreach (array_reverse($mc['recent_cycles']) as $c): ?>
-                            <?php $dot = $c['status'] === 'filled' ? 'text-success' : ($c['status'] === 'overdue' ? 'text-danger' : 'text-warning'); ?>
+                            <?php $dot = $c['status'] === 'filled' ? 'text-success' : ($c['status'] === 'overdue' ? 'text-danger' : ($c['status'] === 'no_items' ? 'text-info' : 'text-warning')); ?>
                             <i class="bi bi-circle-fill <?= $dot ?>" style="font-size:.6rem;" title="<?= date('d/m', strtotime($c['week_start'])) ?>: <?= $c['status'] ?>"></i>
                             <?php endforeach; ?>
                         </td>
@@ -153,9 +154,11 @@
                                         foreach ($mc['sites'] as $s):
                                             $sBadge = $s['status'] === 'filled'
                                                 ? '<span class="badge bg-success">Preenchido</span>'
-                                                : ($s['status'] === 'overdue'
-                                                    ? '<span class="badge bg-danger">Atrasado</span>'
-                                                    : (empty($s['notified_at']) ? '<span class="badge bg-secondary">Não enviado</span>' : '<span class="badge bg-warning text-dark">Pendente</span>'));
+                                                : ($s['status'] === 'no_items'
+                                                    ? '<span class="badge bg-info text-dark">Sem itens</span>'
+                                                    : ($s['status'] === 'overdue'
+                                                        ? '<span class="badge bg-danger">Atrasado</span>'
+                                                        : (empty($s['notified_at']) ? '<span class="badge bg-secondary">Não enviado</span>' : '<span class="badge bg-warning text-dark">Pendente</span>')));
                                             $formUrl = $baseUrlCtrl . '/lista-semanal/' . $s['token'];
                                         ?>
                                         <tr>
@@ -194,14 +197,16 @@
 
 <?php foreach ($requests as $req): ?>
 <?php
-$borderClass = $req['status'] === 'filled' ? 'border-success border-opacity-50' : ($req['status'] === 'overdue' ? 'border-danger border-opacity-50' : 'border-warning border-opacity-50');
-$headerBg = $req['status'] === 'filled' ? 'bg-success bg-opacity-10' : ($req['status'] === 'overdue' ? 'bg-danger bg-opacity-10' : 'bg-warning bg-opacity-10');
+$borderClass = $req['status'] === 'filled' ? 'border-success border-opacity-50' : ($req['status'] === 'no_items' ? 'border-info border-opacity-50' : ($req['status'] === 'overdue' ? 'border-danger border-opacity-50' : 'border-warning border-opacity-50'));
+$headerBg = $req['status'] === 'filled' ? 'bg-success bg-opacity-10' : ($req['status'] === 'no_items' ? 'bg-info bg-opacity-10' : ($req['status'] === 'overdue' ? 'bg-danger bg-opacity-10' : 'bg-warning bg-opacity-10'));
 ?>
 <div class="card mb-3 <?= $borderClass ?>">
     <div class="card-header <?= $headerBg ?> d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div class="d-flex align-items-center gap-2">
             <?php if ($req['status'] === 'filled'): ?>
             <i class="bi bi-check-circle-fill text-success"></i>
+            <?php elseif ($req['status'] === 'no_items'): ?>
+            <i class="bi bi-slash-circle-fill text-info"></i>
             <?php elseif ($req['status'] === 'overdue'): ?>
             <i class="bi bi-x-circle-fill text-danger"></i>
             <?php else: ?>
@@ -237,6 +242,8 @@ $headerBg = $req['status'] === 'filled' ? 'bg-success bg-opacity-10' : ($req['st
 
             <?php if ($req['status'] === 'filled'): ?>
             <span class="badge bg-success">Preenchido em <?= date('d/m H:i', strtotime($req['filled_at'])) ?></span>
+            <?php elseif ($req['status'] === 'no_items'): ?>
+            <span class="badge bg-info text-dark">Sem itens<?= !empty($req['filled_at']) ? ' em ' . date('d/m H:i', strtotime($req['filled_at'])) : '' ?></span>
             <?php elseif ($req['status'] === 'overdue'): ?>
             <span class="badge bg-danger">Não preencheu</span>
             <?php else: ?>

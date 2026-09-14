@@ -69,8 +69,24 @@
             </div>
         </div>
 
+        <!-- Seletor: Solicitação de Material x Solicitação de Serviço -->
+        <ul class="nav nav-pills nav-fill mb-3 shadow-sm rounded" id="orderTypeTabs" role="tablist" style="background:#fff;">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tabMaterial" type="button" data-order-type="material">
+                    <i class="bi bi-box-seam"></i> Solicitação de Material
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tabService" type="button" data-order-type="service">
+                    <i class="bi bi-tools"></i> Solicitação de Serviço
+                </button>
+            </li>
+        </ul>
+
         <form method="POST" action="/lista-semanal/enviar/<?= htmlspecialchars($token) ?>" id="orderForm" enctype="multipart/form-data">
-            <input type="hidden" name="order_type" value="material">
+            <input type="hidden" name="order_type" id="orderTypeInput" value="material">
+            <!-- Modo de envio: "normal" (gera pedido) ou "no_items" (encerra sem pedido) -->
+            <input type="hidden" name="submit_mode" id="submitModeInput" value="normal">
 
             <div class="card mb-3">
                 <div class="card-header"><i class="bi bi-buildings"></i> Obra *</div>
@@ -124,10 +140,10 @@
 
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-list-check"></i> Itens do Pedido <span class="badge bg-primary ms-1" id="itemCountBadge">0</span></span>
+                    <span><i class="bi bi-list-check"></i> <span id="itemsCardTitle">Itens do Pedido</span> <span class="badge bg-primary ms-1" id="itemCountBadge">0</span></span>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newMaterialModal">
-                            <i class="bi bi-box-seam"></i> <span class="d-none d-sm-inline">Novo Material</span>
+                            <i class="bi bi-box-seam"></i> <span class="d-none d-sm-inline" id="newMaterialBtnLabel">Novo Material</span>
                         </button>
                         <button type="button" class="btn btn-sm btn-primary" id="addItemBtn">
                             <i class="bi bi-plus"></i> Adicionar Item
@@ -184,9 +200,42 @@
     <div class="position-fixed start-0 end-0 bg-white border-top shadow" style="z-index:1100; bottom:0;">
         <div class="container p-2" style="max-width:900px;">
             <div class="d-flex align-items-center gap-2 mb-1" style="font-size:0.75rem;" id="autosaveIndicator"></div>
-            <button type="button" class="btn btn-primary w-100 py-2" onclick="showReview()" style="font-size:1rem;">
-                <i class="bi bi-eye"></i> Revisar e Enviar
-            </button>
+            <div class="d-flex flex-column flex-sm-row gap-2">
+                <button type="button" class="btn btn-outline-secondary py-2 order-2 order-sm-1" onclick="showNoItems()" style="font-size:0.95rem;">
+                    <i class="bi bi-slash-circle"></i> Não tenho itens a solicitar
+                </button>
+                <button type="button" class="btn btn-primary py-2 order-1 order-sm-2 flex-grow-1" onclick="showReview()" style="font-size:1rem;">
+                    <i class="bi bi-eye"></i> Revisar e Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmação: encerrar o ciclo SEM itens (irreversível) -->
+    <div class="modal fade" id="noItemsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-slash-circle text-secondary"></i> Encerrar sem solicitar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">Você está confirmando que <strong>não tem itens a solicitar</strong> neste ciclo.</p>
+                    <div class="alert alert-warning small mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Ao confirmar, este link será <strong>encerrado</strong> e <strong>nenhum pedido será gerado</strong>.
+                        Esta ação não pode ser desfeita por aqui. Se precisar solicitar algo depois, isso será feito no próximo ciclo.
+                    </div>
+                </div>
+                <div class="modal-footer flex-column flex-sm-row gap-2">
+                    <button type="button" class="btn btn-outline-secondary w-100 order-2 order-sm-1" data-bs-dismiss="modal" style="flex:1;">
+                        <i class="bi bi-arrow-left"></i> Voltar
+                    </button>
+                    <button type="button" class="btn btn-danger w-100 order-1 order-sm-2" onclick="confirmNoItems()" style="flex:1;">
+                        <i class="bi bi-check2"></i> Confirmar encerramento
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

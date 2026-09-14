@@ -16,6 +16,34 @@
     let itemCount = 0;
     let audioBlob = null;
 
+    // ─── Tipo de solicitação: Material x Serviço ─────────────────────────
+    // Alterna o hidden `order_type` e ajusta rótulos da UI. O padrão é
+    // "material" (comportamento anterior preservado).
+    const orderTypeInput = document.getElementById('orderTypeInput');
+    function currentOrderType() {
+        return (orderTypeInput && orderTypeInput.value) || 'material';
+    }
+    function applyOrderTypeLabels(type) {
+        const isService = type === 'service';
+        const title = document.getElementById('itemsCardTitle');
+        const newLabel = document.getElementById('newMaterialBtnLabel');
+        if (title) title.textContent = isService ? 'Itens do Serviço' : 'Itens do Pedido';
+        if (newLabel) newLabel.textContent = isService ? 'Novo Item' : 'Novo Material';
+    }
+    (function initOrderTypeTabs() {
+        const tabs = document.querySelectorAll('#orderTypeTabs [data-order-type]');
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                const type = tab.getAttribute('data-order-type') || 'material';
+                if (orderTypeInput) orderTypeInput.value = type;
+                tabs.forEach(function (t) { t.classList.remove('active'); });
+                tab.classList.add('active');
+                applyOrderTypeLabels(type);
+                if (typeof scheduleSave === 'function') scheduleSave();
+            });
+        });
+    })();
+
     // ─── Data da necessidade: mínimo obrigatório (15 dias à frente) ──────
     // O responsável não pode escolher uma data anterior ao mínimo.
     const neededDate = document.getElementById('neededDate');
@@ -446,7 +474,8 @@
 
         const obs = (document.querySelector('[name="notes"]') || {}).value;
         if (obs) html += '<div class="alert alert-light mt-2"><strong>Observações:</strong> ' + obs + '</div>';
-        html += '<div class="alert alert-info mt-2 small"><i class="bi bi-info-circle"></i> Ao confirmar, será criado um Pedido de Material no sistema e enviado para cotação.</div>';
+        const tipoLabel = currentOrderType() === 'service' ? 'Serviço' : 'Material';
+        html += '<div class="alert alert-info mt-2 small"><i class="bi bi-info-circle"></i> Ao confirmar, será criado um Pedido de ' + tipoLabel + ' no sistema e enviado para cotação.</div>';
 
         document.getElementById('reviewBody').innerHTML = html;
         new bootstrap.Modal(document.getElementById('reviewModal')).show();
@@ -454,6 +483,9 @@
 
     window.confirmSubmit = function () {
         const form = document.getElementById('orderForm');
+        // Garante o modo normal (gera pedido)
+        const modeEl = document.getElementById('submitModeInput');
+        if (modeEl) modeEl.value = 'normal';
         if (audioBlob) {
             const dt = new DataTransfer();
             dt.items.add(new File([audioBlob], 'audio.webm', { type: audioBlob.type }));
@@ -466,6 +498,22 @@
             }
             audioInput.files = dt.files;
         }
+        form.submit();
+    };
+
+    // ─── Encerrar sem itens (stand-by) ───────────────────────────────────
+    // Abre o modal de confirmação. Não valida itens (o objetivo é justamente
+    // encerrar sem nenhum). A ação é irreversível pelo próprio link.
+    window.showNoItems = function () {
+        new bootstrap.Modal(document.getElementById('noItemsModal')).show();
+    };
+
+    window.confirmNoItems = function () {
+        const form = document.getElementById('orderForm');
+        const modeEl = document.getElementById('submitModeInput');
+        if (modeEl) modeEl.value = 'no_items';
+        // Encerramento sem itens não envia áudio nem materiais.
+        clearDraft();
         form.submit();
     };
 
@@ -490,6 +538,7 @@
         const siteEl = document.getElementById('constructionSiteSelect');
         return {
             items:       items,
+            order_type:  currentOrderType(),
             needed_date: neededDate ? neededDate.value : '',
             site_id:     siteEl ? siteEl.value : '',
             notes:       (document.querySelector('[name="notes"]') || {}).value || '',
@@ -552,6 +601,12 @@
     }
 
     function applyDraft(draft) {
+        // Tipo de solicitação (material/serviço)
+        if (draft.order_type === 'service') {
+            const svcTab = document.querySelector('#orderTypeTabs [data-order-type="service"]');
+            if (svcTab) svcTab.click();
+        }
+
         // Obra
         const siteEl = document.getElementById('constructionSiteSelect');
         if (siteEl && draft.site_id) siteEl.value = draft.site_id;

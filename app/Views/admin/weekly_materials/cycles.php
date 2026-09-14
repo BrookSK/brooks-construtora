@@ -32,6 +32,7 @@
                         <th>Ciclo (início)</th>
                         <th class="text-center">Solicitações</th>
                         <th class="text-center">Preenchidas</th>
+                        <th class="text-center">Sem itens</th>
                         <th class="text-center">Pendentes</th>
                         <th class="text-center">Atrasadas</th>
                         <th class="text-center">Pedidos</th>
@@ -47,6 +48,7 @@
                         </td>
                         <td class="text-center"><?= (int) $w['total_managers'] ?></td>
                         <td class="text-center"><span class="badge bg-success"><?= (int) $w['filled_count'] ?></span></td>
+                        <td class="text-center"><span class="badge bg-info text-dark"><?= (int) ($w['no_items_count'] ?? 0) ?></span></td>
                         <td class="text-center"><span class="badge bg-warning text-dark"><?= (int) $w['pending_count'] ?></span></td>
                         <td class="text-center"><span class="badge bg-danger"><?= (int) $w['overdue_count'] ?></span></td>
                         <td class="text-center"><span class="badge bg-primary"><?= (int) $w['orders_count'] ?></span></td>

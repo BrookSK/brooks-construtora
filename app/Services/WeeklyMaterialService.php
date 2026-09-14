@@ -75,9 +75,11 @@ class WeeklyMaterialService
         );
 
         // 3. Montar descrição/observações do pedido
+        $isService = ($meta['order_type'] ?? 'material') === 'service';
         $descriptionParts = [];
-        $descriptionParts[] = 'Origem: Lista Semanal de Materiais (semana '
-            . date('d/m/Y', strtotime($request['week_start'])) . ').';
+        $descriptionParts[] = 'Origem: Lista Semanal ('
+            . ($isService ? 'Serviço' : 'Material') . ') — semana '
+            . date('d/m/Y', strtotime($request['week_start'])) . '.';
         if (!empty($meta['notes'])) {
             $descriptionParts[] = trim($meta['notes']);
         }
@@ -97,10 +99,17 @@ class WeeklyMaterialService
         // deadline (prazo do pedido) = needed_date
         $deadline = !empty($meta['deadline']) ? $meta['deadline'] : ($meta['needed_date'] ?? null);
 
+        // Tipo do pedido: material (padrão) ou service. Validado aqui para
+        // nunca gravar um valor inesperado no ENUM de purchase_orders.
+        $orderType = $meta['order_type'] ?? 'material';
+        if (!in_array($orderType, ['material', 'service'], true)) {
+            $orderType = 'material';
+        }
+
         // 4. Criar o Pedido pelo PONTO ÚNICO de criação
         try {
             $result = PurchaseOrder::createWithItems([
-                'order_type' => 'material',
+                'order_type' => $orderType,
                 'description' => implode("\n", $descriptionParts),
                 'urgency' => $urgency,
                 'deadline' => $deadline,

@@ -115,6 +115,7 @@ class WeeklyMaterialRequest extends Model
                     SUM(CASE WHEN status = 'filled' THEN 1 ELSE 0 END) as filled_count,
                     SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
                     SUM(CASE WHEN status = 'overdue' THEN 1 ELSE 0 END) as overdue_count,
+                    SUM(CASE WHEN status = 'no_items' THEN 1 ELSE 0 END) as no_items_count,
                     SUM(CASE WHEN order_id IS NOT NULL THEN 1 ELSE 0 END) as orders_count,
                     COALESCE(SUM(items_count), 0) as items_total
              FROM weekly_material_requests
@@ -309,6 +310,37 @@ class WeeklyMaterialRequest extends Model
     }
 
     /**
+     * Encerrar o ciclo do link SEM itens (stand-by).
+     *
+     * O responsável declarou que não tem itens a solicitar nesta semana.
+     * NÃO gera Pedido (por isso não usa markFilled, que exige order_id).
+     * Ação irreversível pelo próprio link: fica registrado como respondido,
+     * fora da cobrança e do atraso automático (que só atuam sobre 'pending').
+     *
+     * A transição só ocorre a partir de 'pending' (update condicional), o que
+     * torna a operação idempotente e segura contra envios concorrentes: uma
+     * solicitação já respondida (filled/no_items) ou já com pedido não é
+     * sobrescrita. Retorna true se ESTE chamado efetivou o encerramento.
+     */
+    public static function markNoItems(int $id, ?string $notes = null): bool
+    {
+        $data = [
+            'status' => 'no_items',
+            'items_count' => 0,
+            'filled_at' => date('Y-m-d H:i:s'),
+        ];
+        if ($notes !== null) $data['notes'] = $notes;
+
+        $affected = Database::update(
+            self::$table,
+            $data,
+            "id = ? AND status = 'pending' AND order_id IS NULL",
+            [$id]
+        );
+        return $affected > 0;
+    }
+
+    /**
      * Registra a abertura do formulário (primeira visualização).
      */
     public static function markOpened(int $id): void
@@ -376,6 +408,12 @@ class WeeklyMaterialRequest extends Model
                 }
             }
             return ['on_time', 'Em dia', 'bg-success'];
+        }
+
+        // Encerrou o ciclo sem itens: respondeu (não é atraso nem pendência).
+        // Conta como resposta em dia para fins de pontualidade.
+        if ($status === 'no_items') {
+            return ['on_time', 'Sem itens', 'bg-info text-dark'];
         }
 
         if ($status === 'overdue') {
@@ -754,6 +792,7 @@ class WeeklyMaterialRequest extends Model
                 SUM(CASE WHEN status = 'filled' THEN 1 ELSE 0 END) as filled,
                 SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
                 SUM(CASE WHEN status = 'overdue' THEN 1 ELSE 0 END) as overdue,
+                SUM(CASE WHEN status = 'no_items' THEN 1 ELSE 0 END) as no_items,
                 COALESCE(SUM(items_count), 0) as items_total,
                 SUM(CASE WHEN urgency IN ('high','critical') AND status = 'filled' THEN 1 ELSE 0 END) as critical_count
              FROM weekly_material_requests
@@ -762,7 +801,7 @@ class WeeklyMaterialRequest extends Model
         );
         return $row ?: [
             'total' => 0, 'links_sent' => 0, 'filled' => 0, 'pending' => 0,
-            'overdue' => 0, 'items_total' => 0, 'critical_count' => 0,
+            'overdue' => 0, 'no_items' => 0, 'items_total' => 0, 'critical_count' => 0,
         ];
     }
 

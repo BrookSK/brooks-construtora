@@ -465,12 +465,13 @@ class WeeklyMaterialController extends Controller
                     'manager_phone' => $row['manager_phone'] ?? '',
                     'recent_cycles' => WeeklyMaterialRequest::getRecentCyclesForManager($mid, 4),
                     'sites' => [],
-                    'total' => 0, 'filled' => 0, 'pending' => 0, 'overdue' => 0, 'not_sent' => 0,
+                    'total' => 0, 'filled' => 0, 'pending' => 0, 'overdue' => 0, 'not_sent' => 0, 'no_items' => 0,
                 ];
             }
             $managers[$mid]['sites'][] = $row;
             $managers[$mid]['total']++;
             if ($row['status'] === 'filled') $managers[$mid]['filled']++;
+            elseif ($row['status'] === 'no_items') $managers[$mid]['no_items']++;
             elseif ($row['status'] === 'overdue') $managers[$mid]['overdue']++;
             elseif (empty($row['notified_at'])) $managers[$mid]['not_sent']++;
             else $managers[$mid]['pending']++;

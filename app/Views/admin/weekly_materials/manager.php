@@ -86,7 +86,9 @@ $rate = $totalSent > 0 ? round($totalResp / $totalSent * 100) : 0;
                     <?php
                     $statusBadge = $req['status'] === 'filled'
                         ? '<span class="badge bg-success">Preenchido</span>'
-                        : ($req['status'] === 'overdue' ? '<span class="badge bg-danger">Atrasado</span>' : '<span class="badge bg-warning text-dark">Pendente</span>');
+                        : ($req['status'] === 'no_items'
+                            ? '<span class="badge bg-info text-dark">Sem itens</span>'
+                            : ($req['status'] === 'overdue' ? '<span class="badge bg-danger">Atrasado</span>' : '<span class="badge bg-warning text-dark">Pendente</span>'));
                     [$uLabel, $uClass] = $urgencyMap[$req['urgency'] ?? ''] ?? ['—', 'bg-light text-dark'];
                     ?>
                     <tr>
