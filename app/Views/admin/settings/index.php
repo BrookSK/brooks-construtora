@@ -327,24 +327,25 @@ $_isProduction = $_currentBranch === 'main';
                 </div>
 
                 <!-- Nome -->
+                <!-- IMPORTANTE: este bloco NÃO usa <form> aninhado (proibido em HTML,
+                     quebrava o form principal de Configurações). Os campos são
+                     vinculados ao formulário externo #profileForm via atributo form=. -->
                 <div class="col-md-8">
-                    <form method="POST" action="/admin/settings/update-profile">
-                        <div class="mb-3">
-                            <label class="form-label fw-medium">Nome de exibição</label>
-                            <input type="text" class="form-control" name="profile_name"
-                                   value="<?= htmlspecialchars($profile['name'] ?? '') ?>"
-                                   placeholder="Seu nome completo" required maxlength="255">
-                            <small class="text-muted">Este nome aparece na saudação da página de Boas-vindas.</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-medium">E-mail</label>
-                            <input type="email" class="form-control" value="<?= htmlspecialchars($profile['email'] ?? '') ?>" disabled>
-                            <small class="text-muted">O e-mail é gerenciado pela seção de Usuários.</small>
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg"></i> Salvar nome
-                        </button>
-                    </form>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Nome de exibição</label>
+                        <input type="text" class="form-control" name="profile_name" form="profileForm"
+                               value="<?= htmlspecialchars($profile['name'] ?? '') ?>"
+                               placeholder="Seu nome completo" required maxlength="255">
+                        <small class="text-muted">Este nome aparece na saudação da página de Boas-vindas.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">E-mail</label>
+                        <input type="email" class="form-control" value="<?= htmlspecialchars($profile['email'] ?? '') ?>" disabled>
+                        <small class="text-muted">O e-mail é gerenciado pela seção de Usuários.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary" form="profileForm">
+                        <i class="bi bi-check-lg"></i> Salvar nome
+                    </button>
                 </div>
             </div>
         </div>
@@ -408,6 +409,10 @@ $_isProduction = $_currentBranch === 'main';
         </button>
     </div>
 </form>
+
+<!-- Formulário isolado do Perfil (fora do form principal). Os campos do card
+     "Configuração de Perfil" são ligados a ele via atributo form="profileForm". -->
+<form id="profileForm" method="POST" action="/admin/settings/update-profile"></form>
 
 <script>
 var logoBtn = document.getElementById('magazine-logo-submit');
