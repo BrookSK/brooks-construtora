@@ -35,6 +35,15 @@
         </div>
         <?php unset($_SESSION['flash']); endif; ?>
 
+        <!-- Banner de rascunho salvo -->
+        <div id="draftRestoreBanner" class="alert alert-warning d-none d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+            <span><i class="bi bi-floppy2-fill"></i> Você tem um rascunho salvo. Deseja restaurar o que estava preenchendo?</span>
+            <div class="d-flex gap-2 flex-shrink-0">
+                <button type="button" class="btn btn-sm btn-warning" id="draftRestoreBtn"><i class="bi bi-arrow-counterclockwise"></i> Restaurar</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="draftDiscardBtn">Descartar</button>
+            </div>
+        </div>
+
         <div class="card mb-3">
             <div class="card-header bg-primary bg-opacity-10 border-0 p-3">
                 <h5 class="mb-1">Olá, <?= htmlspecialchars($request['manager_name']) ?>!</h5>
@@ -174,6 +183,7 @@
 
     <div class="position-fixed start-0 end-0 bg-white border-top shadow" style="z-index:1100; bottom:0;">
         <div class="container p-2" style="max-width:900px;">
+            <div class="d-flex align-items-center gap-2 mb-1" style="font-size:0.75rem;" id="autosaveIndicator"></div>
             <button type="button" class="btn btn-primary w-100 py-2" onclick="showReview()" style="font-size:1rem;">
                 <i class="bi bi-eye"></i> Revisar e Enviar
             </button>

@@ -469,6 +469,146 @@
         form.submit();
     };
 
+    // ─── Autosave (localStorage) ─────────────────────────────────────────
+    const SAVE_KEY = 'wm_draft_' + TOKEN;
+    let saveTimer = null;
+
+    function getFormSnapshot() {
+        const rows = document.querySelectorAll('#itemsBodyDesktop tr');
+        const items = [];
+        rows.forEach(function (row) {
+            items.push({
+                id:             (row.querySelector('[id^="mid-"]') || {}).value || '',
+                name:           (row.querySelector('[id^="mname-"]') || {}).value || '',
+                specification:  (row.querySelector('[id^="spec-"]') || {}).value || '',
+                classification: (row.querySelector('[id^="class-"]') || {}).value || '',
+                unit:           (row.querySelector('[id^="unit-"]') || {}).value || '',
+                quantity:       (row.querySelector('[name*="[quantity]"]') || {}).value || '1',
+                needed_date:    (row.querySelector('[name*="[needed_date]"]') || {}).value || '',
+            });
+        });
+        const siteEl = document.getElementById('constructionSiteSelect');
+        return {
+            items:       items,
+            needed_date: neededDate ? neededDate.value : '',
+            site_id:     siteEl ? siteEl.value : '',
+            notes:       (document.querySelector('[name="notes"]') || {}).value || '',
+        };
+    }
+
+    function showSaveIndicator(status) {
+        let el = document.getElementById('autosaveIndicator');
+        if (!el) return;
+        if (status === 'saving') {
+            el.innerHTML = '<i class="bi bi-cloud-upload text-muted"></i> <span class="text-muted">Salvando...</span>';
+        } else {
+            el.innerHTML = '<i class="bi bi-cloud-check text-success"></i> <span class="text-success">Rascunho salvo</span>';
+            setTimeout(function () {
+                if (el) el.innerHTML = '<i class="bi bi-cloud-check text-muted opacity-50"></i> <span class="text-muted opacity-50">Rascunho salvo</span>';
+            }, 2500);
+        }
+    }
+
+    function saveDraft() {
+        try {
+            showSaveIndicator('saving');
+            localStorage.setItem(SAVE_KEY, JSON.stringify(getFormSnapshot()));
+            showSaveIndicator('saved');
+        } catch (e) { /* quota ou private browsing */ }
+    }
+
+    function scheduleSave() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveDraft, 800);
+    }
+
+    function clearDraft() {
+        try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    }
+
+    function restoreDraft() {
+        let raw;
+        try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return; }
+        if (!raw) return;
+        let draft;
+        try { draft = JSON.parse(raw); } catch (e) { return; }
+        if (!draft || !Array.isArray(draft.items) || draft.items.length === 0) return;
+
+        // Mostra banner de restauração
+        const banner = document.getElementById('draftRestoreBanner');
+        if (banner) {
+            banner.classList.remove('d-none');
+            document.getElementById('draftRestoreBtn').addEventListener('click', function () {
+                applyDraft(draft);
+                banner.classList.add('d-none');
+            });
+            document.getElementById('draftDiscardBtn').addEventListener('click', function () {
+                clearDraft();
+                banner.classList.add('d-none');
+            });
+        } else {
+            applyDraft(draft);
+        }
+    }
+
+    function applyDraft(draft) {
+        // Obra
+        const siteEl = document.getElementById('constructionSiteSelect');
+        if (siteEl && draft.site_id) siteEl.value = draft.site_id;
+
+        // Data de necessidade
+        if (neededDate && draft.needed_date) {
+            neededDate.value = draft.needed_date;
+            enforceMinDate();
+        }
+
+        // Observações
+        const notesEl = document.querySelector('[name="notes"]');
+        if (notesEl && draft.notes) notesEl.value = draft.notes;
+
+        // Itens
+        draft.items.forEach(function (item) {
+            if (!item.name) return;
+            addItem({
+                id:             item.id || '',
+                name:           item.name,
+                specification:  item.specification || '',
+                classification: item.classification || '',
+                unit:           item.unit || '',
+                quantity:       item.quantity || 1,
+            });
+            // Restaura data do item após addItem (precisa do índice inserido)
+            if (item.needed_date) {
+                const lastIdx = itemCount;
+                const dateEl = document.getElementById('idate-' + lastIdx);
+                const dateMobEl = document.querySelector('#item-card-' + lastIdx + ' .date-mobile');
+                if (dateEl) dateEl.value = item.needed_date;
+                if (dateMobEl) dateMobEl.value = item.needed_date;
+            }
+        });
+
+        showSaveIndicator('saved');
+    }
+
+    // Observar mudanças no formulário para disparar autosave
+    function attachSaveListeners() {
+        document.getElementById('orderForm').addEventListener('input', scheduleSave);
+        document.getElementById('orderForm').addEventListener('change', scheduleSave);
+        // Observer para capturar itens adicionados/removidos dinamicamente
+        const observer = new MutationObserver(scheduleSave);
+        observer.observe(document.getElementById('itemsBodyDesktop'), { childList: true, subtree: true });
+    }
+
+    // Limpar rascunho ao submeter com sucesso
+    const origConfirmSubmit = window.confirmSubmit;
+    window.confirmSubmit = function () {
+        clearDraft();
+        origConfirmSubmit();
+    };
+
+    attachSaveListeners();
+    restoreDraft();
+
     // Estado inicial
     enforceMinDate();
 })();
