@@ -78,6 +78,22 @@ class MagazineController extends Controller
         }
     }
 
+    /**
+     * Verifica se a revista pode ser exibida para o visitante atual.
+     * Publicada = pública. Teste = só logado ou com token de preview válido.
+     */
+    private function canView(?array $magazine, int $id): bool
+    {
+        if (!$magazine) return false;
+        if ($magazine['status'] === Magazine::STATUS_PUBLISHED) return true;
+        if ($magazine['status'] === Magazine::STATUS_TEST) {
+            $previewToken = $_GET['preview'] ?? '';
+            if (Magazine::isValidPreviewToken($id, $previewToken)) return true;
+            if ($this->isLoggedIn()) return true;
+        }
+        return false;
+    }
+
     public function show(string $id = ''): void
     {
         $id = (int) $id;
@@ -89,12 +105,7 @@ class MagazineController extends Controller
             return;
         }
 
-        // Revistas publicadas são públicas. Revistas em modo teste só abrem
-        // para usuários logados (PIN do site ou admin).
-        $isTest = $magazine && $magazine['status'] === Magazine::STATUS_TEST;
-        $isPublished = $magazine && $magazine['status'] === Magazine::STATUS_PUBLISHED;
-
-        if (!$magazine || (!$isPublished && !($isTest && $this->isLoggedIn()))) {
+        if (!$this->canView($magazine, $id)) {
             $this->redirect('/revista');
             return;
         }
@@ -129,7 +140,7 @@ class MagazineController extends Controller
             return;
         }
 
-        if (!$magazine || $magazine['status'] !== 'published') {
+        if (!$this->canView($magazine, $id)) {
             http_response_code(404);
             echo 'Revista não encontrada.';
             return;
@@ -142,5 +153,43 @@ class MagazineController extends Controller
 
         // Renderiza o mesmo template do admin preview (isolado, sem CSS do site)
         include ROOT_PATH . '/app/Views/admin/magazines/preview.php';
+    }
+
+    /**
+     * Abre a revista e dispara o download do PDF automaticamente.
+     * Usado pelo botão "Baixar PDF" do e-mail quando o PDF não foi anexado.
+     */
+    public function pdf(string $id = ''): void
+    {
+        $id = (int) $id;
+
+        try {
+            $magazine = Magazine::find($id);
+        } catch (\Exception $e) {
+            $this->redirect('/revista');
+            return;
+        }
+
+        if (!$this->canView($magazine, $id)) {
+            $this->redirect('/revista');
+            return;
+        }
+
+        $pages = Magazine::getPages($id);
+
+        try {
+            $settings = Setting::getGroup('site_');
+        } catch (\Exception $e) {
+            $settings = [];
+        }
+
+        // Flag lida pela view para disparar o download automático do PDF
+        $autoDownloadPdf = true;
+
+        if (defined('ANTIGO_PREFIX')) {
+            include ROOT_PATH . '/app/Views/site/magazine/show.php';
+        } else {
+            include ROOT_PATH . '/app/Views/site/magazine/new-show.php';
+        }
     }
 }

@@ -67,6 +67,7 @@ class SettingsController extends Controller
             // Revista - Modo de Teste (contatos que recebem o teste)
             'magazine_test_emails' => Setting::get('magazine_test_emails', ''),
             'magazine_test_phones' => Setting::get('magazine_test_phones', ''),
+            'wkhtmltopdf_path' => Setting::get('wkhtmltopdf_path', ''),
 
             // Site
             'site_title' => Setting::get('site_title', 'Brooks Construtora'),
@@ -104,7 +105,7 @@ class SettingsController extends Controller
             'cron_token',
             'notification_emails',
             'magazine_webhook_url', 'magazine_webhook_phone', 'magazine_webhook_phone_name',
-            'magazine_test_emails', 'magazine_test_phones',
+            'magazine_test_emails', 'magazine_test_phones', 'wkhtmltopdf_path',
             'site_title', 'site_description', 'site_phone', 'site_email',
             'site_address', 'site_instagram', 'site_facebook',
             'site_linkedin', 'site_whatsapp',

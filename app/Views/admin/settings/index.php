@@ -393,6 +393,11 @@ $_isProduction = $_currentBranch === 'main';
                     <textarea class="form-control" name="magazine_test_phones" rows="2" placeholder="5511999999999, 5511888888888"><?= htmlspecialchars($settings['magazine_test_phones'] ?? '') ?></textarea>
                     <small class="text-muted">Separe múltiplos telefones por vírgula (com DDI + DDD).</small>
                 </div>
+                <div class="col-md-12">
+                    <label class="form-label">Caminho do wkhtmltopdf (opcional)</label>
+                    <input type="text" class="form-control" name="wkhtmltopdf_path" value="<?= htmlspecialchars($settings['wkhtmltopdf_path'] ?? '') ?>" placeholder="/usr/bin/wkhtmltopdf">
+                    <small class="text-muted">Usado para gerar o PDF da revista no servidor e anexá-lo ao e-mail de teste. Deixe em branco para detecção automática. Se o servidor não tiver o wkhtmltopdf, o e-mail traz um botão para baixar o PDF.</small>
+                </div>
             </div>
         </div>
     </div>

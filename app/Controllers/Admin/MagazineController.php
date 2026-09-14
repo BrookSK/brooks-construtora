@@ -1195,10 +1195,13 @@ class MagazineController extends Controller
             'published_by' => Auth::id(),
         ]);
 
-        // Envia notificação SOMENTE para os contatos de teste
+        // Gera/garante o token de preview (link abre sem login)
+        Magazine::ensurePreviewToken($id);
+
+        // Envia notificação SOMENTE para os contatos de teste (com link de preview + PDF)
         $this->sendMagazineNewsletter($id, true);
 
-        $this->setFlash('success', 'Revista publicada em MODO TESTE! Visível apenas para usuários logados. Notificação enviada só para os contatos de teste.');
+        $this->setFlash('success', 'Revista publicada em MODO TESTE! Notificação enviada só para os contatos de teste, com link de acesso direto e o PDF da revista.');
         $this->redirect('/admin/magazines/edit/' . $id);
     }
 
@@ -1658,6 +1661,24 @@ class MagazineController extends Controller
             $displayTitle = $topicTitle ?: $magazine['title'];
             $subjectPrefix = $testMode ? '[TESTE] ' : '';
 
+            // Em modo teste: link com token (abre sem login) e PDF anexado
+            $previewToken = $testMode ? Magazine::ensurePreviewToken($magazineId) : '';
+
+            // Tenta gerar o PDF no servidor (só no modo teste)
+            $pdfPath = null;
+            if ($testMode) {
+                $pdfPath = \App\Services\MagazinePdfService::generate($magazineId);
+            }
+            $attachments = [];
+            if ($pdfPath) {
+                $safeTitle = preg_replace('/[^a-zA-Z0-9]+/', '_', $displayTitle);
+                $attachments[] = [
+                    'path' => $pdfPath,
+                    'name' => 'Revista_Brooks_' . $safeTitle . '.pdf',
+                    'mime' => 'application/pdf',
+                ];
+            }
+
             // Enviar e-mails
             foreach ($subscribers as $subscriber) {
                 if (empty($subscriber['email'])) continue;
@@ -1666,19 +1687,27 @@ class MagazineController extends Controller
                     $magazineId,
                     $subscriber['name'] ?? '',
                     $subscriber['email'] ?? '',
-                    $topicTitle
+                    $topicTitle,
+                    $previewToken,
+                    $testMode && !$pdfPath // se não gerou PDF, mostrar botão de download no e-mail
                 );
 
                 $mail->send(
                     $subscriber['email'],
                     $subjectPrefix . 'Nova Revista: ' . $displayTitle . ' - Brooks Construtora',
                     $htmlBody,
-                    true
+                    true,
+                    $attachments
                 );
             }
 
+            // Limpar PDF temporário após envio
+            if ($pdfPath && is_file($pdfPath)) {
+                @unlink($pdfPath);
+            }
+
             // Enviar webhook WhatsApp
-            $this->sendMagazineWebhook($magazineId, $magazine, $displayTitle, $subscribers, $testMode);
+            $this->sendMagazineWebhook($magazineId, $magazine, $displayTitle, $subscribers, $testMode, $previewToken);
 
         } catch (\Exception $e) {
             error_log('Erro ao enviar newsletter: ' . $e->getMessage());
@@ -1723,7 +1752,7 @@ class MagazineController extends Controller
     /**
      * Enviar webhook de nova revista para assinantes com WhatsApp
      */
-    private function sendMagazineWebhook(int $magazineId, array $magazine, string $displayTitle, array $subscribers, bool $testMode = false): void
+    private function sendMagazineWebhook(int $magazineId, array $magazine, string $displayTitle, array $subscribers, bool $testMode = false, string $previewToken = ''): void
     {
         $webhookUrl = \App\Models\Setting::get('magazine_webhook_url', '');
         if (empty(trim($webhookUrl))) return;
@@ -1731,7 +1760,11 @@ class MagazineController extends Controller
         $defaultPhone = \App\Models\Setting::get('magazine_webhook_phone', '');
         $defaultPhoneName = \App\Models\Setting::get('magazine_webhook_phone_name', '');
         $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'www.brooksconstrutora.com.br');
+        // No modo teste, o link leva o token de preview (abre sem login)
         $magazineUrl = "{$baseUrl}/revista/ver/{$magazineId}";
+        if ($testMode && !empty($previewToken)) {
+            $magazineUrl .= '?preview=' . $previewToken;
+        }
 
         $titlePrefix = $testMode ? "*[TESTE] Nova Revista Brooks!*\n\n" : "*Nova Revista Brooks!*\n\n";
         $message = $titlePrefix
