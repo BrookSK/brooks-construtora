@@ -89,12 +89,23 @@ class PurchaseOrderController extends Controller
             ];
         }
 
+        // Listas de materiais pré-definidas disponíveis para carregar de uma vez.
+        // Só carrega se a tabela existir (a migration 042 pode não ter sido aplicada ainda).
+        $materialLists = [];
+        try {
+            $chk = Database::fetch("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'material_templates' LIMIT 1");
+            if (!empty($chk)) {
+                $materialLists = \App\Models\MaterialTemplate::allActive();
+            }
+        } catch (\Exception $e) {}
+
         $this->view('admin.orders.create', [
             'suppliers' => $suppliers,
             'materials' => $materials,
             'categories' => $categories,
             'units' => $units,
             'constructionSites' => $constructionSites,
+            'materialLists' => $materialLists,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
             'minDaysEnabled' => Setting::get('orders_min_days_enabled', '0') === '1',
