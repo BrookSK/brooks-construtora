@@ -162,8 +162,8 @@
                             <thead>
                                 <tr class="bg-light">
                                     <th style="min-width:250px;" id="colItemName">Material</th>
-                                    <th style="min-width:120px;">Especificação</th>
-                                    <th style="min-width:100px;">Classificação</th>
+                                    <th style="min-width:120px;" class="col-material-only">Especificação</th>
+                                    <th style="min-width:100px;" class="col-material-only">Classificação</th>
                                     <th style="width:90px;">Qtd</th>
                                     <th style="width:150px;">Data (opcional)</th>
                                     <th style="width:50px;"></th>
@@ -268,24 +268,27 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3"><label class="form-label" id="newMatNameLabel">Nome do Material *</label><input type="text" class="form-control" id="newMatName" required></div>
-                    <div class="mb-3">
-                        <label class="form-label">Especificação (Tipo)</label>
-                        <select class="form-select" id="newMatSpec">
-                            <option value="">-- Selecione --</option>
-                            <?php foreach ($categories as $cat): ?>
-                            <option value="<?= htmlspecialchars($cat['name']) ?>" data-id="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3"><label class="form-label">Classificação</label><input type="text" class="form-control" id="newMatClassification" placeholder="Ex: 100mm"></div>
-                    <div class="mb-3">
-                        <label class="form-label">Unidade de Medida</label>
-                        <select class="form-select" id="newMatUnit">
-                            <option value="">-- Selecione --</option>
-                            <?php foreach ($units as $u): ?>
-                            <option value="<?= $u['id'] ?>" data-abbr="<?= htmlspecialchars($u['abbreviation']) ?>"><?= htmlspecialchars($u['name']) ?> (<?= htmlspecialchars($u['abbreviation']) ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
+                    <!-- Campos exclusivos de MATERIAL (ocultos no modo Serviço) -->
+                    <div id="newMatMaterialFields">
+                        <div class="mb-3">
+                            <label class="form-label">Especificação (Tipo)</label>
+                            <select class="form-select" id="newMatSpec">
+                                <option value="">-- Selecione --</option>
+                                <?php foreach ($categories as $cat): ?>
+                                <option value="<?= htmlspecialchars($cat['name']) ?>" data-id="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="mb-3"><label class="form-label">Classificação</label><input type="text" class="form-control" id="newMatClassification" placeholder="Ex: 100mm"></div>
+                        <div class="mb-3">
+                            <label class="form-label">Unidade de Medida</label>
+                            <select class="form-select" id="newMatUnit">
+                                <option value="">-- Selecione --</option>
+                                <?php foreach ($units as $u): ?>
+                                <option value="<?= $u['id'] ?>" data-abbr="<?= htmlspecialchars($u['abbreviation']) ?>"><?= htmlspecialchars($u['name']) ?> (<?= htmlspecialchars($u['abbreviation']) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
