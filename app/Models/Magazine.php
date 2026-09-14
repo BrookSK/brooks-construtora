@@ -37,6 +37,29 @@ class Magazine extends Model
     }
 
     /**
+     * Garante que a coluna status aceite o valor 'test' (expande o ENUM se necessário).
+     * Idempotente e protegido — não lança erro se não tiver permissão.
+     */
+    public static function ensureTestStatusSupported(): void
+    {
+        try {
+            $col = Database::fetch(
+                "SELECT COLUMN_TYPE FROM information_schema.COLUMNS 
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'magazines' AND COLUMN_NAME = 'status' LIMIT 1"
+            );
+            $type = $col['COLUMN_TYPE'] ?? '';
+            if ($type !== '' && strpos($type, "'test'") === false) {
+                Database::getConnection()->exec(
+                    "ALTER TABLE magazines MODIFY COLUMN status 
+                     ENUM('draft','generated','review','approved','published','test') NOT NULL DEFAULT 'draft'"
+                );
+            }
+        } catch (\Throwable $e) {
+            error_log('[MAGAZINE] Falha ao expandir ENUM status: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Chave secreta usada para derivar o token de preview.
      * Fixa no código (não precisa de banco). Só quem tem o código consegue gerar.
      */

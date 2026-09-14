@@ -61,7 +61,7 @@
                                         'review' => 'Em Revisão',
                                         'approved' => 'Aprovada',
                                         'published' => 'Publicada',
-                                        'test' => 'Modo Teste',
+                                        'test' => 'Publicada (Teste)',
                                     ];
                                 ?>
                                 <span class="badge bg-<?= $statusColors[$mag['status']] ?? 'secondary' ?>">

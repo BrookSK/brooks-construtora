@@ -166,47 +166,110 @@ HTML;
             $pdfUrl .= '?preview=' . $previewToken;
         }
         $unsubscribeUrl = "{$baseUrl}/newsletter/unsubscribe?email=" . urlencode($subscriberEmail);
-        $greeting = !empty($subscriberName) ? "Olá, {$subscriberName}!" : "Olá!";
-        $displayTitle = !empty($topicTitle) ? $topicTitle : $magazineTitle;
+        $greeting = !empty($subscriberName) ? "Olá, {$subscriberName}" : "Olá";
+        $displayTitle = htmlspecialchars($topicTitle ?: $magazineTitle, ENT_QUOTES, 'UTF-8');
+        $year = date('Y');
 
-        // Botão de download de PDF (usado quando o PDF não pôde ser anexado)
+        try { $logo = \App\Models\Setting::get('magazine_logo', ''); } catch (\Exception $e) { $logo = ''; }
+        if (empty($logo)) $logo = '/assets/images/wp/2024/11/logo-brooks-1400x396.webp';
+        if (strpos($logo, 'http') !== 0) $logo = $baseUrl . $logo;
+
+        // Botão de PDF (aparece quando o PDF não foi anexado — plano B)
         $pdfButtonHtml = '';
         if ($showPdfDownloadButton) {
             $pdfButtonHtml = <<<PDFBTN
-<p style="text-align:center; margin: 10px 0 10px;">
-    <a href="{$pdfUrl}" style="display:inline-block; background-color:#e53935; color:#ffffff; padding:12px 28px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Baixar PDF da Revista</a>
-</p>
+                        <tr><td style="padding-top:14px;">
+                            <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+                                <tr><td style="border-radius:8px; background:#e63946;">
+                                    <a href="{$pdfUrl}" target="_blank" style="display:inline-block; padding:15px 40px; color:#ffffff; font-size:15px; font-weight:700; text-decoration:none; letter-spacing:0.3px;">&#128196;&nbsp; Baixar PDF da Revista</a>
+                                </td></tr>
+                            </table>
+                        </td></tr>
 PDFBTN;
         }
 
-        // Texto auxiliar sobre o PDF
         $pdfNote = $showPdfDownloadButton
-            ? 'Clique em "Baixar PDF da Revista" para baixar a edição completa.'
-            : 'O PDF da revista está anexado a este e-mail. Você também pode ler online no link acima.';
+            ? 'Baixe a edição completa em PDF pelo botão acima.'
+            : 'O PDF da edição está anexado a este e-mail. Você também pode ler online no botão acima.';
 
-        $body = <<<HTML
-<p style="margin-bottom:15px;">{$greeting}</p>
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background-color:#eef0f3; font-family:'Segoe UI', Helvetica, Arial, sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef0f3; padding:32px 12px;">
+<tr><td align="center">
 
-<p style="margin-bottom:15px;">Uma nova edição da nossa revista digital foi publicada. Confira conteúdo exclusivo sobre construção, reformas e arquitetura de alto padrão.</p>
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 6px 24px rgba(26,27,46,0.12);">
 
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa; border-radius:6px; margin-bottom:20px;">
-<tr><td style="padding: 18px 20px;">
-    <p style="margin:0 0 5px; font-size:13px; color:#888; text-transform:uppercase; letter-spacing:0.5px;">Nova Edição</p>
-    <p style="margin:0; font-size:17px; color:#3a3b4e; font-weight:600;">{$displayTitle}</p>
+        <!-- Header com logo -->
+        <tr>
+            <td style="background:#2f3142; padding:28px 30px; text-align:center;">
+                <img src="{$logo}" alt="Brooks Construtora" width="150" style="max-width:150px; height:auto; display:inline-block;">
+                <p style="margin:12px 0 0; color:#c9ccd6; font-size:11px; letter-spacing:3px; text-transform:uppercase;">Revista Digital</p>
+            </td>
+        </tr>
+
+        <!-- Faixa de destaque -->
+        <tr>
+            <td style="background:linear-gradient(135deg,#3a3b4e 0%,#4a4d68 100%); padding:34px 30px; text-align:center;">
+                <p style="margin:0 0 8px; color:#e63946; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase;">Nova Edição</p>
+                <h1 style="margin:0; color:#ffffff; font-size:24px; line-height:1.3; font-weight:700;">{$displayTitle}</h1>
+            </td>
+        </tr>
+
+        <!-- Corpo -->
+        <tr>
+            <td style="padding:34px 40px 10px;">
+                <p style="margin:0 0 16px; color:#2f3142; font-size:16px; font-weight:600;">{$greeting},</p>
+                <p style="margin:0 0 24px; color:#555b6b; font-size:15px; line-height:1.7;">
+                    Uma nova edição da nossa revista digital acaba de sair. Preparamos conteúdo exclusivo sobre construção, reformas e arquitetura de alto padrão — feito para inspirar seus próximos projetos.
+                </p>
+            </td>
+        </tr>
+
+        <!-- Botões -->
+        <tr>
+            <td style="padding:0 40px 8px; text-align:center;">
+                <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+                    <tr><td style="border-radius:8px; background:#2f3142;">
+                        <a href="{$viewUrl}" target="_blank" style="display:inline-block; padding:15px 48px; color:#ffffff; font-size:15px; font-weight:700; text-decoration:none; letter-spacing:0.3px;">Ler Revista &#8594;</a>
+                    </td></tr>
+                    {$pdfButtonHtml}
+                </table>
+                <p style="margin:18px 0 0; color:#8a90a0; font-size:13px; line-height:1.6;">{$pdfNote}</p>
+            </td>
+        </tr>
+
+        <!-- Divisor -->
+        <tr><td style="padding:28px 40px 0;"><div style="border-top:1px solid #eceef2;"></div></td></tr>
+
+        <!-- Footer -->
+        <tr>
+            <td style="padding:22px 40px 30px; text-align:center;">
+                <p style="margin:0 0 6px; color:#9aa0ae; font-size:12px; line-height:1.6;">
+                    Você recebeu este e-mail por ser assinante da Revista Brooks Construtora.
+                </p>
+                <p style="margin:0 0 14px;">
+                    <a href="{$unsubscribeUrl}" style="color:#9aa0ae; font-size:12px; text-decoration:underline;">Não quero mais receber</a>
+                </p>
+                <p style="margin:0; color:#b4b9c4; font-size:11px; line-height:1.6;">
+                    &copy; {$year} Brooks Construtora &bull; Av. Brigadeiro Faria Lima, 1811 - São Paulo/SP<br>
+                    <a href="{$baseUrl}" style="color:#6b7280; text-decoration:none;">www.brooksconstrutora.com.br</a>
+                </p>
+            </td>
+        </tr>
+
+    </table>
+
 </td></tr>
 </table>
-
-<p style="text-align:center; margin: 25px 0 10px;">
-    <a href="{$viewUrl}" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:12px 28px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Ler Revista</a>
-</p>
-{$pdfButtonHtml}
-<p style="text-align:center; font-size:13px; color:#666; margin-top:15px;">{$pdfNote}</p>
-
-<p style="font-size:12px; color:#999; margin-top:25px; text-align:center;">Você recebeu este e-mail por ser assinante da Revista Brooks Construtora.<br>
-<a href="{$unsubscribeUrl}" style="color:#999; text-decoration:underline;">Não quero mais receber</a></p>
+</body>
+</html>
 HTML;
-
-        return self::wrap('Nova Revista: ' . $displayTitle, $body);
     }
 
     public static function newsletterWelcome(string $email, string $name = ''): string

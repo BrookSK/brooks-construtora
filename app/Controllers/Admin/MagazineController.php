@@ -1189,17 +1189,23 @@ class MagazineController extends Controller
             return;
         }
 
-        // MODO TESTE: NÃO altera o status da revista (continua Aprovada).
-        // O teste apenas envia a notificação para os contatos de teste, com um
-        // link que abre a revista via token (mesmo sem estar publicada).
-        // Assim o status na lista continua "Aprovada" e os botões de publicar
-        // permanecem disponíveis.
+        // MODO TESTE: marca a revista como 'test' (aparece como "Publicada (Teste)").
+        // NÃO é publicação oficial: não vai para o público e os botões de publicar
+        // continuam disponíveis. Envia a notificação só para os contatos de teste.
+        // Protegido: garante que o ENUM aceite 'test' e então marca o status.
+        try {
+            Magazine::ensureTestStatusSupported();
+            Magazine::updateById($id, ['status' => Magazine::STATUS_TEST]);
+        } catch (\Throwable $e) {
+            error_log('[MAGAZINE_TEST] Não foi possível marcar status test: ' . $e->getMessage());
+        }
+
         try {
             $this->sendMagazineNewsletter($id, true);
-            $this->setFlash('success', 'Notificação de TESTE enviada só para os contatos de teste, com link de acesso direto e o PDF da revista. O status da revista não foi alterado.');
+            $this->setFlash('success', 'Teste enviado! A revista está marcada como "Publicada (Teste)". Notificação enviada só para os contatos de teste, com link de acesso direto e o PDF. Você ainda pode publicá-la oficialmente.');
         } catch (\Throwable $e) {
             error_log('[MAGAZINE_TEST] Falha ao notificar teste: ' . $e->getMessage());
-            $this->setFlash('error', 'Houve um problema ao enviar a notificação de teste: ' . $e->getMessage());
+            $this->setFlash('error', 'Revista marcada como TESTE, mas houve um problema ao enviar a notificação: ' . $e->getMessage());
         }
 
         $this->redirect('/admin/magazines/edit/' . $id);
