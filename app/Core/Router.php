@@ -389,6 +389,7 @@ class Router
             'revista' => ['MagazineController', 'index'],
             'revista/ver' => ['MagazineController', 'show'],
             'revista/preview' => ['MagazineController', 'preview'],
+            'revista/pdf' => ['MagazineController', 'pdf'],
             'revista/image-proxy' => ['MagazineController', 'imageProxy'],
         ];
 

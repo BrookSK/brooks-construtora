@@ -973,6 +973,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         setTimeout(function() { fitTitles(); processPages(); }, 3000);
     }
+
+    <?php if (!empty($autoDownloadPdf)): ?>
+    // Download automático do PDF (acessado via link "Baixar PDF" do e-mail de teste)
+    setTimeout(function() {
+        if (typeof generatePDF === 'function') { generatePDF(); }
+    }, 3500);
+    <?php endif; ?>
 });
 </script>
 
