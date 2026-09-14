@@ -41,6 +41,7 @@
         // Modal "Novo …"
         setText('newMaterialModalTitle', isService ? 'Novo Serviço' : 'Novo Material');
         setText('newMatNameLabel', isService ? 'Nome do Serviço *' : 'Nome do Material *');
+        setText('newMatSpecLabel', isService ? 'Categoria (Tipo)' : 'Especificação (Tipo)');
         setText('saveMaterialBtnLabel', isService ? 'Salvar Serviço' : 'Salvar Material');
 
         // Alerta de ajuda da seção de itens
@@ -72,34 +73,15 @@
     function itemSearchHint() {
         return currentOrderType() === 'service' ? 'Busque um serviço acima' : 'Busque um material acima';
     }
-    // Mostra/esconde as colunas exclusivas de material (Especificação/Classificação)
-    // e os campos de material do modal, conforme o tipo selecionado.
-    function toggleMaterialOnlyUI(isService) {
-        document.querySelectorAll('.col-material-only').forEach(function (el) {
-            el.style.display = isService ? 'none' : '';
-        });
-        const matFields = document.getElementById('newMatMaterialFields');
-        if (matFields) matFields.style.display = isService ? 'none' : '';
-    }
     (function initOrderTypeTabs() {
         const tabs = document.querySelectorAll('#orderTypeTabs [data-order-type]');
         tabs.forEach(function (tab) {
             tab.addEventListener('click', function () {
                 const type = tab.getAttribute('data-order-type') || 'material';
-                const prev = currentOrderType();
                 if (orderTypeInput) orderTypeInput.value = type;
                 tabs.forEach(function (t) { t.classList.remove('active'); });
                 tab.classList.add('active');
                 applyOrderTypeLabels(type);
-                toggleMaterialOnlyUI(type === 'service');
-                // Se o tipo REALMENTE mudou, limpa os itens já adicionados:
-                // a estrutura da linha difere entre material e serviço.
-                if (prev !== type) {
-                    document.getElementById('itemsBodyDesktop').innerHTML = '';
-                    document.getElementById('itemsBodyMobile').innerHTML = '';
-                    itemCount = 0;
-                    if (typeof updateItemCount === 'function') updateItemCount();
-                }
                 if (typeof scheduleSave === 'function') scheduleSave();
             });
         });
@@ -160,33 +142,22 @@
 
         const tr = document.createElement('tr');
         tr.id = 'item-row-' + idx;
-        const isService = currentOrderType() === 'service';
-        // No modo Serviço, o campo principal é uma DESCRIÇÃO livre (input texto),
-        // não um seletor de catálogo. As colunas Especificação/Classificação
-        // ficam ocultas (irrelevantes para serviço).
-        const nameCell = isService
-            ? ('<input type="text" class="form-control form-control-sm" placeholder="Descreva o serviço..." ' +
-                    'value="' + (prefill && prefill.name || '') + '" ' +
-                    'oninput="document.getElementById(\'mname-' + idx + '\').value = this.value">' +
-                '<input type="hidden" name="items[' + idx + '][material_id]" id="mid-' + idx + '" value="">' +
-                '<input type="hidden" name="items[' + idx + '][material_name]" id="mname-' + idx + '" value="' + (prefill && prefill.name || '') + '">')
-            : ('<select class="material-select-raw" id="mat-select-' + idx + '" style="display:none;">' + opts + '</select>' +
+        tr.innerHTML =
+            '<td>' +
+                '<select class="material-select-raw" id="mat-select-' + idx + '" style="display:none;">' + opts + '</select>' +
                 '<div id="mat-ss-' + idx + '"></div>' +
                 '<input type="hidden" name="items[' + idx + '][material_id]" id="mid-' + idx + '" value="' + (prefill && prefill.id || '') + '">' +
-                '<input type="hidden" name="items[' + idx + '][material_name]" id="mname-' + idx + '" value="' + (prefill && prefill.name || '') + '">');
-
-        tr.innerHTML =
-            '<td>' + nameCell + '</td>' +
-            '<td class="col-material-only"><input type="text" class="form-control form-control-sm" name="items[' + idx + '][specification]" id="spec-' + idx + '" value="' + (prefill && prefill.specification || '') + '" readonly></td>' +
-            '<td class="col-material-only"><input type="text" class="form-control form-control-sm" name="items[' + idx + '][classification]" id="class-' + idx + '" value="' + (prefill && prefill.classification || '') + '" readonly></td>' +
+                '<input type="hidden" name="items[' + idx + '][material_name]" id="mname-' + idx + '" value="' + (prefill && prefill.name || '') + '">' +
+            '</td>' +
+            '<td><input type="text" class="form-control form-control-sm" name="items[' + idx + '][specification]" id="spec-' + idx + '" value="' + (prefill && prefill.specification || '') + '" readonly></td>' +
+            '<td><input type="text" class="form-control form-control-sm" name="items[' + idx + '][classification]" id="class-' + idx + '" value="' + (prefill && prefill.classification || '') + '" readonly></td>' +
             '<input type="hidden" name="items[' + idx + '][unit]" id="unit-' + idx + '" value="' + (prefill && prefill.unit || '') + '">' +
             '<td><input type="number" class="form-control form-control-sm" name="items[' + idx + '][quantity]" min="0.01" step="0.01" value="' + (prefill && prefill.quantity || 1) + '" required></td>' +
             '<td><input type="date" class="form-control form-control-sm item-date" name="items[' + idx + '][needed_date]" id="idate-' + idx + '"' + (MIN_DATE ? ' min="' + MIN_DATE + '"' : '') + (currentMaxDate() ? ' max="' + currentMaxDate() + '"' : '') + ' title="Data específica (opcional) — até a data máxima informada acima"></td>' +
             '<td><button type="button" class="btn btn-sm btn-outline-danger" data-remove="' + idx + '"><i class="bi bi-trash"></i></button></td>';
         document.getElementById('itemsBodyDesktop').appendChild(tr);
 
-        // No modo serviço não há seletor de catálogo (campo é texto livre).
-        const matSS = isService ? null : new SearchableSelect(document.getElementById('mat-select-' + idx), {
+        const matSS = new SearchableSelect(document.getElementById('mat-select-' + idx), {
             placeholder: itemSearchPlaceholder(),
             onSelect: function (value, text, dataset) {
                 document.getElementById('mid-' + idx).value = String(value).indexOf('epi-') === 0 ? '' : value;
@@ -197,15 +168,7 @@
                 updateMobileDetails(idx, dataset);
             }
         });
-        if (matSS && prefill && prefill.id) matSS.setValue(prefill.id);
-
-        // Célula principal do card mobile: seletor (material) ou texto (serviço).
-        const nameCellMobile = isService
-            ? ('<input type="text" class="form-control form-control-sm flex-grow-1" placeholder="Descreva o serviço..." ' +
-                    'value="' + (prefill && prefill.name || '') + '" ' +
-                    'oninput="document.getElementById(\'mname-' + idx + '\').value = this.value">')
-            : ('<select class="material-select-raw-m" id="mat-select-m-' + idx + '" style="display:none;">' + opts + '</select>' +
-                '<div class="flex-grow-1" id="mat-ss-m-' + idx + '"></div>');
+        if (prefill && prefill.id) matSS.setValue(prefill.id);
 
         const card = document.createElement('div');
         card.className = 'item-card';
@@ -213,13 +176,13 @@
         card.innerHTML =
             '<span class="item-number">#' + idx + '</span>' +
             '<div class="d-flex gap-2 align-items-center mb-2">' +
-                nameCellMobile +
+                '<select class="material-select-raw-m" id="mat-select-m-' + idx + '" style="display:none;">' + opts + '</select>' +
+                '<div class="flex-grow-1" id="mat-ss-m-' + idx + '"></div>' +
                 '<button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" data-remove="' + idx + '"><i class="bi bi-trash"></i></button>' +
             '</div>' +
-            (isService ? '' :
             '<div class="item-details" id="details-m-' + idx + '">' +
                 (prefill ? '<span class="badge bg-light text-dark">' + (prefill.specification || '') + '</span><span class="badge bg-light text-dark">' + (prefill.classification || '') + '</span>' : '<span class="text-muted" style="font-size:0.75rem;">' + itemSearchHint() + '</span>') +
-            '</div>') +
+            '</div>' +
             '<div class="d-flex align-items-center gap-2 mt-2">' +
                 '<label class="form-label mb-0 small fw-bold">Qtd:</label>' +
                 '<input type="number" class="form-control form-control-sm qty-mobile" style="max-width:100px;" data-idx="' + idx + '" min="0.01" step="0.01" value="' + (prefill && prefill.quantity || 1) + '">' +
@@ -230,7 +193,7 @@
             '</div>';
         document.getElementById('itemsBodyMobile').appendChild(card);
 
-        const matSSM = isService ? null : new SearchableSelect(document.getElementById('mat-select-m-' + idx), {
+        const matSSM = new SearchableSelect(document.getElementById('mat-select-m-' + idx), {
             placeholder: itemSearchPlaceholder(),
             onSelect: function (value, text, dataset) {
                 document.getElementById('mid-' + idx).value = String(value).indexOf('epi-') === 0 ? '' : value;
@@ -241,7 +204,7 @@
                 updateMobileDetails(idx, dataset);
             }
         });
-        if (matSSM && prefill && prefill.id) matSSM.setValue(prefill.id);
+        if (prefill && prefill.id) matSSM.setValue(prefill.id);
 
         card.querySelector('.qty-mobile').addEventListener('input', function () {
             const d = document.querySelector('#item-row-' + idx + ' [name="items[' + idx + '][quantity]"]');
