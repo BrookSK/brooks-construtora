@@ -53,6 +53,7 @@
                                         'review' => 'info',
                                         'approved' => 'primary',
                                         'published' => 'success',
+                                        'test' => 'warning',
                                     ];
                                     $statusLabels = [
                                         'draft' => 'Rascunho',
@@ -60,6 +61,7 @@
                                         'review' => 'Em Revisão',
                                         'approved' => 'Aprovada',
                                         'published' => 'Publicada',
+                                        'test' => 'Modo Teste',
                                     ];
                                 ?>
                                 <span class="badge bg-<?= $statusColors[$mag['status']] ?? 'secondary' ?>">

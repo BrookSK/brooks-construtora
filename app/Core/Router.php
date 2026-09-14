@@ -93,6 +93,7 @@ class Router
             'magazines/active-job' => ['MagazineController', 'activeJob'],
             'magazines/approve' => ['MagazineController', 'approve'],
             'magazines/publish' => ['MagazineController', 'publish'],
+            'magazines/publish-test' => ['MagazineController', 'publishTest'],
             'magazines/preview' => ['MagazineController', 'preview'],
             'magazines/delete' => ['MagazineController', 'delete'],
             'magazines/schedule' => ['MagazineController', 'schedule'],

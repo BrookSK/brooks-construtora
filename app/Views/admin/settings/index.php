@@ -272,6 +272,28 @@ $_isProduction = $_currentBranch === 'main';
         </div>
     </div>
 
+    <!-- Revista - Modo de Teste -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-flask"></i> Revista - Modo de Teste</h6>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">Ao usar o botão "Publicar em Modo Teste" na revista, a notificação (e-mail e WhatsApp) será enviada <strong>somente</strong> para os contatos abaixo, e a revista fica visível apenas para usuários logados. Ideal para conferir como a edição chega antes de publicar de verdade.</p>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">E-mails de teste</label>
+                    <textarea class="form-control" name="magazine_test_emails" rows="2" placeholder="voce@empresa.com, mariana@empresa.com"><?= htmlspecialchars($settings['magazine_test_emails'] ?? '') ?></textarea>
+                    <small class="text-muted">Separe múltiplos e-mails por vírgula.</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">WhatsApp de teste</label>
+                    <textarea class="form-control" name="magazine_test_phones" rows="2" placeholder="5511999999999, 5511888888888"><?= htmlspecialchars($settings['magazine_test_phones'] ?? '') ?></textarea>
+                    <small class="text-muted">Separe múltiplos telefones por vírgula (com DDI + DDD).</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="text-end">
         <button type="submit" class="btn btn-primary btn-lg">
             <i class="bi bi-check-lg"></i> Salvar Configurações

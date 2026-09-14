@@ -33,15 +33,33 @@ class MagazineController extends Controller
         exit;
     }
 
+    /**
+     * Detecta se há um usuário logado (PIN do site ou admin do painel).
+     * Usado para liberar revistas em modo de teste.
+     */
+    private function isLoggedIn(): bool
+    {
+        // Usuário logado no painel admin
+        if (\App\Core\Auth::check()) return true;
+        // Usuário logado por PIN no site
+        if (\App\Controllers\Site\PinAuthController::getLoggedUser()) return true;
+        return false;
+    }
+
     public function index(): void
     {
+        // Em modo teste, revistas 'test' aparecem só para usuários logados
+        $allowedStatuses = $this->isLoggedIn() ? ['published', 'test'] : ['published'];
+        $placeholders = implode(',', array_fill(0, count($allowedStatuses), '?'));
+
         try {
             $magazines = \App\Core\Database::fetchAll(
                 "SELECT m.*, mt.title as topic_title 
                  FROM magazines m 
                  LEFT JOIN magazine_topics mt ON m.topic_id = mt.id 
-                 WHERE m.status = 'published' 
-                 ORDER BY m.published_at DESC"
+                 WHERE m.status IN ({$placeholders}) 
+                 ORDER BY m.published_at DESC",
+                $allowedStatuses
             );
         } catch (\Exception $e) {
             $magazines = [];
@@ -71,7 +89,12 @@ class MagazineController extends Controller
             return;
         }
 
-        if (!$magazine || $magazine['status'] !== 'published') {
+        // Revistas publicadas são públicas. Revistas em modo teste só abrem
+        // para usuários logados (PIN do site ou admin).
+        $isTest = $magazine && $magazine['status'] === Magazine::STATUS_TEST;
+        $isPublished = $magazine && $magazine['status'] === Magazine::STATUS_PUBLISHED;
+
+        if (!$magazine || (!$isPublished && !($isTest && $this->isLoggedIn()))) {
             $this->redirect('/revista');
             return;
         }
