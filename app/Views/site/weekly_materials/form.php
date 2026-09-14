@@ -151,7 +151,7 @@
                     </div>
                 </div>
                 <div class="card-body" style="overflow:visible;">
-                    <div class="alert alert-light border small mb-3">
+                    <div class="alert alert-light border small mb-3" id="itemsHelpAlert">
                         <i class="bi bi-info-circle text-primary"></i>
                         A <strong>Data (opcional)</strong> é para materiais que precisam de <strong>maior antecedência</strong>:
                         informe uma data específica de entrega, sempre <strong>até a data máxima informada acima</strong>
@@ -161,7 +161,7 @@
                         <table class="table table-sm mb-0">
                             <thead>
                                 <tr class="bg-light">
-                                    <th style="min-width:250px;">Material</th>
+                                    <th style="min-width:250px;" id="colItemName">Material</th>
                                     <th style="min-width:120px;">Especificação</th>
                                     <th style="min-width:100px;">Classificação</th>
                                     <th style="width:90px;">Qtd</th>
@@ -263,11 +263,11 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Novo Material</h5>
+                    <h5 class="modal-title" id="newMaterialModalTitle">Novo Material</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3"><label class="form-label">Nome do Material *</label><input type="text" class="form-control" id="newMatName" required></div>
+                    <div class="mb-3"><label class="form-label" id="newMatNameLabel">Nome do Material *</label><input type="text" class="form-control" id="newMatName" required></div>
                     <div class="mb-3">
                         <label class="form-label">Especificação (Tipo)</label>
                         <select class="form-select" id="newMatSpec">
@@ -290,7 +290,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="saveMaterialBtn">Salvar Material</button>
+                    <button type="button" class="btn btn-primary" id="saveMaterialBtn"><span id="saveMaterialBtnLabel">Salvar Material</span></button>
                 </div>
             </div>
         </div>

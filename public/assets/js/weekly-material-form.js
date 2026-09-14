@@ -25,10 +25,52 @@
     }
     function applyOrderTypeLabels(type) {
         const isService = type === 'service';
-        const title = document.getElementById('itemsCardTitle');
-        const newLabel = document.getElementById('newMaterialBtnLabel');
-        if (title) title.textContent = isService ? 'Itens do Serviço' : 'Itens do Pedido';
-        if (newLabel) newLabel.textContent = isService ? 'Novo Item' : 'Novo Material';
+        const setText = function (id, txt) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = txt;
+        };
+        // Cabeçalho da seção de itens e botões
+        setText('itemsCardTitle', isService ? 'Itens do Serviço' : 'Itens do Pedido');
+        setText('newMaterialBtnLabel', isService ? 'Novo Serviço' : 'Novo Material');
+        // Cabeçalho da coluna principal da tabela (desktop)
+        setText('colItemName', isService ? 'Serviço' : 'Material');
+        // Empty states
+        setText('emptyDesktop', isService
+            ? 'Clique em "Adicionar Item" para começar'
+            : 'Clique em "Adicionar Item" para começar');
+        // Modal "Novo …"
+        setText('newMaterialModalTitle', isService ? 'Novo Serviço' : 'Novo Material');
+        setText('newMatNameLabel', isService ? 'Nome do Serviço *' : 'Nome do Material *');
+        setText('saveMaterialBtnLabel', isService ? 'Salvar Serviço' : 'Salvar Material');
+
+        // Alerta de ajuda da seção de itens
+        const help = document.getElementById('itemsHelpAlert');
+        if (help) {
+            const alvo = isService ? 'serviços que precisam' : 'materiais que precisam';
+            help.innerHTML = '<i class="bi bi-info-circle text-primary"></i> ' +
+                'A <strong>Data (opcional)</strong> é para ' + alvo + ' de <strong>maior antecedência</strong>: ' +
+                'informe uma data específica, sempre <strong>até a data máxima informada acima</strong> ' +
+                '(campo "Preciso até"). Se deixar em branco, será usada essa data máxima.';
+        }
+
+        // Placeholder de busca nas linhas já existentes (desktop e mobile)
+        document.querySelectorAll('.ss-input').forEach(function (inp) {
+            inp.setAttribute('placeholder', isService ? 'Buscar serviço...' : 'Buscar material...');
+        });
+        // Dica do mobile ("Busque um material acima") nos cards sem seleção
+        document.querySelectorAll('.item-details').forEach(function (el) {
+            const hint = el.querySelector('.text-muted');
+            if (hint && (hint.textContent || '').indexOf('Busque') === 0) {
+                hint.textContent = isService ? 'Busque um serviço acima' : 'Busque um material acima';
+            }
+        });
+    }
+    // Rótulo dinâmico usado ao montar novas linhas de item.
+    function itemSearchPlaceholder() {
+        return currentOrderType() === 'service' ? 'Buscar serviço...' : 'Buscar material...';
+    }
+    function itemSearchHint() {
+        return currentOrderType() === 'service' ? 'Busque um serviço acima' : 'Busque um material acima';
     }
     (function initOrderTypeTabs() {
         const tabs = document.querySelectorAll('#orderTypeTabs [data-order-type]');
@@ -115,7 +157,7 @@
         document.getElementById('itemsBodyDesktop').appendChild(tr);
 
         const matSS = new SearchableSelect(document.getElementById('mat-select-' + idx), {
-            placeholder: 'Buscar material...',
+            placeholder: itemSearchPlaceholder(),
             onSelect: function (value, text, dataset) {
                 document.getElementById('mid-' + idx).value = String(value).indexOf('epi-') === 0 ? '' : value;
                 document.getElementById('mname-' + idx).value = (dataset && dataset.name) || text || '';
@@ -138,7 +180,7 @@
                 '<button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" data-remove="' + idx + '"><i class="bi bi-trash"></i></button>' +
             '</div>' +
             '<div class="item-details" id="details-m-' + idx + '">' +
-                (prefill ? '<span class="badge bg-light text-dark">' + (prefill.specification || '') + '</span><span class="badge bg-light text-dark">' + (prefill.classification || '') + '</span>' : '<span class="text-muted" style="font-size:0.75rem;">Busque um material acima</span>') +
+                (prefill ? '<span class="badge bg-light text-dark">' + (prefill.specification || '') + '</span><span class="badge bg-light text-dark">' + (prefill.classification || '') + '</span>' : '<span class="text-muted" style="font-size:0.75rem;">' + itemSearchHint() + '</span>') +
             '</div>' +
             '<div class="d-flex align-items-center gap-2 mt-2">' +
                 '<label class="form-label mb-0 small fw-bold">Qtd:</label>' +
@@ -151,7 +193,7 @@
         document.getElementById('itemsBodyMobile').appendChild(card);
 
         const matSSM = new SearchableSelect(document.getElementById('mat-select-m-' + idx), {
-            placeholder: 'Buscar material...',
+            placeholder: itemSearchPlaceholder(),
             onSelect: function (value, text, dataset) {
                 document.getElementById('mid-' + idx).value = String(value).indexOf('epi-') === 0 ? '' : value;
                 document.getElementById('mname-' + idx).value = (dataset && dataset.name) || text || '';
@@ -208,7 +250,7 @@
             if (ds.spec) el.innerHTML += '<span class="badge bg-light text-dark">' + ds.spec + '</span>';
             if (ds.class) el.innerHTML += '<span class="badge bg-light text-dark">' + ds.class + '</span>';
         } else {
-            el.innerHTML = '<span class="text-muted" style="font-size:0.75rem;">Busque um material acima</span>';
+            el.innerHTML = '<span class="text-muted" style="font-size:0.75rem;">' + itemSearchHint() + '</span>';
         }
     }
 
@@ -458,7 +500,8 @@
         }
         html += '<div class="alert alert-light py-2 mb-2"><i class="bi bi-calendar-check"></i> <strong>Necessário até:</strong> ' + new Date(neededDate.value + 'T00:00:00').toLocaleDateString('pt-BR') + '</div>';
 
-        html += '<table class="table table-sm table-bordered"><thead><tr><th>#</th><th>Material</th><th>Espec.</th><th>Class.</th><th class="text-center">Qtd</th><th>Data</th></tr></thead><tbody>';
+        const colName = currentOrderType() === 'service' ? 'Serviço' : 'Material';
+        html += '<table class="table table-sm table-bordered"><thead><tr><th>#</th><th>' + colName + '</th><th>Espec.</th><th>Class.</th><th class="text-center">Qtd</th><th>Data</th></tr></thead><tbody>';
         let count = 0;
         rows.forEach(function (row) {
             count++;
