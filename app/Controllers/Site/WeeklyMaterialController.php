@@ -60,6 +60,11 @@ class WeeklyMaterialController extends Controller
             return;
         }
 
+        // Garante que manager_name nunca é null (pin_user pode ter sido deletado)
+        if (empty($request['manager_name'])) {
+            $request['manager_name'] = 'Responsável';
+        }
+
         // Já preenchido → confirmação com o pedido gerado
         if ($request['status'] === 'filled') {
             $items = WeeklyMaterialRequest::getItems($request['id']);

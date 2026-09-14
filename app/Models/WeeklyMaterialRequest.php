@@ -25,7 +25,7 @@ class WeeklyMaterialRequest extends Model
         return Database::fetch(
             "SELECT wmr.*, pu.name as manager_name, pu.phone as manager_phone, pu.email as manager_email
              FROM weekly_material_requests wmr
-             JOIN pin_users pu ON wmr.manager_id = pu.id
+             LEFT JOIN pin_users pu ON wmr.manager_id = pu.id
              WHERE wmr.token = ?",
             [$token]
         );
