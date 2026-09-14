@@ -155,13 +155,34 @@ HTML;
         return self::wrap('Nova Revista Gerada', $body);
     }
 
-    public static function magazinePublished(string $magazineTitle, int $magazineId, string $subscriberName = '', string $subscriberEmail = '', string $topicTitle = ''): string
+    public static function magazinePublished(string $magazineTitle, int $magazineId, string $subscriberName = '', string $subscriberEmail = '', string $topicTitle = '', string $previewToken = '', bool $showPdfDownloadButton = false): string
     {
         $baseUrl = self::baseUrl();
+        // Se houver token de preview (modo teste), o link abre a revista sem login
         $viewUrl = "{$baseUrl}/revista/ver/{$magazineId}";
+        $pdfUrl = "{$baseUrl}/revista/pdf/{$magazineId}";
+        if (!empty($previewToken)) {
+            $viewUrl .= '?preview=' . $previewToken;
+            $pdfUrl .= '?preview=' . $previewToken;
+        }
         $unsubscribeUrl = "{$baseUrl}/newsletter/unsubscribe?email=" . urlencode($subscriberEmail);
         $greeting = !empty($subscriberName) ? "Olá, {$subscriberName}!" : "Olá!";
         $displayTitle = !empty($topicTitle) ? $topicTitle : $magazineTitle;
+
+        // Botão de download de PDF (usado quando o PDF não pôde ser anexado)
+        $pdfButtonHtml = '';
+        if ($showPdfDownloadButton) {
+            $pdfButtonHtml = <<<PDFBTN
+<p style="text-align:center; margin: 10px 0 10px;">
+    <a href="{$pdfUrl}" style="display:inline-block; background-color:#e53935; color:#ffffff; padding:12px 28px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Baixar PDF da Revista</a>
+</p>
+PDFBTN;
+        }
+
+        // Texto auxiliar sobre o PDF
+        $pdfNote = $showPdfDownloadButton
+            ? 'Clique em "Baixar PDF da Revista" para baixar a edição completa.'
+            : 'O PDF da revista está anexado a este e-mail. Você também pode ler online no link acima.';
 
         $body = <<<HTML
 <p style="margin-bottom:15px;">{$greeting}</p>
@@ -178,8 +199,8 @@ HTML;
 <p style="text-align:center; margin: 25px 0 10px;">
     <a href="{$viewUrl}" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:12px 28px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">Ler Revista</a>
 </p>
-
-<p style="text-align:center; font-size:13px; color:#666; margin-top:15px;">Você também pode baixar a revista em PDF acessando o link acima.</p>
+{$pdfButtonHtml}
+<p style="text-align:center; font-size:13px; color:#666; margin-top:15px;">{$pdfNote}</p>
 
 <p style="font-size:12px; color:#999; margin-top:25px; text-align:center;">Você recebeu este e-mail por ser assinante da Revista Brooks Construtora.<br>
 <a href="{$unsubscribeUrl}" style="color:#999; text-decoration:underline;">Não quero mais receber</a></p>
@@ -207,38 +228,22 @@ HTML;
     <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
             <td style="padding: 8px 0; font-size:14px; color:#444;">
-<<<<<<< HEAD
                 <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">&#9654;</span> Construção civil de alto padrão
-=======
-                <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">▸</span> Construção civil de alto padrão
->>>>>>> estoque
             </td>
         </tr>
         <tr>
             <td style="padding: 8px 0; font-size:14px; color:#444;">
-<<<<<<< HEAD
                 <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">&#9654;</span> Reformas e projetos de arquitetura
-=======
-                <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">▸</span> Reformas e projetos de arquitetura
->>>>>>> estoque
             </td>
         </tr>
         <tr>
             <td style="padding: 8px 0; font-size:14px; color:#444;">
-<<<<<<< HEAD
                 <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">&#9654;</span> Tendências e inovação no setor
-=======
-                <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">▸</span> Tendências e inovação no setor
->>>>>>> estoque
             </td>
         </tr>
         <tr>
             <td style="padding: 8px 0; font-size:14px; color:#444;">
-<<<<<<< HEAD
                 <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">&#9654;</span> Sustentabilidade e tecnologia na obra
-=======
-                <span style="color:#3a3b4e; font-weight:bold; margin-right:8px;">▸</span> Sustentabilidade e tecnologia na obra
->>>>>>> estoque
             </td>
         </tr>
     </table>

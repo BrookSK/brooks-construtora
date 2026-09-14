@@ -336,6 +336,7 @@ class Router
             'newsletter/check-email' => ['NewsletterController', 'checkEmail'],
             'revista' => ['MagazineController', 'index'],
             'revista/ver' => ['MagazineController', 'show'],
+            'revista/pdf' => ['MagazineController', 'pdf'],
             'revista/image-proxy' => ['MagazineController', 'imageProxy'],
 
             // Pedidos - Links públicos

@@ -256,6 +256,10 @@ document.addEventListener('DOMContentLoaded', function() {
             attempts++;
         }
     });
+
+    <?php if (!empty($autoDownloadPdf)): ?>
+    setTimeout(function() { generatePDF(); }, 800);
+    <?php endif; ?>
 });
 </script>
 

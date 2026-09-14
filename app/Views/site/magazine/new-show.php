@@ -263,6 +263,11 @@ document.addEventListener('DOMContentLoaded', function() {
             attempts++;
         }
     });
+
+    <?php if (!empty($autoDownloadPdf)): ?>
+    // Download automático do PDF (acessado via link "Baixar PDF" do e-mail)
+    setTimeout(function() { generatePDF(); }, 800);
+    <?php endif; ?>
 });
 </script>
 

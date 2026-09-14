@@ -25,7 +25,14 @@ class MailService
         $this->fromName = Setting::get('smtp_from_name', 'Brooks Construtora');
     }
 
-    public function send(string $to, string $subject, string $body, bool $isHtml = false): bool
+    /**
+     * Envia e-mail. Suporta anexos opcionais.
+     *
+     * @param array $attachments Lista de anexos no formato:
+     *   [ ['path' => '/caminho/arquivo.pdf', 'name' => 'Revista.pdf', 'mime' => 'application/pdf'], ... ]
+     *   ou [ ['content' => '<binário>', 'name' => 'Revista.pdf', 'mime' => 'application/pdf'], ... ]
+     */
+    public function send(string $to, string $subject, string $body, bool $isHtml = false, array $attachments = []): bool
     {
         if (empty($this->host) || empty($this->username)) {
             throw new \Exception('Configurações de SMTP não definidas. Acesse Configurações para definir.');
@@ -65,15 +72,19 @@ class MailService
             // DATA
             $this->sendCommand($socket, "DATA");
 
-            // Cabeçalhos e corpo
-            $contentType = $isHtml ? 'text/html' : 'text/plain';
-            $message = "From: {$this->fromName} <{$this->fromEmail}>\r\n";
-            $message .= "To: {$to}\r\n";
-            $message .= "Subject: {$subject}\r\n";
-            $message .= "MIME-Version: 1.0\r\n";
-            $message .= "Content-Type: {$contentType}; charset=UTF-8\r\n";
-            $message .= "\r\n";
-            $message .= $body;
+            // Monta a mensagem (com ou sem anexos)
+            if (!empty($attachments)) {
+                $message = $this->buildMessageWithAttachments($to, $subject, $body, $isHtml, $attachments);
+            } else {
+                $contentType = $isHtml ? 'text/html' : 'text/plain';
+                $message = "From: {$this->fromName} <{$this->fromEmail}>\r\n";
+                $message .= "To: {$to}\r\n";
+                $message .= "Subject: {$subject}\r\n";
+                $message .= "MIME-Version: 1.0\r\n";
+                $message .= "Content-Type: {$contentType}; charset=UTF-8\r\n";
+                $message .= "\r\n";
+                $message .= $body;
+            }
             $message .= "\r\n.\r\n";
 
             fwrite($socket, $message);
@@ -90,6 +101,55 @@ class MailService
             }
             throw $e;
         }
+    }
+
+    /**
+     * Monta uma mensagem MIME multipart com corpo + anexos.
+     */
+    private function buildMessageWithAttachments(string $to, string $subject, string $body, bool $isHtml, array $attachments): string
+    {
+        $boundary = 'brooks_' . md5(uniqid((string) mt_rand(), true));
+        $contentType = $isHtml ? 'text/html' : 'text/plain';
+
+        $message = "From: {$this->fromName} <{$this->fromEmail}>\r\n";
+        $message .= "To: {$to}\r\n";
+        $message .= "Subject: {$subject}\r\n";
+        $message .= "MIME-Version: 1.0\r\n";
+        $message .= "Content-Type: multipart/mixed; boundary=\"{$boundary}\"\r\n";
+        $message .= "\r\n";
+
+        // Corpo
+        $message .= "--{$boundary}\r\n";
+        $message .= "Content-Type: {$contentType}; charset=UTF-8\r\n";
+        $message .= "Content-Transfer-Encoding: 8bit\r\n";
+        $message .= "\r\n";
+        $message .= $body . "\r\n";
+
+        // Anexos
+        foreach ($attachments as $att) {
+            $content = null;
+            if (!empty($att['content'])) {
+                $content = $att['content'];
+            } elseif (!empty($att['path']) && is_file($att['path'])) {
+                $content = file_get_contents($att['path']);
+            }
+            if ($content === null || $content === false) continue;
+
+            $name = $att['name'] ?? 'anexo';
+            $mime = $att['mime'] ?? 'application/octet-stream';
+            $encoded = chunk_split(base64_encode($content));
+
+            $message .= "--{$boundary}\r\n";
+            $message .= "Content-Type: {$mime}; name=\"{$name}\"\r\n";
+            $message .= "Content-Transfer-Encoding: base64\r\n";
+            $message .= "Content-Disposition: attachment; filename=\"{$name}\"\r\n";
+            $message .= "\r\n";
+            $message .= $encoded . "\r\n";
+        }
+
+        $message .= "--{$boundary}--";
+
+        return $message;
     }
 
     private function connect()
