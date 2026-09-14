@@ -7,20 +7,10 @@
             <div class="card-header"><h6 class="mb-0">Status & Ações</h6></div>
             <div class="card-body">
                 <?php
-                    $statusLabels = ['draft'=>'Rascunho','generated'=>'Gerada pela IA','review'=>'Em Revisão','approved'=>'Aprovada','published'=>'Publicada','test'=>'Modo Teste'];
+                    $statusLabels = ['draft'=>'Rascunho','generated'=>'Gerada pela IA','review'=>'Em Revisão','approved'=>'Aprovada','published'=>'Publicada'];
                 ?>
-                <p class="mb-1"><strong>Status:</strong> <?= $statusLabels[$magazine['status']] ?? $magazine['status'] ?>
-                    <?php if ($magazine['status'] === 'test'): ?>
-                    <span class="badge bg-warning text-dark ms-1"><i class="bi bi-flask"></i> Teste</span>
-                    <?php endif; ?>
-                </p>
+                <p class="mb-1"><strong>Status:</strong> <?= $statusLabels[$magazine['status']] ?? $magazine['status'] ?></p>
                 <p class="mb-3"><strong>Criada:</strong> <?= date('d/m/Y H:i', strtotime($magazine['created_at'])) ?></p>
-
-                <?php if ($magazine['status'] === 'test'): ?>
-                <div class="alert alert-warning small py-2 px-2 mb-2">
-                    <i class="bi bi-exclamation-triangle"></i> Esta revista está em <strong>modo teste</strong>: visível apenas para usuários logados e notificação enviada só aos contatos de teste.
-                </div>
-                <?php endif; ?>
 
                 <?php if ($magazine['status'] !== 'published'): ?>
                 <div class="d-grid gap-2">
@@ -30,10 +20,10 @@
                         <button type="submit" class="btn btn-success w-100" onclick="return confirm('Aprovar?')"><i class="bi bi-check-circle"></i> Aprovar</button>
                     </form>
                     <?php endif; ?>
-                    <?php if (in_array($magazine['status'], ['approved', 'test']) && \App\Core\Auth::hasPermission('magazines.publish')): ?>
+                    <?php if ($magazine['status'] === 'approved' && \App\Core\Auth::hasPermission('magazines.publish')): ?>
                     <form method="POST" action="/admin/magazines/publish-test">
                         <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
-                        <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Publicar em MODO TESTE?\n\nA revista ficará visível apenas para usuários logados e a notificação será enviada somente aos contatos de teste configurados.')"><i class="bi bi-flask"></i> Publicar em Modo Teste</button>
+                        <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Enviar TESTE?\n\nA notificação (e-mail + WhatsApp) será enviada somente aos contatos de teste configurados, com link de acesso direto e o PDF. O status da revista NÃO muda.')"><i class="bi bi-flask"></i> Enviar Teste</button>
                     </form>
                     <form method="POST" action="/admin/magazines/publish">
                         <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
@@ -61,20 +51,6 @@
                         <button type="submit" class="btn btn-outline-warning w-100" onclick="return confirm('Adicionar página de Causos de Obra?')"><i class="bi bi-chat-quote"></i> Adicionar Causos de Obra</button>
                     </form>
                     <?php endif; ?>
-                </div>
-                <?php endif; ?>
-
-                <?php if (in_array($magazine['status'], ['published', 'test']) && \App\Core\Auth::hasPermission('magazines.publish')): ?>
-                <?php if ($magazine['status'] === 'published'): ?>
-                <div class="d-grid gap-2 mb-2">
-                    <a href="/admin/magazines/preview/<?= $magazine['id'] ?>" class="btn btn-outline-info" target="_blank"><i class="bi bi-eye"></i> Preview</a>
-                </div>
-                <?php endif; ?>
-                <div class="d-grid gap-2">
-                    <form method="POST" action="/admin/magazines/unpublish">
-                        <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
-                        <button type="submit" class="btn btn-outline-warning w-100" onclick="return confirm('Voltar esta revista para \'Aprovada\'?\n\nIsso permite publicar ou testar de novo. Nenhuma notificação será reenviada agora.')"><i class="bi bi-arrow-counterclockwise"></i> Voltar para Aprovada (testar de novo)</button>
-                    </form>
                 </div>
                 <?php endif; ?>
             </div>

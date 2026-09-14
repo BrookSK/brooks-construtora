@@ -48,18 +48,15 @@ class MagazineController extends Controller
 
     public function index(): void
     {
-        // Em modo teste, revistas 'test' aparecem só para usuários logados
-        $allowedStatuses = $this->isLoggedIn() ? ['published', 'test'] : ['published'];
-        $placeholders = implode(',', array_fill(0, count($allowedStatuses), '?'));
-
+        // A listagem pública mostra apenas revistas publicadas.
+        // Revistas em teste são acessadas somente pelo link direto (com token).
         try {
             $magazines = \App\Core\Database::fetchAll(
                 "SELECT m.*, mt.title as topic_title 
                  FROM magazines m 
                  LEFT JOIN magazine_topics mt ON m.topic_id = mt.id 
-                 WHERE m.status IN ({$placeholders}) 
-                 ORDER BY m.published_at DESC",
-                $allowedStatuses
+                 WHERE m.status = 'published' 
+                 ORDER BY m.published_at DESC"
             );
         } catch (\Exception $e) {
             $magazines = [];
@@ -85,12 +82,13 @@ class MagazineController extends Controller
     private function canView(?array $magazine, int $id): bool
     {
         if (!$magazine) return false;
+        // Publicada = acesso público
         if ($magazine['status'] === Magazine::STATUS_PUBLISHED) return true;
-        if ($magazine['status'] === Magazine::STATUS_TEST) {
-            $previewToken = $_GET['preview'] ?? '';
-            if (Magazine::isValidPreviewToken($id, $previewToken)) return true;
-            if ($this->isLoggedIn()) return true;
-        }
+        // Não publicada (ex.: aprovada em modo teste): libera com token de preview
+        // válido no link, ou para usuários logados (admin/PIN).
+        $previewToken = $_GET['preview'] ?? '';
+        if (Magazine::isValidPreviewToken($id, $previewToken)) return true;
+        if ($this->isLoggedIn()) return true;
         return false;
     }
 

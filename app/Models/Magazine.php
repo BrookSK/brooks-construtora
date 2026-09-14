@@ -37,33 +37,22 @@ class Magazine extends Model
     }
 
     /**
-     * Garante a existência da coluna preview_token e retorna um token válido
-     * para a revista (gera um novo se ainda não existir).
+     * Chave secreta usada para derivar o token de preview.
+     * Fixa no código (não precisa de banco). Só quem tem o código consegue gerar.
+     */
+    private const PREVIEW_SECRET = 'brooks_magazine_preview_2026_v1';
+
+    /**
+     * Gera um token de preview DETERMINÍSTICO para a revista.
+     * Baseado no id + data de criação + chave secreta (HMAC).
+     * Não depende de coluna no banco — sempre gera o mesmo token para a mesma revista.
      * Usado no modo teste para permitir acesso sem login via link.
      */
     public static function ensurePreviewToken(int $magazineId): string
     {
-        // Garante a coluna (idempotente)
-        try {
-            $col = Database::fetch(
-                "SELECT 1 FROM information_schema.COLUMNS 
-                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'magazines' AND COLUMN_NAME = 'preview_token' LIMIT 1"
-            );
-            if (empty($col)) {
-                Database::getConnection()->exec("ALTER TABLE magazines ADD COLUMN preview_token VARCHAR(64) NULL");
-            }
-        } catch (\Exception $e) {
-            error_log('[MAGAZINE] Falha ao garantir coluna preview_token: ' . $e->getMessage());
-        }
-
         $magazine = self::find($magazineId);
-        if (!empty($magazine['preview_token'])) {
-            return $magazine['preview_token'];
-        }
-
-        $token = bin2hex(random_bytes(16));
-        self::updateById($magazineId, ['preview_token' => $token]);
-        return $token;
+        $seed = $magazineId . '|' . ($magazine['created_at'] ?? '');
+        return substr(hash_hmac('sha256', $seed, self::PREVIEW_SECRET), 0, 32);
     }
 
     /**
@@ -72,8 +61,8 @@ class Magazine extends Model
     public static function isValidPreviewToken(int $magazineId, string $token): bool
     {
         if (empty($token)) return false;
-        $magazine = self::find($magazineId);
-        return !empty($magazine['preview_token']) && hash_equals($magazine['preview_token'], $token);
+        $expected = self::ensurePreviewToken($magazineId);
+        return hash_equals($expected, $token);
     }
 
     public static function addPage(int $magazineId, array $data): int

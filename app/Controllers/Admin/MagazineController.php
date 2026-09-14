@@ -1189,23 +1189,17 @@ class MagazineController extends Controller
             return;
         }
 
-        Magazine::updateById($id, [
-            'status' => Magazine::STATUS_TEST,
-            'published_at' => date('Y-m-d H:i:s'),
-            'published_by' => Auth::id(),
-        ]);
-
-        // Gera/garante o token de preview e envia notificação de teste.
-        // Tudo protegido: se algo falhar (PDF, e-mail, banco), NÃO derruba a página.
-        // O status já foi salvo como 'test', então a revista fica testável mesmo
-        // que a notificação falhe.
+        // MODO TESTE: NÃO altera o status da revista (continua Aprovada).
+        // O teste apenas envia a notificação para os contatos de teste, com um
+        // link que abre a revista via token (mesmo sem estar publicada).
+        // Assim o status na lista continua "Aprovada" e os botões de publicar
+        // permanecem disponíveis.
         try {
-            Magazine::ensurePreviewToken($id);
             $this->sendMagazineNewsletter($id, true);
-            $this->setFlash('success', 'Revista publicada em MODO TESTE! Notificação enviada só para os contatos de teste, com link de acesso direto e o PDF da revista.');
+            $this->setFlash('success', 'Notificação de TESTE enviada só para os contatos de teste, com link de acesso direto e o PDF da revista. O status da revista não foi alterado.');
         } catch (\Throwable $e) {
             error_log('[MAGAZINE_TEST] Falha ao notificar teste: ' . $e->getMessage());
-            $this->setFlash('error', 'Revista marcada como TESTE, mas houve um problema ao enviar a notificação: ' . $e->getMessage());
+            $this->setFlash('error', 'Houve um problema ao enviar a notificação de teste: ' . $e->getMessage());
         }
 
         $this->redirect('/admin/magazines/edit/' . $id);
