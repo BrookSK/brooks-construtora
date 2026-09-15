@@ -41,14 +41,15 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         body.site-embed .preview{padding:0}
         .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
         body.site-embed .page{box-shadow:0 2px 15px rgba(0,0,0,0.1);margin-bottom:15px}
-        /* No mobile, a meta viewport (width=595) escala a folha inteira. A
-           paginação por JS roda igual em todos os dispositivos (a folha mede
-           595px reais), então NÃO forçamos height:auto aqui — senão o CSS
-           venceria o height:842px que o JS aplica e voltaria a juntar tudo
-           numa página só. Só removemos o padding lateral no celular. */
+        /* A paginação é feita NO SERVIDOR: cada .page já vem com o conteúdo que
+           cabe numa folha. No mobile, a meta viewport (width=595) escala a folha
+           inteira; liberamos o min-height de 842px para a página encolher ao
+           tamanho do conteúdo (sem espaço em branco), já que ela nunca vai
+           estourar. No desktop, o min-height:842px do CSS base mantém a folha A4. */
         @media(max-width:620px){
             body{padding:0}
             .preview{padding:0}
+            .page,.pg-int,.pg-guest,.pg-stories{min-height:0!important}
         }
 
         /* ===== CAPA ===== */
@@ -223,9 +224,65 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </div>
 
 <?php elseif ($layout === 'guest_column'): ?>
-<!-- COLUNA DO CONVIDADO -->
-<div class="page pg-guest">
+<!-- COLUNA DO CONVIDADO — paginação feita NO SERVIDOR (idêntica em todo dispositivo) -->
+<?php
+    $guestContent = $page['content'] ?? '';
+    $guestImage = $page['image_url_2'] ?? '';
+    $guestImageCaption = $page['image_caption'] ?? '';
+    $hasMarker = stripos($guestContent, '[imagem]') !== false;
+
+    // Monta o HTML da imagem embutida (usado uma única vez, na 1ª página).
+    $guestImageHtml = '';
+    if ($guestImage) {
+        $guestImageHtml = '<div style="margin:10px 0;text-align:center;">'
+            . '<img src="' . htmlspecialchars($guestImage) . '" alt="' . htmlspecialchars($guestImageCaption) . '" style="max-width:100%;max-height:140px;border-radius:4px;object-fit:contain;">';
+        if ($guestImageCaption !== '') {
+            $guestImageHtml .= '<p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;">' . htmlspecialchars($guestImageCaption) . '</p>';
+        }
+        $guestImageHtml .= '</div>';
+    }
+
+    // Extrai os parágrafos. Com marcador [imagem], o texto ANTES do marcador +
+    // a imagem ficam juntos no começo; o texto depois entra na paginação.
+    if ($guestImage && $hasMarker) {
+        $guestParts = preg_split('/\[imagem\]/i', $guestContent, 2);
+        $beforeImg = array_values(array_filter(array_map('trim', explode("\n", $guestParts[0] ?? '')), fn($p) => $p !== ''));
+        $afterImg  = array_values(array_filter(array_map('trim', explode("\n", $guestParts[1] ?? '')), fn($p) => $p !== ''));
+    } else {
+        $beforeImg = array_values(array_filter(array_map('trim', explode("\n", $guestContent)), fn($p) => $p !== ''));
+        $afterImg  = [];
+    }
+
+    // Altura reservada na 1ª página: header + label + author-box (~200px) + a
+    // imagem embutida quando ela aparece já no topo (sem marcador vai no fim).
+    $reserved = 200;
+    if ($guestImage && $hasMarker) {
+        $reserved += 170; // imagem no meio-topo
+    }
+
+    // Junta os parágrafos numa sequência única para paginar.
+    // Se a imagem vai no FINAL (sem marcador), reservamos altura dela na última
+    // fatia adicionando um "peso" ao final.
+    $allParas = $beforeImg;
+    if (!empty($afterImg)) {
+        // marca visualmente onde entra a imagem: os parágrafos "antes" ocupam a
+        // 1ª página junto da imagem; depois seguem normalmente.
+        $allParas = array_merge($beforeImg, $afterImg);
+    }
+
+    $paged = \App\Services\MagazinePaginator::paginateParagraphs($allParas, $reserved);
+    if (empty($paged)) { $paged = [[]]; }
+
+    $guestTotalPages = count($paged);
+    foreach ($paged as $gp => $guestParasOfPage):
+        $isFirstGuestPage = ($gp === 0);
+        // A imagem embutida (com marcador) aparece só na 1ª página, entre os
+        // parágrafos "antes" e o restante. Para simplificar e ser determinístico,
+        // colocamos a imagem no fim da 1ª página.
+?>
+<div class="page pg-guest"<?= $isFirstGuestPage ? '' : ' data-continuation="true"' ?>>
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
+    <?php if ($isFirstGuestPage): ?>
     <div class="column-label"><?= htmlspecialchars($page['caption'] ?? 'Coluna do Convidado') ?></div>
     <div class="author-box">
         <?php if($img1): ?>
@@ -238,46 +295,24 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
             <div class="author-role"><?= htmlspecialchars($page['subtitle'] ?? 'Cargo / Empresa') ?></div>
         </div>
     </div>
+    <?php endif; ?>
     <div class="column-content">
+        <?php foreach ($guestParasOfPage as $gpar): ?>
+            <p><?= htmlspecialchars($gpar) ?></p>
+        <?php endforeach; ?>
         <?php
-        $guestContent = $page['content'] ?? '';
-        $guestImage = $page['image_url_2'] ?? '';
-        $guestImageCaption = $page['image_caption'] ?? '';
-        $hasMarker = stripos($guestContent, '[imagem]') !== false;
-
-        if ($guestImage && $hasMarker):
-            // Divide o texto no marcador [imagem]
-            $parts = preg_split('/\[imagem\]/i', $guestContent, 2);
-            // Parágrafos antes da imagem
-            foreach(explode("\n", $parts[0] ?? '') as $p): if(trim($p)): ?>
-                <p><?= htmlspecialchars(trim($p)) ?></p>
-            <?php endif; endforeach; ?>
-            <div style="margin:10px 0;text-align:center;">
-                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:140px;border-radius:4px;object-fit:contain;">
-                <?php if ($guestImageCaption): ?>
-                    <p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p>
-                <?php endif; ?>
-            </div>
-            <?php // Parágrafos depois da imagem
-            foreach(explode("\n", $parts[1] ?? '') as $p): if(trim($p)): ?>
-                <p><?= htmlspecialchars(trim($p)) ?></p>
-            <?php endif; endforeach;
-        else:
-            // Sem marcador: texto normal + imagem no final (se tiver)
-            foreach(explode("\n", $guestContent) as $p): if(trim($p)): ?>
-                <p><?= htmlspecialchars(trim($p)) ?></p>
-            <?php endif; endforeach;
-            if ($guestImage): ?>
-            <div style="margin:10px 0;text-align:center;">
-                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:140px;border-radius:4px;object-fit:contain;">
-                <?php if ($guestImageCaption): ?>
-                    <p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p>
-                <?php endif; ?>
-            </div>
-            <?php endif;
-        endif; ?>
+            // Imagem embutida: com marcador vai na 1ª página; sem marcador, na última.
+            if ($guestImageHtml !== '') {
+                $putImageHere = ($hasMarker && $isFirstGuestPage)
+                    || (!$hasMarker && $gp === $guestTotalPages - 1);
+                if ($putImageHere) {
+                    echo $guestImageHtml;
+                }
+            }
+        ?>
     </div>
 </div>
+<?php endforeach; ?>
 
 <?php elseif ($layout === 'internal_01'): ?>
 <!-- PÁG INTERNA 01: Imagem full topo + texto 2 colunas com imagem -->
@@ -531,70 +566,50 @@ document.addEventListener('DOMContentLoaded', function() {
     // no Safari iOS.
 
     var PAGE_HEIGHT = 842;
-    var PAGE_PADDING = 60; // top + bottom padding aproximado
-    var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
 
-    // A paginação roda IGUAL em todos os dispositivos (desktop, Samsung e iPhone).
-    // Como a viewport no celular é width=595, a folha é renderizada em 595px
-    // reais ANTES de o navegador escalá-la visualmente — então scrollHeight/
-    // offsetHeight são confiáveis também no Safari iOS, e a divisão de páginas
-    // fica idêntica à do Samsung/desktop (que era o comportamento desejado).
+    // ATENÇÃO: a paginação NÃO é mais feita por JavaScript.
+    // Ela agora é calculada NO SERVIDOR (App\Services\MagazinePaginator), que
+    // entrega o HTML já dividido em páginas — idêntico em Chrome, Safari e
+    // desktop. O JS aqui só ajusta a ALTURA visual das folhas, sem medir nem
+    // re-dividir conteúdo (era isso que divergia entre navegadores).
+    var REAL_WIDTH = Math.min(window.screen.width || 9999, window.innerWidth || 9999);
+    var IS_MOBILE = REAL_WIDTH < 620;
 
     function processPages() {
         var allPages = Array.from(document.querySelectorAll('.preview .page'));
 
         allPages.forEach(function(page) {
-            // Capas e contracapas: altura fixa de folha, igual em todo dispositivo.
+            // Capas e contracapas: sempre altura fixa de folha (têm fundo cheio).
             if (page.classList.contains('pg-cover') || page.classList.contains('pg-back')) {
-                page.style.height = PAGE_HEIGHT + 'px';
+                if (IS_MOBILE) {
+                    page.style.height = 'auto';
+                    page.style.aspectRatio = '595 / 842';
+                } else {
+                    page.style.height = PAGE_HEIGHT + 'px';
+                }
                 page.style.overflow = 'hidden';
                 return;
             }
 
-            // Para pg-guest: força recalcular altura real
-            if (page.classList.contains('pg-guest')) {
+            // Páginas de conteúdo: no mobile crescem conforme o conteúdo (já vêm
+            // paginadas do servidor, então não sobra espaço nem corta). No
+            // desktop, mantêm a folha A4 fixa.
+            if (IS_MOBILE) {
                 page.style.height = 'auto';
                 page.style.minHeight = '0';
                 page.style.overflow = 'visible';
-                void page.offsetHeight;
-            }
-
-            // Se a página cabe, apenas fixa a altura
-            if (page.scrollHeight <= PAGE_HEIGHT + 5) {
+            } else {
                 page.style.height = PAGE_HEIGHT + 'px';
                 page.style.overflow = 'hidden';
-                return;
             }
-
-            // Primeiro tenta reduzir levemente a fonte pra caber (max 4 tentativas)
-            // Não reduz fonte na coluna do convidado (pg-guest)
-            if (!page.classList.contains('pg-guest')) {
-                var attempts = 0;
-                while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 4) {
-                    var textEls = page.querySelectorAll('.text, .text-sm, p');
-                    textEls.forEach(function(el) {
-                        var cur = parseFloat(window.getComputedStyle(el).fontSize);
-                        el.style.fontSize = (cur - 0.3) + 'px';
-                    });
-                    attempts++;
-                }
-            }
-
-            // Se coube com a redução, fixa
-            if (page.scrollHeight <= PAGE_HEIGHT + 5) {
-                page.style.height = PAGE_HEIGHT + 'px';
-                page.style.overflow = 'hidden';
-                return;
-            }
-
-            // Se ainda não coube, pagina
-            paginatePage(page);
         });
 
-        // Após paginação, renumera todas as páginas internas
         renumberPages();
     }
 
+    // LEGADO — não é mais chamado. A paginação agora é feita no servidor
+    // (App\Services\MagazinePaginator). Mantido apenas para referência; pode ser
+    // removido com segurança numa limpeza futura.
     function paginatePage(page) {
         var header = page.querySelector('.hdr');
         var headerHTML = header ? header.outerHTML : '';
