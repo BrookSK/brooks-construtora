@@ -18,6 +18,10 @@
         @media (max-width: 576px) {
             .form-control, .form-select, .ss-input { font-size: 16px !important; }
         }
+        /* Enquanto um pop-up (modal) estiver aberto, a barra fixa de ações some.
+           Antes ela ficava por cima do modal e tapava o botão "Confirmar e Enviar"
+           do pop-up, principalmente em telas pequenas. */
+        body.modal-open #stickyActionBar { display: none !important; }
     </style>
 </head>
 <body>
@@ -197,7 +201,7 @@
         </form>
     </div>
 
-    <div class="position-fixed start-0 end-0 bg-white border-top shadow" style="z-index:1100; bottom:0;">
+    <div id="stickyActionBar" class="position-fixed start-0 end-0 bg-white border-top shadow" style="z-index:1030; bottom:0;">
         <div class="container p-2" style="max-width:900px;">
             <div class="d-flex align-items-center gap-2 mb-1" style="font-size:0.75rem;" id="autosaveIndicator"></div>
             <div class="d-flex flex-column flex-sm-row gap-2">
