@@ -11,7 +11,13 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Viewport = largura da folha (595px), SEM shrink-to-fit=no.
+         Assim o próprio navegador escala a página inteira uma única vez, de
+         forma nativa e ESTÁVEL. No desktop (tela > 595) mostra em 100%; no
+         mobile o Safari encaixa a folha na largura da tela e NÃO reprocessa
+         durante o scroll (era isso que o zoom/transform via JS causava: o
+         layout "zoava" ao rolar). -->
+    <meta name="viewport" content="width=595">
     <base href="<?= $baseUrl ?>/">
     <title>Preview - <?= htmlspecialchars($magazine['title']) ?></title>
     <link rel="icon" href="/assets/images/wp/2023/01/cropped-favicon-1-32x32.png" />
@@ -24,14 +30,11 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         body.site-embed .preview{padding:0}
         .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
         body.site-embed .page{box-shadow:0 2px 15px rgba(0,0,0,0.1);margin-bottom:15px}
+        /* O scale no mobile é feito pela meta viewport (width=595), não por CSS.
+           Aqui só evitamos rolagem horizontal indevida. */
         @media(max-width:620px){
-            /* No mobile, a folha (595px) é reduzida proporcionalmente via `zoom`
-               (aplicado por JS: innerWidth/595). O `zoom` escala o layout E o
-               fluxo junto — ao contrário de transform:scale, que deixa espaço
-               fantasma e scroll quebrado no Safari iOS. Mantém o layout idêntico
-               ao desktop, só menor, sem refluir texto nem cortar conteúdo. */
-            body{overflow-x:hidden}
-            .preview{padding:0!important}
+            body{padding:0}
+            .preview{padding:0}
         }
 
         /* ===== CAPA ===== */
@@ -509,56 +512,18 @@ function generatePDF() {
 
 // Sistema de paginação e ajuste de páginas
 document.addEventListener('DOMContentLoaded', function() {
-    // Mobile: reduz a folha (595px) para caber na largura da tela usando `zoom`.
-    // `zoom` escala o elemento E reserva o espaço vertical correto — sem o
-    // espaço fantasma e o scroll quebrado que o transform:scale causa no iOS.
-    var SHEET_WIDTH = 595;
-    // Detecta suporte a `zoom` (Chrome, Safari iOS 15+). Se não houver, cai para
-    // transform:scale com ajuste de altura do wrapper (evita espaço fantasma).
-    var supportsZoom = (function () {
-        try { return typeof document.createElement('div').style.zoom !== 'undefined'; }
-        catch (e) { return false; }
-    })();
-
-    function scaleForMobile() {
-        var preview = document.querySelector('.preview');
-        if (!preview) return;
-        var screenW = window.innerWidth;
-
-        // Reset antes de medir/aplicar.
-        preview.style.zoom = '';
-        preview.style.transform = '';
-        preview.style.transformOrigin = '';
-        preview.style.width = '';
-        if (preview.parentElement) preview.parentElement.style.height = '';
-
-        if (screenW >= 620) return;
-
-        var factor = Math.min(1, (screenW - 12) / SHEET_WIDTH);
-
-        if (supportsZoom) {
-            preview.style.zoom = factor;
-        } else {
-            // Fallback transform: fixa a largura da folha, escala e corrige a
-            // altura do wrapper para não sobrar espaço em branco embaixo.
-            preview.style.width = SHEET_WIDTH + 'px';
-            preview.style.transformOrigin = 'top center';
-            preview.style.transform = 'scale(' + factor + ')';
-            var realH = preview.scrollHeight;
-            if (preview.parentElement) {
-                preview.parentElement.style.height = (realH * factor) + 'px';
-            }
-        }
-    }
+    // O scale no mobile é feito pela meta viewport (width=595) — de forma nativa
+    // e estável. Nada de zoom/transform via JS, que "zoavam" o layout ao rolar
+    // no Safari iOS.
 
     var PAGE_HEIGHT = 842;
     var PAGE_PADDING = 60; // top + bottom padding aproximado
     var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
 
     function processPages() {
-        // A paginação roda normalmente (mesma folha de 595px do desktop). No
-        // mobile, o scaleForMobile() aplica `zoom` para reduzir a folha inteira
-        // até caber na largura da tela, mantendo o layout intacto.
+        // A paginação roda igual em todos os dispositivos, sobre a folha de
+        // 595px. No mobile, quem reduz a folha para caber na tela é a meta
+        // viewport (width=595) — de forma nativa, sem JS mexendo no layout.
         var allPages = Array.from(document.querySelectorAll('.preview .page'));
         
         allPages.forEach(function(page) {
@@ -569,10 +534,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // A paginação roda igual em todos os dispositivos: a folha é medida
-            // em tamanho real (595px), ANTES de qualquer zoom. O zoom mobile só
-            // é aplicado no fim (scaleForMobile), então scrollHeight/offsetHeight
-            // são confiáveis também no iOS — não precisa mais de estimativa.
+            // A folha é sempre 595px (viewport cuida do scale), então
+            // scrollHeight/offsetHeight são confiáveis em todos os dispositivos.
 
             // Para pg-guest: força recalcular altura real
             if (page.classList.contains('pg-guest')) {
@@ -976,12 +939,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var loaded = 0;
     var total = images.length;
 
-    // Ordem importante: pagina PRIMEIRO (medições sem zoom), aplica o zoom por
-    // último — senão o zoom distorce offsetHeight/scrollHeight da paginação.
     function finalize() {
         fitTitles();
         processPages();
-        scaleForMobile();
     }
 
     function check() {
@@ -1027,12 +987,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         setTimeout(finalize, 3000);
     }
-
-    // Reaplica o zoom ao girar/redimensionar a tela (não repagina).
-    window.addEventListener('resize', scaleForMobile);
-    window.addEventListener('orientationchange', function () {
-        setTimeout(scaleForMobile, 200);
-    });
 
     <?php if (!empty($autoDownloadPdf)): ?>
     // Download automático do PDF (acessado via link "Baixar PDF" do e-mail de teste)
