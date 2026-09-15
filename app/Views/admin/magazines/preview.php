@@ -31,10 +31,13 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
         body.site-embed .page{box-shadow:0 2px 15px rgba(0,0,0,0.1);margin-bottom:15px}
         /* O scale no mobile é feito pela meta viewport (width=595), não por CSS.
-           Aqui só evitamos rolagem horizontal indevida. */
+           No mobile as páginas crescem conforme o conteúdo (sem a altura fixa de
+           842px, que deixava um enorme espaço em branco embaixo). Vale como
+           reforço caso o JS não rode. */
         @media(max-width:620px){
             body{padding:0}
             .preview{padding:0}
+            .page,.pg-int,.pg-guest,.pg-stories{min-height:0!important;height:auto!important;overflow:visible!important}
         }
 
         /* ===== CAPA ===== */
@@ -520,22 +523,52 @@ document.addEventListener('DOMContentLoaded', function() {
     var PAGE_PADDING = 60; // top + bottom padding aproximado
     var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
 
+    // No mobile (celular), a viewport escala a folha de 595px. NÃO fixamos a
+    // altura em 842px, senão sobra um enorme espaço em branco embaixo de páginas
+    // com pouco conteúdo. Em vez disso, cada página cresce conforme o conteúdo
+    // (min-height reduzido, sem overflow:hidden). No desktop mantém a "folha A4".
+    var IS_MOBILE = window.innerWidth < 620;
+
+    // Aplica a altura final da página conforme o dispositivo.
+    function fixPageHeight(page) {
+        if (IS_MOBILE) {
+            page.style.height = 'auto';
+            page.style.minHeight = '0';
+            page.style.overflow = 'visible';
+        } else {
+            page.style.height = PAGE_HEIGHT + 'px';
+            page.style.overflow = 'hidden';
+        }
+    }
+
     function processPages() {
-        // A paginação roda igual em todos os dispositivos, sobre a folha de
-        // 595px. No mobile, quem reduz a folha para caber na tela é a meta
-        // viewport (width=595) — de forma nativa, sem JS mexendo no layout.
+        // A folha tem sempre 595px de largura (viewport cuida do scale no
+        // mobile), então scrollHeight/offsetHeight são confiáveis.
         var allPages = Array.from(document.querySelectorAll('.preview .page'));
-        
+
         allPages.forEach(function(page) {
-            // Ignora capas e contracapas
+            // Capas/contracapas: no desktop, altura fixa; no mobile, proporção.
             if (page.classList.contains('pg-cover') || page.classList.contains('pg-back')) {
-                page.style.height = PAGE_HEIGHT + 'px';
-                page.style.overflow = 'hidden';
+                if (IS_MOBILE) {
+                    page.style.height = 'auto';
+                    page.style.aspectRatio = '595 / 842';
+                    page.style.overflow = 'hidden';
+                } else {
+                    page.style.height = PAGE_HEIGHT + 'px';
+                    page.style.overflow = 'hidden';
+                }
                 return;
             }
 
-            // A folha é sempre 595px (viewport cuida do scale), então
-            // scrollHeight/offsetHeight são confiáveis em todos os dispositivos.
+            // No mobile NÃO paginamos nem travamos altura: a página cresce com o
+            // conteúdo. Isso elimina o espaço em branco gigante e não reflui o
+            // texto (largura continua 595px). A rolagem fica contínua e estável.
+            if (IS_MOBILE) {
+                fixPageHeight(page);
+                return;
+            }
+
+            // ── Desktop: mantém a paginação "folha A4" ──────────────────────
 
             // Para pg-guest: força recalcular altura real
             if (page.classList.contains('pg-guest')) {
