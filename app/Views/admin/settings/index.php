@@ -285,6 +285,17 @@ $_isProduction = $_currentBranch === 'main';
         </div>
     </div>
 
+    <!-- Fecha o form principal ANTES do card de Perfil.
+         O card de Perfil tem seu próprio <form>, e forms HTML não podem ser aninhados
+         (o navegador fecharia o form principal implicitamente, deixando os campos
+         seguintes — Notificação WhatsApp e Modo de Teste — órfãos e sem salvar). -->
+    <div class="text-end mb-4">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-check-lg"></i> Salvar Configurações
+        </button>
+    </div>
+</form>
+
     <!-- Configuração de Perfil -->
     <div class="card mb-4" id="perfil">
         <div class="card-header">
@@ -349,6 +360,9 @@ $_isProduction = $_currentBranch === 'main';
             </div>
         </div>
     </div>
+
+    <!-- Reabre o form principal para os blocos de Revista (Webhook + Modo de Teste). -->
+    <form method="POST" action="/admin/settings/update">
 
     <!-- Revista - Webhook WhatsApp -->
     <div class="card mb-4">
