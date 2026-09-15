@@ -11,13 +11,24 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <!-- Viewport = largura da folha (595px), SEM shrink-to-fit=no.
-         Assim o próprio navegador escala a página inteira uma única vez, de
-         forma nativa e ESTÁVEL. No desktop (tela > 595) mostra em 100%; no
-         mobile o Safari encaixa a folha na largura da tela e NÃO reprocessa
-         durante o scroll (era isso que o zoom/transform via JS causava: o
-         layout "zoava" ao rolar). -->
-    <meta name="viewport" content="width=595">
+    <!-- Viewport definida por JS conforme o dispositivo (roda ANTES do render):
+         - No celular (tela real estreita): width=595 faz o navegador encaixar a
+           folha de 595px na largura da tela, de forma nativa e estável (não
+           "zoa" ao rolar como o zoom/transform via JS faziam).
+         - No desktop: width=device-width, para a folha A4 aparecer em tamanho
+           real com a paginação normal.
+         Usa screen.width (largura física do aparelho), que não é afetada pela
+         própria meta viewport. -->
+    <script>
+        (function () {
+            var real = Math.min(window.screen.width || 9999, window.innerWidth || 9999);
+            var content = real < 620 ? 'width=595' : 'width=device-width, initial-scale=1.0';
+            var m = document.createElement('meta');
+            m.name = 'viewport';
+            m.content = content;
+            document.head.appendChild(m);
+        })();
+    </script>
     <base href="<?= $baseUrl ?>/">
     <title>Preview - <?= htmlspecialchars($magazine['title']) ?></title>
     <link rel="icon" href="/assets/images/wp/2023/01/cropped-favicon-1-32x32.png" />
@@ -525,9 +536,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // No mobile (celular), a viewport escala a folha de 595px. NÃO fixamos a
     // altura em 842px, senão sobra um enorme espaço em branco embaixo de páginas
-    // com pouco conteúdo. Em vez disso, cada página cresce conforme o conteúdo
-    // (min-height reduzido, sem overflow:hidden). No desktop mantém a "folha A4".
-    var IS_MOBILE = window.innerWidth < 620;
+    // com pouco conteúdo. Em vez disso, cada página cresce conforme o conteúdo.
+    // No desktop mantém a "folha A4" paginada.
+    // Usa screen.width (largura física do aparelho): a viewport mobile é fixada
+    // em 595px, então window.innerWidth reportaria 595 até no desktop.
+    var REAL_WIDTH = Math.min(window.screen.width || 9999, window.innerWidth || 9999);
+    var IS_MOBILE = REAL_WIDTH < 620;
 
     // Aplica a altura final da página conforme o dispositivo.
     function fixPageHeight(page) {
@@ -1022,10 +1036,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     <?php if (!empty($autoDownloadPdf)): ?>
-    // Download automático do PDF (acessado via link "Baixar PDF" do e-mail de teste)
-    setTimeout(function() {
-        if (typeof generatePDF === 'function') { generatePDF(); }
-    }, 3500);
+    // Download automático do PDF (link "Baixar PDF" do e-mail de teste).
+    // NÃO dispara no mobile: o html2canvas com scale:3 é pesadíssimo no iPhone,
+    // manipula o layout durante a rolagem e "zoava" a revista alguns segundos
+    // após abrir. No celular o usuário toca no botão "Baixar PDF" quando quiser.
+    if (window.innerWidth >= 620) {
+        setTimeout(function() {
+            if (typeof generatePDF === 'function') { generatePDF(); }
+        }, 3500);
+    }
     <?php endif; ?>
 });
 </script>
