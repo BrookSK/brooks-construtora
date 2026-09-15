@@ -40,7 +40,7 @@ class MagazinePaginator
      *                                     cabeçalho, label, foto do autor, etc.
      * @return string[][]  Cada item é um array de parágrafos daquela página.
      */
-    public static function paginateParagraphs(array $paragraphs, int $firstPageReserved = 0): array
+    public static function paginateParagraphs(array $paragraphs, int $firstPageReserved = 0, int $lastPageReserved = 0): array
     {
         $paragraphs = array_values(array_filter(
             array_map('trim', $paragraphs),
@@ -60,7 +60,8 @@ class MagazinePaginator
         }
         $usedHeight = 0;
 
-        foreach ($paragraphs as $paragraph) {
+        $count = count($paragraphs);
+        foreach ($paragraphs as $index => $paragraph) {
             $height = self::estimateParagraphHeight($paragraph);
 
             // Se não cabe na página atual (e já há algo nela), fecha a página.
@@ -89,7 +90,29 @@ class MagazinePaginator
             $pages[] = $current;
         }
 
+        // Reserva na ÚLTIMA página (ex.: imagens no rodapé do layout). Se o que
+        // sobrou não cabe junto com o bloco reservado, cria uma página extra
+        // vazia de texto para o bloco reservado descer sozinho.
+        if ($lastPageReserved > 0 && !empty($pages)) {
+            $lastIdx = count($pages) - 1;
+            $lastHeight = 0;
+            foreach ($pages[$lastIdx] as $p) {
+                $lastHeight += self::estimateParagraphHeight($p);
+            }
+            if (($lastHeight + $lastPageReserved) > self::USABLE_HEIGHT) {
+                $pages[] = []; // bloco reservado (imagens) vai numa folha própria
+            }
+        }
+
         return $pages;
+    }
+
+    /**
+     * Altura útil de uma folha (para o chamador calcular reservas).
+     */
+    public static function usableHeight(): int
+    {
+        return self::USABLE_HEIGHT;
     }
 
     /**

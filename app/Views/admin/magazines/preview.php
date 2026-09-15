@@ -344,23 +344,51 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </div>
 
 <?php elseif ($layout === 'internal_03'): ?>
-<!-- PÁG INTERNA 03: Título bold + subtítulo + texto full + 2 imagens -->
-<div class="page pg-int">
+<!-- PÁG INTERNA 03: Título bold + subtítulo + texto full + 2 imagens (paginado no servidor) -->
+<?php
+    $i03Paras = array_values(array_filter(array_map('trim', explode("\n", $page['content'] ?? '')), fn($p) => $p !== ''));
+    // Reserva na 1ª página: título (~55) + subtítulo (~30 se houver).
+    $i03Reserved = 55 + (($page['subtitle'] ?? '') !== '' ? 30 : 0);
+    // As imagens (260px) + caption ficam na ÚLTIMA página; reserva espaço lá.
+    $i03HasImages = ($img1 || $img2 || $showImages);
+    $i03LastReserved = $i03HasImages ? 290 : 0;
+    $i03Paged = \App\Services\MagazinePaginator::paginateParagraphs($i03Paras, $i03Reserved, $i03LastReserved);
+    if (empty($i03Paged)) { $i03Paged = [[]]; }
+    $i03Total = count($i03Paged);
+    foreach ($i03Paged as $i03i => $i03PageParas):
+        $i03First = ($i03i === 0);
+        $i03Last  = ($i03i === $i03Total - 1);
+?>
+<div class="page pg-int"<?= $i03First ? '' : ' data-continuation="true"' ?>>
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <div class="title-big"><?= htmlspecialchars($page['title'] ?? '') ?></div>
-    <?php if($page['subtitle']??''): ?><div class="subtitle"><?= htmlspecialchars($page['subtitle']) ?></div><?php endif; ?>
-    <?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
-    <div style="display:flex;gap:10px;margin-top:15px">
-        <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
-        <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
-    </div>
-    <?php if($page['caption']??''): ?><div class="caption" style="margin-top:8px"><?= htmlspecialchars($page['caption']) ?></div><?php endif; ?>
+    <?php if ($i03First): ?>
+        <div class="title-big"><?= htmlspecialchars($page['title'] ?? '') ?></div>
+        <?php if($page['subtitle']??''): ?><div class="subtitle"><?= htmlspecialchars($page['subtitle']) ?></div><?php endif; ?>
+    <?php endif; ?>
+    <?php foreach($i03PageParas as $p): ?><p class="text"><?= htmlspecialchars($p) ?></p><?php endforeach; ?>
+    <?php if ($i03Last): ?>
+        <div style="display:flex;gap:10px;margin-top:15px">
+            <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
+            <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
+        </div>
+        <?php if($page['caption']??''): ?><div class="caption" style="margin-top:8px"><?= htmlspecialchars($page['caption']) ?></div><?php endif; ?>
+    <?php endif; ?>
 </div>
+<?php endforeach; ?>
 
 <?php elseif ($layout === 'internal_04'): ?>
-<!-- PÁG INTERNA 04: Imagem full com overlay + título sobreposto -->
-<div class="page pg-int">
+<!-- PÁG INTERNA 04: Imagem overlay no topo + texto full (paginado no servidor) -->
+<?php
+    $i04Paras = array_values(array_filter(array_map('trim', explode("\n", $page['content'] ?? '')), fn($p) => $p !== ''));
+    // Reserva na 1ª página: a imagem com overlay ocupa ~435px.
+    $i04Paged = \App\Services\MagazinePaginator::paginateParagraphs($i04Paras, 435);
+    if (empty($i04Paged)) { $i04Paged = [[]]; }
+    foreach ($i04Paged as $i04i => $i04PageParas):
+        $i04First = ($i04i === 0);
+?>
+<div class="page pg-int"<?= $i04First ? '' : ' data-continuation="true"' ?>>
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
+    <?php if ($i04First): ?>
     <div class="overlay-section">
         <?php if($img1): ?><img src="<?= $img1 ?>" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:100%">IMAGEM</div><?php endif; ?>
         <div class="ov">
@@ -368,8 +396,10 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
             <?php if($page['subtitle']??''): ?><p><?= htmlspecialchars($page['subtitle']) ?></p><?php endif; ?>
         </div>
     </div>
-    <?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
+    <?php endif; ?>
+    <?php foreach($i04PageParas as $p): ?><p class="text"><?= htmlspecialchars($p) ?></p><?php endforeach; ?>
 </div>
+<?php endforeach; ?>
 
 <?php elseif ($layout === 'internal_05'): ?>
 <!-- PÁG INTERNA 05: 2 imagens + 2 colunas texto -->
@@ -395,9 +425,24 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         <div class="col"><?php foreach(explode("\n",$cols[1]??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
     </div>
     <?php else: ?>
-        <?php foreach(explode("\n", str_replace('|||', "\n", $page['content']??'')) as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
+        <?php
+        // Coluna única (texto longo, sem imagens): pode estourar → paginação
+        // server-side. A 1ª página já tem título+subtítulo (~85px reservados);
+        // as continuações recebem só o texto restante.
+        $i05Paras = array_values(array_filter(array_map('trim', explode("\n", str_replace('|||', "\n", $page['content'] ?? ''))), fn($p) => $p !== ''));
+        $i05Paged = \App\Services\MagazinePaginator::paginateParagraphs($i05Paras, 130);
+        // Só a 1ª fatia entra aqui; as demais viram páginas de continuação
+        // logo abaixo (fora deste .page).
+        $i05Rest = array_slice($i05Paged, 1);
+        foreach (($i05Paged[0] ?? []) as $p): ?><p class="text"><?= htmlspecialchars($p) ?></p><?php endforeach; ?>
     <?php endif; ?>
 </div>
+<?php if (!$usarDuasColunas && !empty($i05Rest)): foreach ($i05Rest as $i05PageParas): ?>
+<div class="page pg-int" data-continuation="true">
+    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
+    <?php foreach($i05PageParas as $p): ?><p class="text"><?= htmlspecialchars($p) ?></p><?php endforeach; ?>
+</div>
+<?php endforeach; endif; ?>
 
 <?php elseif ($layout === 'internal_06'): ?>
 <!-- PÁG INTERNA 06 v2: 2 imgs topo + img3 esquerda + texto em 2 colunas -->
@@ -576,6 +621,27 @@ document.addEventListener('DOMContentLoaded', function() {
         var allPages = Array.from(document.querySelectorAll('.preview .page'));
 
         allPages.forEach(function(page) {
+            var isCover = page.classList.contains('pg-cover') || page.classList.contains('pg-back');
+
+            // Rede de segurança para os layouts NÃO paginados no servidor
+            // (internal_01/02/06/07): se o conteúdo transbordar a folha, reduz
+            // levemente a fonte do texto até caber. NÃO move blocos entre páginas
+            // (isso é o que divergia entre navegadores) — só encolhe a fonte, que
+            // é determinístico e seguro. As páginas paginadas no servidor já
+            // cabem, então nem entram nesse laço.
+            if (!isCover) {
+                page.style.height = 'auto';
+                page.style.overflow = 'visible';
+                var guard = 0;
+                while (page.scrollHeight > PAGE_HEIGHT && guard < 12) {
+                    page.querySelectorAll('.text, .text-sm, p, .story-text').forEach(function(el) {
+                        var cur = parseFloat(window.getComputedStyle(el).fontSize) || 11;
+                        el.style.fontSize = (cur - 0.3) + 'px';
+                    });
+                    guard++;
+                }
+            }
+
             page.style.height = PAGE_HEIGHT + 'px';
             page.style.overflow = 'hidden';
         });
