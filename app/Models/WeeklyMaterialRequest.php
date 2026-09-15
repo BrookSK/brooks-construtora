@@ -31,6 +31,113 @@ class WeeklyMaterialRequest extends Model
         );
     }
 
+    // ─── Rascunho no servidor (autosave via token) ───────────────────────
+
+    /**
+     * Verifica se as colunas de rascunho (draft_data / draft_updated_at)
+     * existem. Idempotente e protegido: se não existirem, tenta criá-las
+     * (equivalente à migration 046), para não quebrar em bancos ainda não
+     * migrados. Cacheia o resultado por request.
+     */
+    private static ?bool $hasDraftCols = null;
+    public static function ensureDraftColumns(): bool
+    {
+        if (self::$hasDraftCols !== null) return self::$hasDraftCols;
+
+        try {
+            $col = Database::fetch(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'weekly_material_requests'
+                   AND COLUMN_NAME = 'draft_data' LIMIT 1"
+            );
+            if (empty($col)) {
+                Database::getConnection()->exec(
+                    "ALTER TABLE weekly_material_requests
+                        ADD COLUMN draft_data MEDIUMTEXT DEFAULT NULL,
+                        ADD COLUMN draft_updated_at DATETIME DEFAULT NULL"
+                );
+            }
+            self::$hasDraftCols = true;
+        } catch (\Throwable $e) {
+            error_log('[WEEKLY_MATERIAL] Falha ao garantir colunas de rascunho: ' . $e->getMessage());
+            self::$hasDraftCols = false;
+        }
+
+        return self::$hasDraftCols;
+    }
+
+    /**
+     * Salva (ou sobrescreve) o rascunho de uma solicitação, por token.
+     * Só grava se a solicitação ainda estiver pendente (não sobrescreve o
+     * que já foi respondido). Retorna o timestamp gravado, ou null se não gravou.
+     */
+    public static function saveDraftByToken(string $token, string $json): ?string
+    {
+        if (!self::ensureDraftColumns()) return null;
+
+        $req = Database::fetch(
+            "SELECT id, status, order_id FROM weekly_material_requests WHERE token = ?",
+            [$token]
+        );
+        if (!$req) return null;
+        // Não mexe em solicitação já respondida.
+        if (in_array($req['status'], ['filled', 'no_items'], true) || !empty($req['order_id'])) {
+            return null;
+        }
+
+        $now = date('Y-m-d H:i:s');
+        Database::update(
+            self::$table,
+            ['draft_data' => $json, 'draft_updated_at' => $now],
+            'id = ?',
+            [(int) $req['id']]
+        );
+        return $now;
+    }
+
+    /**
+     * Lê o rascunho salvo no servidor por token.
+     * Retorna ['data' => <string JSON>, 'updated_at' => <datetime>] ou null.
+     */
+    public static function getDraftByToken(string $token): ?array
+    {
+        if (!self::ensureDraftColumns()) return null;
+
+        $row = Database::fetch(
+            "SELECT draft_data, draft_updated_at, status, order_id
+             FROM weekly_material_requests WHERE token = ?",
+            [$token]
+        );
+        if (!$row || empty($row['draft_data'])) return null;
+        // Se já foi respondida, não devolve rascunho (evita restaurar em cima).
+        if (in_array($row['status'], ['filled', 'no_items'], true) || !empty($row['order_id'])) {
+            return null;
+        }
+
+        return [
+            'data' => $row['draft_data'],
+            'updated_at' => $row['draft_updated_at'],
+        ];
+    }
+
+    /**
+     * Limpa o rascunho salvo no servidor (após envio bem-sucedido).
+     */
+    public static function clearDraftByToken(string $token): void
+    {
+        if (!self::ensureDraftColumns()) return;
+        try {
+            Database::update(
+                self::$table,
+                ['draft_data' => null, 'draft_updated_at' => null],
+                'token = ?',
+                [$token]
+            );
+        } catch (\Throwable $e) {
+            error_log('[WEEKLY_MATERIAL] Falha ao limpar rascunho: ' . $e->getMessage());
+        }
+    }
+
     /**
      * Gera um token de HUB determinístico para (gerente + ciclo).
      * Permite um único link no e-mail que lista todas as obras do gerente.

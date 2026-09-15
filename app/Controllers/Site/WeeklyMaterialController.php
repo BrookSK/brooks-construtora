@@ -194,9 +194,23 @@ class WeeklyMaterialController extends Controller
             return;
         }
 
-        // IDEMPOTÊNCIA: se já foi respondido (preenchido, com pedido ou
-        // encerrado sem itens), apenas redireciona para a confirmação.
-        if (in_array($request['status'], ['filled', 'no_items'], true) || !empty($request['order_id'])) {
+        // IDEMPOTÊNCIA: só considera "já respondido" quando há de fato uma
+        // resposta válida — encerrado sem itens, ou com um pedido que EXISTE.
+        // Um order_id órfão (apontando para pedido inexistente) NÃO pode
+        // prender o responsável na tela de confirmação: nesse caso deixamos o
+        // fluxo seguir (que é idempotente e revincula/recria o pedido).
+        $alreadyAnswered = $request['status'] === 'no_items';
+        if (!$alreadyAnswered && !empty($request['order_id'])) {
+            $existingOrder = \App\Models\PurchaseOrder::find((int) $request['order_id']);
+            if ($existingOrder) {
+                $alreadyAnswered = true;
+            }
+        }
+        if (!$alreadyAnswered && $request['status'] === 'filled' && empty($request['order_id'])) {
+            // Estado inconsistente (filled sem pedido): não trava; segue o fluxo.
+            $alreadyAnswered = false;
+        }
+        if ($alreadyAnswered) {
             header('Location: /lista-semanal/' . $token);
             exit;
         }
@@ -298,6 +312,9 @@ class WeeklyMaterialController extends Controller
         // Só agora marca como PREENCHIDO (order_id confirmado)
         WeeklyMaterialRequest::markFilled((int) $request['id'], (int) $result['order_id'], $notes ?: null, $audioFilename);
 
+        // Rascunho já virou pedido: limpa o rascunho salvo no servidor.
+        WeeklyMaterialRequest::clearDraftByToken($token);
+
         // Enviar o pedido para o fluxo de cotação existente (notificações)
         if (!$result['duplicated'] && !empty($result['quote_token'])) {
             try {
@@ -308,6 +325,98 @@ class WeeklyMaterialController extends Controller
         }
 
         header('Location: /lista-semanal/' . $token);
+        exit;
+    }
+
+    /**
+     * Autosave do rascunho NO SERVIDOR (endpoint público via token).
+     * Recebe o snapshot JSON do formulário e grava na solicitação.
+     * Complementa o autosave em localStorage do navegador.
+     */
+    public function saveDraft(string $token = ''): void
+    {
+        header('Content-Type: application/json');
+
+        if (!$this->isPost() || !$token) {
+            echo json_encode(['success' => false, 'error' => 'Requisição inválida.']);
+            exit;
+        }
+
+        // O corpo pode vir como JSON puro ou como campo de formulário "draft".
+        $raw = file_get_contents('php://input');
+        $json = '';
+        if (!empty($_POST['draft'])) {
+            $json = (string) $_POST['draft'];
+        } elseif (!empty($raw)) {
+            $json = $raw;
+        }
+
+        // Valida que é um JSON decodificável (evita gravar lixo).
+        $decoded = json_decode($json, true);
+        if ($json === '' || $decoded === null) {
+            echo json_encode(['success' => false, 'error' => 'Rascunho vazio ou inválido.']);
+            exit;
+        }
+
+        // Pedido explícito de limpeza, ou rascunho sem itens: apaga do servidor.
+        $items = $decoded['items'] ?? [];
+        $hasContent = false;
+        foreach ((array) $items as $it) {
+            if (!empty(trim($it['name'] ?? '')) || !empty(trim((string) ($it['id'] ?? '')))
+                || !empty(trim($it['specification'] ?? ''))) {
+                $hasContent = true;
+                break;
+            }
+        }
+        if (!empty($decoded['_cleared']) || !$hasContent) {
+            WeeklyMaterialRequest::clearDraftByToken($token);
+            echo json_encode(['success' => true, 'cleared' => true]);
+            exit;
+        }
+
+        // Re-serializa de forma canônica (protege o tamanho e o conteúdo).
+        $clean = json_encode($decoded, JSON_UNESCAPED_UNICODE);
+
+        try {
+            $savedAt = WeeklyMaterialRequest::saveDraftByToken($token, $clean);
+            echo json_encode(['success' => $savedAt !== null, 'updated_at' => $savedAt]);
+        } catch (\Throwable $e) {
+            error_log('[WEEKLY_MATERIAL] Falha ao salvar rascunho: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => 'Erro ao salvar rascunho.']);
+        }
+        exit;
+    }
+
+    /**
+     * Carrega o rascunho salvo no servidor (endpoint público via token).
+     * Usado pelo front-end para mesclar com o localStorage e escolher o mais recente.
+     */
+    public function loadDraft(string $token = ''): void
+    {
+        header('Content-Type: application/json');
+
+        if (!$token) {
+            echo json_encode(['success' => false]);
+            exit;
+        }
+
+        try {
+            $draft = WeeklyMaterialRequest::getDraftByToken($token);
+        } catch (\Throwable $e) {
+            error_log('[WEEKLY_MATERIAL] Falha ao carregar rascunho: ' . $e->getMessage());
+            $draft = null;
+        }
+
+        if (!$draft) {
+            echo json_encode(['success' => true, 'draft' => null]);
+            exit;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'draft' => json_decode($draft['data'], true),
+            'updated_at' => $draft['updated_at'],
+        ]);
         exit;
     }
 

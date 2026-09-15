@@ -484,9 +484,34 @@
         if (siteSelect && !siteSelect.value) { alert('Selecione a obra.'); siteSelect.focus(); return; }
         if (!neededDate.value) { alert('Informe a data em que precisa do material.'); neededDate.focus(); return; }
 
-        let valid = true;
-        document.querySelectorAll('[id^="mname-"]').forEach(function (input) { if (!input.value) valid = false; });
-        if (!valid) { alert('Selecione um material para cada item.'); return; }
+        // Valida material por linha e aponta exatamente qual está sem seleção,
+        // rolando até ela e destacando. Evita o caso da pessoa não perceber que
+        // um item ficou sem material e o envio "não ir".
+        var firstInvalidRow = null, invalidCount = 0;
+        rows.forEach(function (row) {
+            var nameInput = row.querySelector('[id^="mname-"]');
+            var hasName = nameInput && nameInput.value && nameInput.value.trim();
+            var idx = (row.id || '').replace('item-row-', '');
+            var card = document.getElementById('item-card-' + idx);
+            if (!hasName) {
+                invalidCount++;
+                if (!firstInvalidRow) firstInvalidRow = card || row;
+                row.style.outline = '2px solid #dc3545';
+                if (card) card.style.outline = '2px solid #dc3545';
+            } else {
+                row.style.outline = '';
+                if (card) card.style.outline = '';
+            }
+        });
+        if (invalidCount > 0) {
+            alert(invalidCount === 1
+                ? 'Um item está sem material selecionado. Escolha o material (ou remova a linha destacada em vermelho) e tente novamente.'
+                : invalidCount + ' itens estão sem material selecionado. Escolha o material (ou remova as linhas destacadas em vermelho) e tente novamente.');
+            if (firstInvalidRow && firstInvalidRow.scrollIntoView) {
+                firstInvalidRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+        }
 
         let qtyValid = true, invalidName = '';
         rows.forEach(function (row) {
@@ -589,7 +614,19 @@
             needed_date: neededDate ? neededDate.value : '',
             site_id:     siteEl ? siteEl.value : '',
             notes:       (document.querySelector('[name="notes"]') || {}).value || '',
+            // Marca de tempo (epoch ms) usada para decidir qual rascunho é o mais
+            // recente ao mesclar o localStorage com a cópia salva no servidor.
+            _savedAt:    Date.now(),
         };
+    }
+
+    function draftHasContent(draft) {
+        if (!draft || !Array.isArray(draft.items)) return false;
+        return draft.items.some(function (it) {
+            return (it.name && it.name.trim())
+                || (it.id && String(it.id).trim())
+                || (it.specification && it.specification.trim());
+        });
     }
 
     function showSaveIndicator(status) {
@@ -606,11 +643,47 @@
     }
 
     function saveDraft() {
+        var snapshot = getFormSnapshot();
+        // 1) localStorage (fonte imediata, offline-first). Preserva o
+        //    comportamento atual — não perde os rascunhos já existentes.
         try {
             showSaveIndicator('saving');
-            localStorage.setItem(SAVE_KEY, JSON.stringify(getFormSnapshot()));
+            localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot));
+        } catch (e) { /* quota ou aba privada */ }
+        // 2) servidor (para funcionar em qualquer dispositivo). Só envia se
+        //    tiver algum conteúdo, para não sobrescrever com rascunho vazio.
+        if (draftHasContent(snapshot)) {
+            pushDraftToServer(snapshot);
+        } else {
             showSaveIndicator('saved');
-        } catch (e) { /* quota ou private browsing */ }
+        }
+    }
+
+    function pushDraftToServer(snapshot) {
+        try {
+            fetch('/lista-semanal/rascunho/salvar/' + TOKEN, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(snapshot),
+                keepalive: true,
+            }).then(function () {
+                showSaveIndicator('saved');
+            }).catch(function () {
+                // Falha de rede não é crítica: o localStorage já guardou.
+                showSaveIndicator('saved');
+            });
+        } catch (e) {
+            showSaveIndicator('saved');
+        }
+    }
+
+    function fetchServerDraft() {
+        return fetch('/lista-semanal/rascunho/' + TOKEN, { method: 'GET' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (res) {
+                return (res && res.success && res.draft) ? res.draft : null;
+            })
+            .catch(function () { return null; });
     }
 
     function scheduleSave() {
@@ -620,31 +693,69 @@
 
     function clearDraft() {
         try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+        // Limpa também no servidor (não bloqueia; best-effort).
+        try {
+            fetch('/lista-semanal/rascunho/salvar/' + TOKEN, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: [], _cleared: true }),
+                keepalive: true,
+            }).catch(function () {});
+        } catch (e) {}
     }
 
-    function restoreDraft() {
-        let raw;
-        try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return; }
-        if (!raw) return;
-        let draft;
-        try { draft = JSON.parse(raw); } catch (e) { return; }
-        if (!draft || !Array.isArray(draft.items) || draft.items.length === 0) return;
+    function readLocalDraft() {
+        var raw;
+        try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return null; }
+        if (!raw) return null;
+        try { return JSON.parse(raw); } catch (e) { return null; }
+    }
 
-        // Mostra banner de restauração
-        const banner = document.getElementById('draftRestoreBanner');
-        if (banner) {
-            banner.classList.remove('d-none');
-            document.getElementById('draftRestoreBtn').addEventListener('click', function () {
-                applyDraft(draft);
-                banner.classList.add('d-none');
-            });
-            document.getElementById('draftDiscardBtn').addEventListener('click', function () {
-                clearDraft();
-                banner.classList.add('d-none');
-            });
-        } else {
-            applyDraft(draft);
-        }
+    // Restauração: mescla o rascunho local (localStorage) com o do servidor,
+    // escolhendo o MAIS RECENTE pelo carimbo _savedAt. Assim:
+    //  - quem já tinha rascunho no navegador não perde nada;
+    //  - o rascunho passa a estar disponível em qualquer dispositivo;
+    //  - se o local existir e o servidor não, migra o local para o servidor.
+    function restoreDraft() {
+        var local = readLocalDraft();
+
+        fetchServerDraft().then(function (server) {
+            var chosen = pickMostRecent(local, server);
+            if (!draftHasContent(chosen)) return;
+
+            // Se o escolhido foi o LOCAL (e o servidor está vazio/mais antigo),
+            // sobe a cópia local para o servidor — sem esperar resposta.
+            if (chosen === local) {
+                try { pushDraftToServer(local); } catch (e) {}
+            }
+
+            var banner = document.getElementById('draftRestoreBanner');
+            if (banner) {
+                banner.classList.remove('d-none');
+                document.getElementById('draftRestoreBtn').addEventListener('click', function () {
+                    applyDraft(chosen);
+                    banner.classList.add('d-none');
+                });
+                document.getElementById('draftDiscardBtn').addEventListener('click', function () {
+                    clearDraft();
+                    banner.classList.add('d-none');
+                });
+            } else {
+                applyDraft(chosen);
+            }
+        });
+    }
+
+    function pickMostRecent(a, b) {
+        var aOk = draftHasContent(a);
+        var bOk = draftHasContent(b);
+        if (aOk && !bOk) return a;
+        if (bOk && !aOk) return b;
+        if (!aOk && !bOk) return null;
+        // Ambos têm conteúdo: escolhe pelo carimbo de tempo (_savedAt em ms).
+        var at = (a && a._savedAt) || 0;
+        var bt = (b && b._savedAt) || 0;
+        return bt > at ? b : a;
     }
 
     function applyDraft(draft) {
@@ -670,7 +781,14 @@
 
         // Itens
         draft.items.forEach(function (item) {
-            if (!item.name) return;
+            // Só ignora linhas COMPLETAMENTE vazias. Se tiver nome, id ou até só
+            // quantidade, restaura mesmo assim — assim a pessoa vê o item e pode
+            // corrigir, em vez de ele sumir silenciosamente (o que fazia o envio
+            // acabar sem itens válidos e "não ir").
+            var hasContent = (item.name && item.name.trim())
+                || (item.id && String(item.id).trim())
+                || (item.specification && item.specification.trim());
+            if (!hasContent) return;
             addItem({
                 id:             item.id || '',
                 name:           item.name,

@@ -505,6 +505,8 @@ class Router
             'lista-semanal' => ['WeeklyMaterialController', 'form'],
             'lista-semanal/hub' => ['WeeklyMaterialController', 'hub'],
             'lista-semanal/enviar' => ['WeeklyMaterialController', 'submit'],
+            'lista-semanal/rascunho/salvar' => ['WeeklyMaterialController', 'saveDraft'],
+            'lista-semanal/rascunho' => ['WeeklyMaterialController', 'loadDraft'],
             'lista-semanal/parse-pdf' => ['WeeklyMaterialController', 'parsePdf'],
             'lista-semanal/novo-material' => ['WeeklyMaterialController', 'quickStoreMaterial'],
 
