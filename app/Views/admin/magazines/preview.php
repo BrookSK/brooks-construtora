@@ -42,14 +42,13 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
         body.site-embed .page{box-shadow:0 2px 15px rgba(0,0,0,0.1);margin-bottom:15px}
         /* A paginação é feita NO SERVIDOR: cada .page já vem com o conteúdo que
-           cabe numa folha. No mobile, a meta viewport (width=595) escala a folha
-           inteira; liberamos o min-height de 842px para a página encolher ao
-           tamanho do conteúdo (sem espaço em branco), já que ela nunca vai
-           estourar. No desktop, o min-height:842px do CSS base mantém a folha A4. */
+           cabe numa folha. TODAS as páginas mantêm a altura fixa de A4 (842px)
+           em qualquer dispositivo, para ficarem com o mesmo tamanho padrão de
+           revista (mesmo as com pouco conteúdo). No mobile, a meta viewport
+           (width=595) escala a folha inteira. Só removemos o padding lateral. */
         @media(max-width:620px){
             body{padding:0}
             .preview{padding:0}
-            .page,.pg-int,.pg-guest,.pg-stories{min-height:0!important}
         }
 
         /* ===== CAPA ===== */
@@ -568,40 +567,17 @@ document.addEventListener('DOMContentLoaded', function() {
     var PAGE_HEIGHT = 842;
 
     // ATENÇÃO: a paginação NÃO é mais feita por JavaScript.
-    // Ela agora é calculada NO SERVIDOR (App\Services\MagazinePaginator), que
-    // entrega o HTML já dividido em páginas — idêntico em Chrome, Safari e
-    // desktop. O JS aqui só ajusta a ALTURA visual das folhas, sem medir nem
-    // re-dividir conteúdo (era isso que divergia entre navegadores).
-    var REAL_WIDTH = Math.min(window.screen.width || 9999, window.innerWidth || 9999);
-    var IS_MOBILE = REAL_WIDTH < 620;
-
+    // Ela é calculada NO SERVIDOR (App\Services\MagazinePaginator), que entrega
+    // o HTML já dividido em páginas — idêntico em Chrome, Safari e desktop.
+    // Como cada página já cabe numa folha, TODAS ficam com a altura fixa de A4
+    // (842px), em todos os dispositivos — assim têm o mesmo tamanho padrão,
+    // mesmo as que têm pouco conteúdo (sobra espaço embaixo, como numa revista).
     function processPages() {
         var allPages = Array.from(document.querySelectorAll('.preview .page'));
 
         allPages.forEach(function(page) {
-            // Capas e contracapas: sempre altura fixa de folha (têm fundo cheio).
-            if (page.classList.contains('pg-cover') || page.classList.contains('pg-back')) {
-                if (IS_MOBILE) {
-                    page.style.height = 'auto';
-                    page.style.aspectRatio = '595 / 842';
-                } else {
-                    page.style.height = PAGE_HEIGHT + 'px';
-                }
-                page.style.overflow = 'hidden';
-                return;
-            }
-
-            // Páginas de conteúdo: no mobile crescem conforme o conteúdo (já vêm
-            // paginadas do servidor, então não sobra espaço nem corta). No
-            // desktop, mantêm a folha A4 fixa.
-            if (IS_MOBILE) {
-                page.style.height = 'auto';
-                page.style.minHeight = '0';
-                page.style.overflow = 'visible';
-            } else {
-                page.style.height = PAGE_HEIGHT + 'px';
-                page.style.overflow = 'hidden';
-            }
+            page.style.height = PAGE_HEIGHT + 'px';
+            page.style.overflow = 'hidden';
         });
 
         renumberPages();
