@@ -25,19 +25,13 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
         body.site-embed .page{box-shadow:0 2px 15px rgba(0,0,0,0.1);margin-bottom:15px}
         @media(max-width:620px){
+            /* No mobile, a folha (595px) é reduzida proporcionalmente via `zoom`
+               (aplicado por JS: innerWidth/595). O `zoom` escala o layout E o
+               fluxo junto — ao contrário de transform:scale, que deixa espaço
+               fantasma e scroll quebrado no Safari iOS. Mantém o layout idêntico
+               ao desktop, só menor, sem refluir texto nem cortar conteúdo. */
             body{overflow-x:hidden}
-            /* No mobile a página flui naturalmente (sem altura fixa de 842px).
-               Isso evita o corte de conteúdo no Safari iOS, que não respeita a
-               paginação por estimativa. Restaura o comportamento que já
-               funcionava na última revista publicada (commit 60cda36). */
-            .preview{max-width:100%!important;padding:0!important}
-            .page{width:100%!important;height:auto!important;min-height:auto!important;overflow:visible!important}
-            /* As páginas internas também soltam o min-height:842px próprio, para
-               fluir conforme o conteúdo (sem sobra ou corte). */
-            .pg-int,.pg-guest,.pg-stories{min-height:auto!important;height:auto!important;overflow:visible!important}
-            /* Capa e contracapa: mantêm a proporção A4 (largura da tela) em vez
-               da altura fixa de 842px, para não distorcer no celular. */
-            .pg-cover,.pg-back{height:auto!important;aspect-ratio:595/842}
+            .preview{padding:0!important}
         }
 
         /* ===== CAPA ===== */
@@ -515,19 +509,56 @@ function generatePDF() {
 
 // Sistema de paginação e ajuste de páginas
 document.addEventListener('DOMContentLoaded', function() {
-    // Mobile: escala a revista pra caber na tela (mantém layout desktop)
+    // Mobile: reduz a folha (595px) para caber na largura da tela usando `zoom`.
+    // `zoom` escala o elemento E reserva o espaço vertical correto — sem o
+    // espaço fantasma e o scroll quebrado que o transform:scale causa no iOS.
+    var SHEET_WIDTH = 595;
+    // Detecta suporte a `zoom` (Chrome, Safari iOS 15+). Se não houver, cai para
+    // transform:scale com ajuste de altura do wrapper (evita espaço fantasma).
+    var supportsZoom = (function () {
+        try { return typeof document.createElement('div').style.zoom !== 'undefined'; }
+        catch (e) { return false; }
+    })();
+
+    function scaleForMobile() {
+        var preview = document.querySelector('.preview');
+        if (!preview) return;
+        var screenW = window.innerWidth;
+
+        // Reset antes de medir/aplicar.
+        preview.style.zoom = '';
+        preview.style.transform = '';
+        preview.style.transformOrigin = '';
+        preview.style.width = '';
+        if (preview.parentElement) preview.parentElement.style.height = '';
+
+        if (screenW >= 620) return;
+
+        var factor = Math.min(1, (screenW - 12) / SHEET_WIDTH);
+
+        if (supportsZoom) {
+            preview.style.zoom = factor;
+        } else {
+            // Fallback transform: fixa a largura da folha, escala e corrige a
+            // altura do wrapper para não sobrar espaço em branco embaixo.
+            preview.style.width = SHEET_WIDTH + 'px';
+            preview.style.transformOrigin = 'top center';
+            preview.style.transform = 'scale(' + factor + ')';
+            var realH = preview.scrollHeight;
+            if (preview.parentElement) {
+                preview.parentElement.style.height = (realH * factor) + 'px';
+            }
+        }
+    }
+
     var PAGE_HEIGHT = 842;
     var PAGE_PADDING = 60; // top + bottom padding aproximado
     var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
 
     function processPages() {
-        // No mobile NÃO paginamos: o conteúdo flui naturalmente (o CSS deixa a
-        // página com height:auto). A paginação por estimativa cortava o conteúdo
-        // no Safari iOS — este guard restaura o que funcionava na última revista
-        // publicada (commit 60cda36).
-        if (window.innerWidth < 620) return;
-
-        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        // A paginação roda normalmente (mesma folha de 595px do desktop). No
+        // mobile, o scaleForMobile() aplica `zoom` para reduzir a folha inteira
+        // até caber na largura da tela, mantendo o layout intacto.
         var allPages = Array.from(document.querySelectorAll('.preview .page'));
         
         allPages.forEach(function(page) {
@@ -538,11 +569,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // iOS: usa paginação por estimativa (não confia em scrollHeight)
-            if (isIOS) {
-                paginateByEstimate(page);
-                return;
-            }
+            // A paginação roda igual em todos os dispositivos: a folha é medida
+            // em tamanho real (595px), ANTES de qualquer zoom. O zoom mobile só
+            // é aplicado no fim (scaleForMobile), então scrollHeight/offsetHeight
+            // são confiáveis também no iOS — não precisa mais de estimativa.
 
             // Para pg-guest: força recalcular altura real
             if (page.classList.contains('pg-guest')) {
@@ -946,11 +976,18 @@ document.addEventListener('DOMContentLoaded', function() {
     var loaded = 0;
     var total = images.length;
 
+    // Ordem importante: pagina PRIMEIRO (medições sem zoom), aplica o zoom por
+    // último — senão o zoom distorce offsetHeight/scrollHeight da paginação.
+    function finalize() {
+        fitTitles();
+        processPages();
+        scaleForMobile();
+    }
+
     function check() {
         loaded++;
         if (loaded >= total) {
-            fitTitles();
-            processPages();
+            finalize();
         }
     }
 
@@ -979,8 +1016,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (total === 0) {
-        fitTitles();
-        processPages();
+        finalize();
     } else {
         images.forEach(function(img) {
             if (img.complete) check();
@@ -989,8 +1025,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.addEventListener('error', check);
             }
         });
-        setTimeout(function() { fitTitles(); processPages(); }, 3000);
+        setTimeout(finalize, 3000);
     }
+
+    // Reaplica o zoom ao girar/redimensionar a tela (não repagina).
+    window.addEventListener('resize', scaleForMobile);
+    window.addEventListener('orientationchange', function () {
+        setTimeout(scaleForMobile, 200);
+    });
 
     <?php if (!empty($autoDownloadPdf)): ?>
     // Download automático do PDF (acessado via link "Baixar PDF" do e-mail de teste)
