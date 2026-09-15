@@ -522,7 +522,10 @@
         html += '<div class="alert alert-info mt-2 small"><i class="bi bi-info-circle"></i> Ao confirmar, será criado um Pedido de ' + tipoLabel + ' no sistema e enviado para cotação.</div>';
 
         document.getElementById('reviewBody').innerHTML = html;
-        new bootstrap.Modal(document.getElementById('reviewModal')).show();
+        // getOrCreateInstance reaproveita a instância já associada ao elemento.
+        // Usar `new bootstrap.Modal(...)` a cada clique cria instâncias duplicadas
+        // sobre o mesmo elemento, o que deixa o modal travado a partir do 2º clique.
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('reviewModal')).show();
     };
 
     window.confirmSubmit = function () {
@@ -549,7 +552,7 @@
     // Abre o modal de confirmação. Não valida itens (o objetivo é justamente
     // encerrar sem nenhum). A ação é irreversível pelo próprio link.
     window.showNoItems = function () {
-        new bootstrap.Modal(document.getElementById('noItemsModal')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('noItemsModal')).show();
     };
 
     window.confirmNoItems = function () {
