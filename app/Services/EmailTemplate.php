@@ -170,10 +170,6 @@ HTML;
         $displayTitle = htmlspecialchars($topicTitle ?: $magazineTitle, ENT_QUOTES, 'UTF-8');
         $year = date('Y');
 
-        try { $logo = \App\Models\Setting::get('magazine_logo', ''); } catch (\Exception $e) { $logo = ''; }
-        if (empty($logo)) $logo = '/assets/images/wp/2024/11/logo-brooks-1400x396.webp';
-        if (strpos($logo, 'http') !== 0) $logo = $baseUrl . $logo;
-
         // Botão de PDF (aparece quando o PDF não foi anexado — plano B)
         $pdfButtonHtml = '';
         if ($showPdfDownloadButton) {
@@ -205,10 +201,17 @@ PDFBTN;
 
     <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 6px 24px rgba(26,27,46,0.12);">
 
-        <!-- Header com logo -->
+        <!-- Header com logo (tipográfica: renderiza nítida em qualquer cliente de e-mail,
+             sem depender de WebP/PNG que ficam serrilhados ou são bloqueados) -->
         <tr>
-            <td style="background:#2f3142; padding:28px 30px; text-align:center;">
-                <img src="{$logo}" alt="Brooks Construtora" width="150" style="max-width:150px; height:auto; display:inline-block;">
+            <td style="background:#2f3142; padding:30px 30px 26px; text-align:center;">
+                <div style="font-family:'Arial Black', Arial, Helvetica, sans-serif; font-size:32px; font-weight:900; letter-spacing:4px; line-height:1; color:#ffffff;">
+                    BRO<span style="color:#e63946;">O</span>KS
+                </div>
+                <div style="margin-top:6px; font-family:Arial, Helvetica, sans-serif; font-size:11px; font-weight:600; letter-spacing:6px; color:#c9ccd6;">
+                    CONSTRUTORA
+                </div>
+                <div style="margin:16px auto 0; width:44px; height:2px; background:#e63946;"></div>
                 <p style="margin:12px 0 0; color:#c9ccd6; font-size:11px; letter-spacing:3px; text-transform:uppercase;">Revista Digital</p>
             </td>
         </tr>
