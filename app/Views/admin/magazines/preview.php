@@ -11,7 +11,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=615, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="<?= $baseUrl ?>/">
     <title>Preview - <?= htmlspecialchars($magazine['title']) ?></title>
     <link rel="icon" href="/assets/images/wp/2023/01/cropped-favicon-1-32x32.png" />
@@ -25,7 +25,19 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
         body.site-embed .page{box-shadow:0 2px 15px rgba(0,0,0,0.1);margin-bottom:15px}
         @media(max-width:620px){
-            body{overflow-x:auto}
+            body{overflow-x:hidden}
+            /* No mobile a página flui naturalmente (sem altura fixa de 842px).
+               Isso evita o corte de conteúdo no Safari iOS, que não respeita a
+               paginação por estimativa. Restaura o comportamento que já
+               funcionava na última revista publicada (commit 60cda36). */
+            .preview{max-width:100%!important;padding:0!important}
+            .page{width:100%!important;height:auto!important;min-height:auto!important;overflow:visible!important}
+            /* As páginas internas também soltam o min-height:842px próprio, para
+               fluir conforme o conteúdo (sem sobra ou corte). */
+            .pg-int,.pg-guest,.pg-stories{min-height:auto!important;height:auto!important;overflow:visible!important}
+            /* Capa e contracapa: mantêm a proporção A4 (largura da tela) em vez
+               da altura fixa de 842px, para não distorcer no celular. */
+            .pg-cover,.pg-back{height:auto!important;aspect-ratio:595/842}
         }
 
         /* ===== CAPA ===== */
@@ -509,6 +521,12 @@ document.addEventListener('DOMContentLoaded', function() {
     var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
 
     function processPages() {
+        // No mobile NÃO paginamos: o conteúdo flui naturalmente (o CSS deixa a
+        // página com height:auto). A paginação por estimativa cortava o conteúdo
+        // no Safari iOS — este guard restaura o que funcionava na última revista
+        // publicada (commit 60cda36).
+        if (window.innerWidth < 620) return;
+
         var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         var allPages = Array.from(document.querySelectorAll('.preview .page'));
         
