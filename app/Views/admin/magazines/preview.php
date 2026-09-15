@@ -1035,17 +1035,9 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(finalize, 3000);
     }
 
-    <?php if (!empty($autoDownloadPdf)): ?>
-    // Download automático do PDF (link "Baixar PDF" do e-mail de teste).
-    // NÃO dispara no mobile: o html2canvas com scale:3 é pesadíssimo no iPhone,
-    // manipula o layout durante a rolagem e "zoava" a revista alguns segundos
-    // após abrir. No celular o usuário toca no botão "Baixar PDF" quando quiser.
-    if (window.innerWidth >= 620) {
-        setTimeout(function() {
-            if (typeof generatePDF === 'function') { generatePDF(); }
-        }, 3500);
-    }
-    <?php endif; ?>
+    // Sem download automático de PDF. O PDF é gerado só quando o usuário clica
+    // no botão "Baixar PDF" (generatePDF). Rolar/visualizar a revista não dispara
+    // o html2canvas — que era pesado no iPhone e bagunçava o layout ao rolar.
 });
 </script>
 

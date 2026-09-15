@@ -181,9 +181,8 @@ class MagazineController extends Controller
             $settings = [];
         }
 
-        // Flag lida pela view para disparar o download automático do PDF
-        $autoDownloadPdf = true;
-
+        // A rota /revista/pdf agora apenas EXIBE a revista (sem download
+        // automático). O PDF é baixado só quando o usuário clica no botão.
         if (defined('ANTIGO_PREFIX')) {
             include ROOT_PATH . '/app/Views/site/magazine/show.php';
         } else {
