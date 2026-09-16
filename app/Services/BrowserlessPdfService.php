@@ -215,61 +215,51 @@ class BrowserlessPdfService
     }
 
     /**
-     * Captura uma imagem PNG de cada página (.page) da revista via /screenshot,
-     * cropando pelo selector. Salva como Revista_{id}_pNN.png e um índice com o
-     * total de páginas. Cada página é uma chamada ao Browserless.
+     * Captura UMA imagem de página inteira (fullPage) da revista via /screenshot.
+     * É uma única chamada — rápido e sem risco de timeout. A imagem contém
+     * TODAS as páginas empilhadas (a revista rola no visualizador). Renderizada
+     * pelo Chrome, mantém sombras/gradientes/efeitos, idêntica ao PDF.
      */
     private static function generatePageImages(int $magazineId, string $token, string $host): void
     {
-        $previewUrl = self::buildPreviewUrl($magazineId);
         $dir = ROOT_PATH . '/public/uploads/magazine_pdfs';
         if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
         if (!is_dir($dir) || !is_writable($dir)) return;
 
-        // Remove imagens antigas desta revista (evita sobra de páginas removidas).
+        // Remove imagens antigas desta revista.
         foreach (glob($dir . '/Revista_' . $magazineId . '_p*.png') ?: [] as $old) {
             @unlink($old);
         }
 
+        if (!self::usageStatus()['allowed']) return;
+
+        $previewUrl = self::buildPreviewUrl($magazineId);
         $endpoint = rtrim($host, '/') . '/screenshot?token=' . urlencode($token);
-        $pageCount = 0;
-        $maxPages = 40; // teto de segurança
 
-        for ($i = 1; $i <= $maxPages; $i++) {
-            // Respeita o limite mensal também durante a captura das imagens.
-            if (!self::usageStatus()['allowed']) {
-                error_log('[BROWSERLESS] Limite atingido durante captura de imagens (página ' . $i . ').');
-                break;
-            }
-            $payload = [
-                'url' => $previewUrl,
-                'gotoOptions' => ['waitUntil' => 'networkidle2', 'timeout' => 60000],
-                'waitForTimeout' => 2500,
-                // Crop na N-ésima folha. Se não existir, o Browserless retorna erro
-                // (selector não encontrado) → encerramos o laço.
-                'selector' => '.preview .page:nth-of-type(' . $i . ')',
-                'options' => ['type' => 'png'],
-            ];
+        $payload = [
+            'url' => $previewUrl,
+            'gotoOptions' => ['waitUntil' => 'networkidle2', 'timeout' => 50000],
+            'waitForTimeout' => 3000,
+            'bestAttempt' => true,
+            'options' => [
+                'type' => 'png',
+                'fullPage' => true,
+            ],
+            // Largura fixa da folha para a imagem sair no tamanho da revista.
+            'viewport' => ['width' => 595, 'height' => 842, 'deviceScaleFactor' => 2],
+        ];
 
-            [$body, $httpCode, $contentType] = self::postToBrowserless($endpoint, $payload);
-            $isImage = ($httpCode === 200)
-                && (stripos($contentType, 'image/') !== false || substr((string) $body, 0, 8) === "\x89PNG\r\n\x1a\n");
+        [$body, $httpCode, $contentType] = self::postToBrowserless($endpoint, $payload);
+        $isImage = ($httpCode === 200)
+            && (stripos($contentType, 'image/') !== false || substr((string) $body, 0, 8) === "\x89PNG\r\n\x1a\n");
 
-            if (!$isImage) {
-                // Página i não existe (ou falhou) → terminou.
-                break;
-            }
-
-            file_put_contents($dir . '/Revista_' . $magazineId . '_p' . str_pad((string) $i, 2, '0', STR_PAD_LEFT) . '.png', $body);
-            $pageCount++;
-            // Cada screenshot é uma chamada consumida no plano do Browserless.
-            self::registerUsage();
+        if (!$isImage) {
+            error_log('[BROWSERLESS] Screenshot fullPage falhou. code=' . $httpCode . ' type=' . $contentType);
+            return;
         }
 
-        // Salva o total de páginas geradas (para o visualizador iterar).
-        if ($pageCount > 0) {
-            file_put_contents($dir . '/Revista_' . $magazineId . '_pages.txt', (string) $pageCount);
-        }
+        file_put_contents($dir . '/Revista_' . $magazineId . '_p01.png', $body);
+        self::registerUsage(); // 1 chamada consumida
     }
 
     /**

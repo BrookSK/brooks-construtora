@@ -1245,6 +1245,12 @@ class MagazineController extends Controller
             return;
         }
 
+        // A geração faz o PDF + uma imagem por página (várias chamadas ao
+        // Browserless), o que pode levar bastante tempo. Removemos o limite de
+        // tempo do PHP e liberamos a sessão para o request não estourar timeout.
+        @set_time_limit(0);
+        if (function_exists('session_write_close')) { @session_write_close(); }
+
         $pdfUrl = \App\Services\BrowserlessPdfService::generate($id);
 
         if ($pdfUrl) {
