@@ -31,7 +31,11 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         /* ===== CAPA ===== */
         .pg-cover{display:flex;flex-direction:column;align-items:center;padding:0;background:#0a1628;height:842px;overflow:hidden}
         .pg-cover .bg{position:absolute;top:0;left:0;right:0;bottom:0;object-fit:cover;width:100%;height:100%}
-        .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,0,0,0.4) 0%,rgba(0,0,0,0.05) 35%,rgba(0,0,0,0.05) 50%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0.8) 90%,rgba(0,0,0,0.92) 100%)}
+        /* Overlay sólido semitransparente (não gradiente): o Chrome converte
+           gradientes CSS complexos em "ShadingType 1", que o PDF.js NÃO
+           renderiza (a capa saía rosa). Cor sólida renderiza igual no
+           visualizador e no download. */
+        .pg-cover .overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.32)}
         .pg-cover .content{position:relative;z-index:2;text-align:center;width:100%;height:100%;display:flex;flex-direction:column;padding:30px 40px}
         .pg-cover .title{font-weight:900;color:#fff;text-transform:uppercase;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,0.3);font-size:min(5rem, 11vw);letter-spacing:min(2px, 0.3vw)}
         .pg-cover .sub-line{display:flex;align-items:center;justify-content:center;gap:15px;margin-top:5px;font-size:0.7rem;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,0.9)}
@@ -66,7 +70,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         /* ===== INTERNAL_04 - Imagem full com overlay ===== */
         .overlay-section{position:relative;width:100%;height:420px;overflow:hidden;margin-bottom:15px}
         .overlay-section img{width:100%;height:100%;object-fit:cover}
-        .overlay-section .ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(5,15,40,0.95));padding:25px 30px 20px}
+        .overlay-section .ov{position:absolute;bottom:0;left:0;right:0;background:rgba(5,15,40,0.88);padding:25px 30px 20px}
         .overlay-section .ov h2{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:900;color:#fff}
         .overlay-section .ov p{font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.8);margin-top:5px}
 
@@ -79,7 +83,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-back .foot{position:absolute;bottom:15px;left:25px;right:25px;display:flex;justify-content:space-between;font-size:0.55rem;color:rgba(255,255,255,0.8);z-index:2}
 
         /* Placeholder para imagens não carregadas */
-        .img-placeholder{background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;color:#1a3d6d;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
+        .img-placeholder{background:#d3deee;display:flex;align-items:center;justify-content:center;color:#1a3d6d;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
 
         /* ===== COLUNA DO CONVIDADO ===== */
         .pg-guest{padding:40px 40px;height:auto;min-height:842px;overflow:visible}
@@ -92,7 +96,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-guest .column-title{font-family:'Montserrat',sans-serif;font-size:2.2rem;font-weight:900;color:#111;line-height:1.1;margin-bottom:20px}
         .pg-guest .author-box{display:flex;align-items:center;gap:15px;margin-bottom:25px;padding-bottom:20px;border-bottom:2px solid #1a3d6d}
         .pg-guest .author-photo{width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid #1a3d6d}
-        .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#e0e8f4,#b8c8e0);display:flex;align-items:center;justify-content:center;border:3px solid #1a3d6d;color:#1a3d6d;font-size:0.5rem;text-transform:uppercase}
+        .pg-guest .author-photo-placeholder{width:70px;height:70px;border-radius:50%;background:#d3deee;display:flex;align-items:center;justify-content:center;border:3px solid #1a3d6d;color:#1a3d6d;font-size:0.5rem;text-transform:uppercase}
         .pg-guest .author-info .author-name{font-weight:700;font-size:1rem;color:#111}
         .pg-guest .author-info .author-role{font-size:0.75rem;color:#666;font-style:italic}
         .pg-guest .column-content p{font-size:0.72rem;line-height:1.75;color:#333;margin-bottom:10px;text-align:justify}
