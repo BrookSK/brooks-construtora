@@ -19,16 +19,21 @@ namespace App\Services;
 class MagazinePaginator
 {
     /** Altura útil de uma folha (842) menos o padding vertical (~80). */
-    private const USABLE_HEIGHT = 760;
+    // Valores propositalmente CONSERVADORES. O Safari iOS renderiza o texto um
+    // pouco mais alto que o Chrome/Android; se a estimativa ficar no limite, a
+    // última linha vaza e o overflow:hidden corta no iPhone. Superestimando a
+    // altura (menos texto por página, com folga embaixo) a divisão nunca corta
+    // em nenhum navegador — e continua idêntica entre os aparelhos.
+    private const USABLE_HEIGHT = 680;
 
-    /** Altura de uma linha de parágrafo do corpo (line-height ~20px). */
-    private const LINE_HEIGHT = 20;
+    /** Altura de uma linha (line-height real ~20px, superestimado p/ folga). */
+    private const LINE_HEIGHT = 21;
 
-    /** Espaço abaixo de cada parágrafo (margin-bottom). */
-    private const PARAGRAPH_SPACING = 10;
+    /** Espaço abaixo de cada parágrafo (margin-bottom, superestimado). */
+    private const PARAGRAPH_SPACING = 12;
 
-    /** Caracteres que cabem por linha na largura útil do texto. */
-    private const CHARS_PER_LINE = 90;
+    /** Caracteres por linha (subestimado → parágrafo conta mais linhas). */
+    private const CHARS_PER_LINE = 82;
 
     /**
      * Divide uma lista de parágrafos em páginas, respeitando a altura

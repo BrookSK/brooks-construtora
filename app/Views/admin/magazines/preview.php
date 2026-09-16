@@ -623,12 +623,12 @@ document.addEventListener('DOMContentLoaded', function() {
         allPages.forEach(function(page) {
             var isCover = page.classList.contains('pg-cover') || page.classList.contains('pg-back');
 
-            // Rede de segurança para os layouts NÃO paginados no servidor
-            // (internal_01/02/06/07): se o conteúdo transbordar a folha, reduz
-            // levemente a fonte do texto até caber. NÃO move blocos entre páginas
-            // (isso é o que divergia entre navegadores) — só encolhe a fonte, que
-            // é determinístico e seguro. As páginas paginadas no servidor já
-            // cabem, então nem entram nesse laço.
+            // Rede de segurança (todas as páginas de conteúdo): se o conteúdo
+            // ainda transbordar a folha, reduz levemente a fonte do texto até
+            // caber. NÃO move blocos entre páginas (isso é o que divergia entre
+            // navegadores) — só encolhe a fonte, que é determinístico e seguro.
+            // Cobre também a diferença de renderização do Safari iOS, que às
+            // vezes deixa o texto 1 linha mais alto que o Chrome.
             if (!isCover) {
                 page.style.height = 'auto';
                 page.style.overflow = 'visible';
