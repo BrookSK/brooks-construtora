@@ -196,11 +196,101 @@ class BrowserlessPdfService
             // Só conta quando deu certo (uma chamada consumida no plano).
             self::registerUsage();
 
+            // Gera as IMAGENS das páginas (uma por folha), renderizadas pelo
+            // Chrome do Browserless — ficam pixel a pixel iguais ao PDF, com
+            // sombras/gradientes/efeitos. O visualizador do site exibe essas
+            // imagens (em vez do PDF.js, que não suporta sombras/ShadingType 1
+            // e deixava a capa rosa). Best-effort: se falhar, o PDF já está salvo.
+            try {
+                self::generatePageImages($magazineId, $token, $host);
+            } catch (\Throwable $e) {
+                error_log('[BROWSERLESS] Falha ao gerar imagens das páginas: ' . $e->getMessage());
+            }
+
             return '/uploads/magazine_pdfs/' . $filename;
         } catch (\Throwable $e) {
             error_log('[BROWSERLESS] Exceção: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Captura uma imagem PNG de cada página (.page) da revista via /screenshot,
+     * cropando pelo selector. Salva como Revista_{id}_pNN.png e um índice com o
+     * total de páginas. Cada página é uma chamada ao Browserless.
+     */
+    private static function generatePageImages(int $magazineId, string $token, string $host): void
+    {
+        $previewUrl = self::buildPreviewUrl($magazineId);
+        $dir = ROOT_PATH . '/public/uploads/magazine_pdfs';
+        if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+        if (!is_dir($dir) || !is_writable($dir)) return;
+
+        // Remove imagens antigas desta revista (evita sobra de páginas removidas).
+        foreach (glob($dir . '/Revista_' . $magazineId . '_p*.png') ?: [] as $old) {
+            @unlink($old);
+        }
+
+        $endpoint = rtrim($host, '/') . '/screenshot?token=' . urlencode($token);
+        $pageCount = 0;
+        $maxPages = 40; // teto de segurança
+
+        for ($i = 1; $i <= $maxPages; $i++) {
+            // Respeita o limite mensal também durante a captura das imagens.
+            if (!self::usageStatus()['allowed']) {
+                error_log('[BROWSERLESS] Limite atingido durante captura de imagens (página ' . $i . ').');
+                break;
+            }
+            $payload = [
+                'url' => $previewUrl,
+                'gotoOptions' => ['waitUntil' => 'networkidle2', 'timeout' => 60000],
+                'waitForTimeout' => 2500,
+                // Crop na N-ésima folha. Se não existir, o Browserless retorna erro
+                // (selector não encontrado) → encerramos o laço.
+                'selector' => '.preview .page:nth-of-type(' . $i . ')',
+                'options' => ['type' => 'png'],
+            ];
+
+            [$body, $httpCode, $contentType] = self::postToBrowserless($endpoint, $payload);
+            $isImage = ($httpCode === 200)
+                && (stripos($contentType, 'image/') !== false || substr((string) $body, 0, 8) === "\x89PNG\r\n\x1a\n");
+
+            if (!$isImage) {
+                // Página i não existe (ou falhou) → terminou.
+                break;
+            }
+
+            file_put_contents($dir . '/Revista_' . $magazineId . '_p' . str_pad((string) $i, 2, '0', STR_PAD_LEFT) . '.png', $body);
+            $pageCount++;
+            // Cada screenshot é uma chamada consumida no plano do Browserless.
+            self::registerUsage();
+        }
+
+        // Salva o total de páginas geradas (para o visualizador iterar).
+        if ($pageCount > 0) {
+            file_put_contents($dir . '/Revista_' . $magazineId . '_pages.txt', (string) $pageCount);
+        }
+    }
+
+    /**
+     * Faz um POST JSON ao Browserless e devolve [body, httpCode, contentType].
+     */
+    private static function postToBrowserless(string $endpoint, array $payload): array
+    {
+        $ch = curl_init($endpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Cache-Control: no-cache'],
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_TIMEOUT => 120,
+            CURLOPT_CONNECTTIMEOUT => 20,
+        ]);
+        $body = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        curl_close($ch);
+        return [$body, $httpCode, $contentType];
     }
 
     /**
@@ -210,6 +300,22 @@ class BrowserlessPdfService
     {
         $rel = '/uploads/magazine_pdfs/Revista_' . $magazineId . '.pdf';
         return is_file(ROOT_PATH . '/public' . $rel) ? $rel : null;
+    }
+
+    /**
+     * Lista as URLs relativas das imagens de página geradas (em ordem), ou []
+     * se ainda não houver. Usado pelo visualizador do site.
+     */
+    public static function existingPageImages(int $magazineId): array
+    {
+        $dir = ROOT_PATH . '/public/uploads/magazine_pdfs';
+        $files = glob($dir . '/Revista_' . $magazineId . '_p[0-9][0-9].png') ?: [];
+        sort($files);
+        $urls = [];
+        foreach ($files as $f) {
+            $urls[] = '/uploads/magazine_pdfs/' . basename($f);
+        }
+        return $urls;
     }
 
     /**

@@ -130,14 +130,14 @@ class MagazineController extends Controller
             $settings = [];
         }
 
-        // Se existe um PDF gerado (via Browserless), o leitor vê o PDF num
-        // visualizador — idêntico em qualquer dispositivo (iPhone/iPad/Safari/
-        // Android/PC). É a forma definitiva que elimina a renderização por
-        // navegador. Sem PDF, cai no HTML (fallback).
+        // Se existe PDF gerado (via Browserless), o leitor vê a revista num
+        // visualizador — idêntico em qualquer dispositivo. As páginas são
+        // exibidas como IMAGENS renderizadas pelo Chrome (mantêm sombras,
+        // gradientes e efeitos, sem os bugs do PDF.js). O PDF fica para download.
         $pdfUrl = \App\Services\BrowserlessPdfService::existingPdfUrl($id);
         if ($pdfUrl) {
-            // Preserva o token de preview no link do PDF (modo teste, sem login).
             $previewToken = $_GET['preview'] ?? '';
+            $pageImages = \App\Services\BrowserlessPdfService::existingPageImages($id);
             include ROOT_PATH . '/app/Views/site/magazine/pdf_viewer.php';
             return;
         }
