@@ -482,21 +482,47 @@ class PurchaseOrderReportService
             ? "AND (i.source_type IS NULL OR i.source_type = 'purchase')"
             : '';
 
+        // Uma linha por material: pega o MENOR preço unitário aprovado entre
+        // todos os pedidos aprovados. O pedido mostrado é aquele onde esse
+        // menor preço foi encontrado.
         $sql = "SELECT
-                    $categoriaExpr AS categoria,
-                    $materialExpr  AS material,
-                    $codeExpr      AS pedido,
-                    $qtdExpr       AS quantidade,
-                    ROUND($unitExpr, 2)  AS preco_unit,
-                    ROUND($totalExpr, 2) AS preco_total
-                FROM purchase_order_items i
-                JOIN purchase_orders po ON po.id = i.order_id
-                $joinMaterial
-                $joinCategory
-                WHERE po.status = 'approved'
-                  AND $priceFilter
-                  $sourceFilter
-                ORDER BY categoria ASC, material ASC, preco_unit ASC";
+                    x.categoria,
+                    x.material,
+                    x.preco_unit,
+                    x.pedido
+                FROM (
+                    SELECT
+                        $categoriaExpr AS categoria,
+                        $materialExpr  AS material,
+                        $codeExpr      AS pedido,
+                        ROUND($unitExpr, 2) AS preco_unit
+                    FROM purchase_order_items i
+                    JOIN purchase_orders po ON po.id = i.order_id
+                    $joinMaterial
+                    $joinCategory
+                    WHERE po.status = 'approved'
+                      AND $priceFilter
+                      $sourceFilter
+                ) x
+                JOIN (
+                    SELECT categoria, material, MIN(preco_unit) AS menor_unit
+                    FROM (
+                        SELECT
+                            $categoriaExpr AS categoria,
+                            $materialExpr  AS material,
+                            ROUND($unitExpr, 2) AS preco_unit
+                        FROM purchase_order_items i
+                        JOIN purchase_orders po ON po.id = i.order_id
+                        $joinMaterial
+                        $joinCategory
+                        WHERE po.status = 'approved'
+                          AND $priceFilter
+                          $sourceFilter
+                    ) y
+                    GROUP BY categoria, material
+                ) mn ON mn.categoria = x.categoria AND mn.material = x.material AND mn.menor_unit = x.preco_unit
+                GROUP BY x.categoria, x.material
+                ORDER BY x.categoria ASC, x.material ASC";
 
         try {
             $data = self::all($sql);
@@ -507,15 +533,15 @@ class PurchaseOrderReportService
             ];
         }
 
-        // Agrupa por categoria mantendo cada item como uma linha.
+        // Agrupa por categoria (uma linha por material, com o menor preço).
         $porCategoria = [];
         foreach ($data as $r) {
             $porCategoria[(string) $r['categoria']][] = $r;
         }
-        // Ordena categorias pelo maior valor total.
+        // Ordena categorias pelo somatório dos menores preços (desc).
         $subtotalCat = [];
         foreach ($porCategoria as $cat => $itens) {
-            $subtotalCat[$cat] = array_sum(array_map(fn($x) => (float) $x['preco_total'], $itens));
+            $subtotalCat[$cat] = array_sum(array_map(fn($x) => (float) $x['preco_unit'], $itens));
         }
         arsort($subtotalCat);
 
@@ -525,33 +551,30 @@ class PurchaseOrderReportService
         foreach (array_keys($subtotalCat) as $cat) {
             $itens    = $porCategoria[$cat];
             $subTotal = 0.0;
-            // Cabeçalho da categoria
-            $rows[] = ['▸ ' . $cat, '', '', '', ''];
+            $rows[] = ['▸ ' . $cat, '', ''];
             foreach ($itens as $it) {
-                $total = (float) $it['preco_total'];
-                $subTotal += $total;
+                $unit = (float) $it['preco_unit'];
+                $subTotal += $unit;
                 $totalLinhas++;
                 $rows[] = [
                     '   ' . (string) $it['material'],
                     (string) $it['pedido'],
-                    self::qty((float) $it['quantidade']),
-                    self::money((float) $it['preco_unit']),
-                    self::money($total),
+                    self::money($unit),
                 ];
             }
-            $rows[] = ['   Subtotal ' . $cat, '', '', '', self::money($subTotal)];
-            $rows[] = ['', '', '', '', ''];
+            $rows[] = ['   Subtotal ' . $cat, '', self::money($subTotal)];
+            $rows[] = ['', '', ''];
             $totalGeral += $subTotal;
         }
 
         if (empty($rows)) {
-            $rows[] = ['(nenhum item aprovado com preço)', '', '', '', self::money(0)];
+            $rows[] = ['(nenhum item aprovado com preço)', '', self::money(0)];
         } else {
-            $rows[] = ['TOTAL GERAL (' . $totalLinhas . ' itens)', '', '', '', self::money($totalGeral)];
+            $rows[] = ['TOTAL GERAL (' . $totalLinhas . ' materiais)', '', self::money($totalGeral)];
         }
 
         return [
-            'headers' => ['Categoria / Material', 'Pedido', 'Qtd.', 'Preço Unit. (R$)', 'Preço Total (R$)'],
+            'headers' => ['Categoria / Material', 'Pedido (menor preço)', 'Menor Preço Unit. (R$)'],
             'rows'    => $rows,
         ];
     }
