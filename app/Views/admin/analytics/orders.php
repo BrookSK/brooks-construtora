@@ -34,8 +34,15 @@ $criticos    = $rowsOf($data, '10. Pedidos Criticos');
 $profCrit    = $rowsOf($data, '11. Profissional x Criticos');
 $aprovCat    = $rowsOf($data, '12. Aprovados por Categoria');
 
-// Total geral de materiais aprovados com menor cotação (linha "TOTAL GERAL" da seção 12)
-$kpiAprovCat = $valueByLabel($aprovCat, 'TOTAL GERAL');
+// Total geral de materiais aprovados com menor cotação (linha "TOTAL GERAL" da seção 12).
+// Nesta seção o valor fica na última coluna, então lemos direto da linha.
+$kpiAprovCat = '—';
+foreach ($aprovCat as $r) {
+    if (isset($r[0]) && trim((string)$r[0]) === 'TOTAL GERAL') {
+        $kpiAprovCat = (string)($r[count($r) - 1] ?? '—');
+        break;
+    }
+}
 
 // KPIs principais
 $kpiTotal      = $valueByLabel($resumo, 'Total de pedidos (todos)');
