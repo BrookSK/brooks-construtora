@@ -135,10 +135,22 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-stories .story-item .story-title{font-weight:700;font-size:0.82rem;color:#111;margin-bottom:4px}
         .pg-stories .story-item .story-text{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify}
     </style>
+    <?php $pdfMode = !empty($_GET['pdf']); // renderização limpa para gerar o PDF (Browserless) ?>
+    <?php if ($pdfMode): ?>
+    <style>
+        /* MODO PDF: só as folhas da revista, sem barra, sem fundo cinza, sem
+           padding nem sombra/margem entre páginas. Evita página vazia no topo e
+           faixas laterais no PDF gerado pelo Browserless. */
+        body, body.site-embed { background:#fff !important; padding:0 !important; margin:0 !important; }
+        #site-nav { display:none !important; }
+        .preview, body.site-embed .preview { max-width:none !important; width:595px !important; margin:0 !important; padding:0 !important; }
+        .page, body.site-embed .page { margin:0 !important; box-shadow:none !important; }
+    </style>
+    <?php endif; ?>
 </head>
 <?php if (!isset($isAdmin)) { $isAdmin = false; try { $isAdmin = \App\Core\Auth::check(); } catch(\Exception $e) {} } ?>
 <body<?= $isAdmin ? '' : ' class="site-embed"' ?>>
-<?php if (!$isAdmin): ?>
+<?php if (!$isAdmin && !$pdfMode): ?>
 <div id="site-nav" style="background:#0a1628;padding:14px 15px 12px;margin-bottom:15px;">
     <div style="max-width:595px;margin:0 auto;">
         <a href="/revista" style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:6px;">

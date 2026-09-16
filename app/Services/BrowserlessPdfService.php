@@ -65,7 +65,11 @@ class BrowserlessPdfService
                 'waitForTimeout' => 3500,
                 'options' => [
                     'printBackground' => true,
-                    'format' => 'A4',
+                    // Dimensões exatas da folha (595x842) para cada .page virar
+                    // UMA página do PDF, sem sobra/linha extra que o 'format:A4'
+                    // (arredondamento de pontos) às vezes causa.
+                    'width' => '595px',
+                    'height' => '842px',
                     'preferCSSPageSize' => false,
                     'margin' => [
                         'top' => '0',
@@ -155,6 +159,11 @@ class BrowserlessPdfService
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'www.brooksconstrutora.com.br';
         $token = Magazine::ensurePreviewToken($magazineId);
-        return $scheme . '://' . $host . '/revista/preview/' . $magazineId . '?preview=' . urlencode($token);
+        // &pdf=1 ativa o "modo PDF" na view: remove a barra de navegação, o
+        // fundo cinza, o padding e as sombras entre páginas — só as folhas da
+        // revista, coladas, sem margem. Assim o PDF não fica com página vazia
+        // no topo nem faixas laterais.
+        return $scheme . '://' . $host . '/revista/preview/' . $magazineId
+            . '?preview=' . urlencode($token) . '&pdf=1';
     }
 }
