@@ -32,6 +32,10 @@ $diarios     = $rowsOf($data, '8. Pedidos Diarios');
 $matObra     = $rowsOf($data, '9. Material x Custo Obra');
 $criticos    = $rowsOf($data, '10. Pedidos Criticos');
 $profCrit    = $rowsOf($data, '11. Profissional x Criticos');
+$aprovCat    = $rowsOf($data, '12. Aprovados por Categoria');
+
+// Total geral de materiais aprovados com menor cotação (linha "TOTAL GERAL" da seção 12)
+$kpiAprovCat = $valueByLabel($aprovCat, 'TOTAL GERAL');
 
 // KPIs principais
 $kpiTotal      = $valueByLabel($resumo, 'Total de pedidos (todos)');
@@ -154,6 +158,24 @@ $renderTable = function (array $headers, array $rows, string $emptyMsg = 'Sem da
     echo '</tbody></table></div>';
 };
 ?>
+
+<!-- Materiais aprovados por categoria (menor preço cotado) -->
+<div class="card shadow-sm mb-3">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span><i class="bi bi-tags"></i> Materiais aprovados por categoria · menor preço cotado</span>
+        <span class="badge bg-dark fs-6">Total: R$ <?= $esc($kpiAprovCat) ?></span>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-2">
+            Considera apenas pedidos <strong>aprovados</strong>. Para cada item usa o
+            <strong>menor valor real cotado</strong> entre os fornecedores (não é média),
+            somado por categoria do material.
+        </p>
+        <div style="max-height:460px; overflow:auto;">
+            <?php $renderTable($data['12. Aprovados por Categoria']['headers'] ?? [], $aprovCat); ?>
+        </div>
+    </div>
+</div>
 
 <div class="row g-3">
     <!-- Materiais mais consumidos -->

@@ -379,7 +379,128 @@ class PurchaseOrderReportService
             ];
         }
 
+        // --- 12. Materiais aprovados por categoria (menor preço cotado) --
+        // Para cada item de pedidos APROVADOS que tenha pelo menos um preço
+        // cotado, considera o MENOR total cotado entre os fornecedores
+        // (valor real, não média) e soma por categoria do material.
+        $sheets['12. Aprovados por Categoria'] = self::approvedByCategory($nc);
+
         return $sheets;
+    }
+
+    /**
+     * Seção 12: valor dos materiais já cotados e aprovados, tomando o MENOR
+     * preço cotado de cada item (valor real, não média), agrupado por
+     * categoria do material.
+     *
+     * Regras:
+     *   - Considera apenas pedidos aprovados (status = 'approved').
+     *   - Para cada item, usa o MENOR total_price cotado entre os
+     *     fornecedores em purchase_order_item_prices.
+     *   - A categoria vem de material_categories.name (via materials.category_id).
+     *     Sem categoria, usa a classificação/especificação do item como rótulo.
+     *
+     * @param string $nc Cláusula que exclui cancelados (mantida por consistência).
+     * @return array{headers:string[],rows:array<int,array<int,string>>}
+     */
+    private static function approvedByCategory(string $nc): array
+    {
+        // A tabela de preços por fornecedor é obrigatória para esta seção.
+        if (empty(self::tableColumns('purchase_order_item_prices'))) {
+            return [
+                'headers' => ['Aviso'],
+                'rows'    => [['A tabela purchase_order_item_prices não existe nesta base; sem dados de cotação por fornecedor.']],
+            ];
+        }
+
+        $itemCols = self::tableColumns('purchase_order_items');
+        $matCols  = self::tableColumns('materials');
+        $hasMaterials  = !empty($matCols);
+        $hasCategories = !empty(self::tableColumns('material_categories'));
+
+        // Rótulo da categoria: preferimos a categoria cadastrada do material;
+        // depois classification/specification do item; senão "(sem categoria)".
+        $categoriaParts = [];
+        if ($hasMaterials && $hasCategories && in_array('category_id', $matCols, true)) {
+            $categoriaParts[] = 'NULLIF(TRIM(mc.name), \'\')';
+        }
+        if ($hasMaterials && in_array('specification', $matCols, true)) {
+            $categoriaParts[] = 'NULLIF(TRIM(m.specification), \'\')';
+        }
+        if (in_array('classification', $itemCols, true)) {
+            $categoriaParts[] = 'NULLIF(TRIM(i.classification), \'\')';
+        }
+        if (in_array('specification', $itemCols, true)) {
+            $categoriaParts[] = 'NULLIF(TRIM(i.specification), \'\')';
+        }
+        $categoriaExpr = empty($categoriaParts)
+            ? "'(sem categoria)'"
+            : 'COALESCE(' . implode(', ', $categoriaParts) . ", '(sem categoria)')";
+
+        // Joins com materials/material_categories (quando existirem).
+        $joinMaterial = ($hasMaterials && in_array('material_id', $itemCols, true))
+            ? 'LEFT JOIN materials m ON m.id = i.material_id'
+            : '';
+        $joinCategory = ($joinMaterial !== '' && $hasCategories && in_array('category_id', $matCols, true))
+            ? 'LEFT JOIN material_categories mc ON mc.id = m.category_id'
+            : '';
+
+        // Menor total cotado por item (entre todos os fornecedores).
+        // Só entram itens de pedidos aprovados que tenham algum preço > 0.
+        $sql = "SELECT
+                    $categoriaExpr AS categoria,
+                    COUNT(*)               AS qtd_itens,
+                    COALESCE(SUM(menor.menor_total), 0) AS valor_total
+                FROM (
+                    SELECT p.item_id, MIN(p.total_price) AS menor_total
+                    FROM purchase_order_item_prices p
+                    JOIN purchase_orders po ON po.id = p.order_id
+                    WHERE po.status = 'approved'
+                      AND p.total_price IS NOT NULL
+                      AND p.total_price > 0
+                    GROUP BY p.item_id
+                ) menor
+                JOIN purchase_order_items i ON i.id = menor.item_id
+                $joinMaterial
+                $joinCategory
+                GROUP BY categoria
+                ORDER BY valor_total DESC, qtd_itens DESC";
+
+        $rows = [];
+        $totalGeral = 0.0;
+        $totalItens = 0;
+        try {
+            $data = self::all($sql);
+        } catch (Throwable $e) {
+            return [
+                'headers' => ['Aviso'],
+                'rows'    => [['Não foi possível calcular esta seção: ' . $e->getMessage()]],
+            ];
+        }
+
+        foreach ($data as $r) {
+            $valor = (float) $r['valor_total'];
+            $itens = (int) $r['qtd_itens'];
+            $totalGeral += $valor;
+            $totalItens += $itens;
+            $rows[] = [
+                (string) $r['categoria'],
+                (string) $itens,
+                self::money($valor),
+            ];
+        }
+
+        if (empty($rows)) {
+            $rows[] = ['(nenhum item aprovado com cotação)', '0', self::money(0)];
+        } else {
+            $rows[] = ['', '', ''];
+            $rows[] = ['TOTAL GERAL', (string) $totalItens, self::money($totalGeral)];
+        }
+
+        return [
+            'headers' => ['Categoria', 'Nº Itens', 'Valor (menor cotação) (R$)'],
+            'rows'    => $rows,
+        ];
     }
 
     // =================================================================
