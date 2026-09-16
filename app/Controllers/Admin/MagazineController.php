@@ -1234,11 +1234,23 @@ class MagazineController extends Controller
             return;
         }
 
+        // Trava de limite mensal (protege o plano gratuito do Browserless).
+        $usage = \App\Services\BrowserlessPdfService::usageStatus();
+        if (!$usage['allowed']) {
+            $msg = 'Limite mensal de geração de PDF atingido (' . $usage['used'] . '/' . $usage['limit']
+                . '). O contador zera no próximo mês. Se precisar de mais, aumente o limite em Configurações ou faça upgrade do plano Browserless.';
+            if ($this->isAjax()) { $this->json(['success' => false, 'error' => $msg], 429); return; }
+            $this->setFlash('error', $msg);
+            $this->redirect('/admin/magazines/edit/' . $id);
+            return;
+        }
+
         $pdfUrl = \App\Services\BrowserlessPdfService::generate($id);
 
         if ($pdfUrl) {
-            if ($this->isAjax()) { $this->json(['success' => true, 'url' => $pdfUrl]); return; }
-            $this->setFlash('success', 'PDF da revista gerado com sucesso! Ele já é exibido para os leitores em qualquer dispositivo.');
+            $after = \App\Services\BrowserlessPdfService::usageStatus();
+            if ($this->isAjax()) { $this->json(['success' => true, 'url' => $pdfUrl, 'remaining' => $after['remaining'], 'limit' => $after['limit']]); return; }
+            $this->setFlash('success', 'PDF da revista gerado com sucesso! Ele já é exibido para os leitores em qualquer dispositivo. (Restam ' . $after['remaining'] . ' gerações neste mês.)');
         } else {
             $msg = 'Não foi possível gerar o PDF. Verifique se o token do Browserless está configurado em Configurações.';
             if ($this->isAjax()) { $this->json(['success' => false, 'error' => $msg], 500); return; }

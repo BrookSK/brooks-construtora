@@ -26,6 +26,56 @@ class BrowserlessPdfService
     private const DEFAULT_HOST = 'https://production-sfo.browserless.io';
 
     /**
+     * Teto mensal padrão de gerações (margem de segurança do plano gratuito do
+     * Browserless, que costuma ser ~1.000 unidades/mês). Fica bem abaixo para
+     * nunca estourar. Pode ser ajustado pela Setting 'browserless_monthly_limit'.
+     */
+    private const DEFAULT_MONTHLY_LIMIT = 800;
+
+    /**
+     * Verifica se ainda há cota no mês. Retorna ['allowed'=>bool, 'used'=>int,
+     * 'limit'=>int, 'remaining'=>int]. O contador é reiniciado a cada mês.
+     */
+    public static function usageStatus(): array
+    {
+        $limit = (int) Setting::get('browserless_monthly_limit', (string) self::DEFAULT_MONTHLY_LIMIT);
+        if ($limit <= 0) $limit = self::DEFAULT_MONTHLY_LIMIT;
+
+        $month = date('Y-m');
+        $storedMonth = (string) Setting::get('browserless_usage_month', '');
+        $used = (int) Setting::get('browserless_usage_count', '0');
+
+        // Virou o mês → zera o contador.
+        if ($storedMonth !== $month) {
+            $used = 0;
+        }
+
+        $remaining = max(0, $limit - $used);
+        return [
+            'allowed' => $used < $limit,
+            'used' => $used,
+            'limit' => $limit,
+            'remaining' => $remaining,
+            'month' => $month,
+        ];
+    }
+
+    /**
+     * Registra uma geração bem-sucedida no contador do mês.
+     */
+    private static function registerUsage(): void
+    {
+        $month = date('Y-m');
+        $storedMonth = (string) Setting::get('browserless_usage_month', '');
+        $used = (int) Setting::get('browserless_usage_count', '0');
+        if ($storedMonth !== $month) {
+            $used = 0;
+        }
+        Setting::set('browserless_usage_month', $month);
+        Setting::set('browserless_usage_count', (string) ($used + 1));
+    }
+
+    /**
      * Gera o PDF e devolve a URL pública relativa do arquivo (ex.:
      * /uploads/magazine_pdfs/Revista_15.pdf), ou null em caso de falha.
      */
@@ -35,6 +85,14 @@ class BrowserlessPdfService
             $token = trim((string) Setting::get('browserless_token', ''));
             if ($token === '') {
                 error_log('[BROWSERLESS] Token não configurado.');
+                return null;
+            }
+
+            // Trava de segurança: não gera se o limite mensal foi atingido
+            // (protege contra estourar o plano gratuito).
+            $usage = self::usageStatus();
+            if (!$usage['allowed']) {
+                error_log('[BROWSERLESS] Limite mensal atingido: ' . $usage['used'] . '/' . $usage['limit']);
                 return null;
             }
 
@@ -134,6 +192,9 @@ class BrowserlessPdfService
                 error_log('[BROWSERLESS] Falha ao salvar o PDF em ' . $absolute);
                 return null;
             }
+
+            // Só conta quando deu certo (uma chamada consumida no plano).
+            self::registerUsage();
 
             return '/uploads/magazine_pdfs/' . $filename;
         } catch (\Throwable $e) {

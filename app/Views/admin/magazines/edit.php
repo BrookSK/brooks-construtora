@@ -22,33 +22,126 @@
                 </div>
                 <?php endif; ?>
 
+                <?php
+                    $canPublish = \App\Core\Auth::hasPermission('magazines.publish');
+                    $canEdit = \App\Core\Auth::hasPermission('magazines.edit');
+                    $hasPdf = \App\Services\BrowserlessPdfService::existingPdfUrl((int) $magazine['id']) !== null;
+                    $hasGuestColumn = false; $hasStories = false;
+                    foreach ($pages as $p) {
+                        if (($p['layout_type'] ?? '') === 'guest_column') $hasGuestColumn = true;
+                        if (($p['layout_type'] ?? '') === 'construction_stories') $hasStories = true;
+                    }
+                ?>
+
                 <?php if ($magazine['status'] !== 'published'): ?>
-                <div class="d-grid gap-2">
-                    <?php if (in_array($magazine['status'], ['generated', 'review'])): ?>
-                    <form method="POST" action="/admin/magazines/approve">
+
+                <!-- Passo 1: preparar (aprovar quando vier da IA) -->
+                <?php if (in_array($magazine['status'], ['generated', 'review'])): ?>
+                <form method="POST" action="/admin/magazines/approve" class="d-grid mb-2">
+                    <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
+                    <button type="submit" class="btn btn-success" onclick="return confirm('Aprovar?')"><i class="bi bi-check-circle"></i> Aprovar</button>
+                </form>
+                <?php endif; ?>
+
+                <!-- Passo 2: conferir (preview + gerar o PDF que os leitores veem) -->
+                <div class="d-grid gap-2 mb-2">
+                    <a href="/admin/magazines/preview/<?= $magazine['id'] ?>" class="btn btn-outline-info btn-sm" target="_blank"><i class="bi bi-eye"></i> Ver Preview</a>
+                    <?php if ($canEdit): ?>
+                    <form method="POST" action="/admin/magazines/generate-pdf" id="genPdfForm">
                         <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
-                        <button type="submit" class="btn btn-success w-100" onclick="return confirm('Aprovar?')"><i class="bi bi-check-circle"></i> Aprovar</button>
+                        <button type="submit" class="btn <?= $hasPdf ? 'btn-outline-dark' : 'btn-dark' ?> btn-sm w-100" id="genPdfBtn">
+                            <i class="bi bi-file-earmark-pdf"></i> <?= $hasPdf ? 'Regerar PDF' : 'Gerar PDF da Revista' ?>
+                        </button>
                     </form>
+                    <small class="text-muted" style="font-size:0.72rem;">Gera o PDF no servidor (fica igual em qualquer aparelho). <?= $hasPdf ? 'Já existe um PDF gerado.' : 'Necessário antes de publicar/testar.' ?></small>
                     <?php endif; ?>
-                    <?php if (in_array($magazine['status'], ['approved', 'test']) && \App\Core\Auth::hasPermission('magazines.publish')): ?>
+                </div>
+
+                <!-- Passo 3: distribuir (teste e publicação oficial) -->
+                <?php if (in_array($magazine['status'], ['approved', 'test']) && $canPublish): ?>
+                <div class="d-grid gap-2 mb-1">
                     <form method="POST" action="/admin/magazines/publish-test">
                         <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
-                        <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Enviar TESTE?\n\nA notificação (e-mail + WhatsApp) será enviada somente aos contatos de teste configurados, com link de acesso direto e o PDF. A revista fica marcada como \'Publicada (Teste)\' e NÃO vai para o público.')"><i class="bi bi-flask"></i> Enviar Teste</button>
+                        <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Enviar TESTE?\n\nA notificação (e-mail + WhatsApp) será enviada somente aos contatos de teste configurados. A revista fica como \'Publicada (Teste)\' e NÃO vai para o público.')"><i class="bi bi-flask"></i> Enviar Teste</button>
                     </form>
                     <form method="POST" action="/admin/magazines/publish">
                         <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
                         <button type="submit" class="btn btn-primary w-100" onclick="return confirm('Publicar de verdade e enviar newsletter para TODOS os assinantes?')"><i class="bi bi-send"></i> Publicar (Oficial)</button>
                     </form>
-                    <?php endif; ?>
-                    <a href="/admin/magazines/preview/<?= $magazine['id'] ?>" class="btn btn-outline-info" target="_blank"><i class="bi bi-eye"></i> Preview</a>
-                    <?php if (\App\Core\Auth::hasPermission('magazines.edit')): ?>
-                    <form method="POST" action="/admin/magazines/generate-pdf" class="mt-2" id="genPdfForm">
+                </div>
+                <?php endif; ?>
+
+                <!-- Estrutura de páginas (opcional) — recolhido para não poluir -->
+                <?php if (!$hasGuestColumn || !$hasStories): ?>
+                <details class="mt-2">
+                    <summary class="text-muted small" style="cursor:pointer;">Adicionar páginas especiais</summary>
+                    <div class="d-grid gap-2 mt-2">
+                        <?php if (!$hasGuestColumn): ?>
+                        <form method="POST" action="/admin/magazines/add-guest-column">
+                            <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm w-100" onclick="return confirm('Adicionar página de Coluna do Convidado?')"><i class="bi bi-person-plus"></i> Coluna do Convidado</button>
+                        </form>
+                        <?php endif; ?>
+                        <?php if (!$hasStories): ?>
+                        <form method="POST" action="/admin/magazines/add-construction-stories">
+                            <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm w-100" onclick="return confirm('Adicionar página de Causos de Obra?')"><i class="bi bi-chat-quote"></i> Causos de Obra</button>
+                        </form>
+                        <?php endif; ?>
+                    </div>
+                </details>
+                <?php endif; ?>
+
+                <script>
+                (function () {
+                    var form = document.getElementById('genPdfForm');
+                    if (!form) return;
+                    form.addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        var btn = document.getElementById('genPdfBtn');
+                        var original = btn.innerHTML;
+                        btn.disabled = true;
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando PDF...';
+                        fetch(form.action, {
+                            method: 'POST',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                            body: new FormData(form)
+                        })
+                        .then(function (r) { return r.json(); })
+                        .then(function (res) {
+                            if (res && res.success) {
+                                btn.innerHTML = '<i class="bi bi-check-lg"></i> PDF gerado!';
+                                btn.classList.add('btn-success');
+                                setTimeout(function () { window.location.reload(); }, 1200);
+                            } else {
+                                alert((res && res.error) || 'Não foi possível gerar o PDF.');
+                                btn.disabled = false; btn.innerHTML = original;
+                            }
+                        })
+                        .catch(function () {
+                            alert('Erro de conexão ao gerar o PDF.');
+                            btn.disabled = false; btn.innerHTML = original;
+                        });
+                    });
+                })();
+                </script>
+
+                <?php else: ?>
+
+                <!-- Revista PUBLICADA: reverter para poder editar/regerar -->
+                <?php if ($canPublish): ?>
+                <form method="POST" action="/admin/magazines/unpublish" class="d-grid mb-2">
+                    <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm" onclick="return confirm('Reverter para Aprovada? A revista sai do ar para o público até publicar de novo.')"><i class="bi bi-arrow-counterclockwise"></i> Reverter Publicação</button>
+                </form>
+                <?php endif; ?>
+                <div class="d-grid gap-2">
+                    <a href="/admin/magazines/preview/<?= $magazine['id'] ?>" class="btn btn-outline-info btn-sm" target="_blank"><i class="bi bi-eye"></i> Ver Preview</a>
+                    <?php if ($canEdit): ?>
+                    <form method="POST" action="/admin/magazines/generate-pdf" id="genPdfForm">
                         <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
-                        <button type="submit" class="btn btn-outline-dark w-100" id="genPdfBtn">
-                            <i class="bi bi-file-earmark-pdf"></i> Gerar PDF da Revista
-                        </button>
+                        <button type="submit" class="btn btn-outline-dark btn-sm w-100" id="genPdfBtn"><i class="bi bi-file-earmark-pdf"></i> Regerar PDF</button>
                     </form>
-                    <small class="text-muted d-block mt-1">O PDF é gerado no servidor (Chrome na nuvem) e fica idêntico em qualquer dispositivo — é o que os leitores veem. Pode levar alguns segundos.</small>
                     <script>
                     (function () {
                         var form = document.getElementById('genPdfForm');
@@ -58,51 +151,17 @@
                             var btn = document.getElementById('genPdfBtn');
                             var original = btn.innerHTML;
                             btn.disabled = true;
-                            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando PDF...';
-                            fetch(form.action, {
-                                method: 'POST',
-                                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-                                body: new FormData(form)
-                            })
+                            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando...';
+                            fetch(form.action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: new FormData(form) })
                             .then(function (r) { return r.json(); })
                             .then(function (res) {
-                                if (res && res.success) {
-                                    btn.innerHTML = '<i class="bi bi-check-lg"></i> PDF gerado!';
-                                    btn.classList.remove('btn-outline-dark');
-                                    btn.classList.add('btn-success');
-                                    setTimeout(function () { btn.disabled = false; btn.classList.remove('btn-success'); btn.classList.add('btn-outline-dark'); btn.innerHTML = original; }, 3000);
-                                } else {
-                                    alert((res && res.error) || 'Não foi possível gerar o PDF.');
-                                    btn.disabled = false; btn.innerHTML = original;
-                                }
+                                if (res && res.success) { btn.innerHTML = '<i class="bi bi-check-lg"></i> PDF gerado!'; btn.classList.add('btn-success'); setTimeout(function(){ window.location.reload(); }, 1200); }
+                                else { alert((res && res.error) || 'Não foi possível gerar o PDF.'); btn.disabled = false; btn.innerHTML = original; }
                             })
-                            .catch(function () {
-                                alert('Erro de conexão ao gerar o PDF.');
-                                btn.disabled = false; btn.innerHTML = original;
-                            });
+                            .catch(function () { alert('Erro de conexão ao gerar o PDF.'); btn.disabled = false; btn.innerHTML = original; });
                         });
                     })();
                     </script>
-                    <?php endif; ?>
-                    <?php
-                    $hasGuestColumn = false;
-                    foreach ($pages as $p) { if ($p['layout_type'] === 'guest_column') { $hasGuestColumn = true; break; } }
-                    if (!$hasGuestColumn):
-                    ?>
-                    <form method="POST" action="/admin/magazines/add-guest-column" class="mt-2">
-                        <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
-                        <button type="submit" class="btn btn-outline-secondary w-100" onclick="return confirm('Adicionar página de Coluna do Convidado?')"><i class="bi bi-person-plus"></i> Adicionar Coluna do Convidado</button>
-                    </form>
-                    <?php endif; ?>
-                    <?php
-                    $hasStories = false;
-                    foreach ($pages as $p) { if ($p['layout_type'] === 'construction_stories') { $hasStories = true; break; } }
-                    if (!$hasStories):
-                    ?>
-                    <form method="POST" action="/admin/magazines/add-construction-stories" class="mt-2">
-                        <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
-                        <button type="submit" class="btn btn-outline-warning w-100" onclick="return confirm('Adicionar página de Causos de Obra?')"><i class="bi bi-chat-quote"></i> Adicionar Causos de Obra</button>
-                    </form>
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>

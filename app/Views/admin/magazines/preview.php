@@ -11,24 +11,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <!-- Viewport definida por JS conforme o dispositivo (roda ANTES do render):
-         - No celular (tela real estreita): width=595 faz o navegador encaixar a
-           folha de 595px na largura da tela, de forma nativa e estável (não
-           "zoa" ao rolar como o zoom/transform via JS faziam).
-         - No desktop: width=device-width, para a folha A4 aparecer em tamanho
-           real com a paginação normal.
-         Usa screen.width (largura física do aparelho), que não é afetada pela
-         própria meta viewport. -->
-    <script>
-        (function () {
-            var real = Math.min(window.screen.width || 9999, window.innerWidth || 9999);
-            var content = real < 620 ? 'width=595' : 'width=device-width, initial-scale=1.0';
-            var m = document.createElement('meta');
-            m.name = 'viewport';
-            m.content = content;
-            document.head.appendChild(m);
-        })();
-    </script>
+    <meta name="viewport" content="width=615, shrink-to-fit=no">
     <base href="<?= $baseUrl ?>/">
     <title>Preview - <?= htmlspecialchars($magazine['title']) ?></title>
     <link rel="icon" href="/assets/images/wp/2023/01/cropped-favicon-1-32x32.png" />
@@ -41,14 +24,8 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         body.site-embed .preview{padding:0}
         .page{background:#fff;width:595px;min-height:842px;margin:0 auto 25px;position:relative;overflow:visible;box-shadow:0 8px 40px rgba(0,0,0,0.4);page-break-before:always;page-break-inside:avoid}
         body.site-embed .page{box-shadow:0 2px 15px rgba(0,0,0,0.1);margin-bottom:15px}
-        /* A paginação é feita NO SERVIDOR: cada .page já vem com o conteúdo que
-           cabe numa folha. TODAS as páginas mantêm a altura fixa de A4 (842px)
-           em qualquer dispositivo, para ficarem com o mesmo tamanho padrão de
-           revista (mesmo as com pouco conteúdo). No mobile, a meta viewport
-           (width=595) escala a folha inteira. Só removemos o padding lateral. */
         @media(max-width:620px){
-            body{padding:0}
-            .preview{padding:0}
+            body{overflow-x:auto}
         }
 
         /* ===== CAPA ===== */
@@ -135,12 +112,11 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         .pg-stories .story-item .story-title{font-weight:700;font-size:0.82rem;color:#111;margin-bottom:4px}
         .pg-stories .story-item .story-text{font-size:0.72rem;line-height:1.75;color:#333;text-align:justify}
     </style>
-    <?php $pdfMode = !empty($_GET['pdf']); // renderização limpa para gerar o PDF (Browserless) ?>
+    <?php $pdfMode = !empty($_GET['pdf']); // render limpo para o Browserless gerar o PDF ?>
     <?php if ($pdfMode): ?>
     <style>
-        /* MODO PDF: só as folhas da revista, sem barra, sem fundo cinza, sem
-           padding nem sombra/margem entre páginas. Evita página vazia no topo e
-           faixas laterais no PDF gerado pelo Browserless. */
+        /* MODO PDF: só as folhas da revista — sem barra, sem fundo cinza, sem
+           padding/margem/sombra. Evita página vazia no topo e faixas laterais. */
         body, body.site-embed { background:#fff !important; padding:0 !important; margin:0 !important; }
         #site-nav { display:none !important; }
         .preview, body.site-embed .preview { max-width:none !important; width:595px !important; margin:0 !important; padding:0 !important; }
@@ -150,7 +126,7 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </head>
 <?php if (!isset($isAdmin)) { $isAdmin = false; try { $isAdmin = \App\Core\Auth::check(); } catch(\Exception $e) {} } ?>
 <body<?= $isAdmin ? '' : ' class="site-embed"' ?>>
-<?php if (!$isAdmin && !$pdfMode): ?>
+<?php if (!$isAdmin && empty($_GET['pdf'])): ?>
 <div id="site-nav" style="background:#0a1628;padding:14px 15px 12px;margin-bottom:15px;">
     <div style="max-width:595px;margin:0 auto;">
         <a href="/revista" style="font-family:'Inter',sans-serif;font-size:11px;color:rgba(255,255,255,0.6);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:6px;">
@@ -235,65 +211,9 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </div>
 
 <?php elseif ($layout === 'guest_column'): ?>
-<!-- COLUNA DO CONVIDADO — paginação feita NO SERVIDOR (idêntica em todo dispositivo) -->
-<?php
-    $guestContent = $page['content'] ?? '';
-    $guestImage = $page['image_url_2'] ?? '';
-    $guestImageCaption = $page['image_caption'] ?? '';
-    $hasMarker = stripos($guestContent, '[imagem]') !== false;
-
-    // Monta o HTML da imagem embutida (usado uma única vez, na 1ª página).
-    $guestImageHtml = '';
-    if ($guestImage) {
-        $guestImageHtml = '<div style="margin:10px 0;text-align:center;">'
-            . '<img src="' . htmlspecialchars($guestImage) . '" alt="' . htmlspecialchars($guestImageCaption) . '" style="max-width:100%;max-height:140px;border-radius:4px;object-fit:contain;">';
-        if ($guestImageCaption !== '') {
-            $guestImageHtml .= '<p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;">' . htmlspecialchars($guestImageCaption) . '</p>';
-        }
-        $guestImageHtml .= '</div>';
-    }
-
-    // Extrai os parágrafos. Com marcador [imagem], o texto ANTES do marcador +
-    // a imagem ficam juntos no começo; o texto depois entra na paginação.
-    if ($guestImage && $hasMarker) {
-        $guestParts = preg_split('/\[imagem\]/i', $guestContent, 2);
-        $beforeImg = array_values(array_filter(array_map('trim', explode("\n", $guestParts[0] ?? '')), fn($p) => $p !== ''));
-        $afterImg  = array_values(array_filter(array_map('trim', explode("\n", $guestParts[1] ?? '')), fn($p) => $p !== ''));
-    } else {
-        $beforeImg = array_values(array_filter(array_map('trim', explode("\n", $guestContent)), fn($p) => $p !== ''));
-        $afterImg  = [];
-    }
-
-    // Altura reservada na 1ª página: header + label + author-box (~200px) + a
-    // imagem embutida quando ela aparece já no topo (sem marcador vai no fim).
-    $reserved = 200;
-    if ($guestImage && $hasMarker) {
-        $reserved += 170; // imagem no meio-topo
-    }
-
-    // Junta os parágrafos numa sequência única para paginar.
-    // Se a imagem vai no FINAL (sem marcador), reservamos altura dela na última
-    // fatia adicionando um "peso" ao final.
-    $allParas = $beforeImg;
-    if (!empty($afterImg)) {
-        // marca visualmente onde entra a imagem: os parágrafos "antes" ocupam a
-        // 1ª página junto da imagem; depois seguem normalmente.
-        $allParas = array_merge($beforeImg, $afterImg);
-    }
-
-    $paged = \App\Services\MagazinePaginator::paginateParagraphs($allParas, $reserved);
-    if (empty($paged)) { $paged = [[]]; }
-
-    $guestTotalPages = count($paged);
-    foreach ($paged as $gp => $guestParasOfPage):
-        $isFirstGuestPage = ($gp === 0);
-        // A imagem embutida (com marcador) aparece só na 1ª página, entre os
-        // parágrafos "antes" e o restante. Para simplificar e ser determinístico,
-        // colocamos a imagem no fim da 1ª página.
-?>
-<div class="page pg-guest"<?= $isFirstGuestPage ? '' : ' data-continuation="true"' ?>>
+<!-- COLUNA DO CONVIDADO -->
+<div class="page pg-guest">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <?php if ($isFirstGuestPage): ?>
     <div class="column-label"><?= htmlspecialchars($page['caption'] ?? 'Coluna do Convidado') ?></div>
     <div class="author-box">
         <?php if($img1): ?>
@@ -306,24 +226,46 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
             <div class="author-role"><?= htmlspecialchars($page['subtitle'] ?? 'Cargo / Empresa') ?></div>
         </div>
     </div>
-    <?php endif; ?>
     <div class="column-content">
-        <?php foreach ($guestParasOfPage as $gpar): ?>
-            <p><?= htmlspecialchars($gpar) ?></p>
-        <?php endforeach; ?>
         <?php
-            // Imagem embutida: com marcador vai na 1ª página; sem marcador, na última.
-            if ($guestImageHtml !== '') {
-                $putImageHere = ($hasMarker && $isFirstGuestPage)
-                    || (!$hasMarker && $gp === $guestTotalPages - 1);
-                if ($putImageHere) {
-                    echo $guestImageHtml;
-                }
-            }
-        ?>
+        $guestContent = $page['content'] ?? '';
+        $guestImage = $page['image_url_2'] ?? '';
+        $guestImageCaption = $page['image_caption'] ?? '';
+        $hasMarker = stripos($guestContent, '[imagem]') !== false;
+
+        if ($guestImage && $hasMarker):
+            // Divide o texto no marcador [imagem]
+            $parts = preg_split('/\[imagem\]/i', $guestContent, 2);
+            // Parágrafos antes da imagem
+            foreach(explode("\n", $parts[0] ?? '') as $p): if(trim($p)): ?>
+                <p><?= htmlspecialchars(trim($p)) ?></p>
+            <?php endif; endforeach; ?>
+            <div style="margin:10px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:140px;border-radius:4px;object-fit:contain;">
+                <?php if ($guestImageCaption): ?>
+                    <p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p>
+                <?php endif; ?>
+            </div>
+            <?php // Parágrafos depois da imagem
+            foreach(explode("\n", $parts[1] ?? '') as $p): if(trim($p)): ?>
+                <p><?= htmlspecialchars(trim($p)) ?></p>
+            <?php endif; endforeach;
+        else:
+            // Sem marcador: texto normal + imagem no final (se tiver)
+            foreach(explode("\n", $guestContent) as $p): if(trim($p)): ?>
+                <p><?= htmlspecialchars(trim($p)) ?></p>
+            <?php endif; endforeach;
+            if ($guestImage): ?>
+            <div style="margin:10px 0;text-align:center;">
+                <img src="<?= $guestImage ?>" alt="<?= htmlspecialchars($guestImageCaption) ?>" style="max-width:100%;max-height:140px;border-radius:4px;object-fit:contain;">
+                <?php if ($guestImageCaption): ?>
+                    <p style="font-size:0.55rem;color:#888;margin-top:4px;font-style:italic;"><?= htmlspecialchars($guestImageCaption) ?></p>
+                <?php endif; ?>
+            </div>
+            <?php endif;
+        endif; ?>
     </div>
 </div>
-<?php endforeach; ?>
 
 <?php elseif ($layout === 'internal_01'): ?>
 <!-- PÁG INTERNA 01: Imagem full topo + texto 2 colunas com imagem -->
@@ -356,51 +298,23 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
 </div>
 
 <?php elseif ($layout === 'internal_03'): ?>
-<!-- PÁG INTERNA 03: Título bold + subtítulo + texto full + 2 imagens (paginado no servidor) -->
-<?php
-    $i03Paras = array_values(array_filter(array_map('trim', explode("\n", $page['content'] ?? '')), fn($p) => $p !== ''));
-    // Reserva na 1ª página: título (~55) + subtítulo (~30 se houver).
-    $i03Reserved = 55 + (($page['subtitle'] ?? '') !== '' ? 30 : 0);
-    // As imagens (260px) + caption ficam na ÚLTIMA página; reserva espaço lá.
-    $i03HasImages = ($img1 || $img2 || $showImages);
-    $i03LastReserved = $i03HasImages ? 290 : 0;
-    $i03Paged = \App\Services\MagazinePaginator::paginateParagraphs($i03Paras, $i03Reserved, $i03LastReserved);
-    if (empty($i03Paged)) { $i03Paged = [[]]; }
-    $i03Total = count($i03Paged);
-    foreach ($i03Paged as $i03i => $i03PageParas):
-        $i03First = ($i03i === 0);
-        $i03Last  = ($i03i === $i03Total - 1);
-?>
-<div class="page pg-int"<?= $i03First ? '' : ' data-continuation="true"' ?>>
+<!-- PÁG INTERNA 03: Título bold + subtítulo + texto full + 2 imagens -->
+<div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <?php if ($i03First): ?>
-        <div class="title-big"><?= htmlspecialchars($page['title'] ?? '') ?></div>
-        <?php if($page['subtitle']??''): ?><div class="subtitle"><?= htmlspecialchars($page['subtitle']) ?></div><?php endif; ?>
-    <?php endif; ?>
-    <?php foreach($i03PageParas as $p): ?><p class="text"><?= htmlspecialchars($p) ?></p><?php endforeach; ?>
-    <?php if ($i03Last): ?>
-        <div style="display:flex;gap:10px;margin-top:15px">
-            <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
-            <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
-        </div>
-        <?php if($page['caption']??''): ?><div class="caption" style="margin-top:8px"><?= htmlspecialchars($page['caption']) ?></div><?php endif; ?>
-    <?php endif; ?>
+    <div class="title-big"><?= htmlspecialchars($page['title'] ?? '') ?></div>
+    <?php if($page['subtitle']??''): ?><div class="subtitle"><?= htmlspecialchars($page['subtitle']) ?></div><?php endif; ?>
+    <?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
+    <div style="display:flex;gap:10px;margin-top:15px">
+        <?php if($img1): ?><img src="<?= $img1 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
+        <?php if($img2): ?><img src="<?= $img2 ?>" class="img-half" style="height:260px" alt=""><?php elseif($showImages): ?><div class="img-half img-placeholder" style="height:260px">IMAGEM</div><?php endif; ?>
+    </div>
+    <?php if($page['caption']??''): ?><div class="caption" style="margin-top:8px"><?= htmlspecialchars($page['caption']) ?></div><?php endif; ?>
 </div>
-<?php endforeach; ?>
 
 <?php elseif ($layout === 'internal_04'): ?>
-<!-- PÁG INTERNA 04: Imagem overlay no topo + texto full (paginado no servidor) -->
-<?php
-    $i04Paras = array_values(array_filter(array_map('trim', explode("\n", $page['content'] ?? '')), fn($p) => $p !== ''));
-    // Reserva na 1ª página: a imagem com overlay ocupa ~435px.
-    $i04Paged = \App\Services\MagazinePaginator::paginateParagraphs($i04Paras, 435);
-    if (empty($i04Paged)) { $i04Paged = [[]]; }
-    foreach ($i04Paged as $i04i => $i04PageParas):
-        $i04First = ($i04i === 0);
-?>
-<div class="page pg-int"<?= $i04First ? '' : ' data-continuation="true"' ?>>
+<!-- PÁG INTERNA 04: Imagem full com overlay + título sobreposto -->
+<div class="page pg-int">
     <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <?php if ($i04First): ?>
     <div class="overlay-section">
         <?php if($img1): ?><img src="<?= $img1 ?>" alt=""><?php else: ?><div class="img-placeholder" style="width:100%;height:100%">IMAGEM</div><?php endif; ?>
         <div class="ov">
@@ -408,10 +322,8 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
             <?php if($page['subtitle']??''): ?><p><?= htmlspecialchars($page['subtitle']) ?></p><?php endif; ?>
         </div>
     </div>
-    <?php endif; ?>
-    <?php foreach($i04PageParas as $p): ?><p class="text"><?= htmlspecialchars($p) ?></p><?php endforeach; ?>
+    <?php foreach(explode("\n",$page['content']??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
 </div>
-<?php endforeach; ?>
 
 <?php elseif ($layout === 'internal_05'): ?>
 <!-- PÁG INTERNA 05: 2 imagens + 2 colunas texto -->
@@ -437,24 +349,9 @@ if (empty($magazineLogo)) $magazineLogo = '/assets/images/wp/2024/11/logo-brooks
         <div class="col"><?php foreach(explode("\n",$cols[1]??'') as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?></div>
     </div>
     <?php else: ?>
-        <?php
-        // Coluna única (texto longo, sem imagens): pode estourar → paginação
-        // server-side. A 1ª página já tem título+subtítulo (~85px reservados);
-        // as continuações recebem só o texto restante.
-        $i05Paras = array_values(array_filter(array_map('trim', explode("\n", str_replace('|||', "\n", $page['content'] ?? ''))), fn($p) => $p !== ''));
-        $i05Paged = \App\Services\MagazinePaginator::paginateParagraphs($i05Paras, 130);
-        // Só a 1ª fatia entra aqui; as demais viram páginas de continuação
-        // logo abaixo (fora deste .page).
-        $i05Rest = array_slice($i05Paged, 1);
-        foreach (($i05Paged[0] ?? []) as $p): ?><p class="text"><?= htmlspecialchars($p) ?></p><?php endforeach; ?>
+        <?php foreach(explode("\n", str_replace('|||', "\n", $page['content']??'')) as $p): if(trim($p)): ?><p class="text"><?= htmlspecialchars(trim($p)) ?></p><?php endif; endforeach; ?>
     <?php endif; ?>
 </div>
-<?php if (!$usarDuasColunas && !empty($i05Rest)): foreach ($i05Rest as $i05PageParas): ?>
-<div class="page pg-int" data-continuation="true">
-    <div class="hdr"><div class="logo-sm">BROO<span class="ck">K</span>S<small>CONSTRUTORA</small></div><div class="pn"><?= $displayPageNum ?></div></div>
-    <?php foreach($i05PageParas as $p): ?><p class="text"><?= htmlspecialchars($p) ?></p><?php endforeach; ?>
-</div>
-<?php endforeach; endif; ?>
 
 <?php elseif ($layout === 'internal_06'): ?>
 <!-- PÁG INTERNA 06 v2: 2 imgs topo + img3 esquerda + texto em 2 colunas -->
@@ -617,53 +514,73 @@ function generatePDF() {
 
 // Sistema de paginação e ajuste de páginas
 document.addEventListener('DOMContentLoaded', function() {
-    // O scale no mobile é feito pela meta viewport (width=595) — de forma nativa
-    // e estável. Nada de zoom/transform via JS, que "zoavam" o layout ao rolar
-    // no Safari iOS.
-
+    // Mobile: escala a revista pra caber na tela (mantém layout desktop)
     var PAGE_HEIGHT = 842;
+    var PAGE_PADDING = 60; // top + bottom padding aproximado
+    var MAX_CONTENT = PAGE_HEIGHT - PAGE_PADDING;
 
-    // ATENÇÃO: a paginação NÃO é mais feita por JavaScript.
-    // Ela é calculada NO SERVIDOR (App\Services\MagazinePaginator), que entrega
-    // o HTML já dividido em páginas — idêntico em Chrome, Safari e desktop.
-    // Como cada página já cabe numa folha, TODAS ficam com a altura fixa de A4
-    // (842px), em todos os dispositivos — assim têm o mesmo tamanho padrão,
-    // mesmo as que têm pouco conteúdo (sobra espaço embaixo, como numa revista).
     function processPages() {
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         var allPages = Array.from(document.querySelectorAll('.preview .page'));
-
+        
         allPages.forEach(function(page) {
-            var isCover = page.classList.contains('pg-cover') || page.classList.contains('pg-back');
+            // Ignora capas e contracapas
+            if (page.classList.contains('pg-cover') || page.classList.contains('pg-back')) {
+                page.style.height = PAGE_HEIGHT + 'px';
+                page.style.overflow = 'hidden';
+                return;
+            }
 
-            // Rede de segurança (todas as páginas de conteúdo): se o conteúdo
-            // ainda transbordar a folha, reduz levemente a fonte do texto até
-            // caber. NÃO move blocos entre páginas (isso é o que divergia entre
-            // navegadores) — só encolhe a fonte, que é determinístico e seguro.
-            // Cobre também a diferença de renderização do Safari iOS, que às
-            // vezes deixa o texto 1 linha mais alto que o Chrome.
-            if (!isCover) {
+            // iOS: usa paginação por estimativa (não confia em scrollHeight)
+            if (isIOS) {
+                paginateByEstimate(page);
+                return;
+            }
+
+            // Para pg-guest: força recalcular altura real
+            if (page.classList.contains('pg-guest')) {
                 page.style.height = 'auto';
+                page.style.minHeight = '0';
                 page.style.overflow = 'visible';
-                var guard = 0;
-                while (page.scrollHeight > PAGE_HEIGHT && guard < 12) {
-                    page.querySelectorAll('.text, .text-sm, p, .story-text').forEach(function(el) {
-                        var cur = parseFloat(window.getComputedStyle(el).fontSize) || 11;
+                void page.offsetHeight;
+            }
+
+            // Se a página cabe, apenas fixa a altura
+            if (page.scrollHeight <= PAGE_HEIGHT + 5) {
+                page.style.height = PAGE_HEIGHT + 'px';
+                page.style.overflow = 'hidden';
+                return;
+            }
+
+            // Primeiro tenta reduzir levemente a fonte pra caber (max 4 tentativas)
+            // Não reduz fonte na coluna do convidado (pg-guest)
+            if (!page.classList.contains('pg-guest')) {
+                var attempts = 0;
+                while (page.scrollHeight > PAGE_HEIGHT + 2 && attempts < 4) {
+                    var textEls = page.querySelectorAll('.text, .text-sm, p');
+                    textEls.forEach(function(el) {
+                        var cur = parseFloat(window.getComputedStyle(el).fontSize);
                         el.style.fontSize = (cur - 0.3) + 'px';
                     });
-                    guard++;
+                    attempts++;
                 }
             }
 
-            page.style.height = PAGE_HEIGHT + 'px';
-            page.style.overflow = 'hidden';
+            // Se coube com a redução, fixa
+            if (page.scrollHeight <= PAGE_HEIGHT + 5) {
+                page.style.height = PAGE_HEIGHT + 'px';
+                page.style.overflow = 'hidden';
+                return;
+            }
+
+            // Se ainda não coube, pagina
+            paginatePage(page);
         });
 
+        // Após paginação, renumera todas as páginas internas
         renumberPages();
     }
 
-    // LEGADO — não é mais chamado. A paginação agora é feita no servidor
-    // (App\Services\MagazinePaginator). Mantido apenas para referência; pode ser
-    // removido com segurança numa limpeza futura.
     function paginatePage(page) {
         var header = page.querySelector('.hdr');
         var headerHTML = header ? header.outerHTML : '';
@@ -1022,34 +939,11 @@ document.addEventListener('DOMContentLoaded', function() {
     var loaded = 0;
     var total = images.length;
 
-    var paginated = false;
-    // Executa a paginação UMA única vez (protege contra os múltiplos gatilhos:
-    // imagens, fallback de 3s, fonts.ready e o setTimeout de segurança).
-    function runPagination() {
-        if (paginated) return;
-        paginated = true;
-        fitTitles();
-        processPages();
-    }
-
-    function finalize() {
-        // Espera as FONTES carregarem antes de medir/paginar. Se paginarmos com a
-        // fonte fallback (Inter ainda não carregou), a altura do texto é medida
-        // errada e o Safari iOS acha que "cabe tudo", juntando o que deveria ser
-        // 2 páginas numa só. document.fonts.ready garante a medição correta.
-        if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
-            document.fonts.ready.then(runPagination);
-            // Rede de segurança: se fonts.ready demorar/não resolver, roda assim mesmo.
-            setTimeout(runPagination, 1500);
-        } else {
-            runPagination();
-        }
-    }
-
     function check() {
         loaded++;
         if (loaded >= total) {
-            finalize();
+            fitTitles();
+            processPages();
         }
     }
 
@@ -1078,7 +972,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (total === 0) {
-        finalize();
+        fitTitles();
+        processPages();
     } else {
         images.forEach(function(img) {
             if (img.complete) check();
@@ -1087,12 +982,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.addEventListener('error', check);
             }
         });
-        setTimeout(finalize, 3000);
+        setTimeout(function() { fitTitles(); processPages(); }, 3000);
     }
 
-    // Sem download automático de PDF. O PDF é gerado só quando o usuário clica
-    // no botão "Baixar PDF" (generatePDF). Rolar/visualizar a revista não dispara
-    // o html2canvas — que era pesado no iPhone e bagunçava o layout ao rolar.
+    // Sem download automático de PDF. O PDF é gerado no servidor (Browserless)
+    // pelo botão do painel, e o leitor vê pelo visualizador do site.
 });
 </script>
 

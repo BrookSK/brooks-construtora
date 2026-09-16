@@ -71,6 +71,9 @@ class SettingsController extends Controller
 
             // Revista - PDF via Browserless (Chrome na nuvem gera o PDF fiel)
             'browserless_token' => Setting::get('browserless_token', ''),
+            'browserless_monthly_limit' => Setting::get('browserless_monthly_limit', '800'),
+            'browserless_usage_count' => Setting::get('browserless_usage_count', '0'),
+            'browserless_usage_month' => Setting::get('browserless_usage_month', ''),
 
             // Site
             'site_title' => Setting::get('site_title', 'Brooks Construtora'),
@@ -109,7 +112,7 @@ class SettingsController extends Controller
             'notification_emails',
             'magazine_webhook_url', 'magazine_webhook_phone', 'magazine_webhook_phone_name',
             'magazine_test_emails', 'magazine_test_phones', 'wkhtmltopdf_path',
-            'browserless_token',
+            'browserless_token', 'browserless_monthly_limit',
             'site_title', 'site_description', 'site_phone', 'site_email',
             'site_address', 'site_instagram', 'site_facebook',
             'site_linkedin', 'site_whatsapp',
