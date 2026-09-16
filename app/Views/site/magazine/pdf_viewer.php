@@ -101,7 +101,15 @@ $esc = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES, 'UTF-8');
         // demais no celular.
         var DPR = Math.min(window.devicePixelRatio || 1, 2);
 
-        pdfjsLib.getDocument(PDF_URL).promise.then(function (pdf) {
+        pdfjsLib.getDocument({
+            url: PDF_URL,
+            // CMaps e fontes padrão locais: sem eles o PDF.js decodifica alguns
+            // espaços de cor/imagens errado (a capa saía com tom rosa/magenta,
+            // mesmo o PDF estando certo no download).
+            cMapUrl: '/assets/pdfjs/cmaps/',
+            cMapPacked: true,
+            standardFontDataUrl: '/assets/pdfjs/standard_fonts/'
+        }).promise.then(function (pdf) {
             if (loadingEl) loadingEl.style.display = 'none';
 
             var renderChain = Promise.resolve();
@@ -116,7 +124,7 @@ $esc = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES, 'UTF-8');
                             var viewport = page.getViewport({ scale: scale * DPR });
 
                             var canvas = document.createElement('canvas');
-                            var ctx = canvas.getContext('2d');
+                            var ctx = canvas.getContext('2d', { alpha: false });
                             canvas.width = Math.floor(viewport.width);
                             canvas.height = Math.floor(viewport.height);
                             // Largura CSS = largura do container (o height escala junto).
@@ -125,7 +133,8 @@ $esc = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES, 'UTF-8');
 
                             return page.render({
                                 canvasContext: ctx,
-                                viewport: viewport
+                                viewport: viewport,
+                                background: '#ffffff'
                             }).promise;
                         });
                     });
