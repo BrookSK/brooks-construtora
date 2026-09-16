@@ -45,7 +45,12 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
             
             <div class="grid grid--3 reveal" style="gap: var(--space-xl);">
                 <?php foreach ($magazines as $mag): ?>
-                    <a href="/revista/ver/<?= $mag['id'] ?>" class="magazine-card">
+                    <a href="/revista/ver/<?= $mag['id'] ?>" class="magazine-card" style="position:relative;">
+                        <?php if (($mag['status'] ?? '') === 'test'): ?>
+                            <span style="position:absolute;top:10px;left:10px;z-index:2;background:#e63946;color:#fff;font-size:11px;font-weight:700;letter-spacing:0.5px;padding:5px 10px;border-radius:5px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+                                MODO TESTE &middot; só você vê
+                            </span>
+                        <?php endif; ?>
                         <div class="magazine-card__cover">
                             <?php if (!empty($mag['cover_image'])): ?>
                                 <img src="<?= htmlspecialchars($mag['cover_image']) ?>" alt="<?= htmlspecialchars($mag['title']) ?>" loading="lazy">
@@ -60,8 +65,9 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                                 <span class="magazine-card__category"><?= htmlspecialchars($mag['topic_title']) ?></span>
                             <?php endif; ?>
                             <h3 class="magazine-card__title"><?= htmlspecialchars($mag['title']) ?></h3>
-                            <?php if (!empty($mag['published_at'])): ?>
-                                <span class="magazine-card__date"><?= date('d/m/Y', strtotime($mag['published_at'])) ?></span>
+                            <?php $magDate = $mag['published_at'] ?? $mag['created_at'] ?? ''; ?>
+                            <?php if (!empty($magDate)): ?>
+                                <span class="magazine-card__date"><?= date('d/m/Y', strtotime($magDate)) ?></span>
                             <?php endif; ?>
                         </div>
                     </a>

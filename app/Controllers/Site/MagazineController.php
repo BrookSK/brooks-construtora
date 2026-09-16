@@ -48,16 +48,30 @@ class MagazineController extends Controller
 
     public function index(): void
     {
-        // A listagem pública mostra apenas revistas publicadas.
-        // Revistas em teste são acessadas somente pelo link direto (com token).
+        // A listagem pública mostra apenas revistas PUBLICADAS.
+        // Exceção: quando há um usuário logado (admin/PIN), as revistas em
+        // modo TESTE também aparecem — assim dá para conferir como a listagem
+        // e a revista aparecerão para o cliente ANTES de publicar de verdade.
+        // Para o público (não logado), revistas em teste continuam invisíveis.
+        $isStaff = $this->isLoggedIn();
         try {
-            $magazines = \App\Core\Database::fetchAll(
-                "SELECT m.*, mt.title as topic_title 
-                 FROM magazines m 
-                 LEFT JOIN magazine_topics mt ON m.topic_id = mt.id 
-                 WHERE m.status = 'published' 
-                 ORDER BY m.published_at DESC"
-            );
+            if ($isStaff) {
+                $magazines = \App\Core\Database::fetchAll(
+                    "SELECT m.*, mt.title as topic_title
+                     FROM magazines m
+                     LEFT JOIN magazine_topics mt ON m.topic_id = mt.id
+                     WHERE m.status IN ('published', 'test')
+                     ORDER BY (m.status = 'test') DESC, COALESCE(m.published_at, m.created_at) DESC"
+                );
+            } else {
+                $magazines = \App\Core\Database::fetchAll(
+                    "SELECT m.*, mt.title as topic_title
+                     FROM magazines m
+                     LEFT JOIN magazine_topics mt ON m.topic_id = mt.id
+                     WHERE m.status = 'published'
+                     ORDER BY m.published_at DESC"
+                );
+            }
         } catch (\Exception $e) {
             $magazines = [];
         }

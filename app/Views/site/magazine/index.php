@@ -44,7 +44,10 @@
 								<div class="col-inner">
 									<a href="<?= $prefix ?>/revista/ver/<?= $mag['id'] ?>" style="text-decoration: none; color: inherit;">
 										<div class="box has-hover box-default" style="margin-bottom: 20px;">
-											<div class="box-image" style="aspect-ratio: 3/4; overflow: hidden; border-radius: 4px; box-shadow: 0 5px 20px rgba(0,0,0,0.15);">
+											<div class="box-image" style="position: relative; aspect-ratio: 3/4; overflow: hidden; border-radius: 4px; box-shadow: 0 5px 20px rgba(0,0,0,0.15);">
+												<?php if (($mag['status'] ?? '') === 'test'): ?>
+													<span style="position:absolute;top:10px;left:10px;z-index:2;background:#e63946;color:#fff;font-size:11px;font-weight:700;padding:5px 10px;border-radius:5px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">MODO TESTE &middot; só você vê</span>
+												<?php endif; ?>
 												<?php if ($mag['cover_image']): ?>
 													<img src="<?= $mag['cover_image'] ?>" alt="<?= htmlspecialchars($mag['title']) ?>" style="width: 100%; height: 100%; object-fit: cover;" />
 												<?php else: ?>
@@ -55,7 +58,8 @@
 											</div>
 											<div class="box-text" style="padding: 15px 5px;">
 												<h5 style="margin: 0 0 5px; font-size: 1rem;"><?= htmlspecialchars($mag['topic_title'] ?? $mag['title']) ?></h5>
-												<p style="margin: 0; font-size: 0.85rem; color: #888;"><?= date('d/m/Y', strtotime($mag['published_at'])) ?></p>
+												<?php $magDate = $mag['published_at'] ?? $mag['created_at'] ?? ''; ?>
+												<p style="margin: 0; font-size: 0.85rem; color: #888;"><?= $magDate ? date('d/m/Y', strtotime($magDate)) : '' ?></p>
 											</div>
 										</div>
 									</a>
