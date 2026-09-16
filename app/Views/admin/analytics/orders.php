@@ -38,7 +38,7 @@ $aprovCat    = $rowsOf($data, '12. Aprovados por Categoria');
 // Nesta seção o valor fica na última coluna, então lemos direto da linha.
 $kpiAprovCat = '—';
 foreach ($aprovCat as $r) {
-    if (isset($r[0]) && trim((string)$r[0]) === 'TOTAL GERAL') {
+    if (isset($r[0]) && strpos((string)$r[0], 'TOTAL GERAL') === 0) {
         $kpiAprovCat = (string)($r[count($r) - 1] ?? '—');
         break;
     }
@@ -174,9 +174,10 @@ $renderTable = function (array $headers, array $rows, string $emptyMsg = 'Sem da
     </div>
     <div class="card-body">
         <p class="text-muted small mb-2">
-            Considera apenas pedidos <strong>aprovados</strong>. Para cada item usa o
-            <strong>menor valor real cotado</strong> entre os fornecedores (não é média),
-            somado por categoria do material.
+            Considera apenas pedidos <strong>aprovados</strong>. Lista cada material com o
+            <strong>preço unitário real aprovado</strong> (fornecedor vencedor do item).
+            O mesmo material aparece em mais de uma linha quando foi aprovado em pedidos
+            diferentes. Itens ficam agrupados pela categoria do material.
         </p>
         <div style="max-height:460px; overflow:auto;">
             <?php $renderTable($data['12. Aprovados por Categoria']['headers'] ?? [], $aprovCat); ?>

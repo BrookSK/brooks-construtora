@@ -389,37 +389,42 @@ class PurchaseOrderReportService
     }
 
     /**
-     * Seção 12: valor dos materiais já cotados e aprovados, tomando o MENOR
-     * preço cotado de cada item (valor real, não média), agrupado por
-     * categoria do material.
+     * Seção 12: materiais dos pedidos APROVADOS, listados um a um, com o
+     * preço UNITÁRIO real aprovado (do fornecedor vencedor de cada item).
+     *
+     * Não agrega por material: cada aparição do material em um pedido aprovado
+     * vira uma linha própria. Ex.: "Cinta lombar ergonômica" que aparece em
+     * dois pedidos aprovados gera duas linhas (uma com preço unitário de cada
+     * pedido). As linhas ficam agrupadas por categoria do material.
      *
      * Regras:
      *   - Considera apenas pedidos aprovados (status = 'approved').
-     *   - Para cada item, usa o MENOR total_price cotado entre os
-     *     fornecedores em purchase_order_item_prices.
+     *   - Usa o unit_price/total_price gravado no item (snapshot do fornecedor
+     *     aprovado, preenchido no momento da aprovação).
+     *   - Ignora itens sem preço (não cotados) e itens de estoque/transferência.
      *   - A categoria vem de material_categories.name (via materials.category_id).
-     *     Sem categoria, usa a classificação/especificação do item como rótulo.
+     *     Sem categoria, usa a classificação/especificação como rótulo.
      *
      * @param string $nc Cláusula que exclui cancelados (mantida por consistência).
      * @return array{headers:string[],rows:array<int,array<int,string>>}
      */
     private static function approvedByCategory(string $nc): array
     {
-        // A tabela de preços por fornecedor é obrigatória para esta seção.
-        if (empty(self::tableColumns('purchase_order_item_prices'))) {
+        $itemCols = self::tableColumns('purchase_order_items');
+        if (empty($itemCols)) {
             return [
                 'headers' => ['Aviso'],
-                'rows'    => [['A tabela purchase_order_item_prices não existe nesta base; sem dados de cotação por fornecedor.']],
+                'rows'    => [['A tabela purchase_order_items não existe nesta base.']],
             ];
         }
 
-        $itemCols = self::tableColumns('purchase_order_items');
+        $poCols   = self::tableColumns('purchase_orders');
         $matCols  = self::tableColumns('materials');
         $hasMaterials  = !empty($matCols);
         $hasCategories = !empty(self::tableColumns('material_categories'));
 
-        // Rótulo da categoria: preferimos a categoria cadastrada do material;
-        // depois classification/specification do item; senão "(sem categoria)".
+        // Rótulo da categoria: categoria cadastrada do material; depois
+        // classification/specification; senão "(sem categoria)".
         $categoriaParts = [];
         if ($hasMaterials && $hasCategories && in_array('category_id', $matCols, true)) {
             $categoriaParts[] = 'NULLIF(TRIM(mc.name), \'\')';
@@ -437,7 +442,6 @@ class PurchaseOrderReportService
             ? "'(sem categoria)'"
             : 'COALESCE(' . implode(', ', $categoriaParts) . ", '(sem categoria)')";
 
-        // Joins com materials/material_categories (quando existirem).
         $joinMaterial = ($hasMaterials && in_array('material_id', $itemCols, true))
             ? 'LEFT JOIN materials m ON m.id = i.material_id'
             : '';
@@ -445,37 +449,54 @@ class PurchaseOrderReportService
             ? 'LEFT JOIN material_categories mc ON mc.id = m.category_id'
             : '';
 
-        // Rótulo do material (snapshot do item).
         $materialExpr = in_array('material_name', $itemCols, true)
             ? "COALESCE(NULLIF(TRIM(i.material_name), ''), '(sem nome)')"
             : "'(sem nome)'";
+        $qtdExpr      = in_array('quantity', $itemCols, true) ? 'i.quantity' : '1';
+        $codeExpr     = in_array('code', $poCols, true) ? 'po.code' : "CONCAT('#', po.id)";
 
-        // Quantidade do item (para somar o total consumido do material).
-        $qtdExpr = in_array('quantity', $itemCols, true) ? 'i.quantity' : '0';
+        // Preço unitário: usa unit_price; se ausente, deriva de total_price/qtd.
+        $hasUnit  = in_array('unit_price', $itemCols, true);
+        $hasTotal = in_array('total_price', $itemCols, true);
+        if ($hasUnit && $hasTotal) {
+            $unitExpr  = "COALESCE(i.unit_price, i.total_price / NULLIF($qtdExpr,0))";
+            $totalExpr = "COALESCE(i.total_price, i.unit_price * $qtdExpr)";
+            $priceFilter = "(i.unit_price > 0 OR i.total_price > 0)";
+        } elseif ($hasUnit) {
+            $unitExpr  = "i.unit_price";
+            $totalExpr = "i.unit_price * $qtdExpr";
+            $priceFilter = "i.unit_price > 0";
+        } elseif ($hasTotal) {
+            $unitExpr  = "i.total_price / NULLIF($qtdExpr,0)";
+            $totalExpr = "i.total_price";
+            $priceFilter = "i.total_price > 0";
+        } else {
+            return [
+                'headers' => ['Aviso'],
+                'rows'    => [['A tabela purchase_order_items não possui colunas de preço (unit_price/total_price).']],
+            ];
+        }
 
-        // Menor total cotado por item (entre todos os fornecedores).
-        // Só entram itens de pedidos aprovados que tenham algum preço > 0.
-        // Depois agregamos por (categoria, material) para listar cada material.
+        // Exclui itens de estoque/transferência (não são compras cotadas).
+        $sourceFilter = in_array('source_type', $itemCols, true)
+            ? "AND (i.source_type IS NULL OR i.source_type = 'purchase')"
+            : '';
+
         $sql = "SELECT
                     $categoriaExpr AS categoria,
                     $materialExpr  AS material,
-                    COUNT(*)                AS qtd_itens,
-                    COALESCE(SUM($qtdExpr), 0)          AS qtd_total,
-                    COALESCE(SUM(menor.menor_total), 0) AS valor_total
-                FROM (
-                    SELECT p.item_id, MIN(p.total_price) AS menor_total
-                    FROM purchase_order_item_prices p
-                    JOIN purchase_orders po ON po.id = p.order_id
-                    WHERE po.status = 'approved'
-                      AND p.total_price IS NOT NULL
-                      AND p.total_price > 0
-                    GROUP BY p.item_id
-                ) menor
-                JOIN purchase_order_items i ON i.id = menor.item_id
+                    $codeExpr      AS pedido,
+                    $qtdExpr       AS quantidade,
+                    ROUND($unitExpr, 2)  AS preco_unit,
+                    ROUND($totalExpr, 2) AS preco_total
+                FROM purchase_order_items i
+                JOIN purchase_orders po ON po.id = i.order_id
                 $joinMaterial
                 $joinCategory
-                GROUP BY categoria, material
-                ORDER BY categoria ASC, valor_total DESC, material ASC";
+                WHERE po.status = 'approved'
+                  AND $priceFilter
+                  $sourceFilter
+                ORDER BY categoria ASC, material ASC, preco_unit ASC";
 
         try {
             $data = self::all($sql);
@@ -486,55 +507,51 @@ class PurchaseOrderReportService
             ];
         }
 
-        // Agrupa por categoria mantendo a lista de materiais e subtotais.
+        // Agrupa por categoria mantendo cada item como uma linha.
         $porCategoria = [];
         foreach ($data as $r) {
-            $cat = (string) $r['categoria'];
-            $porCategoria[$cat][] = $r;
+            $porCategoria[(string) $r['categoria']][] = $r;
         }
         // Ordena categorias pelo maior valor total.
         $subtotalCat = [];
-        foreach ($porCategoria as $cat => $mats) {
-            $subtotalCat[$cat] = array_sum(array_map(fn($m) => (float) $m['valor_total'], $mats));
+        foreach ($porCategoria as $cat => $itens) {
+            $subtotalCat[$cat] = array_sum(array_map(fn($x) => (float) $x['preco_total'], $itens));
         }
         arsort($subtotalCat);
 
         $rows = [];
         $totalGeral = 0.0;
-        $totalItens = 0;
+        $totalLinhas = 0;
         foreach (array_keys($subtotalCat) as $cat) {
-            $mats     = $porCategoria[$cat];
+            $itens    = $porCategoria[$cat];
             $subTotal = 0.0;
-            $subItens = 0;
             // Cabeçalho da categoria
-            $rows[] = ['▸ ' . $cat, '', '', ''];
-            foreach ($mats as $m) {
-                $valor = (float) $m['valor_total'];
-                $itens = (int) $m['qtd_itens'];
-                $subTotal += $valor;
-                $subItens += $itens;
+            $rows[] = ['▸ ' . $cat, '', '', '', ''];
+            foreach ($itens as $it) {
+                $total = (float) $it['preco_total'];
+                $subTotal += $total;
+                $totalLinhas++;
                 $rows[] = [
-                    '   ' . (string) $m['material'],
-                    self::qty((float) $m['qtd_total']),
-                    (string) $itens,
-                    self::money($valor),
+                    '   ' . (string) $it['material'],
+                    (string) $it['pedido'],
+                    self::qty((float) $it['quantidade']),
+                    self::money((float) $it['preco_unit']),
+                    self::money($total),
                 ];
             }
-            // Subtotal da categoria
-            $rows[] = ['   Subtotal ' . $cat, '', (string) $subItens, self::money($subTotal)];
-            $rows[] = ['', '', '', ''];
+            $rows[] = ['   Subtotal ' . $cat, '', '', '', self::money($subTotal)];
+            $rows[] = ['', '', '', '', ''];
             $totalGeral += $subTotal;
-            $totalItens += $subItens;
         }
 
         if (empty($rows)) {
-            $rows[] = ['(nenhum item aprovado com cotação)', '', '0', self::money(0)];
+            $rows[] = ['(nenhum item aprovado com preço)', '', '', '', self::money(0)];
         } else {
-            $rows[] = ['TOTAL GERAL', '', (string) $totalItens, self::money($totalGeral)];
+            $rows[] = ['TOTAL GERAL (' . $totalLinhas . ' itens)', '', '', '', self::money($totalGeral)];
         }
 
         return [
-            'headers' => ['Categoria / Material', 'Qtd. Total', 'Nº Itens', 'Valor (menor cotação) (R$)'],
+            'headers' => ['Categoria / Material', 'Pedido', 'Qtd.', 'Preço Unit. (R$)', 'Preço Total (R$)'],
             'rows'    => $rows,
         ];
     }
