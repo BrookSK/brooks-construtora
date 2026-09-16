@@ -451,4 +451,297 @@ class MaterialController extends Controller
         $unit = MeasurementUnit::find($id);
         $this->json(['success' => true, 'unit' => $unit]);
     }
+
+    /**
+     * Exportar TODOS os materiais em CSV para correção externa (ex: IA).
+     *
+     * O arquivo inclui a coluna "id" (chave imutável do material). Essa coluna
+     * é o que torna a reimportação segura: a atualização é feita por id, então
+     * nenhum vínculo/histórico (pedidos, transporte, estoque, preço, listas) é
+     * perdido. NÃO edite/remova a coluna id no arquivo corrigido.
+     */
+    public function export(): void
+    {
+        $materials = \App\Core\Database::fetchAll(
+            "SELECT m.id, m.code, m.name, m.specification,
+                    m.category_id, mc.name AS category_name,
+                    m.unit_id, mu.name AS unit_name, mu.abbreviation AS unit_abbr,
+                    m.classification, m.active
+             FROM materials m
+             LEFT JOIN material_categories mc ON m.category_id = mc.id
+             LEFT JOIN measurement_units mu ON m.unit_id = mu.id
+             ORDER BY m.name ASC"
+        );
+
+        $filename = 'materiais_export_' . date('Y-m-d_His') . '.csv';
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $out = fopen('php://output', 'w');
+        // BOM UTF-8 para o Excel abrir acentuação corretamente
+        fwrite($out, "\xEF\xBB\xBF");
+
+        // Cabeçalho. Mantenha "id" na primeira coluna e não altere.
+        fputcsv($out, [
+            'id',
+            'codigo',
+            'nome',
+            'especificacao',
+            'classificacao',
+            'unidade',
+            'categoria',
+            'ativo',
+        ], ';');
+
+        foreach ($materials as $m) {
+            fputcsv($out, [
+                $m['id'],
+                $m['code'] ?? '',
+                $m['name'] ?? '',
+                $m['specification'] ?? '',
+                $m['classification'] ?? '',
+                // Unidade: exporta a abreviação (usada como chave na reimportação)
+                $m['unit_abbr'] ?? ($m['unit_name'] ?? ''),
+                // Categoria: nome legível (usada como chave na reimportação)
+                $m['category_name'] ?? '',
+                (int) $m['active'],
+            ], ';');
+        }
+
+        fclose($out);
+        exit;
+    }
+
+    /**
+     * Reimportar o arquivo corrigido, ATUALIZANDO os materiais existentes por id.
+     *
+     * Regras de segurança:
+     *  - Só faz UPDATE por materials.id (nunca DELETE, nunca altera o id).
+     *  - Linhas sem id válido ou com id inexistente são ignoradas (reportadas).
+     *  - Categoria/unidade novas são criadas automaticamente e vinculadas.
+     *  - Como todas as tabelas dependentes usam material_id + snapshots próprios
+     *    e não fazem cascade a partir de materials, nenhum vínculo é perdido.
+     */
+    public function reimportProcess(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['error' => 'Método inválido.'], 400);
+            return;
+        }
+
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            $this->json(['error' => 'Erro no upload do arquivo.'], 400);
+            return;
+        }
+
+        $file = $_FILES['file'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+        if (!in_array($ext, ['csv', 'txt'])) {
+            $this->json(['error' => 'Formato não suportado. Reexporte/edite e salve como CSV (separado por ;).'], 400);
+            return;
+        }
+
+        // Ler CSV normalizando quebras de linha e detectando separador
+        $content = file_get_contents($file['tmp_name']);
+        $content = str_replace(["\r\n", "\r"], "\n", $content);
+        // Remover BOM UTF-8 se presente
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'reimport_');
+        file_put_contents($tmpFile, $content);
+
+        $firstLine = strtok($content, "\n");
+        $separator = ';';
+        if (substr_count($firstLine, ',') > substr_count($firstLine, ';')) {
+            $separator = ',';
+        } elseif (substr_count($firstLine, "\t") > substr_count($firstLine, ';')) {
+            $separator = "\t";
+        }
+
+        $handle = fopen($tmpFile, 'r');
+        if (!$handle) {
+            @unlink($tmpFile);
+            $this->json(['error' => 'Não foi possível ler o arquivo.'], 400);
+            return;
+        }
+
+        $header = fgetcsv($handle, 0, $separator, '"', '\\');
+        if ($header) {
+            $header = array_map(fn($h) => trim(preg_replace('/\s+/', ' ', (string) $h)), $header);
+        }
+        $colMap = $this->mapReimportColumns($header);
+
+        if ($colMap['id'] === null) {
+            fclose($handle);
+            @unlink($tmpFile);
+            $this->json(['error' => 'Coluna "id" não encontrada no arquivo. A reimportação exige a coluna id gerada pela exportação.'], 400);
+            return;
+        }
+
+        // Caches de categoria/unidade (por nome/abreviação, em minúsculas)
+        $catMap = [];
+        foreach (MaterialCategory::all('name ASC') as $c) {
+            $catMap[mb_strtolower(trim($c['name']))] = (int) $c['id'];
+        }
+        $unitMap = [];
+        foreach (MeasurementUnit::all('name ASC') as $u) {
+            if (!empty($u['abbreviation'])) $unitMap[mb_strtolower(trim($u['abbreviation']))] = (int) $u['id'];
+            if (!empty($u['name'])) $unitMap[mb_strtolower(trim($u['name']))] = (int) $u['id'];
+        }
+
+        $updated = 0;
+        $skipped = 0;
+        $notFound = 0;
+        $total = 0;
+        $errors = [];
+
+        $db = \App\Core\Database::getConnection();
+        $db->beginTransaction();
+
+        try {
+            while (($row = fgetcsv($handle, 0, $separator, '"', '\\')) !== false) {
+                // Ignorar linhas totalmente vazias
+                if (count(array_filter($row, fn($v) => trim((string) $v) !== '')) === 0) {
+                    continue;
+                }
+                $total++;
+
+                $id = (int) trim((string) ($row[$colMap['id']] ?? 0));
+                if ($id <= 0) { $skipped++; continue; }
+
+                $existing = \App\Core\Database::fetch("SELECT id FROM materials WHERE id = ?", [$id]);
+                if (!$existing) { $notFound++; continue; }
+
+                $data = [];
+
+                // Nome (obrigatório se a coluna existir)
+                if ($colMap['name'] !== null) {
+                    $name = trim((string) ($row[$colMap['name']] ?? ''));
+                    if ($name === '') { $skipped++; continue; }
+                    $data['name'] = $name;
+                }
+
+                if ($colMap['code'] !== null) {
+                    $code = trim((string) ($row[$colMap['code']] ?? ''));
+                    $data['code'] = $code !== '' ? $code : null;
+                }
+
+                if ($colMap['specification'] !== null) {
+                    $spec = trim((string) ($row[$colMap['specification']] ?? ''));
+                    $data['specification'] = $spec !== '' ? $spec : null;
+                }
+
+                if ($colMap['classification'] !== null) {
+                    $cls = trim((string) ($row[$colMap['classification']] ?? ''));
+                    $data['classification'] = $cls !== '' ? $cls : null;
+                }
+
+                // Categoria: resolve por nome; cria se não existir
+                if ($colMap['category'] !== null) {
+                    $catName = trim((string) ($row[$colMap['category']] ?? ''));
+                    if ($catName !== '') {
+                        $key = mb_strtolower($catName);
+                        if (!isset($catMap[$key])) {
+                            $catMap[$key] = MaterialCategory::create([
+                                'name' => $catName,
+                                'created_at' => date('Y-m-d H:i:s'),
+                            ]);
+                        }
+                        $data['category_id'] = $catMap[$key];
+                    } else {
+                        $data['category_id'] = null;
+                    }
+                }
+
+                // Unidade: resolve por abreviação/nome; cria se não existir
+                if ($colMap['unit'] !== null) {
+                    $unit = trim((string) ($row[$colMap['unit']] ?? ''));
+                    if ($unit !== '') {
+                        $key = mb_strtolower($unit);
+                        if (!isset($unitMap[$key])) {
+                            $newUnitId = MeasurementUnit::create([
+                                'name' => $unit,
+                                'abbreviation' => $unit,
+                                'created_at' => date('Y-m-d H:i:s'),
+                            ]);
+                            $unitMap[$key] = $newUnitId;
+                        }
+                        $data['unit_id'] = $unitMap[$key];
+                    } else {
+                        $data['unit_id'] = null;
+                    }
+                }
+
+                // Ativo (opcional)
+                if ($colMap['active'] !== null) {
+                    $activeRaw = mb_strtolower(trim((string) ($row[$colMap['active']] ?? '')));
+                    $data['active'] = in_array($activeRaw, ['1', 'sim', 'ativo', 'true', 'yes'], true) ? 1 : 0;
+                }
+
+                if (empty($data)) { $skipped++; continue; }
+
+                // UPDATE seguro por id — nunca toca no id nem em outras tabelas
+                \App\Core\Database::update('materials', $data, 'id = ?', [$id]);
+                $updated++;
+            }
+
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            fclose($handle);
+            @unlink($tmpFile);
+            $this->json(['error' => 'Falha na reimportação (nenhuma alteração aplicada): ' . $e->getMessage()], 500);
+            return;
+        }
+
+        fclose($handle);
+        @unlink($tmpFile);
+
+        $this->json([
+            'success'  => true,
+            'updated'  => $updated,
+            'skipped'  => $skipped,
+            'notFound' => $notFound,
+            'total'    => $total,
+        ]);
+    }
+
+    /**
+     * Mapear colunas do CSV de reimportação (por header). Retorna índice ou null.
+     */
+    private function mapReimportColumns(?array $header): array
+    {
+        $map = [
+            'id'             => null,
+            'code'           => null,
+            'name'           => null,
+            'specification'  => null,
+            'classification' => null,
+            'unit'           => null,
+            'category'       => null,
+            'active'         => null,
+        ];
+
+        if (!$header) return $map;
+
+        foreach ($header as $i => $col) {
+            $c = mb_strtolower(trim((string) $col));
+            $c = preg_replace('/[^a-z0-9]/', '', $c);
+
+            if ($c === 'id') $map['id'] = $i;
+            elseif (str_contains($c, 'classific')) $map['classification'] = $i;
+            elseif (str_contains($c, 'especific') || str_contains($c, 'specif')) $map['specification'] = $i;
+            elseif (str_contains($c, 'categor')) $map['category'] = $i;
+            elseif (str_contains($c, 'codigo') || str_contains($c, 'cdigo') || $c === 'code') $map['code'] = $i;
+            elseif (str_contains($c, 'descri') || str_contains($c, 'nome') || $c === 'name' || str_contains($c, 'insumo')) $map['name'] = $i;
+            elseif (str_contains($c, 'unid') || str_contains($c, 'unit')) $map['unit'] = $i;
+            elseif (str_contains($c, 'ativo') || str_contains($c, 'active') || str_contains($c, 'status')) $map['active'] = $i;
+        }
+
+        return $map;
+    }
 }

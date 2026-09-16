@@ -261,6 +261,8 @@ class Router
             'materials/quick-store-unit' => ['MaterialController', 'quickStoreUnit'],
             'materials/import' => ['MaterialController', 'import'],
             'materials/import-process' => ['MaterialController', 'importProcess'],
+            'materials/export' => ['MaterialController', 'export'],
+            'materials/reimport-process' => ['MaterialController', 'reimportProcess'],
 
             // Fornecedores - Contatos/Vendedores
             'suppliers/contacts' => ['SupplierController', 'contacts'],

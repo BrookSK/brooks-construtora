@@ -4,6 +4,9 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <span class="badge bg-secondary"><?= $total ?> materiais</span>
     <div class="d-flex gap-2">
+        <a href="/admin/materials/export" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-download"></i> <span class="d-none d-sm-inline">Exportar</span>
+        </a>
         <a href="/admin/materials/import" class="btn btn-outline-success btn-sm">
             <i class="bi bi-upload"></i> <span class="d-none d-sm-inline">Importar</span>
         </a>
