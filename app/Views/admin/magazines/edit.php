@@ -41,6 +41,49 @@
                     </form>
                     <?php endif; ?>
                     <a href="/admin/magazines/preview/<?= $magazine['id'] ?>" class="btn btn-outline-info" target="_blank"><i class="bi bi-eye"></i> Preview</a>
+                    <?php if (\App\Core\Auth::hasPermission('magazines.edit')): ?>
+                    <form method="POST" action="/admin/magazines/generate-pdf" class="mt-2" id="genPdfForm">
+                        <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
+                        <button type="submit" class="btn btn-outline-dark w-100" id="genPdfBtn">
+                            <i class="bi bi-file-earmark-pdf"></i> Gerar PDF da Revista
+                        </button>
+                    </form>
+                    <small class="text-muted d-block mt-1">O PDF é gerado no servidor (Chrome na nuvem) e fica idêntico em qualquer dispositivo — é o que os leitores veem. Pode levar alguns segundos.</small>
+                    <script>
+                    (function () {
+                        var form = document.getElementById('genPdfForm');
+                        if (!form) return;
+                        form.addEventListener('submit', function (e) {
+                            e.preventDefault();
+                            var btn = document.getElementById('genPdfBtn');
+                            var original = btn.innerHTML;
+                            btn.disabled = true;
+                            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando PDF...';
+                            fetch(form.action, {
+                                method: 'POST',
+                                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                                body: new FormData(form)
+                            })
+                            .then(function (r) { return r.json(); })
+                            .then(function (res) {
+                                if (res && res.success) {
+                                    btn.innerHTML = '<i class="bi bi-check-lg"></i> PDF gerado!';
+                                    btn.classList.remove('btn-outline-dark');
+                                    btn.classList.add('btn-success');
+                                    setTimeout(function () { btn.disabled = false; btn.classList.remove('btn-success'); btn.classList.add('btn-outline-dark'); btn.innerHTML = original; }, 3000);
+                                } else {
+                                    alert((res && res.error) || 'Não foi possível gerar o PDF.');
+                                    btn.disabled = false; btn.innerHTML = original;
+                                }
+                            })
+                            .catch(function () {
+                                alert('Erro de conexão ao gerar o PDF.');
+                                btn.disabled = false; btn.innerHTML = original;
+                            });
+                        });
+                    })();
+                    </script>
+                    <?php endif; ?>
                     <?php
                     $hasGuestColumn = false;
                     foreach ($pages as $p) { if ($p['layout_type'] === 'guest_column') { $hasGuestColumn = true; break; } }

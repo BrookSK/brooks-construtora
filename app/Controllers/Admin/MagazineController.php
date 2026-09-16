@@ -1212,6 +1212,54 @@ class MagazineController extends Controller
     }
 
     /**
+     * Gera (ou regenera) o PDF da revista no servidor via Browserless.
+     * O PDF fica salvo e é o que os leitores veem no visualizador — idêntico
+     * em qualquer dispositivo. Roda no servidor, então independe do navegador
+     * de quem clica (funciona igual no MacBook/Safari do gestor).
+     */
+    public function generatePdf(): void
+    {
+        if (!$this->isPost() || !Auth::hasPermission('magazines.edit')) {
+            if ($this->isAjax()) { $this->json(['success' => false, 'error' => 'Sem permissão.'], 403); return; }
+            $this->redirect('/admin/magazines');
+            return;
+        }
+
+        $id = (int) $this->input('magazine_id');
+        $magazine = Magazine::find($id);
+        if (!$magazine) {
+            if ($this->isAjax()) { $this->json(['success' => false, 'error' => 'Revista não encontrada.'], 404); return; }
+            $this->setFlash('error', 'Revista não encontrada.');
+            $this->redirect('/admin/magazines');
+            return;
+        }
+
+        $pdfUrl = \App\Services\BrowserlessPdfService::generate($id);
+
+        if ($pdfUrl) {
+            if ($this->isAjax()) { $this->json(['success' => true, 'url' => $pdfUrl]); return; }
+            $this->setFlash('success', 'PDF da revista gerado com sucesso! Ele já é exibido para os leitores em qualquer dispositivo.');
+        } else {
+            $msg = 'Não foi possível gerar o PDF. Verifique se o token do Browserless está configurado em Configurações.';
+            if ($this->isAjax()) { $this->json(['success' => false, 'error' => $msg], 500); return; }
+            $this->setFlash('error', $msg);
+        }
+
+        $this->redirect('/admin/magazines/edit/' . $id);
+    }
+
+    /**
+     * Detecta requisição AJAX (fetch/XHR) para responder JSON.
+     */
+    private function isAjax(): bool
+    {
+        $xrw = $_SERVER['HTTP_X_REQUESTED_WITH'] ?? '';
+        if (strtolower($xrw) === 'xmlhttprequest') return true;
+        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+        return stripos($accept, 'application/json') !== false;
+    }
+
+    /**
      * Reverte uma revista publicada/em teste de volta para "Aprovada",
      * permitindo publicar novamente (útil para repetir o teste).
      * NÃO reenvia notificação — apenas muda o status.

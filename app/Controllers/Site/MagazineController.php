@@ -116,6 +116,18 @@ class MagazineController extends Controller
             $settings = [];
         }
 
+        // Se existe um PDF gerado (via Browserless), o leitor vê o PDF num
+        // visualizador — idêntico em qualquer dispositivo (iPhone/iPad/Safari/
+        // Android/PC). É a forma definitiva que elimina a renderização por
+        // navegador. Sem PDF, cai no HTML (fallback).
+        $pdfUrl = \App\Services\BrowserlessPdfService::existingPdfUrl($id);
+        if ($pdfUrl) {
+            // Preserva o token de preview no link do PDF (modo teste, sem login).
+            $previewToken = $_GET['preview'] ?? '';
+            include ROOT_PATH . '/app/Views/site/magazine/pdf_viewer.php';
+            return;
+        }
+
         if (defined('ANTIGO_PREFIX')) {
             include ROOT_PATH . '/app/Views/site/magazine/show.php';
         } else {
@@ -173,6 +185,14 @@ class MagazineController extends Controller
             return;
         }
 
+        // Se há um PDF real gerado (Browserless), entrega ele diretamente —
+        // é o arquivo fiel, idêntico em qualquer dispositivo.
+        $pdfUrl = \App\Services\BrowserlessPdfService::existingPdfUrl($id);
+        if ($pdfUrl) {
+            $this->redirect($pdfUrl);
+            return;
+        }
+
         $pages = Magazine::getPages($id);
 
         try {
@@ -181,8 +201,7 @@ class MagazineController extends Controller
             $settings = [];
         }
 
-        // A rota /revista/pdf agora apenas EXIBE a revista (sem download
-        // automático). O PDF é baixado só quando o usuário clica no botão.
+        // Fallback (sem PDF gerado): exibe a revista em HTML.
         if (defined('ANTIGO_PREFIX')) {
             include ROOT_PATH . '/app/Views/site/magazine/show.php';
         } else {

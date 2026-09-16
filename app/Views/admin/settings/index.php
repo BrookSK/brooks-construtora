@@ -412,6 +412,11 @@ $_isProduction = $_currentBranch === 'main';
                     <input type="text" class="form-control" name="wkhtmltopdf_path" value="<?= htmlspecialchars($settings['wkhtmltopdf_path'] ?? '') ?>" placeholder="/usr/bin/wkhtmltopdf">
                     <small class="text-muted">Usado para gerar o PDF da revista no servidor e anexá-lo ao e-mail de teste. Deixe em branco para detecção automática. Se o servidor não tiver o wkhtmltopdf, o e-mail traz um botão para baixar o PDF.</small>
                 </div>
+                <div class="col-md-12">
+                    <label class="form-label">Token do Browserless (geração do PDF da revista)</label>
+                    <input type="password" class="form-control" name="browserless_token" value="<?= htmlspecialchars($settings['browserless_token'] ?? '') ?>" placeholder="Cole aqui o token da sua conta Browserless" autocomplete="off">
+                    <small class="text-muted">O PDF da revista é gerado por um Chrome na nuvem (Browserless), ficando idêntico em qualquer dispositivo (iPhone, Android, PC). Crie uma conta em browserless.io e cole o token aqui. Sem o token, a revista continua sendo exibida em HTML.</small>
+                </div>
             </div>
         </div>
     </div>
