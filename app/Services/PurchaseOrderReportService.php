@@ -482,6 +482,32 @@ class PurchaseOrderReportService
             ? "AND (i.source_type IS NULL OR i.source_type = 'purchase')"
             : '';
 
+        // Exclui obras de construção que não devem entrar neste relatório
+        // (P033 - Mariana Maran - Vanessa e Caique / P027 - Casa Da Montanha).
+        // Filtra pelo código da obra em construction_sites; ignora se a base
+        // não tiver o vínculo de obra.
+        if (in_array('construction_site_id', $poCols, true)
+            && !empty(self::tableColumns('construction_sites'))) {
+            // As obras a excluir aparecem como "P027 - ..." e "P033 - ..." no
+            // NOME da obra (o code interno é OBR-000001 / OBR-000049).
+            // Filtramos por code e por prefixo do nome, cobrindo os dois casos.
+            $excluirCodes = ['P033', 'P027', 'OBR-000049', 'OBR-000001'];
+            $excluirNomes = ['P033%', 'P027%', '%Mariana Maran%', '%Casa Da Montanha%'];
+            $inCodes  = implode(',', array_fill(0, count($excluirCodes), '?'));
+            $likeNome = implode(' OR ', array_fill(0, count($excluirNomes), 'cs.name LIKE ?'));
+            $excludeSitesSql = "AND po.construction_site_id NOT IN (
+                    SELECT cs.id FROM construction_sites cs
+                    WHERE cs.code IN ($inCodes) OR $likeNome
+                )";
+            // Parâmetros de UMA ocorrência da cláusula, na ordem: codes, nomes.
+            $oneSet = array_merge($excluirCodes, $excluirNomes);
+            // A cláusula aparece 2x na SQL (subquery x e y), então repetimos.
+            $excludeParams = array_merge($oneSet, $oneSet);
+            $sourceFilter .= ' ' . $excludeSitesSql;
+        } else {
+            $excludeParams = [];
+        }
+
         // Uma linha por material: pega o MENOR preço unitário aprovado entre
         // todos os pedidos aprovados. O pedido mostrado é aquele onde esse
         // menor preço foi encontrado.
@@ -525,7 +551,7 @@ class PurchaseOrderReportService
                 ORDER BY x.categoria ASC, x.material ASC";
 
         try {
-            $data = self::all($sql);
+            $data = self::all($sql, $excludeParams);
         } catch (Throwable $e) {
             return [
                 'headers' => ['Aviso'],
