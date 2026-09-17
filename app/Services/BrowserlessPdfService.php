@@ -66,8 +66,8 @@ class BrowserlessPdfService
             $ch = curl_init('https://api.browserless.io/v1/account/usage?token=' . urlencode($token));
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 10,
-                CURLOPT_CONNECTTIMEOUT => 6,
+                CURLOPT_TIMEOUT => 5,
+                CURLOPT_CONNECTTIMEOUT => 4,
                 CURLOPT_HTTPHEADER => ['Accept: application/json'],
             ]);
             $resp = curl_exec($ch);
@@ -159,14 +159,6 @@ class BrowserlessPdfService
                 return null;
             }
 
-            // Trava de segurança: não gera se o limite mensal foi atingido
-            // (protege contra estourar o plano gratuito).
-            $usage = self::usageStatus();
-            if (!$usage['allowed']) {
-                error_log('[BROWSERLESS] Limite mensal atingido: ' . $usage['used'] . '/' . $usage['limit']);
-                return null;
-            }
-
             $magazine = Magazine::find($magazineId);
             if (!$magazine) {
                 return null;
@@ -177,180 +169,96 @@ class BrowserlessPdfService
                 return null;
             }
 
-            $previewUrl = self::buildPreviewUrl($magazineId);
-            $host = trim((string) Setting::get('browserless_host', '')) ?: self::DEFAULT_HOST;
-            $endpoint = rtrim($host, '/') . '/pdf?token=' . urlencode($token);
-
-            // Corpo da requisição: abre a URL de preview e gera o PDF em A4 com
-            // os fundos/gradientes (printBackground). Espera a rede ficar ociosa
-            // e um tempo extra para o JS de paginação e as fontes assentarem.
-            $payload = [
-                'url' => $previewUrl,
-                'gotoOptions' => [
-                    'waitUntil' => 'networkidle2',
-                    'timeout' => 60000,
-                ],
-                // Espera adicional após carregar, para a paginação/fontes assentarem.
-                'waitForTimeout' => 3500,
-                'options' => [
-                    'printBackground' => true,
-                    // Dimensões exatas da folha (595x842) para cada .page virar
-                    // UMA página do PDF, sem sobra/linha extra que o 'format:A4'
-                    // (arredondamento de pontos) às vezes causa.
-                    'width' => '595px',
-                    'height' => '842px',
-                    'preferCSSPageSize' => false,
-                    'margin' => [
-                        'top' => '0',
-                        'bottom' => '0',
-                        'left' => '0',
-                        'right' => '0',
-                    ],
-                ],
-            ];
-
-            $ch = curl_init($endpoint);
-            curl_setopt_array($ch, [
-                CURLOPT_POST => true,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => [
-                    'Content-Type: application/json',
-                    'Cache-Control: no-cache',
-                ],
-                CURLOPT_POSTFIELDS => json_encode($payload),
-                CURLOPT_TIMEOUT => 120,
-                CURLOPT_CONNECTTIMEOUT => 20,
-            ]);
-
-            $body = curl_exec($ch);
-            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-            $curlError = curl_error($ch);
-            curl_close($ch);
-
-            if ($body === false || $curlError !== '') {
-                error_log('[BROWSERLESS] Falha cURL: ' . $curlError);
-                return null;
-            }
-
-            // A resposta de sucesso é o binário do PDF (application/pdf). Em erro,
-            // vem JSON/texto com a mensagem — não é um PDF.
-            $isPdf = ($httpCode === 200)
-                && (stripos($contentType, 'application/pdf') !== false
-                    || substr($body, 0, 4) === '%PDF');
-
-            if (!$isPdf) {
-                error_log('[BROWSERLESS] Resposta não-PDF. code=' . $httpCode
-                    . ' type=' . $contentType . ' body=' . substr($body, 0, 300));
-                return null;
-            }
-
-            // Salva o arquivo.
             $dir = ROOT_PATH . '/public/uploads/magazine_pdfs';
-            if (!is_dir($dir)) {
-                @mkdir($dir, 0755, true);
-            }
+            if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
             if (!is_dir($dir) || !is_writable($dir)) {
                 error_log('[BROWSERLESS] Diretório não gravável: ' . $dir);
                 return null;
             }
 
-            // Nome estável por revista (sobrescreve o anterior a cada geração).
-            $filename = 'Revista_' . $magazineId . '.pdf';
-            $absolute = $dir . '/' . $filename;
+            $previewUrl = self::buildPreviewUrl($magazineId);
+            $host = trim((string) Setting::get('browserless_host', '')) ?: self::DEFAULT_HOST;
+            $endpoint = rtrim($host, '/') . '/function?token=' . urlencode($token);
 
-            if (file_put_contents($absolute, $body) === false) {
-                error_log('[BROWSERLESS] Falha ao salvar o PDF em ' . $absolute);
+            // UMA ÚNICA chamada faz TUDO: abre a revista uma vez, gera o PDF e
+            // captura a imagem de cada página. Antes eram 2 chamadas (2
+            // carregamentos), o que estourava o timeout. waitUntil 'load' +
+            // espera curta reduzem o tempo total.
+            $jsCode = <<<JS
+export default async ({ page }) => {
+  await page.setViewport({ width: 595, height: 842, deviceScaleFactor: 2 });
+  await page.goto("{$previewUrl}", { waitUntil: "load", timeout: 45000 });
+  try { await page.evaluateHandle('document.fonts.ready'); } catch (e) {}
+  await new Promise(r => setTimeout(r, 2000));
+  const pdf = await page.pdf({
+    printBackground: true,
+    width: "595px",
+    height: "842px",
+    margin: { top: "0", bottom: "0", left: "0", right: "0" }
+  });
+  const handles = await page.\$\$(".preview .page");
+  const images = [];
+  for (const h of handles) {
+    try { images.push(await h.screenshot({ type: "png", encoding: "base64" })); }
+    catch (e) {}
+  }
+  return {
+    data: { pdf: pdf.toString("base64"), images: images },
+    type: "application/json"
+  };
+};
+JS;
+
+            [$body, $httpCode, $contentType] = self::postToBrowserlessCode($endpoint, $jsCode);
+
+            if ($httpCode !== 200 || $body === false) {
+                error_log('[BROWSERLESS] /function falhou. code=' . $httpCode . ' body=' . substr((string) $body, 0, 300));
                 return null;
             }
 
-            // Só conta quando deu certo (uma chamada consumida no plano).
-            self::registerUsage();
+            $json = json_decode((string) $body, true);
+            $pdfB64 = $json['data']['pdf'] ?? ($json['pdf'] ?? null);
+            $images = $json['data']['images'] ?? ($json['images'] ?? []);
 
-            // Gera as IMAGENS das páginas (uma por folha), renderizadas pelo
-            // Chrome do Browserless — ficam pixel a pixel iguais ao PDF, com
-            // sombras/gradientes/efeitos. O visualizador do site exibe essas
-            // imagens (em vez do PDF.js, que não suporta sombras/ShadingType 1
-            // e deixava a capa rosa). Best-effort: se falhar, o PDF já está salvo.
-            try {
-                self::generatePageImages($magazineId, $token, $host);
-            } catch (\Throwable $e) {
-                error_log('[BROWSERLESS] Falha ao gerar imagens das páginas: ' . $e->getMessage());
+            if (empty($pdfB64)) {
+                error_log('[BROWSERLESS] Resposta sem PDF. body=' . substr((string) $body, 0, 300));
+                return null;
             }
+
+            $pdfBin = base64_decode((string) $pdfB64, true);
+            if ($pdfBin === false || substr($pdfBin, 0, 4) !== '%PDF') {
+                error_log('[BROWSERLESS] PDF inválido no retorno.');
+                return null;
+            }
+
+            // Salva o PDF (nome estável — sobrescreve o anterior).
+            $filename = 'Revista_' . $magazineId . '.pdf';
+            if (file_put_contents($dir . '/' . $filename, $pdfBin) === false) {
+                error_log('[BROWSERLESS] Falha ao salvar o PDF.');
+                return null;
+            }
+
+            // Salva as imagens das páginas (para o visualizador do site).
+            foreach (glob($dir . '/Revista_' . $magazineId . '_p*.png') ?: [] as $old) {
+                @unlink($old);
+            }
+            if (is_array($images)) {
+                $n = 0;
+                foreach ($images as $b64) {
+                    $bin = base64_decode((string) $b64, true);
+                    if ($bin === false || $bin === '') continue;
+                    $n++;
+                    file_put_contents($dir . '/Revista_' . $magazineId . '_p' . str_pad((string) $n, 2, '0', STR_PAD_LEFT) . '.png', $bin);
+                }
+            }
+
+            // Uma chamada consumida no plano (PDF + imagens juntos).
+            self::registerUsage();
 
             return '/uploads/magazine_pdfs/' . $filename;
         } catch (\Throwable $e) {
             error_log('[BROWSERLESS] Exceção: ' . $e->getMessage());
             return null;
-        }
-    }
-
-    /**
-     * Captura UMA imagem por página (.page) numa ÚNICA chamada, via /function.
-     * O script Puppeteer abre a revista uma vez e tira um screenshot de cada
-     * folha, retornando todas as imagens (base64) num JSON. O PHP salva cada
-     * uma como _pNN.png. Assim: páginas separadas (com espaço no visualizador),
-     * sem recarregar a revista N vezes (sem timeout) e com todos os efeitos.
-     */
-    private static function generatePageImages(int $magazineId, string $token, string $host): void
-    {
-        $dir = ROOT_PATH . '/public/uploads/magazine_pdfs';
-        if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
-        if (!is_dir($dir) || !is_writable($dir)) return;
-
-        // Remove imagens antigas desta revista.
-        foreach (glob($dir . '/Revista_' . $magazineId . '_p*.png') ?: [] as $old) {
-            @unlink($old);
-        }
-
-        if (!self::usageStatus()['allowed']) return;
-
-        $previewUrl = self::buildPreviewUrl($magazineId);
-        $endpoint = rtrim($host, '/') . '/function?token=' . urlencode($token);
-
-        // Script Puppeteer: abre a revista, espera assentar, e captura cada
-        // .page como PNG base64. Retorna a lista em JSON.
-        $jsCode = <<<JS
-export default async ({ page }) => {
-  await page.setViewport({ width: 595, height: 842, deviceScaleFactor: 2 });
-  await page.goto("{$previewUrl}", { waitUntil: "networkidle2", timeout: 60000 });
-  await new Promise(r => setTimeout(r, 3500));
-  const handles = await page.\$\$(".preview .page");
-  const images = [];
-  for (const h of handles) {
-    try {
-      const shot = await h.screenshot({ type: "png", encoding: "base64" });
-      images.push(shot);
-    } catch (e) {}
-  }
-  return { data: { images }, type: "application/json" };
-};
-JS;
-
-        [$body, $httpCode, $contentType] = self::postToBrowserlessCode($endpoint, $jsCode);
-
-        if ($httpCode !== 200 || $body === false) {
-            error_log('[BROWSERLESS] /function falhou. code=' . $httpCode . ' body=' . substr((string) $body, 0, 300));
-            return;
-        }
-
-        $json = json_decode((string) $body, true);
-        $images = $json['data']['images'] ?? ($json['images'] ?? null);
-        if (!is_array($images) || empty($images)) {
-            error_log('[BROWSERLESS] /function sem imagens. body=' . substr((string) $body, 0, 300));
-            return;
-        }
-
-        $n = 0;
-        foreach ($images as $b64) {
-            $bin = base64_decode((string) $b64, true);
-            if ($bin === false || $bin === '') continue;
-            $n++;
-            file_put_contents($dir . '/Revista_' . $magazineId . '_p' . str_pad((string) $n, 2, '0', STR_PAD_LEFT) . '.png', $bin);
-        }
-
-        if ($n > 0) {
-            self::registerUsage(); // 1 chamada consumida (independente do nº de páginas)
         }
     }
 
@@ -366,28 +274,7 @@ JS;
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => ['Content-Type: application/javascript'],
             CURLOPT_POSTFIELDS => $jsCode,
-            CURLOPT_TIMEOUT => 180,
-            CURLOPT_CONNECTTIMEOUT => 20,
-        ]);
-        $body = curl_exec($ch);
-        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-        curl_close($ch);
-        return [$body, $httpCode, $contentType];
-    }
-
-    /**
-     * Faz um POST JSON ao Browserless e devolve [body, httpCode, contentType].
-     */
-    private static function postToBrowserless(string $endpoint, array $payload): array
-    {
-        $ch = curl_init($endpoint);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Cache-Control: no-cache'],
-            CURLOPT_POSTFIELDS => json_encode($payload),
-            CURLOPT_TIMEOUT => 120,
+            CURLOPT_TIMEOUT => 150,
             CURLOPT_CONNECTTIMEOUT => 20,
         ]);
         $body = curl_exec($ch);
