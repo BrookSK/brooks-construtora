@@ -26,15 +26,61 @@ class BrowserlessPdfService
     private const DEFAULT_HOST = 'https://production-sfo.browserless.io';
 
     /**
-     * Teto mensal padrão de gerações (margem de segurança do plano gratuito do
-     * Browserless, que costuma ser ~1.000 unidades/mês). Fica bem abaixo para
-     * nunca estourar. Pode ser ajustado pela Setting 'browserless_monthly_limit'.
+     * Teto mensal padrão em UNIDADES do Browserless.
+     *
+     * IMPORTANTE: o Browserless cobra por TEMPO de navegador, não por geração.
+     * Cada 30 segundos de sessão aberta = 1 unidade (arredondado pra cima). O
+     * plano gratuito dá 1.000 unidades/mês. Deixamos o teto BEM abaixo (700)
+     * para nunca estourar. Ajustável pela Setting 'browserless_monthly_limit'.
      */
-    private const DEFAULT_MONTHLY_LIMIT = 800;
+    private const DEFAULT_MONTHLY_LIMIT = 700;
 
     /**
-     * Verifica se ainda há cota no mês. Retorna ['allowed'=>bool, 'used'=>int,
-     * 'limit'=>int, 'remaining'=>int]. O contador é reiniciado a cada mês.
+     * Estimativa CONSERVADORA de unidades por chamada. Cada chamada abre um
+     * navegador que fica aberto alguns segundos (carrega a revista + espera +
+     * captura). Como 1 unidade = 30s e o mínimo é sempre 1, contamos 2 unidades
+     * por chamada para ter folga (nunca subestimar o consumo real).
+     */
+    private const UNITS_PER_CALL = 2;
+
+    /**
+     * Consulta o uso REAL na API do Browserless (fonte da verdade). Retorna o
+     * número de unidades consumidas no ciclo, ou null se não conseguir ler.
+     */
+    private static function fetchRemoteUnits(string $token): ?int
+    {
+        if ($token === '' || !function_exists('curl_init')) return null;
+        try {
+            $ch = curl_init('https://api.browserless.io/v1/account/usage?token=' . urlencode($token));
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 12,
+                CURLOPT_CONNECTTIMEOUT => 8,
+            ]);
+            $resp = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($code !== 200 || !$resp) return null;
+
+            $data = json_decode((string) $resp, true);
+            if (!is_array($data)) return null;
+
+            // Procura o campo de unidades consumidas entre nomes comuns.
+            foreach (['unitsUsed', 'units', 'used', 'consumed', 'usage', 'billedUnits'] as $k) {
+                if (isset($data[$k]) && is_numeric($data[$k])) {
+                    return (int) ceil((float) $data[$k]);
+                }
+            }
+            return null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Situação do uso no mês (em UNIDADES). Prioriza o número real da API do
+     * Browserless; se não conseguir, usa a estimativa local (conservadora).
+     * Retorna ['allowed','used','limit','remaining','month','source'].
      */
     public static function usageStatus(): array
     {
@@ -43,11 +89,19 @@ class BrowserlessPdfService
 
         $month = date('Y-m');
         $storedMonth = (string) Setting::get('browserless_usage_month', '');
-        $used = (int) Setting::get('browserless_usage_count', '0');
-
-        // Virou o mês → zera o contador.
+        $localUsed = (int) Setting::get('browserless_usage_count', '0');
         if ($storedMonth !== $month) {
-            $used = 0;
+            $localUsed = 0; // virou o mês → zera a estimativa local
+        }
+
+        // Tenta o número REAL da conta (fonte da verdade).
+        $token = trim((string) Setting::get('browserless_token', ''));
+        $remote = self::fetchRemoteUnits($token);
+        $source = 'local';
+        $used = $localUsed;
+        if ($remote !== null) {
+            $used = $remote;
+            $source = 'api';
         }
 
         $remaining = max(0, $limit - $used);
@@ -57,11 +111,13 @@ class BrowserlessPdfService
             'limit' => $limit,
             'remaining' => $remaining,
             'month' => $month,
+            'source' => $source,
         ];
     }
 
     /**
-     * Registra uma geração bem-sucedida no contador do mês.
+     * Soma unidades (estimadas) ao contador local do mês. Usado após cada
+     * chamada ao Browserless, como fallback quando a API de uso não responde.
      */
     private static function registerUsage(): void
     {
@@ -72,7 +128,7 @@ class BrowserlessPdfService
             $used = 0;
         }
         Setting::set('browserless_usage_month', $month);
-        Setting::set('browserless_usage_count', (string) ($used + 1));
+        Setting::set('browserless_usage_count', (string) ($used + self::UNITS_PER_CALL));
     }
 
     /**

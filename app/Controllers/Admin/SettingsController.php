@@ -71,7 +71,7 @@ class SettingsController extends Controller
 
             // Revista - PDF via Browserless (Chrome na nuvem gera o PDF fiel)
             'browserless_token' => Setting::get('browserless_token', ''),
-            'browserless_monthly_limit' => Setting::get('browserless_monthly_limit', '800'),
+            'browserless_monthly_limit' => Setting::get('browserless_monthly_limit', '700'),
             'browserless_usage_count' => Setting::get('browserless_usage_count', '0'),
             'browserless_usage_month' => Setting::get('browserless_usage_month', ''),
 

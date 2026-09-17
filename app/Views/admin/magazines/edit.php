@@ -54,6 +54,25 @@
                         </button>
                     </form>
                     <small class="text-muted" style="font-size:0.72rem;">Gera o PDF no servidor (fica igual em qualquer aparelho). <?= $hasPdf ? 'Já existe um PDF gerado.' : 'Necessário antes de publicar/testar.' ?></small>
+                    <?php
+                        // Indicador de consumo do Browserless (mesma info das Configurações),
+                        // aqui à mão na hora de gerar. Protegido: nunca quebra a tela.
+                        try {
+                            $bl = \App\Services\BrowserlessPdfService::usageStatus();
+                            $blUsed = (int) $bl['used']; $blLimit = (int) $bl['limit'];
+                            $blPct = $blLimit > 0 ? min(100, round($blUsed / $blLimit * 100)) : 0;
+                            $blColor = $blPct >= 90 ? '#dc3545' : ($blPct >= 70 ? '#fd7e14' : '#198754');
+                    ?>
+                    <div class="mt-1" style="font-size:0.72rem;color:#666;">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Uso Browserless (mês)</span>
+                            <span style="color:<?= $blColor ?>;font-weight:600;"><?= $blUsed ?>/<?= $blLimit ?> un.</span>
+                        </div>
+                        <div style="height:6px;background:#e9ecef;border-radius:3px;overflow:hidden;">
+                            <div style="height:100%;width:<?= $blPct ?>%;background:<?= $blColor ?>;"></div>
+                        </div>
+                    </div>
+                    <?php } catch (\Throwable $e) { /* silencioso */ } ?>
                     <?php endif; ?>
                 </div>
 

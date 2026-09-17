@@ -418,25 +418,33 @@ $_isProduction = $_currentBranch === 'main';
                     <small class="text-muted">O PDF da revista é gerado por um Chrome na nuvem (Browserless), ficando idêntico em qualquer dispositivo (iPhone, Android, PC). Crie uma conta em browserless.io e cole o token aqui. Sem o token, a revista continua sendo exibida em HTML.</small>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Limite mensal de gerações de PDF</label>
-                    <input type="number" min="1" class="form-control" name="browserless_monthly_limit" value="<?= htmlspecialchars($settings['browserless_monthly_limit'] ?? '800') ?>">
-                    <small class="text-muted">Trava de segurança: ao atingir esse número de gerações no mês, o sistema bloqueia novas gerações (protege o plano gratuito). O contador zera a cada mês.</small>
+                    <label class="form-label">Limite mensal de unidades (Browserless)</label>
+                    <input type="number" min="1" class="form-control" name="browserless_monthly_limit" value="<?= htmlspecialchars($settings['browserless_monthly_limit'] ?? '700') ?>">
+                    <small class="text-muted">O Browserless cobra por <strong>tempo de navegador</strong> (cada 30s = 1 unidade), não por geração. O plano gratuito dá <strong>1.000 unidades/mês</strong>. Deixe o limite abaixo disso (ex.: 700) — ao atingir, o sistema bloqueia novas gerações para não estourar. Zera a cada mês.</small>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Uso neste mês</label>
+                    <label class="form-label">Uso neste mês (unidades)</label>
                     <?php
-                        $bUsed = (int) ($settings['browserless_usage_count'] ?? 0);
-                        $bMonth = $settings['browserless_usage_month'] ?? '';
-                        // Se o mês armazenado não é o atual, o uso efetivo é 0.
-                        if ($bMonth !== date('Y-m')) { $bUsed = 0; }
-                        $bLimit = (int) ($settings['browserless_monthly_limit'] ?? 800);
+                        // Consulta o número REAL da conta Browserless (se o token permitir);
+                        // senão, mostra a estimativa local conservadora.
+                        try {
+                            $bStatus = \App\Services\BrowserlessPdfService::usageStatus();
+                        } catch (\Throwable $e) {
+                            $bStatus = ['used' => 0, 'limit' => (int) ($settings['browserless_monthly_limit'] ?? 700), 'source' => 'local'];
+                        }
+                        $bUsed = (int) $bStatus['used'];
+                        $bLimit = (int) $bStatus['limit'];
+                        $bSource = $bStatus['source'] ?? 'local';
                         $bPct = $bLimit > 0 ? min(100, round($bUsed / $bLimit * 100)) : 0;
                     ?>
                     <div class="form-control d-flex align-items-center justify-content-between" style="background:#f8f9fa;">
-                        <span><strong><?= $bUsed ?></strong> de <?= $bLimit ?> gerações</span>
+                        <span><strong><?= $bUsed ?></strong> de <?= $bLimit ?> unidades</span>
                         <span class="badge <?= $bPct >= 90 ? 'bg-danger' : ($bPct >= 70 ? 'bg-warning text-dark' : 'bg-success') ?>"><?= $bPct ?>%</span>
                     </div>
-                    <small class="text-muted">Referência: <?= $bMonth !== '' ? htmlspecialchars($bMonth) : date('Y-m') ?>. Zera automaticamente no início de cada mês.</small>
+                    <small class="text-muted">
+                        <?= $bSource === 'api' ? 'Número real da conta Browserless.' : 'Estimativa local (a API da conta não respondeu).' ?>
+                        Zera no início de cada mês.
+                    </small>
                 </div>
             </div>
         </div>
