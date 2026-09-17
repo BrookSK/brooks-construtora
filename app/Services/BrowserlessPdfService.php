@@ -38,24 +38,37 @@ class BrowserlessPdfService
     /**
      * Estimativa CONSERVADORA de unidades por chamada. Cada chamada abre um
      * navegador que fica aberto alguns segundos (carrega a revista + espera +
-     * captura). Como 1 unidade = 30s e o mínimo é sempre 1, contamos 2 unidades
-     * por chamada para ter folga (nunca subestimar o consumo real).
+     * captura). Como 1 unidade = 30s e o mínimo é sempre 1, contamos 3 unidades
+     * por chamada para ter folga (é melhor superestimar e bloquear um pouco
+     * antes do que subestimar e estourar o plano). Só vale quando a API real
+     * de uso não responde — quando responde, usamos o número exato da conta.
      */
-    private const UNITS_PER_CALL = 2;
+    private const UNITS_PER_CALL = 3;
 
     /**
      * Consulta o uso REAL na API do Browserless (fonte da verdade). Retorna o
      * número de unidades consumidas no ciclo, ou null se não conseguir ler.
      */
-    private static function fetchRemoteUnits(string $token): ?int
+    /**
+     * Consulta o uso REAL na API da conta Browserless.
+     * Endpoint: GET https://api.browserless.io/v1/account/usage?token=...
+     * Resposta:
+     *   {"plan":{...},
+     *    "units":{"included":1000,"used":13,"remaining":987},
+     *    "billingPeriod":{"start":..., "end":...}}
+     *
+     * Retorna ['used'=>int, 'included'=>int] ou null se não conseguir ler.
+     */
+    private static function fetchRemoteUsage(string $token): ?array
     {
         if ($token === '' || !function_exists('curl_init')) return null;
         try {
             $ch = curl_init('https://api.browserless.io/v1/account/usage?token=' . urlencode($token));
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 12,
-                CURLOPT_CONNECTTIMEOUT => 8,
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_CONNECTTIMEOUT => 6,
+                CURLOPT_HTTPHEADER => ['Accept: application/json'],
             ]);
             $resp = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -63,15 +76,12 @@ class BrowserlessPdfService
             if ($code !== 200 || !$resp) return null;
 
             $data = json_decode((string) $resp, true);
-            if (!is_array($data)) return null;
+            if (!is_array($data) || !isset($data['units']['used'])) return null;
 
-            // Procura o campo de unidades consumidas entre nomes comuns.
-            foreach (['unitsUsed', 'units', 'used', 'consumed', 'usage', 'billedUnits'] as $k) {
-                if (isset($data[$k]) && is_numeric($data[$k])) {
-                    return (int) ceil((float) $data[$k]);
-                }
-            }
-            return null;
+            return [
+                'used' => (int) ceil((float) $data['units']['used']),
+                'included' => isset($data['units']['included']) ? (int) $data['units']['included'] : 0,
+            ];
         } catch (\Throwable $e) {
             return null;
         }
@@ -96,12 +106,17 @@ class BrowserlessPdfService
 
         // Tenta o número REAL da conta (fonte da verdade).
         $token = trim((string) Setting::get('browserless_token', ''));
-        $remote = self::fetchRemoteUnits($token);
+        $remote = self::fetchRemoteUsage($token);
         $source = 'local';
         $used = $localUsed;
         if ($remote !== null) {
-            $used = $remote;
+            $used = $remote['used'];
             $source = 'api';
+            // O limite efetivo é o MENOR entre o seu teto configurado e o
+            // incluído no plano (ex.: 1000 do free) — o que vier primeiro trava.
+            if (!empty($remote['included']) && $remote['included'] < $limit) {
+                $limit = $remote['included'];
+            }
         }
 
         $remaining = max(0, $limit - $used);
