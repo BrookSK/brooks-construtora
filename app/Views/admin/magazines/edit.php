@@ -111,40 +111,6 @@
                 </details>
                 <?php endif; ?>
 
-                <script>
-                (function () {
-                    var form = document.getElementById('genPdfForm');
-                    if (!form) return;
-                    form.addEventListener('submit', function (e) {
-                        e.preventDefault();
-                        var btn = document.getElementById('genPdfBtn');
-                        var original = btn.innerHTML;
-                        btn.disabled = true;
-                        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando PDF...';
-                        fetch(form.action, {
-                            method: 'POST',
-                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-                            body: new FormData(form)
-                        })
-                        .then(function (r) { return r.json(); })
-                        .then(function (res) {
-                            if (res && res.success) {
-                                btn.innerHTML = '<i class="bi bi-check-lg"></i> PDF gerado!';
-                                btn.classList.add('btn-success');
-                                setTimeout(function () { window.location.reload(); }, 1200);
-                            } else {
-                                alert((res && res.error) || 'Não foi possível gerar o PDF.');
-                                btn.disabled = false; btn.innerHTML = original;
-                            }
-                        })
-                        .catch(function () {
-                            alert('Erro de conexão ao gerar o PDF.');
-                            btn.disabled = false; btn.innerHTML = original;
-                        });
-                    });
-                })();
-                </script>
-
                 <?php else: ?>
 
                 <!-- Revista PUBLICADA: reverter para poder editar/regerar -->
@@ -161,29 +127,77 @@
                         <input type="hidden" name="magazine_id" value="<?= $magazine['id'] ?>">
                         <button type="submit" class="btn btn-outline-dark btn-sm w-100" id="genPdfBtn"><i class="bi bi-file-earmark-pdf"></i> Regerar PDF</button>
                     </form>
-                    <script>
-                    (function () {
-                        var form = document.getElementById('genPdfForm');
-                        if (!form) return;
-                        form.addEventListener('submit', function (e) {
-                            e.preventDefault();
-                            var btn = document.getElementById('genPdfBtn');
-                            var original = btn.innerHTML;
-                            btn.disabled = true;
-                            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando...';
-                            fetch(form.action, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: new FormData(form) })
-                            .then(function (r) { return r.json(); })
-                            .then(function (res) {
-                                if (res && res.success) { btn.innerHTML = '<i class="bi bi-check-lg"></i> PDF gerado!'; btn.classList.add('btn-success'); setTimeout(function(){ window.location.reload(); }, 1200); }
-                                else { alert((res && res.error) || 'Não foi possível gerar o PDF.'); btn.disabled = false; btn.innerHTML = original; }
-                            })
-                            .catch(function () { alert('Erro de conexão ao gerar o PDF.'); btn.disabled = false; btn.innerHTML = original; });
-                        });
-                    })();
-                    </script>
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>
+
+                <!-- Geração de PDF em BACKGROUND + polling do status.
+                     O servidor responde na hora (evita o timeout do nginx) e
+                     gera o PDF em segundo plano. Aqui acompanhamos até terminar. -->
+                <script>
+                (function () {
+                    var form = document.getElementById('genPdfForm');
+                    if (!form) return;
+                    var btn = document.getElementById('genPdfBtn');
+                    var original = btn ? btn.innerHTML : '';
+                    var magId = <?= (int) $magazine['id'] ?>;
+                    var pollTimer = null, elapsed = 0;
+
+                    function fail(msg) {
+                        if (pollTimer) clearInterval(pollTimer);
+                        alert(msg || 'Não foi possível gerar o PDF.');
+                        btn.disabled = false; btn.innerHTML = original;
+                    }
+                    function done() {
+                        if (pollTimer) clearInterval(pollTimer);
+                        btn.innerHTML = '<i class="bi bi-check-lg"></i> PDF gerado!';
+                        btn.classList.add('btn-success');
+                        setTimeout(function () { window.location.reload(); }, 1200);
+                    }
+
+                    function startPolling() {
+                        pollTimer = setInterval(function () {
+                            elapsed += 4;
+                            if (elapsed > 180) { fail('A geração está demorando mais que o normal. Tente novamente em instantes.'); return; }
+                            fetch('/admin/magazines/pdf-status?magazine_id=' + magId, {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                            })
+                            .then(function (r) { return r.json(); })
+                            .then(function (s) {
+                                if (!s) return;
+                                if (s.status === 'done') { done(); }
+                                else if (s.status === 'failed') { fail('A geração falhou. Verifique o token do Browserless e tente novamente.'); }
+                                // 'processing' → continua aguardando
+                            })
+                            .catch(function () { /* rede instável: continua tentando */ });
+                        }, 4000);
+                    }
+
+                    form.addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        btn.disabled = true;
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando PDF (aguarde)...';
+                        fetch(form.action, {
+                            method: 'POST',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                            body: new FormData(form)
+                        })
+                        .then(function (r) { return r.json(); })
+                        .then(function (res) {
+                            if (res && (res.started || res.success)) {
+                                startPolling(); // acompanha a geração em background
+                            } else {
+                                fail(res && res.error);
+                            }
+                        })
+                        .catch(function () {
+                            // Mesmo se a resposta inicial falhar, a geração pode ter
+                            // começado — tenta acompanhar por polling assim mesmo.
+                            startPolling();
+                        });
+                    });
+                })();
+                </script>
             </div>
         </div>
 

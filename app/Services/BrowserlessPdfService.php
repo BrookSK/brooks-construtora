@@ -310,6 +310,35 @@ JS;
     }
 
     /**
+     * Marca o status da geração (processing|done|failed) num arquivo, para o
+     * front-end acompanhar por polling (a geração roda em background).
+     */
+    public static function setStatus(int $magazineId, string $status): void
+    {
+        $dir = ROOT_PATH . '/public/uploads/magazine_pdfs';
+        if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+        @file_put_contents($dir . '/Revista_' . $magazineId . '.status', $status . '|' . time());
+    }
+
+    /**
+     * Lê o status atual da geração: 'processing', 'done', 'failed' ou 'none'.
+     */
+    public static function getStatus(int $magazineId): string
+    {
+        $file = ROOT_PATH . '/public/uploads/magazine_pdfs/Revista_' . $magazineId . '.status';
+        if (!is_file($file)) return 'none';
+        $raw = (string) @file_get_contents($file);
+        $parts = explode('|', $raw);
+        $status = $parts[0] ?? 'none';
+        $ts = (int) ($parts[1] ?? 0);
+        // Se ficou "processing" há mais de 5 min, considera travado (failed).
+        if ($status === 'processing' && (time() - $ts) > 300) {
+            return 'failed';
+        }
+        return $status ?: 'none';
+    }
+
+    /**
      * Monta a URL de preview isolada da revista, com token de acesso sem login.
      */
     private static function buildPreviewUrl(int $magazineId): string

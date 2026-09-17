@@ -1245,25 +1245,57 @@ class MagazineController extends Controller
             return;
         }
 
-        // A geração faz o PDF + uma imagem por página (várias chamadas ao
-        // Browserless), o que pode levar bastante tempo. Removemos o limite de
-        // tempo do PHP e liberamos a sessão para o request não estourar timeout.
-        @set_time_limit(0);
-        if (function_exists('session_write_close')) { @session_write_close(); }
+        // A geração no Browserless leva ~30-50s, o que estoura o timeout do
+        // nginx se o navegador ficar esperando. Por isso rodamos em BACKGROUND:
+        // respondemos "iniciado" na hora, desconectamos o request e seguimos
+        // gerando. O front-end acompanha por polling (pdfStatus).
+        \App\Services\BrowserlessPdfService::setStatus($id, 'processing');
 
-        $pdfUrl = \App\Services\BrowserlessPdfService::generate($id);
-
-        if ($pdfUrl) {
-            $after = \App\Services\BrowserlessPdfService::usageStatus();
-            if ($this->isAjax()) { $this->json(['success' => true, 'url' => $pdfUrl, 'remaining' => $after['remaining'], 'limit' => $after['limit']]); return; }
-            $this->setFlash('success', 'PDF da revista gerado com sucesso! Ele já é exibido para os leitores em qualquer dispositivo. (Restam ~' . $after['remaining'] . ' unidades Browserless neste mês.)');
-        } else {
-            $msg = 'Não foi possível gerar o PDF. Verifique se o token do Browserless está configurado em Configurações.';
-            if ($this->isAjax()) { $this->json(['success' => false, 'error' => $msg], 500); return; }
-            $this->setFlash('error', $msg);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
         }
 
-        $this->redirect('/admin/magazines/edit/' . $id);
+        $response = json_encode(['success' => true, 'started' => true]);
+        while (ob_get_level() > 0) { ob_end_clean(); }
+        http_response_code(202);
+        header('Content-Type: application/json');
+        header('Content-Length: ' . strlen($response));
+        header('Connection: close');
+        echo $response;
+        flush();
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        // A partir daqui o navegador já recebeu a resposta — nada de timeout.
+        set_time_limit(0);
+        ignore_user_abort(true);
+
+        try {
+            $pdfUrl = \App\Services\BrowserlessPdfService::generate($id);
+            \App\Services\BrowserlessPdfService::setStatus($id, $pdfUrl ? 'done' : 'failed');
+        } catch (\Throwable $e) {
+            error_log('[MAGAZINE_PDF] Erro no background: ' . $e->getMessage());
+            \App\Services\BrowserlessPdfService::setStatus($id, 'failed');
+        }
+        exit;
+    }
+
+    /**
+     * Endpoint de polling: informa se a geração do PDF terminou.
+     * Retorna { status: processing|done|failed|none, url? }.
+     */
+    public function pdfStatus(): void
+    {
+        $id = (int) $this->input('magazine_id');
+        if (!$id) { $this->json(['status' => 'none']); return; }
+
+        $status = \App\Services\BrowserlessPdfService::getStatus($id);
+        $url = \App\Services\BrowserlessPdfService::existingPdfUrl($id);
+        $this->json([
+            'status' => $status,
+            'url' => $url,
+        ]);
     }
 
     /**

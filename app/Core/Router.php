@@ -103,6 +103,7 @@ class Router
             'magazines/publish' => ['MagazineController', 'publish'],
             'magazines/publish-test' => ['MagazineController', 'publishTest'],
             'magazines/generate-pdf' => ['MagazineController', 'generatePdf'],
+            'magazines/pdf-status' => ['MagazineController', 'pdfStatus'],
             'magazines/unpublish' => ['MagazineController', 'unpublish'],
             'magazines/preview' => ['MagazineController', 'preview'],
             'magazines/delete' => ['MagazineController', 'delete'],
