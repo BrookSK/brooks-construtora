@@ -215,10 +215,11 @@ class BrowserlessPdfService
     }
 
     /**
-     * Captura UMA imagem de página inteira (fullPage) da revista via /screenshot.
-     * É uma única chamada — rápido e sem risco de timeout. A imagem contém
-     * TODAS as páginas empilhadas (a revista rola no visualizador). Renderizada
-     * pelo Chrome, mantém sombras/gradientes/efeitos, idêntica ao PDF.
+     * Captura UMA imagem por página (.page) numa ÚNICA chamada, via /function.
+     * O script Puppeteer abre a revista uma vez e tira um screenshot de cada
+     * folha, retornando todas as imagens (base64) num JSON. O PHP salva cada
+     * uma como _pNN.png. Assim: páginas separadas (com espaço no visualizador),
+     * sem recarregar a revista N vezes (sem timeout) e com todos os efeitos.
      */
     private static function generatePageImages(int $magazineId, string $token, string $host): void
     {
@@ -234,32 +235,74 @@ class BrowserlessPdfService
         if (!self::usageStatus()['allowed']) return;
 
         $previewUrl = self::buildPreviewUrl($magazineId);
-        $endpoint = rtrim($host, '/') . '/screenshot?token=' . urlencode($token);
+        $endpoint = rtrim($host, '/') . '/function?token=' . urlencode($token);
 
-        $payload = [
-            'url' => $previewUrl,
-            'gotoOptions' => ['waitUntil' => 'networkidle2', 'timeout' => 50000],
-            'waitForTimeout' => 3000,
-            'bestAttempt' => true,
-            'options' => [
-                'type' => 'png',
-                'fullPage' => true,
-            ],
-            // Largura fixa da folha para a imagem sair no tamanho da revista.
-            'viewport' => ['width' => 595, 'height' => 842, 'deviceScaleFactor' => 2],
-        ];
+        // Script Puppeteer: abre a revista, espera assentar, e captura cada
+        // .page como PNG base64. Retorna a lista em JSON.
+        $jsCode = <<<JS
+export default async ({ page }) => {
+  await page.setViewport({ width: 595, height: 842, deviceScaleFactor: 2 });
+  await page.goto("{$previewUrl}", { waitUntil: "networkidle2", timeout: 60000 });
+  await new Promise(r => setTimeout(r, 3500));
+  const handles = await page.\$\$(".preview .page");
+  const images = [];
+  for (const h of handles) {
+    try {
+      const shot = await h.screenshot({ type: "png", encoding: "base64" });
+      images.push(shot);
+    } catch (e) {}
+  }
+  return { data: { images }, type: "application/json" };
+};
+JS;
 
-        [$body, $httpCode, $contentType] = self::postToBrowserless($endpoint, $payload);
-        $isImage = ($httpCode === 200)
-            && (stripos($contentType, 'image/') !== false || substr((string) $body, 0, 8) === "\x89PNG\r\n\x1a\n");
+        [$body, $httpCode, $contentType] = self::postToBrowserlessCode($endpoint, $jsCode);
 
-        if (!$isImage) {
-            error_log('[BROWSERLESS] Screenshot fullPage falhou. code=' . $httpCode . ' type=' . $contentType);
+        if ($httpCode !== 200 || $body === false) {
+            error_log('[BROWSERLESS] /function falhou. code=' . $httpCode . ' body=' . substr((string) $body, 0, 300));
             return;
         }
 
-        file_put_contents($dir . '/Revista_' . $magazineId . '_p01.png', $body);
-        self::registerUsage(); // 1 chamada consumida
+        $json = json_decode((string) $body, true);
+        $images = $json['data']['images'] ?? ($json['images'] ?? null);
+        if (!is_array($images) || empty($images)) {
+            error_log('[BROWSERLESS] /function sem imagens. body=' . substr((string) $body, 0, 300));
+            return;
+        }
+
+        $n = 0;
+        foreach ($images as $b64) {
+            $bin = base64_decode((string) $b64, true);
+            if ($bin === false || $bin === '') continue;
+            $n++;
+            file_put_contents($dir . '/Revista_' . $magazineId . '_p' . str_pad((string) $n, 2, '0', STR_PAD_LEFT) . '.png', $bin);
+        }
+
+        if ($n > 0) {
+            self::registerUsage(); // 1 chamada consumida (independente do nº de páginas)
+        }
+    }
+
+    /**
+     * POST de código JS (application/javascript) ao Browserless /function.
+     * Retorna [body, httpCode, contentType].
+     */
+    private static function postToBrowserlessCode(string $endpoint, string $jsCode): array
+    {
+        $ch = curl_init($endpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/javascript'],
+            CURLOPT_POSTFIELDS => $jsCode,
+            CURLOPT_TIMEOUT => 180,
+            CURLOPT_CONNECTTIMEOUT => 20,
+        ]);
+        $body = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        curl_close($ch);
+        return [$body, $httpCode, $contentType];
     }
 
     /**
