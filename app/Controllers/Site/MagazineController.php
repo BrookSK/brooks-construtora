@@ -199,10 +199,24 @@ class MagazineController extends Controller
             return;
         }
 
-        // Se há um PDF real gerado (Browserless), entrega ele diretamente —
-        // é o arquivo fiel, idêntico em qualquer dispositivo.
+        // Se há um PDF real gerado (Browserless), entrega o arquivo com um NOME
+        // amigável (título da revista) via Content-Disposition — assim o
+        // download não vem como "Revista_15.pdf".
         $pdfUrl = \App\Services\BrowserlessPdfService::existingPdfUrl($id);
         if ($pdfUrl) {
+            $absolute = ROOT_PATH . '/public' . $pdfUrl;
+            if (is_file($absolute)) {
+                $title = $magazine['title'] ?? 'Revista Brooks';
+                $name = preg_replace('/[\/:*?"<>|]+/', '', 'Revista Brooks - ' . $title . '.pdf');
+                // Modo: ?dl=1 força download; senão abre inline (visualizar).
+                $disposition = !empty($_GET['dl']) ? 'attachment' : 'inline';
+                header('Content-Type: application/pdf');
+                header('Content-Disposition: ' . $disposition . '; filename="' . $name . '"');
+                header('Content-Length: ' . filesize($absolute));
+                header('Cache-Control: public, max-age=300');
+                readfile($absolute);
+                exit;
+            }
             $this->redirect($pdfUrl);
             return;
         }

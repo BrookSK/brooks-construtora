@@ -24,6 +24,11 @@ $pdfFull = $pdfUrl . '?v=' . $ver;
 $images = $pageImages ?? [];
 $title = $magazine['title'] ?? 'Revista Brooks';
 $esc = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES, 'UTF-8');
+
+// Nome amigável do arquivo ao baixar (usa o título da revista, não "Revista_15").
+$downloadName = 'Revista Brooks - ' . $title . '.pdf';
+// Remove caracteres inválidos para nome de arquivo.
+$downloadName = preg_replace('/[\\/:*?"<>|]+/', '', $downloadName);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -66,7 +71,13 @@ $esc = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES, 'UTF-8');
             <span class="mag"><?= $esc($title) ?></span>
         </div>
         <div class="actions">
-            <a href="<?= $esc($pdfFull) ?>" download class="btn btn-primary" title="Baixar PDF">&#8681; Baixar</a>
+            <?php
+                // Baixa pela rota PHP (?dl=1), que entrega o arquivo com o nome
+                // bonito (título da revista) via Content-Disposition.
+                $dlHref = '/revista/pdf/' . (int) $magazine['id'] . '?dl=1';
+                if (!empty($previewToken)) $dlHref .= '&preview=' . urlencode($previewToken);
+            ?>
+            <a href="<?= $esc($dlHref) ?>" class="btn btn-primary" title="Baixar PDF">&#8681; Baixar</a>
         </div>
     </div>
 
