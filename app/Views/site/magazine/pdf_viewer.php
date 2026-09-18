@@ -22,7 +22,10 @@ $ver = is_file($pdfAbs) ? filemtime($pdfAbs) : time();
 $pdfFull = $pdfUrl . '?v=' . $ver;
 
 $images = $pageImages ?? [];
-$title = $magazine['title'] ?? 'Revista Brooks';
+// Nome exibido = Nome da Revista (editável) → título → padrão.
+$title = trim($magazine['magazine_name'] ?? '') !== ''
+    ? $magazine['magazine_name']
+    : (trim($magazine['title'] ?? '') !== '' ? $magazine['title'] : 'Revista Brooks');
 $esc = fn($v) => htmlspecialchars((string) ($v ?? ''), ENT_QUOTES, 'UTF-8');
 
 // Nome amigável do arquivo ao baixar (usa o título da revista, não "Revista_15").

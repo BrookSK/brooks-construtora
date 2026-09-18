@@ -61,10 +61,13 @@ include ROOT_PATH . '/app/Views/site/layouts/new-header.php';
                             <?php endif; ?>
                         </div>
                         <div class="magazine-card__info">
-                            <?php if (!empty($mag['topic_title'])): ?>
-                                <span class="magazine-card__category"><?= htmlspecialchars($mag['topic_title']) ?></span>
-                            <?php endif; ?>
-                            <h3 class="magazine-card__title"><?= htmlspecialchars($mag['title']) ?></h3>
+                            <?php
+                                // Nome exibido = Nome da Revista (editável) → título → tema.
+                                $magDisplayName = trim($mag['magazine_name'] ?? '') !== ''
+                                    ? $mag['magazine_name']
+                                    : (trim($mag['title'] ?? '') !== '' ? $mag['title'] : ($mag['topic_title'] ?? ''));
+                            ?>
+                            <h3 class="magazine-card__title"><?= htmlspecialchars($magDisplayName) ?></h3>
                             <?php $magDate = $mag['published_at'] ?? $mag['created_at'] ?? ''; ?>
                             <?php if (!empty($magDate)): ?>
                                 <span class="magazine-card__date"><?= date('d/m/Y', strtotime($magDate)) ?></span>

@@ -57,7 +57,12 @@
 												<?php endif; ?>
 											</div>
 											<div class="box-text" style="padding: 15px 5px;">
-												<h5 style="margin: 0 0 5px; font-size: 1rem;"><?= htmlspecialchars($mag['topic_title'] ?? $mag['title']) ?></h5>
+												<?php
+													$magDisplayName = trim($mag['magazine_name'] ?? '') !== ''
+														? $mag['magazine_name']
+														: (trim($mag['title'] ?? '') !== '' ? $mag['title'] : ($mag['topic_title'] ?? ''));
+												?>
+												<h5 style="margin: 0 0 5px; font-size: 1rem;"><?= htmlspecialchars($magDisplayName) ?></h5>
 												<?php $magDate = $mag['published_at'] ?? $mag['created_at'] ?? ''; ?>
 												<p style="margin: 0; font-size: 0.85rem; color: #888;"><?= $magDate ? date('d/m/Y', strtotime($magDate)) : '' ?></p>
 											</div>
