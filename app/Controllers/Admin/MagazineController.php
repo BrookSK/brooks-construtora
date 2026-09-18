@@ -1810,26 +1810,12 @@ class MagazineController extends Controller
             // é o normal (a revista já é pública).
             $previewToken = $testMode ? Magazine::ensurePreviewToken($magazineId) : '';
 
-            // Anexa o PDF da revista (o gerado pelo Browserless, que JÁ está
-            // salvo e é o mesmo que o leitor vê no site) — TANTO no teste quanto
-            // no oficial. Assim o cliente recebe exatamente o que você testou.
-            $pdfPath = null;
-            $pdfRel = \App\Services\BrowserlessPdfService::existingPdfUrl($magazineId);
-            if ($pdfRel) {
-                $candidate = ROOT_PATH . '/public' . $pdfRel;
-                if (is_file($candidate)) {
-                    $pdfPath = $candidate;
-                }
-            }
+            // NÃO anexamos o PDF ao e-mail: o PDF da revista (Browserless) é
+            // pesado (várias páginas em alta resolução) e o anexo estourava o
+            // limite/timeout do SMTP, fazendo o e-mail NÃO chegar a ninguém.
+            // Em vez disso, o e-mail leva o botão "Ler Revista" (visualizador no
+            // site) + botão "Baixar PDF". E-mail leve = entrega garantida.
             $attachments = [];
-            if ($pdfPath) {
-                $safeTitle = preg_replace('/[^a-zA-Z0-9]+/', '_', $displayTitle);
-                $attachments[] = [
-                    'path' => $pdfPath,
-                    'name' => 'Revista_Brooks_' . $safeTitle . '.pdf',
-                    'mime' => 'application/pdf',
-                ];
-            }
 
             // Enviar e-mails
             foreach ($subscribers as $subscriber) {
@@ -1841,7 +1827,7 @@ class MagazineController extends Controller
                     $subscriber['email'] ?? '',
                     $displayTitle,               // mantém compat: usado como fallback interno
                     $previewToken,
-                    $testMode && !$pdfPath       // se não gerou PDF, mostrar botão de download no e-mail
+                    true                         // sempre mostra o botão de baixar/ler o PDF (link)
                 );
 
                 $mail->send(
