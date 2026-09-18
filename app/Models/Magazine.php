@@ -60,6 +60,44 @@ class Magazine extends Model
     }
 
     /**
+     * Verifica se a coluna magazine_name (nome exibido nas notificações) existe.
+     * Cacheia por request.
+     */
+    private static ?bool $hasMagazineName = null;
+    public static function hasMagazineNameColumn(): bool
+    {
+        if (self::$hasMagazineName !== null) return self::$hasMagazineName;
+        try {
+            $r = Database::fetch(
+                "SELECT 1 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'magazines'
+                   AND COLUMN_NAME = 'magazine_name' LIMIT 1"
+            );
+            self::$hasMagazineName = !empty($r);
+        } catch (\Throwable $e) {
+            self::$hasMagazineName = false;
+        }
+        return self::$hasMagazineName;
+    }
+
+    /**
+     * Garante a coluna magazine_name (equivalente à migration 047). Idempotente
+     * e protegido — não quebra se o banco ainda não foi migrado.
+     */
+    public static function ensureMagazineNameColumn(): void
+    {
+        if (self::hasMagazineNameColumn()) return;
+        try {
+            Database::getConnection()->exec(
+                "ALTER TABLE magazines ADD COLUMN magazine_name VARCHAR(255) DEFAULT NULL AFTER subtitle"
+            );
+            self::$hasMagazineName = true;
+        } catch (\Throwable $e) {
+            error_log('[MAGAZINE] Falha ao adicionar magazine_name: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Chave secreta usada para derivar o token de preview.
      * Fixa no código (não precisa de banco). Só quem tem o código consegue gerar.
      */

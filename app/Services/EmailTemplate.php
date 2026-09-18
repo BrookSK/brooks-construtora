@@ -155,7 +155,7 @@ HTML;
         return self::wrap('Nova Revista Gerada', $body);
     }
 
-    public static function magazinePublished(string $magazineTitle, int $magazineId, string $subscriberName = '', string $subscriberEmail = '', string $topicTitle = '', string $previewToken = '', bool $showPdfDownloadButton = false): string
+    public static function magazinePublished(string $magazineTitle, int $magazineId, string $subscriberName = '', string $subscriberEmail = '', string $topicTitle = '', string $previewToken = '', bool $showPdfDownloadButton = false, string $description = ''): string
     {
         $baseUrl = self::baseUrl();
         // Se houver token de preview (modo teste), o link abre a revista sem login
@@ -167,7 +167,14 @@ HTML;
         }
         $unsubscribeUrl = "{$baseUrl}/newsletter/unsubscribe?email=" . urlencode($subscriberEmail);
         $greeting = !empty($subscriberName) ? "Olá, {$subscriberName}" : "Olá";
-        $displayTitle = htmlspecialchars($topicTitle ?: $magazineTitle, ENT_QUOTES, 'UTF-8');
+        // Título exibido = nome editável da revista (magazineTitle). O topicTitle
+        // fica só como fallback caso o título venha vazio.
+        $displayTitle = htmlspecialchars($magazineTitle ?: $topicTitle, ENT_QUOTES, 'UTF-8');
+        // Descrição editável (subtítulo da revista) para o corpo do e-mail.
+        // Se vazia, usa o texto padrão institucional.
+        $descText = trim($description) !== ''
+            ? htmlspecialchars($description, ENT_QUOTES, 'UTF-8')
+            : 'Uma nova edição da nossa revista digital acaba de sair. Preparamos conteúdo exclusivo sobre construção, reformas e arquitetura de alto padrão — feito para inspirar seus próximos projetos.';
         $year = date('Y');
 
         // Botão de PDF (aparece quando o PDF não foi anexado — plano B)
@@ -229,7 +236,7 @@ PDFBTN;
             <td style="padding:34px 40px 10px;">
                 <p style="margin:0 0 16px; color:#2f3142; font-size:16px; font-weight:600;">{$greeting},</p>
                 <p style="margin:0 0 24px; color:#555b6b; font-size:15px; line-height:1.7;">
-                    Uma nova edição da nossa revista digital acaba de sair. Preparamos conteúdo exclusivo sobre construção, reformas e arquitetura de alto padrão — feito para inspirar seus próximos projetos.
+                    {$descText}
                 </p>
             </td>
         </tr>

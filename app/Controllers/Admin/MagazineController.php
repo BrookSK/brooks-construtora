@@ -682,10 +682,16 @@ class MagazineController extends Controller
         }
 
         // Atualiza dados gerais
-        Magazine::updateById($id, [
+        $generalData = [
             'title' => $this->input('title'),
             'subtitle' => $this->input('subtitle'),
-        ]);
+        ];
+        // Nome da revista (notificações) — só grava se a coluna existir.
+        Magazine::ensureMagazineNameColumn();
+        if (Magazine::hasMagazineNameColumn()) {
+            $generalData['magazine_name'] = trim((string) $this->input('magazine_name')) ?: null;
+        }
+        Magazine::updateById($id, $generalData);
 
         // Atualiza páginas
         if (isset($_POST['pages'])) {
@@ -1776,14 +1782,19 @@ class MagazineController extends Controller
     {
         try {
             $magazine = Magazine::find($magazineId);
-            
-            // Busca o tema da revista
+
+            // O que aparece nas notificações é o NOME DA REVISTA (campo próprio
+            // 'magazine_name', editável em Informações Gerais). Não é o Título/
+            // Subtítulo da capa nem o tema. Fallbacks: título da revista → tema.
+            $magName = trim((string) ($magazine['magazine_name'] ?? ''));
+            $magTitle = trim((string) ($magazine['title'] ?? ''));
+
             $topicTitle = '';
-            if ($magazine['topic_id']) {
+            if (!empty($magazine['topic_id'])) {
                 $topic = MagazineTopic::find($magazine['topic_id']);
                 $topicTitle = $topic['title'] ?? '';
             }
-            
+
             // Em modo teste, usa apenas os contatos de teste configurados.
             // Caso contrário, todos os assinantes ativos.
             $subscribers = $testMode
@@ -1791,16 +1802,24 @@ class MagazineController extends Controller
                 : \App\Models\Newsletter::getActiveSubscribers();
 
             $mail = new MailService();
-            $displayTitle = $topicTitle ?: $magazine['title'];
+            // Título exibido na notificação: nome da revista → título → tema.
+            $displayTitle = $magName !== '' ? $magName : ($magTitle !== '' ? $magTitle : $topicTitle);
             $subjectPrefix = $testMode ? '[TESTE] ' : '';
 
-            // Em modo teste: link com token (abre sem login) e PDF anexado
+            // Em modo teste: link com token (abre sem login). No oficial o link
+            // é o normal (a revista já é pública).
             $previewToken = $testMode ? Magazine::ensurePreviewToken($magazineId) : '';
 
-            // Tenta gerar o PDF no servidor (só no modo teste)
+            // Anexa o PDF da revista (o gerado pelo Browserless, que JÁ está
+            // salvo e é o mesmo que o leitor vê no site) — TANTO no teste quanto
+            // no oficial. Assim o cliente recebe exatamente o que você testou.
             $pdfPath = null;
-            if ($testMode) {
-                $pdfPath = \App\Services\MagazinePdfService::generate($magazineId);
+            $pdfRel = \App\Services\BrowserlessPdfService::existingPdfUrl($magazineId);
+            if ($pdfRel) {
+                $candidate = ROOT_PATH . '/public' . $pdfRel;
+                if (is_file($candidate)) {
+                    $pdfPath = $candidate;
+                }
             }
             $attachments = [];
             if ($pdfPath) {
@@ -1816,13 +1835,13 @@ class MagazineController extends Controller
             foreach ($subscribers as $subscriber) {
                 if (empty($subscriber['email'])) continue;
                 $htmlBody = \App\Services\EmailTemplate::magazinePublished(
-                    $magazine['title'],
+                    $displayTitle,               // título exibido = nome editável da revista
                     $magazineId,
                     $subscriber['name'] ?? '',
                     $subscriber['email'] ?? '',
-                    $topicTitle,
+                    $displayTitle,               // mantém compat: usado como fallback interno
                     $previewToken,
-                    $testMode && !$pdfPath // se não gerou PDF, mostrar botão de download no e-mail
+                    $testMode && !$pdfPath       // se não gerou PDF, mostrar botão de download no e-mail
                 );
 
                 $mail->send(
@@ -1834,10 +1853,8 @@ class MagazineController extends Controller
                 );
             }
 
-            // Limpar PDF temporário após envio
-            if ($pdfPath && is_file($pdfPath)) {
-                @unlink($pdfPath);
-            }
+            // NÃO apagar o PDF: agora é o arquivo PERMANENTE do Browserless,
+            // que o visualizador do site usa. (Antes era um PDF temporário.)
 
             // Enviar webhook WhatsApp
             $this->sendMagazineWebhook($magazineId, $magazine, $displayTitle, $subscribers, $testMode, $previewToken);
@@ -1863,24 +1880,30 @@ class MagazineController extends Controller
 
         $subscribers = [];
 
-        // E-mails de teste (separados por vírgula)
-        foreach (array_map('trim', explode(',', $emailsRaw)) as $email) {
+        // E-mails e telefones de teste são listas INDEPENDENTES. Cada e-mail
+        // válido recebe o e-mail; cada telefone válido recebe o WhatsApp. NÃO
+        // alinhamos e-mail com telefone por posição (o casamento por índice
+        // antigo fazia telefones serem descartados quando as quantidades de
+        // e-mails e telefones eram diferentes — por isso só alguns recebiam).
+
+        // Aceita separação por vírgula OU quebra de linha.
+        $splitList = function (string $raw): array {
+            $parts = preg_split('/[,\r\n]+/', $raw) ?: [];
+            return array_values(array_filter(array_map('trim', $parts), fn($v) => $v !== ''));
+        };
+
+        // E-mails de teste
+        foreach ($splitList($emailsRaw) as $email) {
             if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $subscribers[] = ['name' => 'Teste', 'email' => $email, 'phone' => null];
             }
         }
 
-        // Telefones de teste (separados por vírgula) — anexa ao primeiro contato ou cria novos
-        $phones = array_filter(array_map('trim', explode(',', $phonesRaw)));
-        foreach ($phones as $i => $phone) {
+        // Telefones de teste — cada um vira um destinatário próprio de WhatsApp.
+        foreach ($splitList($phonesRaw) as $phone) {
             $digits = preg_replace('/\D/', '', $phone);
             if (strlen($digits) < 10) continue;
-            // Se já existe um subscriber sem telefone, adiciona nele; senão cria novo
-            if (isset($subscribers[$i]) && empty($subscribers[$i]['phone'])) {
-                $subscribers[$i]['phone'] = $digits;
-            } else {
-                $subscribers[] = ['name' => 'Teste', 'email' => null, 'phone' => $digits];
-            }
+            $subscribers[] = ['name' => 'Teste', 'email' => null, 'phone' => $digits];
         }
 
         return $subscribers;

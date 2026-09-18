@@ -246,13 +246,32 @@
             <div class="card mb-3">
                 <div class="card-header"><h6 class="mb-0">Informações Gerais</h6></div>
                 <div class="card-body">
+                    <!-- NOME DA REVISTA: campo próprio, usado nas notificações
+                         (e-mail e WhatsApp). É diferente do Título/Subtítulo (que
+                         aparecem na capa/PDF) e do Tema (que gerou o conteúdo). -->
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold"><i class="bi bi-envelope-paper"></i> Nome da Revista <span class="text-primary">(usado no e-mail e no WhatsApp)</span></label>
+                        <input type="text" class="form-control form-control-sm" name="magazine_name" value="<?= htmlspecialchars($magazine['magazine_name'] ?? '') ?>" placeholder="Ex: Como aumentar o valor do seu produto">
+                        <small class="text-muted">É o nome que o cliente vê na notificação. Se deixar em branco, usa o Título abaixo.</small>
+                    </div>
+
+                    <?php if (!empty($magazine['topic_id'])):
+                        $__topic = \App\Models\MagazineTopic::find((int) $magazine['topic_id']);
+                    ?>
+                    <div class="mb-2">
+                        <label class="form-label small text-muted">Tema utilizado (referência — não editável)</label>
+                        <input type="text" class="form-control form-control-sm" value="<?= htmlspecialchars($__topic['title'] ?? '') ?>" disabled style="background:#f1f1f1;color:#888;">
+                    </div>
+                    <?php endif; ?>
+
+                    <hr class="my-2">
                     <div class="row g-2">
                         <div class="col-md-6">
-                            <label class="form-label small">Título</label>
+                            <label class="form-label small">Título <span class="text-muted">(capa/PDF)</span></label>
                             <input type="text" class="form-control form-control-sm" name="title" value="<?= htmlspecialchars($magazine['title']) ?>">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small">Subtítulo / Tema</label>
+                            <label class="form-label small">Subtítulo <span class="text-muted">(capa/PDF)</span></label>
                             <input type="text" class="form-control form-control-sm" name="subtitle" value="<?= htmlspecialchars($magazine['subtitle'] ?? '') ?>">
                         </div>
                     </div>
