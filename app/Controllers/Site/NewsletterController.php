@@ -48,9 +48,10 @@ class NewsletterController extends Controller
 
         if ($this->isAjax()) {
             if ($result) {
-                $this->json(['success' => true, 'message' => 'Inscrição realizada com sucesso!']);
+                $this->json(['success' => true, 'message' => 'Pronto! Inscrição confirmada. Você vai receber as próximas edições por e-mail.']);
             } else {
-                $this->json(['success' => false, 'message' => 'Este e-mail já está inscrito.']);
+                // Já é assinante — trata como aviso amigável (não é erro).
+                $this->json(['success' => false, 'message' => 'Este e-mail já está na nossa lista. Você já recebe as edições. 👍']);
             }
         } else {
             if ($result) {

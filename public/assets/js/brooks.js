@@ -225,6 +225,23 @@
     // === NEWSLETTER FORM (AJAX) ===
     const newsletterForms = document.querySelectorAll('#footer-newsletter-form, .newsletter-form-ajax');
     newsletterForms.forEach(function (form) {
+        // Mostra uma mensagem amigável abaixo do formulário (sucesso ou aviso),
+        // usando o texto que o servidor retorna (ex.: "Este e-mail já está
+        // inscrito."), em vez de só escrever "Erro" no botão.
+        function showMsg(text, ok) {
+            var box = form.querySelector('.newsletter-msg');
+            if (!box) {
+                box = document.createElement('div');
+                box.className = 'newsletter-msg';
+                box.style.cssText = 'width:100%;margin-top:10px;padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.4;text-align:center;';
+                form.appendChild(box);
+            }
+            box.textContent = text;
+            box.style.background = ok ? 'rgba(40,167,69,0.15)' : 'rgba(230,57,70,0.15)';
+            box.style.color = ok ? '#28a745' : '#e63946';
+            box.style.border = '1px solid ' + (ok ? 'rgba(40,167,69,0.4)' : 'rgba(230,57,70,0.4)');
+        }
+
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             var fd = new FormData(this);
@@ -240,19 +257,18 @@
             })
             .then(function (r) { return r.json(); })
             .then(function (d) {
-                btn.textContent = d.success ? '✓ Inscrito!' : 'Erro';
-                if (d.success) form.reset();
-                setTimeout(function () {
-                    btn.textContent = originalText;
-                    btn.disabled = false;
-                }, 3000);
+                var msg = (d && d.message)
+                    ? d.message
+                    : (d && d.success ? 'Inscrição realizada com sucesso!' : 'Não foi possível concluir. Tente novamente.');
+                showMsg(msg, !!(d && d.success));
+                if (d && d.success) form.reset();
+                btn.textContent = originalText;
+                btn.disabled = false;
             })
             .catch(function () {
-                btn.textContent = 'Erro';
-                setTimeout(function () {
-                    btn.textContent = originalText;
-                    btn.disabled = false;
-                }, 3000);
+                showMsg('Erro de conexão. Tente novamente em instantes.', false);
+                btn.textContent = originalText;
+                btn.disabled = false;
             });
         });
     });
