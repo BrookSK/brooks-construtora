@@ -740,6 +740,43 @@ HTML;
         return self::wrap("Mensagem - Pedido {$order['code']}", $body);
     }
 
+    /**
+     * E-mail de novo áudio gravado em um pedido.
+     * $targetRole = 'quoter' (notificando a cotação) ou 'approver' (notificando a aprovação)
+     */
+    public static function orderAudio(array $order, string $recordedBy, string $fromRoleLabel, string $actionUrl, string $targetRole, ?int $durationSeconds = null): string
+    {
+        $actionLabel = $targetRole === 'quoter' ? 'Abrir Cotação e Ouvir' : 'Abrir Aprovação e Ouvir';
+        $bgColor = $fromRoleLabel === 'Aprovação' ? '#fff3cd' : '#d1ecf1';
+        $borderColor = $fromRoleLabel === 'Aprovação' ? '#ffc107' : '#bee5eb';
+
+        $durationText = '';
+        if ($durationSeconds && $durationSeconds > 0) {
+            $mins = floor($durationSeconds / 60);
+            $secs = $durationSeconds % 60;
+            $durationText = '<p style="margin:8px 0 0; font-size:13px; color:#555;">Duração: <strong>'
+                . sprintf('%d:%02d', $mins, $secs) . '</strong></p>';
+        }
+
+        $body = <<<HTML
+<p style="margin-bottom:15px;">Um novo áudio foi gravado no pedido <strong>{$order['code']}</strong> e aguarda sua resposta:</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:{$bgColor}; border-radius:6px; margin-bottom:20px; border:1px solid {$borderColor};">
+<tr><td style="padding: 18px 20px;">
+    <p style="margin:0 0 5px; font-size:13px; color:#333; font-weight:600;">🎤 Áudio de {$recordedBy} ({$fromRoleLabel})</p>
+    <p style="margin:6px 0 0; font-size:14px; color:#333; line-height:1.6;">Abra o pedido para ouvir o áudio e responder.</p>
+    {$durationText}
+</td></tr>
+</table>
+
+<p style="text-align:center; margin: 25px 0 10px;">
+    <a href="{$actionUrl}" style="display:inline-block; background-color:#3a3b4e; color:#ffffff; padding:14px 32px; border-radius:5px; text-decoration:none; font-weight:600; font-size:14px;">{$actionLabel}</a>
+</p>
+HTML;
+
+        return self::wrap("Novo áudio - Pedido {$order['code']}", $body);
+    }
+
     public static function purchaseOrderPaymentPending(array $order, string $panelUrl): string
     {
         $totalFormatted = number_format($order['total_estimated'] ?? 0, 2, ',', '.');

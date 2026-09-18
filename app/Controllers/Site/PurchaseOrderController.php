@@ -3370,6 +3370,15 @@ class PurchaseOrderController extends Controller
             'recorded_by_user_id' => null,
         ]);
 
+        // Notificar a outra parte (cotação <-> aprovação) sobre o novo áudio.
+        // - Áudio do aprovador (stage=approval) -> notifica a COTAÇÃO
+        // - Áudio do cotador  (stage=quote)     -> notifica a APROVAÇÃO
+        try {
+            $this->notifyAudioRecorded($order, $stage, $recordedBy, $filename, $duration);
+        } catch (\Throwable $e) {
+            error_log('[BROOKS_AUDIO_NOTIFY] Falha ao enfileirar notificacao de audio: ' . $e->getMessage());
+        }
+
         echo json_encode([
             'success' => true,
             'audio' => [
@@ -3382,6 +3391,120 @@ class PurchaseOrderController extends Controller
             ],
         ]);
         exit;
+    }
+
+    /**
+     * Enfileira notificações (e-mail + WhatsApp/webhook) quando um áudio é gravado
+     * na fase pública de cotação ou aprovação.
+     *
+     * Fluxo desejado:
+     *  - Aprovador grava áudio (stage=approval) => notifica a COTAÇÃO, com link para a cotação.
+     *  - Cotador grava áudio  (stage=quote)     => notifica a APROVAÇÃO, com link para a aprovação.
+     */
+    private function notifyAudioRecorded(array $order, string $stage, string $recordedBy, string $filename, int $duration): void
+    {
+        $baseUrl = $this->getBaseUrl();
+        $audioUrl = $baseUrl . '/uploads/orders/audio/' . $filename;
+        $constructionSiteId = !empty($order['construction_site_id']) ? (int) $order['construction_site_id'] : null;
+
+        if ($stage === 'approval') {
+            // Áudio do aprovador -> notificar a COTAÇÃO
+            $targetPhase = 'quote';
+            $fromRoleLabel = 'Aprovação';
+            $targetRole = 'quoter';
+            $actionUrl = "{$baseUrl}/pedido/cotacao/{$order['quote_token']}";
+            $eventType = 'approval_audio';
+            $globalEmails = Setting::get('orders_quote_emails', '');
+            $globalWebhook = Setting::get('orders_quote_webhook', '');
+            $globalPhone = Setting::get('orders_quote_phone', '');
+            $globalPhoneName = Setting::get('orders_quote_phone_name', '');
+        } else {
+            // Áudio do cotador -> notificar a APROVAÇÃO
+            $targetPhase = 'approval';
+            $fromRoleLabel = 'Cotação';
+            $targetRole = 'approver';
+            $actionUrl = "{$baseUrl}/pedido/aprovacao/{$order['approval_token']}";
+            $eventType = 'quote_audio';
+            $globalEmails = Setting::get('orders_approval_emails', '');
+            $globalWebhook = Setting::get('orders_approval_webhook', '');
+            $globalPhone = Setting::get('orders_approval_phone', '');
+            $globalPhoneName = Setting::get('orders_approval_phone_name', '');
+        }
+
+        // Respeita o modo de notificação (both / site_only / global_only) igual aos demais eventos
+        $recipients = $this->resolveNotifyRecipients($constructionSiteId, $targetPhase);
+
+        // ---- Montar destinatários de e-mail ----
+        $emailList = [];
+        if ($recipients['send_global'] && !empty($globalEmails)) {
+            $emailList[] = $globalEmails;
+        }
+        if ($recipients['send_site'] && !empty($recipients['site_users'])) {
+            $siteEmails = array_filter(array_column($recipients['site_users'], 'email'));
+            if (!empty($siteEmails)) {
+                $emailList[] = implode(',', $siteEmails);
+            }
+        }
+        $emails = implode(',', array_filter($emailList));
+
+        // ---- Montar destinatários de WhatsApp/telefone ----
+        $phones = [];
+        $phoneNames = [];
+        if ($recipients['send_global'] && !empty($globalPhone)) {
+            $phones[] = $globalPhone;
+            $phoneNames[] = $globalPhoneName ?: $globalPhone;
+        }
+        if ($recipients['send_site'] && !empty($recipients['site_users'])) {
+            foreach ($recipients['site_users'] as $u) {
+                if (!empty($u['phone'])) {
+                    $phones[] = $u['phone'];
+                    $phoneNames[] = $u['name'] ?? $u['phone'];
+                }
+            }
+        }
+
+        // ---- E-mail ----
+        if (!empty($emails)) {
+            $subject = "Novo áudio no Pedido {$order['code']} - {$fromRoleLabel}";
+            $body = EmailTemplate::orderAudio($order, $recordedBy, $fromRoleLabel, $actionUrl, $targetRole, $duration > 0 ? $duration : null);
+            NotificationService::queueEmails($emails, $subject, $body, $order['id'], $eventType);
+        }
+
+        // ---- WhatsApp / webhook ----
+        if (!empty($globalWebhook) && !empty($phones)) {
+            $durationText = '';
+            if ($duration > 0) {
+                $durationText = "*Duração:* " . sprintf('%d:%02d', floor($duration / 60), $duration % 60) . "\n";
+            }
+            $whMessage = "*NOVO ÁUDIO NO PEDIDO*\n\n"
+                . "*Pedido:* {$order['code']}\n"
+                . "*De:* {$recordedBy} ({$fromRoleLabel})\n"
+                . $durationText
+                . "\nAbra o pedido para ouvir e responder:\n{$actionUrl}";
+
+            $this->sendWebhook($globalWebhook, [
+                'event' => $eventType,
+                'order_code' => $order['code'],
+                'from' => $recordedBy,
+                'audio_url' => $audioUrl,
+                'action_url' => $actionUrl,
+                'phone' => implode(',', $phones),
+                'phone_name' => implode(',', $phoneNames),
+                'message' => $whMessage,
+            ], $order['id']);
+        }
+
+        // Registrar no histórico
+        try {
+            PurchaseOrderHistory::log(
+                $order['id'],
+                $eventType,
+                "Áudio gravado por {$recordedBy} (" . \App\Models\PurchaseOrderAudio::stageLabel($stage) . ")",
+                $recordedBy
+            );
+        } catch (\Throwable $e) {
+            // histórico é best-effort
+        }
     }
 
     /**
