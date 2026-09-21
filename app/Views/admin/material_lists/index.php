@@ -9,7 +9,7 @@
         <small class="text-muted">Monte listas reutilizáveis por categoria para agilizar a criação de pedidos.</small>
     </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#recreateListsModal" title="Apagar todas as listas e recriar a partir das categorias de materiais">
+        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#recreateListsModal" title="Apagar todas as listas e recriar a partir das especificações dos materiais">
             <i class="bi bi-arrow-clockwise"></i> Recriar Listas
         </button>
         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newListModal">
@@ -214,8 +214,8 @@
                     <strong>Atenção!</strong> Esta ação irá:
                     <ul class="mb-0 mt-2">
                         <li><strong>Apagar TODAS</strong> as listas existentes e seus itens</li>
-                        <li>Criar novas listas baseadas nas <strong>categorias de materiais</strong> cadastradas</li>
-                        <li>Cada categoria se tornará uma lista com todos os materiais ativos daquela categoria</li>
+                        <li>Criar novas listas baseadas nas <strong>especificações dos materiais</strong> cadastrados</li>
+                        <li>Cada especificação se tornará uma lista com todos os materiais ativos daquela especificação</li>
                     </ul>
                 </div>
                 <p class="text-muted small mb-3">

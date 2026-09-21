@@ -192,33 +192,40 @@ class MaterialTemplateController extends Controller
         }
         Database::query("DELETE FROM material_templates");
 
-        // 2. Buscar todas as categorias e seus materiais
-        $categories = MaterialCategory::all('name ASC');
+        // 2. Buscar todas as especificações únicas dos materiais ativos
+        $specifications = Database::fetchAll(
+            "SELECT DISTINCT COALESCE(NULLIF(TRIM(specification), ''), 'Sem Especificação') AS spec_name
+             FROM materials
+             WHERE active = 1
+             ORDER BY spec_name ASC"
+        );
+
         $listsCreated = 0;
         $itemsCreated = 0;
 
-        foreach ($categories as $cat) {
-            $catId = (int) $cat['id'];
-            $catName = $cat['name'];
+        foreach ($specifications as $spec) {
+            $specName = $spec['spec_name'];
 
-            // Buscar materiais ativos desta categoria
+            // Buscar materiais ativos com esta especificação
             $materials = Database::fetchAll(
-                "SELECT m.*, mu.abbreviation AS unit_abbr
+                "SELECT m.*, mu.abbreviation AS unit_abbr, mc.name AS category_name
                  FROM materials m
                  LEFT JOIN measurement_units mu ON m.unit_id = mu.id
-                 WHERE m.category_id = ? AND m.active = 1
+                 LEFT JOIN material_categories mc ON m.category_id = mc.id
+                 WHERE m.active = 1
+                   AND COALESCE(NULLIF(TRIM(m.specification), ''), 'Sem Especificação') = ?
                  ORDER BY m.name ASC",
-                [$catId]
+                [$specName]
             );
 
             if (empty($materials)) {
-                continue; // Pula categorias sem materiais ativos
+                continue; // Pula especificações sem materiais ativos
             }
 
-            // Criar a lista (template) para esta categoria
+            // Criar a lista (template) para esta especificação
             $templateId = MaterialTemplate::create([
-                'name'            => $catName,
-                'description'     => 'Lista criada automaticamente a partir da categoria "' . $catName . '"',
+                'name'            => $specName,
+                'description'     => 'Lista criada automaticamente a partir da especificação "' . $specName . '"',
                 'active'          => 1,
                 'created_by_name' => $this->currentActorName(),
                 'created_at'      => date('Y-m-d H:i:s'),
@@ -232,7 +239,7 @@ class MaterialTemplateController extends Controller
                     'template_id'      => $templateId,
                     'material_id'      => (int) $mat['id'],
                     'material_name'    => $mat['name'],
-                    'specification'    => $mat['specification'] ?? $catName,
+                    'specification'    => $mat['specification'] ?? $specName,
                     'classification'   => $mat['classification'] ?? null,
                     'unit'             => $mat['unit_abbr'] ?? null,
                     'project_type'     => $mat['project_type'] ?? 'both',
