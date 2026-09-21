@@ -79,6 +79,7 @@
                 <div class="col-6 col-md-2">
                     <select id="filterSupplier" class="form-select form-select-sm">
                         <option value="">Fornecedor</option>
+                        <option value="__NA__">Sem Fornecedor (N/A)</option>
                         <?php
                         $supplierNames = array_unique(array_filter(array_column($orders, 'supplier_name')));
                         sort($supplierNames);
@@ -609,7 +610,16 @@
             if (show && activeFlag === 'arrived' && row.dataset.arrived !== 'arrived') show = false;
             if (show && search && !(row.dataset.search || '').includes(search)) show = false;
             if (show && material && !(row.dataset.items || '').includes(material)) show = false;
-            if (show && supplier && row.dataset.supplier !== supplier) show = false;
+            // Filtro fornecedor: __NA__ = sem fornecedor
+            if (show && supplier) {
+                if (supplier === '__NA__') {
+                    // Mostrar apenas pedidos sem fornecedor
+                    if (row.dataset.supplier && row.dataset.supplier.trim() !== '') show = false;
+                } else {
+                    // Filtrar por fornecedor específico
+                    if (row.dataset.supplier !== supplier) show = false;
+                }
+            }
             if (show && site && row.dataset.site !== site) show = false;
             if (show && type && row.dataset.type !== type) show = false;
             if (show && financial && financial !== 'all' && row.dataset.financial !== financial) show = false;
