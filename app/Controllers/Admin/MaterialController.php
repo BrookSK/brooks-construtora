@@ -785,4 +785,64 @@ class MaterialController extends Controller
 
         return $map;
     }
+
+    /**
+     * Diagnóstico de materiais e especificações para debug
+     */
+    public function diagnostics(): void
+    {
+        $db = \App\Core\Database::class;
+
+        // 1. Especificações únicas
+        $specs = \App\Core\Database::fetchAll(
+            "SELECT 
+                COALESCE(NULLIF(TRIM(specification), ''), 'Sem Especificação') AS spec_name,
+                COUNT(*) as total
+             FROM materials
+             WHERE active = 1
+             GROUP BY spec_name
+             ORDER BY total DESC
+             LIMIT 50"
+        );
+
+        // 2. Amostra de materiais
+        $materials = \App\Core\Database::fetchAll(
+            "SELECT m.id, m.name, m.specification, m.classification, m.category_id, m.unit_id,
+                    mc.name as category_name, mu.abbreviation as unit_abbr
+             FROM materials m
+             LEFT JOIN material_categories mc ON m.category_id = mc.id
+             LEFT JOIN measurement_units mu ON m.unit_id = mu.id
+             WHERE m.active = 1
+             ORDER BY m.name ASC
+             LIMIT 30"
+        );
+
+        // 3. Listas existentes
+        $templates = \App\Core\Database::fetchAll(
+            "SELECT t.id, t.name, t.description, t.active, t.created_at,
+                    (SELECT COUNT(*) FROM material_template_items WHERE template_id = t.id) as item_count
+             FROM material_templates t
+             ORDER BY t.name ASC"
+        );
+
+        // 4. Categorias
+        $categories = \App\Core\Database::fetchAll(
+            "SELECT id, name FROM material_categories ORDER BY name ASC"
+        );
+
+        // 5. Totais
+        $totalMaterials = \App\Core\Database::fetch("SELECT COUNT(*) as t FROM materials WHERE active = 1")['t'];
+        $totalSpecs = count($specs);
+
+        $this->view('admin.materials.diagnostics', [
+            'specs' => $specs,
+            'materials' => $materials,
+            'templates' => $templates,
+            'categories' => $categories,
+            'totalMaterials' => $totalMaterials,
+            'totalSpecs' => $totalSpecs,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
+    }
 }
