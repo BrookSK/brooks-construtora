@@ -177,79 +177,111 @@ class MaterialTemplateController extends Controller
             return;
         }
 
-        // Confirmar ação destrutiva
-        $confirm = $this->input('confirm', '');
+        // Confirmar ação destrutiva (case-insensitive, igual à validação do JS)
+        $confirm = mb_strtoupper(trim((string) $this->input('confirm', '')));
         if ($confirm !== 'RECRIAR') {
             $this->setFlash('error', 'Confirmação inválida. Digite "RECRIAR" para confirmar.');
             $this->redirect('/admin/material-lists');
             return;
         }
 
-        // 1. Apagar todos os itens e templates existentes
-        $existingTemplates = MaterialTemplate::all();
-        foreach ($existingTemplates as $t) {
-            MaterialTemplateItem::deleteByTemplate((int) $t['id']);
-        }
-        Database::query("DELETE FROM material_templates");
-
-        // 2. Buscar todas as especificações únicas dos materiais ativos
-        $specifications = Database::fetchAll(
-            "SELECT DISTINCT COALESCE(NULLIF(TRIM(specification), ''), 'Sem Especificação') AS spec_name
-             FROM materials
-             WHERE active = 1
-             ORDER BY spec_name ASC"
-        );
+        // Evitar timeout com grande volume de materiais (milhares de itens)
+        @set_time_limit(0);
 
         $listsCreated = 0;
         $itemsCreated = 0;
 
-        foreach ($specifications as $spec) {
-            $specName = $spec['spec_name'];
+        $db = Database::getConnection();
+        $db->beginTransaction();
 
-            // Buscar materiais ativos com esta especificação
-            $materials = Database::fetchAll(
-                "SELECT m.*, mu.abbreviation AS unit_abbr, mc.name AS category_name
-                 FROM materials m
-                 LEFT JOIN measurement_units mu ON m.unit_id = mu.id
-                 LEFT JOIN material_categories mc ON m.category_id = mc.id
-                 WHERE m.active = 1
-                   AND COALESCE(NULLIF(TRIM(m.specification), ''), 'Sem Especificação') = ?
-                 ORDER BY m.name ASC",
-                [$specName]
+        try {
+            // 1. Apagar todos os itens e templates existentes (rápido, direto no banco)
+            Database::query("DELETE FROM material_template_items");
+            Database::query("DELETE FROM material_templates");
+
+            // 2. Buscar todas as especificações únicas dos materiais ativos
+            $specifications = Database::fetchAll(
+                "SELECT DISTINCT COALESCE(NULLIF(TRIM(specification), ''), 'Sem Especificação') AS spec_name
+                 FROM materials
+                 WHERE active = 1
+                 ORDER BY spec_name ASC"
             );
 
-            if (empty($materials)) {
-                continue; // Pula especificações sem materiais ativos
-            }
+            $actor = $this->currentActorName();
+            $now = date('Y-m-d H:i:s');
 
-            // Criar a lista (template) para esta especificação
-            $templateId = MaterialTemplate::create([
-                'name'            => $specName,
-                'description'     => 'Lista criada automaticamente a partir da especificação "' . $specName . '"',
-                'active'          => 1,
-                'created_by_name' => $this->currentActorName(),
-                'created_at'      => date('Y-m-d H:i:s'),
-            ]);
-            $listsCreated++;
+            // Statements preparados reutilizáveis
+            $stmtTemplate = $db->prepare(
+                "INSERT INTO material_templates (name, description, active, created_by_name, created_at)
+                 VALUES (?, ?, 1, ?, ?)"
+            );
 
-            // Adicionar os materiais como itens da lista
-            $sortOrder = 0;
-            foreach ($materials as $mat) {
-                MaterialTemplateItem::create([
-                    'template_id'      => $templateId,
-                    'material_id'      => (int) $mat['id'],
-                    'material_name'    => $mat['name'],
-                    'specification'    => $mat['specification'] ?? $specName,
-                    'classification'   => $mat['classification'] ?? null,
-                    'unit'             => $mat['unit_abbr'] ?? null,
-                    'project_type'     => $mat['project_type'] ?? 'both',
-                    'default_quantity' => 1,
-                    'sort_order'       => $sortOrder++,
-                    'active'           => 1,
-                    'created_at'       => date('Y-m-d H:i:s'),
+            foreach ($specifications as $spec) {
+                $specName = $spec['spec_name'];
+
+                // Buscar materiais ativos com esta especificação
+                $materials = Database::fetchAll(
+                    "SELECT m.*, mu.abbreviation AS unit_abbr, mc.name AS category_name
+                     FROM materials m
+                     LEFT JOIN measurement_units mu ON m.unit_id = mu.id
+                     LEFT JOIN material_categories mc ON m.category_id = mc.id
+                     WHERE m.active = 1
+                       AND COALESCE(NULLIF(TRIM(m.specification), ''), 'Sem Especificação') = ?
+                     ORDER BY m.name ASC",
+                    [$specName]
+                );
+
+                if (empty($materials)) {
+                    continue; // Pula especificações sem materiais ativos
+                }
+
+                // Criar a lista (template) para esta especificação
+                $stmtTemplate->execute([
+                    $specName,
+                    'Lista criada automaticamente a partir da especificação "' . $specName . '"',
+                    $actor,
+                    $now,
                 ]);
-                $itemsCreated++;
+                $templateId = (int) $db->lastInsertId();
+                $listsCreated++;
+
+                // Adicionar os materiais como itens da lista, em INSERT multi-linha (lotes de 200)
+                $sortOrder = 0;
+                $chunks = array_chunk($materials, 200);
+                foreach ($chunks as $chunk) {
+                    $placeholders = [];
+                    $values = [];
+                    foreach ($chunk as $mat) {
+                        $placeholders[] = "(?, ?, ?, ?, ?, ?, ?, 1, ?, 1, ?)";
+                        array_push(
+                            $values,
+                            $templateId,
+                            (int) $mat['id'],
+                            $mat['name'],
+                            $mat['specification'] ?? $specName,
+                            $mat['classification'] ?? null,
+                            $mat['unit_abbr'] ?? null,
+                            $mat['project_type'] ?? 'both',
+                            $sortOrder++,
+                            $now
+                        );
+                        $itemsCreated++;
+                    }
+
+                    $sql = "INSERT INTO material_template_items
+                                (template_id, material_id, material_name, specification, classification, unit, project_type, default_quantity, sort_order, active, created_at)
+                            VALUES " . implode(', ', $placeholders);
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute($values);
+                }
             }
+
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            $this->setFlash('error', 'Falha ao recriar as listas (nenhuma alteração aplicada): ' . $e->getMessage());
+            $this->redirect('/admin/material-lists');
+            return;
         }
 
         $this->setFlash('success', "Listas recriadas com sucesso! {$listsCreated} listas criadas com {$itemsCreated} itens no total.");
