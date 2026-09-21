@@ -969,21 +969,31 @@ class MaterialController extends Controller
     {
         header('Content-Type: text/plain; charset=UTF-8');
 
-        echo "=== Materiais com specification poluida (nao e categoria valida) ===\n\n";
+        // Lista OFICIAL de especificações válidas (as 22 categorias reais do CSV)
+        $oficiais = [
+            'Material Hidráulico', 'Material Elétrico', 'Material Civil', 'Material de Fixação',
+            'Material de Serralheria', 'Material de Ferramentas', 'Equipamento (aquisição)',
+            'Material de Marcenaria', 'Mão de obra', 'Material de Acabamento', 'Material Sanitário',
+            'Material de Segurança / EPI', 'Material de Pintura', 'Canteiro (copa, escritório e apoio)',
+            'Material de Impermeabilização', 'Outros', 'Material de Limpeza', 'Encargos complementares',
+            'Serviços', 'Equipamento (locação)', 'Material de Proteção (obra)',
+        ];
+        $inList = "'" . implode("','", array_map(fn($s) => str_replace("'", "''", $s), $oficiais)) . "'";
 
-        // Materiais ativos cuja specification NAO corresponde a nenhuma categoria cadastrada
+        echo "=== Materiais com specification FORA das 22 categorias oficiais ===\n\n";
+
         $poluidos = \App\Core\Database::fetchAll(
             "SELECT m.id, m.name, m.specification, m.classification, m.category_id, mc.name AS cat_name
              FROM materials m
              LEFT JOIN material_categories mc ON m.category_id = mc.id
              WHERE m.active = 1
                AND TRIM(COALESCE(m.specification, '')) <> ''
-               AND TRIM(m.specification) NOT IN (SELECT name FROM material_categories)
+               AND TRIM(m.specification) NOT IN ({$inList})
              ORDER BY m.id ASC
-             LIMIT 40"
+             LIMIT 60"
         );
 
-        echo "Mostrando ate 40 exemplos:\n\n";
+        echo "Mostrando ate 60 exemplos:\n\n";
         foreach ($poluidos as $r) {
             echo "id={$r['id']} | spec=[" . ($r['specification'] ?? '') . "] | class=[" . ($r['classification'] ?? '') . "] | cat_id=" . ($r['category_id'] ?? 'NULL') . " (" . ($r['cat_name'] ?? '-') . ") | " . $r['name'] . "\n";
         }
@@ -994,7 +1004,7 @@ class MaterialController extends Controller
             "SELECT COUNT(*) t FROM materials m
              WHERE m.active = 1
                AND TRIM(COALESCE(m.specification, '')) <> ''
-               AND TRIM(m.specification) NOT IN (SELECT name FROM material_categories)"
+               AND TRIM(m.specification) NOT IN ({$inList})"
         )['t'];
 
         echo "\nTotal materiais ativos: {$totalAtivos}\n";
