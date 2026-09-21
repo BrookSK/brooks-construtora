@@ -999,6 +999,19 @@ class MaterialController extends Controller
 
         echo "\nTotal materiais ativos: {$totalAtivos}\n";
         echo "Total com specification poluida: {$totalPoluidos}\n";
+
+        // Distribuicao REAL de specification agora (o que o rebuild vai gerar)
+        echo "\n=== Distribuicao ATUAL de specification (o que gera as listas) ===\n";
+        $dist = \App\Core\Database::fetchAll(
+            "SELECT COALESCE(NULLIF(TRIM(specification), ''), '(vazio)') AS spec, COUNT(*) AS qtd
+             FROM materials WHERE active = 1
+             GROUP BY spec ORDER BY qtd DESC"
+        );
+        echo "TOTAL DE ESPECIFICACOES DISTINTAS: " . count($dist) . "\n\n";
+        foreach ($dist as $d) {
+            echo "  " . str_pad((string) $d['qtd'], 5) . " | " . $d['spec'] . "\n";
+        }
+
         echo "\n=== FIM ===\n";
     }
 
