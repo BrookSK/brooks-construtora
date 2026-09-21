@@ -939,8 +939,23 @@ class MaterialController extends Controller
             echo "  " . str_pad((string) $r['qtd'], 5) . " | " . $r['spec'] . "\n";
         }
 
-        echo "\nAgora rode a recriacao de listas em: /admin/materials/rebuild-lists\n";
-        echo "=== FIM ===\n";
+        // Total de categorias cadastradas
+        $totalCats = \App\Core\Database::fetch("SELECT COUNT(*) t FROM material_categories")['t'];
+        echo "\nTotal de CATEGORIAS cadastradas: {$totalCats}\n";
+
+        // Distribuição real de specification (o que vira lista)
+        echo "\n=== Distribuicao atual de specification (o que gera as listas) ===\n";
+        $dist = \App\Core\Database::fetchAll(
+            "SELECT COALESCE(NULLIF(TRIM(specification), ''), '(vazio)') AS spec, COUNT(*) AS qtd
+             FROM materials WHERE active = 1
+             GROUP BY spec ORDER BY qtd DESC"
+        );
+        echo "Total distintas: " . count($dist) . "\n";
+        foreach ($dist as $d) {
+            echo "  " . str_pad((string) $d['qtd'], 5) . " | " . $d['spec'] . "\n";
+        }
+
+        echo "\n=== FIM ===\n";
     }
 
     /**
