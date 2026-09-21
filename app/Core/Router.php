@@ -267,6 +267,7 @@ class Router
             'materials/reimport-process' => ['MaterialController', 'reimportProcess'],
             'materials/diagnostics' => ['MaterialController', 'diagnostics'],
             'materials/rebuild-lists' => ['MaterialController', 'rebuildListsDebug'],
+            'materials/fix-specifications' => ['MaterialController', 'fixSpecificationsFromCategory'],
 
             // Fornecedores - Contatos/Vendedores
             'suppliers/contacts' => ['SupplierController', 'contacts'],

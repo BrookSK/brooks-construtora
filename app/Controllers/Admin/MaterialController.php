@@ -859,6 +859,53 @@ class MaterialController extends Controller
     }
 
     /**
+     * Corrige a coluna `specification` dos materiais a partir do nome da
+     * categoria vinculada (category_id → material_categories.name).
+     *
+     * Contexto: a reimportação não gravou a especificação corretamente e a
+     * coluna ficou poluída com valores de dimensão (ex: "100mm", "BRANCA").
+     * Como a categoria foi importada corretamente e, no arquivo de origem,
+     * `especificacao` == `categoria` em ~99,8% das linhas, sincronizar a
+     * specification pela categoria limpa os dados de forma segura.
+     *
+     * Acesso: GET /admin/materials/fix-specifications
+     */
+    public function fixSpecificationsFromCategory(): void
+    {
+        header('Content-Type: text/plain; charset=UTF-8');
+        @set_time_limit(0);
+
+        echo "=== Corrigir specification a partir da categoria ===\n\n";
+
+        // Distintos ANTES
+        $before = \App\Core\Database::fetch(
+            "SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(specification), ''), '(vazio)')) t
+             FROM materials WHERE active = 1"
+        )['t'];
+        echo "Especificacoes distintas ANTES: {$before}\n";
+
+        // Atualiza specification = nome da categoria, quando houver categoria vinculada
+        $affected = \App\Core\Database::query(
+            "UPDATE materials m
+             JOIN material_categories mc ON m.category_id = mc.id
+             SET m.specification = mc.name
+             WHERE m.category_id IS NOT NULL
+               AND (m.specification IS NULL OR TRIM(m.specification) <> mc.name)"
+        )->rowCount();
+        echo "Materiais atualizados: {$affected}\n";
+
+        // Distintos DEPOIS
+        $after = \App\Core\Database::fetch(
+            "SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(specification), ''), '(vazio)')) t
+             FROM materials WHERE active = 1"
+        )['t'];
+        echo "Especificacoes distintas DEPOIS: {$after}\n";
+
+        echo "\nAgora rode a recriacao de listas em: /admin/materials/rebuild-lists\n";
+        echo "=== FIM ===\n";
+    }
+
+    /**
      * Executa a recriação de listas DIRETAMENTE e imprime o resultado em texto puro.
      * Ferramenta de diagnóstico: sem modal, sem confirmação, para isolar o problema.
      * Acesso: GET /admin/materials/rebuild-lists
