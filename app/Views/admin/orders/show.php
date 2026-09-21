@@ -384,6 +384,20 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
 
         <!-- Fornecedores Cotados -->
         <?php if (!empty($orderSuppliers)): ?>
+        <?php
+        // Índice de links por fornecedor (link de compra online informado na cotação)
+        $linksBySupplierItem = [];
+        foreach (($itemPrices ?? []) as $p) {
+            if (!empty($p['link'])) {
+                $linksBySupplierItem[$p['supplier_id']][$p['item_id']] = $p['link'];
+            }
+        }
+        // Mapa item_id => nome do material
+        $itemNamesMap = [];
+        foreach ($items as $it) {
+            $itemNamesMap[$it['id']] = $it['material_name'];
+        }
+        ?>
         <div class="card mb-3">
             <div class="card-header"><i class="bi bi-building"></i> Fornecedores Cotados</div>
             <div class="card-body p-0">
@@ -408,6 +422,20 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                     </div>
                     <?php if ($os['quoted_by_name']): ?>
                     <small class="text-muted d-block mb-2">Cotado por <?= htmlspecialchars($os['quoted_by_name']) ?> em <?= $os['quoted_at'] ? date('d/m/Y H:i', strtotime($os['quoted_at'])) : '' ?></small>
+                    <?php endif; ?>
+
+                    <?php $supplierLinks = $linksBySupplierItem[$os['supplier_id']] ?? []; ?>
+                    <?php if (!empty($supplierLinks)): ?>
+                    <div class="small mb-2">
+                        <span class="text-muted d-block mb-1"><i class="bi bi-link-45deg"></i> Links de compra online:</span>
+                        <?php foreach ($supplierLinks as $itemId => $link): ?>
+                        <div class="d-flex align-items-center gap-1 mb-1">
+                            <span class="text-truncate" style="max-width:220px;"><?= htmlspecialchars($itemNamesMap[$itemId] ?? ('Item #' . $itemId)) ?>:</span>
+                            <a href="<?= htmlspecialchars($link) ?>" target="_blank" rel="noopener" title="Abrir link" class="text-truncate" style="max-width:260px;"><?= htmlspecialchars($link) ?></a>
+                            <button type="button" class="btn btn-sm btn-outline-secondary btn-copy-link py-0 px-1" data-link="<?= htmlspecialchars($link) ?>" title="Copiar link"><i class="bi bi-clipboard"></i></button>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
                     <?php endif; ?>
 
                     <!-- Dados do fornecedor -->

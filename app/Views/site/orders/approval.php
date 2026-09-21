@@ -314,7 +314,12 @@
                              <?= !$isZeroPriceList ? 'onclick="selectItemSupplier(' . $item['id'] . ', ' . $os['supplier_id'] . ')"' : '' ?>
                              <?= $isZeroPriceList ? 'title="Preço zerado — não pode ser selecionado"' : '' ?>>
                             <div>
-                                <div class="supplier-name"><?= htmlspecialchars($os['supplier_name']) ?></div>
+                                <div class="supplier-name">
+                                    <?= htmlspecialchars($os['supplier_name']) ?>
+                                    <?php if (!empty($p['link'])): ?>
+                                    <a href="<?= htmlspecialchars($p['link']) ?>" target="_blank" rel="noopener" onclick="event.stopPropagation();" title="Abrir link de compra online" style="color:#0d6efd; margin-left:4px;"><i class="bi bi-box-arrow-up-right"></i></a>
+                                    <?php endif; ?>
+                                </div>
                                 <?php if ($isZeroPriceList): ?>
                                 <div style="font-size:0.68rem; color:#dc3545;"><i class="bi bi-x-circle"></i> R$ 0,00/un</div>
                                 <?php else: ?>
@@ -380,6 +385,9 @@
                                         <?php else: ?>
                                         R$ <?= number_format($p['unit_price'], 2, ',', '.') ?>
                                         <br><small class="fw-bold text-dark">= R$ <?= number_format($p['total_price'], 2, ',', '.') ?></small>
+                                        <?php endif; ?>
+                                        <?php if (!empty($p['link'])): ?>
+                                        <br><a href="<?= htmlspecialchars($p['link']) ?>" target="_blank" rel="noopener" onclick="event.stopPropagation();" title="Abrir link de compra online" style="color:#0d6efd; font-size:0.65rem;"><i class="bi bi-box-arrow-up-right"></i> link</a>
                                         <?php endif; ?>
                                     <?php else: ?>
                                     <span class="text-muted">-</span>

@@ -32,6 +32,10 @@
         #quotationMap table tfoot td:first-child { background: #f8f9fa; z-index: 1; }
         #mapFinancials .accordion-button { font-size: 0.85rem; padding: 0.5rem 1rem; }
         .map-price-input { font-size: 0.8rem !important; padding: 4px 6px; }
+        .link-toggle-btn.has-link { color: #0d6efd; border-color: #0d6efd; background: #e7f1ff; }
+        .map-link-btn { border: none; background: transparent; cursor: pointer; padding: 0 2px; color: #adb5bd; font-size: 0.9rem; }
+        .map-link-btn.has-link { color: #0d6efd; }
+        .map-link-input-wrap { margin-top: 3px; }
         @media (max-width: 768px) {
             .main-card .card-body, .main-card .card-header { padding: 0.75rem; }
             .page-header h4 { font-size: 1.1rem; }
@@ -1051,11 +1055,15 @@
                                 <input type="text" inputmode="decimal" class="form-control price-input" 
                                     name="supplier_prices[${sid}][${item.id}]" placeholder="0,00" required
                                     data-qty="${item.quantity}" data-sid="${sid}" data-item-id="${item.id}">
+                                <button type="button" class="btn btn-outline-secondary link-toggle-btn" title="Adicionar link de compra online"
+                                    onclick="toggleLinkField('${sid}', '${item.id}')" data-sid="${sid}" data-item-id="${item.id}">
+                                    <i class="bi bi-link-45deg"></i>
+                                </button>
                             </div>
-                            <div class="input-group input-group-sm mt-1">
+                            <div class="input-group input-group-sm mt-1 supplier-link-wrap d-none" data-sid="${sid}" data-item-id="${item.id}">
                                 <span class="input-group-text" title="Link da compra (opcional)"><i class="bi bi-link-45deg"></i></span>
                                 <input type="url" class="form-control supplier-link-input"
-                                    name="supplier_links[${sid}][${item.id}]" placeholder="Link do produto (opcional)"
+                                    name="supplier_links[${sid}][${item.id}]" placeholder="Cole o link do produto"
                                     data-sid="${sid}" data-item-id="${item.id}">
                             </div>
                         </div>
@@ -1301,6 +1309,43 @@
     // --- Modo de visualização (Lista vs Mapa) ---
     let currentView = 'list';
 
+    // Mostra/esconde o campo de link (modo lista). Mantém o botão marcado quando há link.
+    function toggleLinkField(sid, itemId) {
+        const wrap = document.querySelector(`.supplier-link-wrap[data-sid="${sid}"][data-item-id="${itemId}"]`);
+        if (!wrap) return;
+        wrap.classList.toggle('d-none');
+        if (!wrap.classList.contains('d-none')) {
+            const input = wrap.querySelector('.supplier-link-input');
+            if (input) input.focus();
+        }
+    }
+
+    // Sincroniza o estado visual do botão de link e revela o campo se já houver link salvo.
+    function refreshLinkToggle(sid, itemId) {
+        const input = document.querySelector(`.supplier-link-input[data-sid="${sid}"][data-item-id="${itemId}"]`);
+        const btn = document.querySelector(`.link-toggle-btn[data-sid="${sid}"][data-item-id="${itemId}"]`);
+        if (!input || !btn) return;
+        const has = input.value.trim() !== '';
+        btn.classList.toggle('has-link', has);
+        if (has) {
+            const wrap = input.closest('.supplier-link-wrap');
+            if (wrap) wrap.classList.remove('d-none');
+        }
+    }
+
+    // Marca o botão sempre que o usuário digita/limpa o link.
+    document.addEventListener('input', function(e) {
+        if (e.target && e.target.classList && e.target.classList.contains('supplier-link-input')) {
+            const sid = e.target.dataset.sid;
+            const itemId = e.target.dataset.itemId;
+            const btn = document.querySelector(`.link-toggle-btn[data-sid="${sid}"][data-item-id="${itemId}"]`);
+            if (btn) btn.classList.toggle('has-link', e.target.value.trim() !== '');
+            // Sincroniza com o campo do mapa, se existir
+            const mapInput = document.querySelector(`.map-link-input[data-sid="${sid}"][data-item="${itemId}"]`);
+            if (mapInput && mapInput.value !== e.target.value) mapInput.value = e.target.value;
+        }
+    });
+
     function updateViewToggle() {
         const toggle = document.getElementById('viewToggle');
 
@@ -1351,7 +1396,15 @@
             addedSuppliers.forEach(sid => {
                 const input = document.querySelector(`#supplier-block-${sid} [name="supplier_prices[${sid}][${item.id}]"]`);
                 const val = input ? input.value : '';
-                bodyHtml += `<td class="text-center"><input type="text" inputmode="decimal" class="form-control form-control-sm text-center map-price-input" data-sid="${sid}" data-item="${item.id}" value="${val}" placeholder="0,00" style="font-size:0.85rem;"></td>`;
+                const linkInput = document.querySelector(`#supplier-block-${sid} .supplier-link-input[data-item-id="${item.id}"]`);
+                const linkVal = linkInput ? (linkInput.value || '') : '';
+                bodyHtml += `<td class="text-center">
+                    <input type="text" inputmode="decimal" class="form-control form-control-sm text-center map-price-input" data-sid="${sid}" data-item="${item.id}" value="${val}" placeholder="0,00" style="font-size:0.85rem;">
+                    <div class="map-link-input-wrap input-group input-group-sm ${linkVal ? '' : 'd-none'}" data-sid="${sid}" data-item="${item.id}">
+                        <input type="url" class="form-control form-control-sm map-link-input" data-sid="${sid}" data-item="${item.id}" value="${escAttr(linkVal)}" placeholder="Link" style="font-size:0.75rem;">
+                    </div>
+                    <button type="button" class="map-link-btn ${linkVal ? 'has-link' : ''}" data-sid="${sid}" data-item="${item.id}" title="Adicionar/editar link de compra" onclick="toggleMapLink('${sid}', '${item.id}')"><i class="bi bi-link-45deg"></i> <span style="font-size:0.6rem;">link</span></button>
+                </td>`;
             });
             bodyHtml += '</tr>';
         });
@@ -1393,6 +1446,32 @@
                 setTimeout(renderMapFooter, 150);
             });
         });
+
+        // Bind inputs de link do mapa → sincroniza com o input oculto da lista
+        document.querySelectorAll('.map-link-input').forEach(input => {
+            input.addEventListener('input', function() {
+                const sid = this.dataset.sid;
+                const itemId = this.dataset.item;
+                const listInput = document.querySelector(`#supplier-block-${sid} .supplier-link-input[data-item-id="${itemId}"]`);
+                if (listInput) {
+                    listInput.value = this.value;
+                    refreshLinkToggle(sid, itemId);
+                }
+                const btn = document.querySelector(`.map-link-btn[data-sid="${sid}"][data-item="${itemId}"]`);
+                if (btn) btn.classList.toggle('has-link', this.value.trim() !== '');
+            });
+        });
+    }
+
+    // Mostra/esconde o campo de link no modo mapa.
+    function toggleMapLink(sid, itemId) {
+        const wrap = document.querySelector(`.map-link-input-wrap[data-sid="${sid}"][data-item="${itemId}"]`);
+        if (!wrap) return;
+        wrap.classList.toggle('d-none');
+        if (!wrap.classList.contains('d-none')) {
+            const input = wrap.querySelector('.map-link-input');
+            if (input) input.focus();
+        }
     }
 
     function renderMapFinancials() {
@@ -1670,6 +1749,7 @@
             for (const itemId in links) {
                 const linkInput = block.querySelector('input[name="supplier_links[<?= $os['supplier_id'] ?>][' + itemId + ']"]');
                 if (linkInput) linkInput.value = links[itemId];
+                refreshLinkToggle('<?= $os['supplier_id'] ?>', itemId);
             }
             // Preencher vendedor
             const vName = block.querySelector('[name*="[name]"]'); if (vName) vName.value = '<?= htmlspecialchars($os['vendor_name'] ?? '') ?>';
@@ -1726,6 +1806,7 @@
                     for (const iid in lks) {
                         const li = blk.querySelector('input[name="supplier_links[' + sid + '][' + iid + ']"]');
                         if (li) li.value = lks[iid];
+                        refreshLinkToggle(sid, iid);
                     }
                     setTimeout(function() { calculateSupplierTotal(String(sid)); }, 800);
                 }, 500);
@@ -2113,6 +2194,15 @@ function escHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Escapa valor para uso dentro de atributo HTML com aspas duplas.
+function escAttr(text) {
+    return String(text == null ? '' : text)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 }
 
 // ─── Serviço: Upload e análise de PDF do fornecedor ─────────────────────────

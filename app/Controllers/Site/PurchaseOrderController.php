@@ -1038,6 +1038,7 @@ class PurchaseOrderController extends Controller
         $orderSuppliers = PurchaseOrderSupplier::getByOrder($orderId);
         $approvedSupplier = PurchaseOrderSupplier::getApproved($orderId);
         $stockMovements = \App\Models\StockMovement::getByOrder($orderId);
+        $itemPrices = PurchaseOrderItemPrice::getByOrder($orderId);
 
         $this->view('site.orders.pdf', [
             'order' => $order,
@@ -1046,6 +1047,7 @@ class PurchaseOrderController extends Controller
             'orderSuppliers' => $orderSuppliers,
             'approvedSupplier' => $approvedSupplier,
             'stockMovements' => $stockMovements,
+            'itemPrices' => $itemPrices,
         ]);
     }
 

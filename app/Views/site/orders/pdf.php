@@ -243,6 +243,22 @@
         }
         $hasMultiSupplier = !empty($allApproved) && count($allApproved) > 1;
         $showSupplierColumn = !empty($supplierNamesMap);
+
+        // Índice de link de compra online por (fornecedor, item), vindo da cotação
+        $linkBySupplierItem = [];
+        foreach (($itemPrices ?? []) as $p) {
+            if (!empty($p['link'])) {
+                $linkBySupplierItem[$p['supplier_id']][$p['item_id']] = $p['link'];
+            }
+        }
+        // Retorna o link do fornecedor aprovado daquele item (se houver)
+        $getItemLink = function (array $item) use ($linkBySupplierItem) {
+            $sid = $item['approved_supplier_id'] ?? null;
+            if ($sid && !empty($linkBySupplierItem[$sid][$item['id']])) {
+                return $linkBySupplierItem[$sid][$item['id']];
+            }
+            return null;
+        };
         ?>
         <table class="items-table-desktop">
             <thead>
@@ -272,6 +288,10 @@
                             <br><span style="font-size:0.65rem; color:#0d6efd; font-weight:600;">
                                 ✓ JÁ COMPRADO<?= !empty($item['already_purchased_qty']) ? ' (' . number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) . ')' : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?>
                             </span>
+                        <?php endif; ?>
+                        <?php $itemLink = $getItemLink($item); ?>
+                        <?php if ($itemLink): ?>
+                            <br><a href="<?= htmlspecialchars($itemLink) ?>" target="_blank" rel="noopener" style="font-size:0.62rem; color:#0d6efd; word-break:break-all;">🔗 <?= htmlspecialchars($itemLink) ?></a>
                         <?php endif; ?>
                     </td>
                     <td><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
@@ -357,6 +377,10 @@
                             <?= $item['classification'] ? ' · ' . htmlspecialchars($item['classification']) : '' ?>
                             <?php if (!empty($item['already_purchased'])): ?>
                             <br><span style="color:#0d6efd; font-weight:600;">✓ Já comprado<?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
+                            <?php endif; ?>
+                            <?php $itemLinkCard = $getItemLink($item); ?>
+                            <?php if ($itemLinkCard): ?>
+                            <br><a href="<?= htmlspecialchars($itemLinkCard) ?>" target="_blank" rel="noopener" style="color:#0d6efd; word-break:break-all;">🔗 <?= htmlspecialchars($itemLinkCard) ?></a>
                             <?php endif; ?>
                         </div>
                     </div>
