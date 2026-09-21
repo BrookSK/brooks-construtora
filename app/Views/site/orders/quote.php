@@ -1043,6 +1043,12 @@
             
             itemsHtml += `
                 <div class="supplier-item-entry py-2 border-bottom">
+                    <div class="input-group input-group-sm mb-1 supplier-link-wrap d-none" data-sid="${sid}" data-item-id="${item.id}">
+                        <span class="input-group-text" title="Link da compra (opcional)"><i class="bi bi-link-45deg"></i></span>
+                        <input type="url" class="form-control supplier-link-input"
+                            name="supplier_links[${sid}][${item.id}]" placeholder="Cole o link do produto (compra online)"
+                            data-sid="${sid}" data-item-id="${item.id}">
+                    </div>
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-1">
                         <div class="item-info">
                             <span class="small">${item.material_name}</span>
@@ -1059,12 +1065,6 @@
                                     onclick="toggleLinkField('${sid}', '${item.id}')" data-sid="${sid}" data-item-id="${item.id}">
                                     <i class="bi bi-link-45deg"></i>
                                 </button>
-                            </div>
-                            <div class="input-group input-group-sm mt-1 supplier-link-wrap d-none" data-sid="${sid}" data-item-id="${item.id}">
-                                <span class="input-group-text" title="Link da compra (opcional)"><i class="bi bi-link-45deg"></i></span>
-                                <input type="url" class="form-control supplier-link-input"
-                                    name="supplier_links[${sid}][${item.id}]" placeholder="Cole o link do produto"
-                                    data-sid="${sid}" data-item-id="${item.id}">
                             </div>
                         </div>
                     </div>
