@@ -162,13 +162,43 @@
     </div>
 </div>
 
+<!-- Listas Órfãs -->
+<div class="card mb-4 border-danger">
+    <div class="card-header bg-danger text-white">
+        <strong>⚠️ Listas que NÃO batem com nenhuma especificação atual (<?= count($orphanTemplates ?? []) ?>)</strong>
+        <br><small>Se houver muitas aqui, essas listas foram criadas por outra coluna (ex: classification) ou antes da reimportação</small>
+    </div>
+    <div class="card-body p-0" style="max-height: 300px; overflow-y: auto;">
+        <?php if (empty($orphanTemplates)): ?>
+            <div class="p-3 text-success">✓ Nenhuma lista órfã. Todas as listas correspondem a especificações.</div>
+        <?php else: ?>
+        <table class="table table-sm table-striped mb-0">
+            <thead class="sticky-top bg-light"><tr><th>Nome da Lista (órfã)</th><th class="text-end">Itens</th></tr></thead>
+            <tbody>
+                <?php foreach ($orphanTemplates as $o): ?>
+                <tr><td><?= htmlspecialchars($o['name']) ?></td><td class="text-end"><?= $o['item_count'] ?></td></tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Ação de rebuild direto -->
+<div class="alert alert-warning">
+    <h5>🔧 Recriar listas AGORA (teste direto)</h5>
+    <p class="mb-2">Este botão executa a recriação diretamente no servidor e mostra o resultado em texto puro (sem modal, sem confirmação). Use para diagnosticar se a recriação funciona.</p>
+    <a href="/admin/materials/rebuild-lists" class="btn btn-warning" target="_blank">
+        ▶ Executar Recriação de Listas (debug)
+    </a>
+</div>
+
 <!-- Instruções -->
 <div class="alert alert-info">
     <h5>ℹ️ Como funciona:</h5>
     <ol class="mb-0">
         <li><strong>Reimportação:</strong> Atualiza os materiais pelo ID, incluindo a coluna <code>specification</code></li>
         <li><strong>Recriar Listas:</strong> Agrupa os materiais pela coluna <code>specification</code> e cria uma lista para cada valor único</li>
-        <li>Se as especificações acima estão corretas (ex: "Material Hidráulico", "Material Elétrico"), vá em <a href="/admin/material-lists">Listas de Materiais</a> e clique em "Recriar Listas"</li>
     </ol>
 </div>
 

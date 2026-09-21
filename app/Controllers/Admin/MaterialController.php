@@ -832,6 +832,19 @@ class MaterialController extends Controller
         $totalMaterials = \App\Core\Database::fetch("SELECT COUNT(*) as t FROM materials WHERE active = 1")['t'];
         $totalSpecs = count($specs);
 
+        // 6. Nomes de listas que NÃO batem com nenhuma especificação atual.
+        //    Se aparecer muita coisa aqui, as listas foram criadas por outra coluna (ex: classification).
+        $orphanTemplates = \App\Core\Database::fetchAll(
+            "SELECT t.name,
+                    (SELECT COUNT(*) FROM material_template_items WHERE template_id = t.id) AS item_count
+             FROM material_templates t
+             WHERE t.name NOT IN (
+                 SELECT DISTINCT COALESCE(NULLIF(TRIM(specification), ''), 'Sem Especificação')
+                 FROM materials WHERE active = 1
+             )
+             ORDER BY t.name ASC"
+        );
+
         $this->view('admin.materials.diagnostics', [
             'specs' => $specs,
             'materials' => $materials,
@@ -839,8 +852,111 @@ class MaterialController extends Controller
             'categories' => $categories,
             'totalMaterials' => $totalMaterials,
             'totalSpecs' => $totalSpecs,
+            'orphanTemplates' => $orphanTemplates,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);
+    }
+
+    /**
+     * Executa a recriação de listas DIRETAMENTE e imprime o resultado em texto puro.
+     * Ferramenta de diagnóstico: sem modal, sem confirmação, para isolar o problema.
+     * Acesso: GET /admin/materials/rebuild-lists
+     */
+    public function rebuildListsDebug(): void
+    {
+        header('Content-Type: text/plain; charset=UTF-8');
+        @set_time_limit(0);
+
+        $db = \App\Core\Database::getConnection();
+
+        echo "=== DEBUG: Recriação de Listas ===\n\n";
+
+        // Estado ANTES
+        $before = \App\Core\Database::fetch("SELECT COUNT(*) t FROM material_templates")['t'];
+        echo "Listas ANTES: {$before}\n";
+
+        $specifications = \App\Core\Database::fetchAll(
+            "SELECT DISTINCT COALESCE(NULLIF(TRIM(specification), ''), 'Sem Especificação') AS spec_name
+             FROM materials WHERE active = 1 ORDER BY spec_name ASC"
+        );
+        echo "Especificacoes distintas encontradas: " . count($specifications) . "\n\n";
+
+        $listsCreated = 0;
+        $itemsCreated = 0;
+
+        $db->beginTransaction();
+        try {
+            \App\Core\Database::query("DELETE FROM material_template_items");
+            \App\Core\Database::query("DELETE FROM material_templates");
+            echo "Tabelas limpas.\n";
+
+            $actor = 'Diagnostico';
+            $now = date('Y-m-d H:i:s');
+
+            $stmtTemplate = $db->prepare(
+                "INSERT INTO material_templates (name, description, active, created_by_name, created_at)
+                 VALUES (?, ?, 1, ?, ?)"
+            );
+
+            foreach ($specifications as $spec) {
+                $specName = $spec['spec_name'];
+                $materials = \App\Core\Database::fetchAll(
+                    "SELECT m.*, mu.abbreviation AS unit_abbr
+                     FROM materials m
+                     LEFT JOIN measurement_units mu ON m.unit_id = mu.id
+                     WHERE m.active = 1
+                       AND COALESCE(NULLIF(TRIM(m.specification), ''), 'Sem Especificação') = ?
+                     ORDER BY m.name ASC",
+                    [$specName]
+                );
+                if (empty($materials)) continue;
+
+                $stmtTemplate->execute([
+                    $specName,
+                    'Lista automatica: ' . $specName,
+                    $actor,
+                    $now,
+                ]);
+                $templateId = (int) $db->lastInsertId();
+                $listsCreated++;
+
+                $sortOrder = 0;
+                foreach (array_chunk($materials, 200) as $chunk) {
+                    $ph = [];
+                    $vals = [];
+                    foreach ($chunk as $mat) {
+                        $ph[] = "(?, ?, ?, ?, ?, ?, ?, 1, ?, 1, ?)";
+                        array_push($vals,
+                            $templateId, (int) $mat['id'], $mat['name'],
+                            $mat['specification'] ?? $specName,
+                            $mat['classification'] ?? null,
+                            $mat['unit_abbr'] ?? null,
+                            $mat['project_type'] ?? 'both',
+                            $sortOrder++, $now
+                        );
+                        $itemsCreated++;
+                    }
+                    $sql = "INSERT INTO material_template_items
+                                (template_id, material_id, material_name, specification, classification, unit, project_type, default_quantity, sort_order, active, created_at)
+                            VALUES " . implode(', ', $ph);
+                    $db->prepare($sql)->execute($vals);
+                }
+            }
+
+            $db->commit();
+            echo "\nCOMMIT OK.\n";
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            echo "\n!!! ERRO (rollback): " . $e->getMessage() . "\n";
+            echo "Arquivo: " . $e->getFile() . ":" . $e->getLine() . "\n";
+            return;
+        }
+
+        $after = \App\Core\Database::fetch("SELECT COUNT(*) t FROM material_templates")['t'];
+        echo "\nListas DEPOIS: {$after}\n";
+        echo "Listas criadas: {$listsCreated}\n";
+        echo "Itens criados: {$itemsCreated}\n";
+        echo "\n=== FIM ===\n";
     }
 }
