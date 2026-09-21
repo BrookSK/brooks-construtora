@@ -968,24 +968,38 @@ class MaterialController extends Controller
     public function peekMaterials(): void
     {
         header('Content-Type: text/plain; charset=UTF-8');
-        $ids = [1, 7, 8, 5129, 5468, 5223];
-        $in = implode(',', $ids);
-        $rows = \App\Core\Database::fetchAll(
+
+        echo "=== Materiais com specification poluida (nao e categoria valida) ===\n\n";
+
+        // Materiais ativos cuja specification NAO corresponde a nenhuma categoria cadastrada
+        $poluidos = \App\Core\Database::fetchAll(
             "SELECT m.id, m.name, m.specification, m.classification, m.category_id, mc.name AS cat_name
              FROM materials m
              LEFT JOIN material_categories mc ON m.category_id = mc.id
-             WHERE m.id IN ({$in})
-             ORDER BY m.id ASC"
+             WHERE m.active = 1
+               AND TRIM(COALESCE(m.specification, '')) <> ''
+               AND TRIM(m.specification) NOT IN (SELECT name FROM material_categories)
+             ORDER BY m.id ASC
+             LIMIT 40"
         );
-        echo "=== Estado bruto no banco ===\n\n";
-        foreach ($rows as $r) {
-            echo "id={$r['id']}\n";
-            echo "  name           = {$r['name']}\n";
-            echo "  specification  = [" . ($r['specification'] ?? 'NULL') . "]\n";
-            echo "  classification = [" . ($r['classification'] ?? 'NULL') . "]\n";
-            echo "  category_id    = " . ($r['category_id'] ?? 'NULL') . " (" . ($r['cat_name'] ?? '-') . ")\n\n";
+
+        echo "Mostrando ate 40 exemplos:\n\n";
+        foreach ($poluidos as $r) {
+            echo "id={$r['id']} | spec=[" . ($r['specification'] ?? '') . "] | class=[" . ($r['classification'] ?? '') . "] | cat_id=" . ($r['category_id'] ?? 'NULL') . " (" . ($r['cat_name'] ?? '-') . ") | " . $r['name'] . "\n";
         }
-        echo "=== FIM ===\n";
+
+        // Totais
+        $totalAtivos = \App\Core\Database::fetch("SELECT COUNT(*) t FROM materials WHERE active = 1")['t'];
+        $totalPoluidos = \App\Core\Database::fetch(
+            "SELECT COUNT(*) t FROM materials m
+             WHERE m.active = 1
+               AND TRIM(COALESCE(m.specification, '')) <> ''
+               AND TRIM(m.specification) NOT IN (SELECT name FROM material_categories)"
+        )['t'];
+
+        echo "\nTotal materiais ativos: {$totalAtivos}\n";
+        echo "Total com specification poluida: {$totalPoluidos}\n";
+        echo "\n=== FIM ===\n";
     }
 
     /**
