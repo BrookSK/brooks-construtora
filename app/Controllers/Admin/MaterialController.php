@@ -791,8 +791,6 @@ class MaterialController extends Controller
      */
     public function diagnostics(): void
     {
-        $db = \App\Core\Database::class;
-
         // 1. Especificações únicas
         $specs = \App\Core\Database::fetchAll(
             "SELECT 
