@@ -552,6 +552,9 @@ class MaterialController extends Controller
      */
     public function reimportProcess(): void
     {
+        // Evita timeout com milhares de linhas (um SELECT + UPDATE por linha)
+        @set_time_limit(0);
+
         if (!$this->isPost()) {
             $this->json(['error' => 'Método inválido.'], 400);
             return;
