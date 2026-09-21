@@ -514,6 +514,7 @@ class Router
             'lista-semanal/rascunho' => ['WeeklyMaterialController', 'loadDraft'],
             'lista-semanal/parse-pdf' => ['WeeklyMaterialController', 'parsePdf'],
             'lista-semanal/novo-material' => ['WeeklyMaterialController', 'quickStoreMaterial'],
+            'lista-semanal/lista-predefinida' => ['WeeklyMaterialController', 'predefinedList'],
 
             // PIN Auth
             'pin/login' => ['PinAuthController', 'login'],

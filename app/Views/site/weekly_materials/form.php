@@ -142,6 +142,39 @@
                 </div>
             </div>
 
+            <!-- Aplicar lista pré-definida (mesma ideia do Novo Pedido) -->
+            <?php if (!empty($materialLists)): ?>
+            <div class="card mb-3 border-primary border-opacity-25" id="materialListCard">
+                <div class="card-header bg-primary bg-opacity-10"><i class="bi bi-list-stars"></i> Aplicar Lista Pré-definida <small class="text-muted">(opcional)</small></div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">Selecione uma lista para carregar de uma vez os materiais já com quantidades sugeridas. Depois é só remover o que não precisa e ajustar as quantidades.</p>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-8">
+                            <select class="form-select form-select-sm" id="materialListSelect">
+                                <option value="">-- Selecione uma lista --</option>
+                                <?php foreach ($materialLists as $ml): ?>
+                                <option value="<?= (int) $ml['id'] ?>"><?= htmlspecialchars($ml['name']) ?> (<?= (int) ($ml['item_count'] ?? 0) ?> itens)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-grid">
+                            <button type="button" class="btn btn-sm btn-primary" id="applyListBtn">
+                                <i class="bi bi-download"></i> Carregar itens
+                            </button>
+                        </div>
+                    </div>
+                    <div class="alert alert-warning small mt-3 mb-0 d-flex align-items-start gap-2">
+                        <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                        <div>
+                            <strong>Atenção:</strong> a lista é apenas uma sugestão. Revise item por item,
+                            deixe somente o que realmente precisa e ajuste as quantidades antes de enviar.
+                        </div>
+                    </div>
+                    <div id="listApplyStatus" class="mt-2" style="display:none;"></div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-list-check"></i> <span id="itemsCardTitle">Itens do Pedido</span> <span class="badge bg-primary ms-1" id="itemCountBadge">0</span></span>
@@ -308,6 +341,7 @@
     window.WEEKLY_MIN_ADVANCE = <?= (int) ($minAdvanceDays ?? 15) ?>;
     window.WEEKLY_MIN_DATE = <?= json_encode($minNeededDate ?? '') ?>;
     window.WEEKLY_CYCLE_END = <?= json_encode($cycleEndDate ?? '') ?>;
+    window.WEEKLY_OBRA_TYPE = <?= json_encode($obraType ?? '') ?>;
     window.WEEKLY_MATERIALS = <?= json_encode(array_values($materials)) ?>;
     </script>
     <?php $wmJs = ROOT_PATH . '/public/assets/js/weekly-material-form.js'; $wmJsVer = is_file($wmJs) ? filemtime($wmJs) : time(); ?>

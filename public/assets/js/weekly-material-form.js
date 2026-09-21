@@ -12,6 +12,7 @@
     const MIN_ADVANCE = parseInt(window.WEEKLY_MIN_ADVANCE || 15, 10);
     const MIN_DATE = window.WEEKLY_MIN_DATE || '';
     const CYCLE_END = window.WEEKLY_CYCLE_END || '';
+    const OBRA_TYPE = window.WEEKLY_OBRA_TYPE || '';
     const materials = window.WEEKLY_MATERIALS || [];
     let itemCount = 0;
     let audioBlob = null;
@@ -259,6 +260,78 @@
     if (addBtn) addBtn.addEventListener('click', function () { addItem(); });
     const addBtnInline = document.getElementById('addItemBtnInline');
     if (addBtnInline) addBtnInline.addEventListener('click', function () { addItem(); });
+
+    // ─── Aplicar lista de materiais pré-definida ─────────────────────────
+    // Carrega de uma vez os materiais de uma lista, já com quantidades
+    // sugeridas, reaproveitando o addItem(prefill) acima. É só uma sugestão:
+    // o responsável revisa, remove o que não precisa e ajusta.
+    async function applyMaterialList() {
+        const sel = document.getElementById('materialListSelect');
+        const statusEl = document.getElementById('listApplyStatus');
+        const btn = document.getElementById('applyListBtn');
+        if (!sel || !sel.value) { alert('Selecione uma lista primeiro.'); return; }
+
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        try {
+            let url = '/lista-semanal/lista-predefinida/' + encodeURIComponent(TOKEN) +
+                '?template_id=' + encodeURIComponent(sel.value);
+            if (OBRA_TYPE) url += '&obra_type=' + encodeURIComponent(OBRA_TYPE);
+
+            const resp = await fetch(url);
+            const data = await resp.json();
+
+            if (!data.success || !Array.isArray(data.items)) {
+                statusEl.style.display = 'block';
+                statusEl.innerHTML = '<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> ' + (data.error || 'Não foi possível carregar a lista.') + '</div>';
+                return;
+            }
+
+            if (data.items.length === 0) {
+                statusEl.style.display = 'block';
+                let msg = 'Esta lista não tem itens ativos.';
+                if (OBRA_TYPE) {
+                    const tipoLabel = OBRA_TYPE === 'construction' ? 'Construção' : 'Reforma';
+                    msg = 'Esta lista não tem itens ativos compatíveis com o tipo da obra (' + tipoLabel + ').';
+                }
+                statusEl.innerHTML = '<div class="alert alert-info small py-2 mb-0"><i class="bi bi-info-circle"></i> ' + msg + '</div>';
+                return;
+            }
+
+            let added = 0;
+            data.items.forEach(function (it) {
+                addItem({
+                    id: it.id || '',
+                    name: it.name || '',
+                    specification: it.specification || '',
+                    classification: it.classification || '',
+                    unit: it.unit || '',
+                    quantity: it.quantity || 1
+                });
+                added++;
+            });
+
+            let filterMsg = '';
+            if (data.filtered_by_obra_type) {
+                const tipoLabel = data.filtered_by_obra_type === 'construction' ? 'Construção' : 'Reforma';
+                filterMsg = ' <small class="text-primary">(filtrado para ' + tipoLabel + ')</small>';
+            }
+
+            statusEl.style.display = 'block';
+            statusEl.innerHTML = '<div class="alert alert-success small py-2 mb-0"><i class="bi bi-check-circle"></i> <strong>' + added + ' item(ns)</strong> carregados da lista <strong>' + ((data.template && data.template.name) || '') + '</strong>' + filterMsg + '. Revise, remova o que não precisa e ajuste as quantidades antes de enviar.</div>';
+        } catch (e) {
+            statusEl.style.display = 'block';
+            statusEl.innerHTML = '<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> Erro de conexão ao carregar a lista.</div>';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+
+    const applyListBtn = document.getElementById('applyListBtn');
+    if (applyListBtn) applyListBtn.addEventListener('click', applyMaterialList);
 
     // ─── Novo material inline (endpoint público) ─────────────────────────
     const saveMatBtn = document.getElementById('saveMaterialBtn');

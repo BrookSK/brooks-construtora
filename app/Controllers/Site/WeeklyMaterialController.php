@@ -7,6 +7,8 @@ use App\Models\WeeklyMaterialRequest;
 use App\Models\WeeklyMaterialLog;
 use App\Models\ConstructionSite;
 use App\Models\Material;
+use App\Models\MaterialTemplate;
+use App\Models\MaterialTemplateItem;
 use App\Services\WeeklyMaterialService;
 
 class WeeklyMaterialController extends Controller
@@ -150,6 +152,20 @@ class WeeklyMaterialController extends Controller
         // Janela do ciclo (Y-m-d) para limitar a data opcional por item.
         // O máximo é o fim do ciclo; o mínimo é a data mínima da necessidade.
         $cycleEndDate = WeeklyMaterialRequest::cycleEnd($request['week_start']);
+
+        // Listas de materiais pré-definidas (mesmas do Novo Pedido).
+        // Permitem carregar de uma vez vários materiais já com quantidades
+        // sugeridas. É apenas uma sugestão: o responsável revisa e ajusta.
+        $materialLists = [];
+        try {
+            $materialLists = MaterialTemplate::allActive();
+        } catch (\Throwable $e) {
+            error_log('[WEEKLY_MATERIAL] Falha ao carregar listas pré-definidas: ' . $e->getMessage());
+        }
+
+        // Tipo de projeto da obra travada (para filtrar itens da lista por
+        // construção/reforma, quando a obra do link é conhecida).
+        $obraType = $lockedSite['project_type'] ?? '';
 
         require ROOT_PATH . '/app/Views/site/weekly_materials/form.php';
     }
@@ -490,6 +506,69 @@ class WeeklyMaterialController extends Controller
         ]);
 
         echo json_encode(['success' => true, 'material' => Material::find($id)]);
+        exit;
+    }
+
+    /**
+     * AJAX (público via token): itens de uma lista de materiais pré-definida.
+     *
+     * Espelha Admin\MaterialTemplateController::items(), porém validando o
+     * token do link semanal em vez de sessão de admin. Usado pelo formulário
+     * de preenchimento da lista semanal para carregar de uma vez os materiais
+     * de uma lista, já com quantidades sugeridas.
+     */
+    public function predefinedList(string $token = ''): void
+    {
+        header('Content-Type: application/json');
+
+        if (!$token) {
+            echo json_encode(['success' => false, 'error' => 'Link inválido.']);
+            exit;
+        }
+
+        $request = WeeklyMaterialRequest::findByToken($token);
+        if (!$request) {
+            echo json_encode(['success' => false, 'error' => 'Link inválido.']);
+            exit;
+        }
+
+        $templateId = (int) $this->input('template_id', 0);
+        $template = MaterialTemplate::find($templateId);
+        if (!$template) {
+            echo json_encode(['success' => false, 'error' => 'Lista não encontrada.']);
+            exit;
+        }
+
+        $rows = MaterialTemplateItem::forTemplate($templateId, true);
+
+        // Filtra por tipo de projeto da obra, se informado.
+        $obraType = $this->input('obra_type', '');
+        if ($obraType === 'construction' || $obraType === 'renovation') {
+            $rows = array_filter($rows, function ($item) use ($obraType) {
+                $itemType = $item['project_type'] ?? 'both';
+                return $itemType === 'both' || $itemType === $obraType;
+            });
+            $rows = array_values($rows);
+        }
+
+        $items = array_map(function ($i) {
+            return [
+                'id'             => $i['material_id'] !== null ? (int) $i['material_id'] : null,
+                'item_id'        => (int) $i['id'],
+                'name'           => $i['material_name'],
+                'specification'  => $i['specification'] ?? ($i['category_name'] ?? ''),
+                'classification' => $i['classification'] ?? '',
+                'unit'           => $i['unit_abbr'] ?? $i['unit'] ?? '',
+                'quantity'       => (float) $i['default_quantity'],
+            ];
+        }, $rows);
+
+        echo json_encode([
+            'success'  => true,
+            'template' => ['id' => (int) $template['id'], 'name' => $template['name']],
+            'items'    => $items,
+            'filtered_by_obra_type' => $obraType ?: null,
+        ]);
         exit;
     }
 
