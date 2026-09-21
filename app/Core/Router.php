@@ -268,6 +268,7 @@ class Router
             'materials/diagnostics' => ['MaterialController', 'diagnostics'],
             'materials/rebuild-lists' => ['MaterialController', 'rebuildListsDebug'],
             'materials/fix-specifications' => ['MaterialController', 'fixSpecificationsFromCategory'],
+            'materials/peek' => ['MaterialController', 'peekMaterials'],
 
             // Fornecedores - Contatos/Vendedores
             'suppliers/contacts' => ['SupplierController', 'contacts'],

@@ -962,6 +962,33 @@ class MaterialController extends Controller
     }
 
     /**
+     * Mostra o estado bruto de alguns materiais no banco (debug pontual).
+     * Acesso: GET /admin/materials/peek
+     */
+    public function peekMaterials(): void
+    {
+        header('Content-Type: text/plain; charset=UTF-8');
+        $ids = [1, 7, 8, 5129, 5468, 5223];
+        $in = implode(',', $ids);
+        $rows = \App\Core\Database::fetchAll(
+            "SELECT m.id, m.name, m.specification, m.classification, m.category_id, mc.name AS cat_name
+             FROM materials m
+             LEFT JOIN material_categories mc ON m.category_id = mc.id
+             WHERE m.id IN ({$in})
+             ORDER BY m.id ASC"
+        );
+        echo "=== Estado bruto no banco ===\n\n";
+        foreach ($rows as $r) {
+            echo "id={$r['id']}\n";
+            echo "  name           = {$r['name']}\n";
+            echo "  specification  = [" . ($r['specification'] ?? 'NULL') . "]\n";
+            echo "  classification = [" . ($r['classification'] ?? 'NULL') . "]\n";
+            echo "  category_id    = " . ($r['category_id'] ?? 'NULL') . " (" . ($r['cat_name'] ?? '-') . ")\n\n";
+        }
+        echo "=== FIM ===\n";
+    }
+
+    /**
      * Executa a recriação de listas DIRETAMENTE e imprime o resultado em texto puro.
      * Ferramenta de diagnóstico: sem modal, sem confirmação, para isolar o problema.
      * Acesso: GET /admin/materials/rebuild-lists
