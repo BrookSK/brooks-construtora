@@ -200,6 +200,27 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Garante que a coluna purchase_order_item_prices.link exista (migration 039 lazy).
+     */
+    private function ensureItemPriceLinkColumn(): void
+    {
+        try {
+            $c = Database::fetch(
+                "SELECT 1 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_order_item_prices'
+                   AND COLUMN_NAME = 'link' LIMIT 1"
+            );
+            if (empty($c)) {
+                Database::getConnection()->exec(
+                    "ALTER TABLE purchase_order_item_prices ADD COLUMN link VARCHAR(500) DEFAULT NULL AFTER total_price"
+                );
+            }
+        } catch (\Exception $e) {
+            // Silencioso: se falhar, o create sem a coluna ainda funciona.
+        }
+    }
+
+    /**
      * Processar cotação (POST)
      */
     public function submitQuote(string $token = ''): void
@@ -231,6 +252,8 @@ class PurchaseOrderController extends Controller
         $supplierFinancials = $_POST['supplier_financials'] ?? [];
         $supplierVendor = $_POST['supplier_vendor'] ?? [];
         $supplierIds = $_POST['supplier_ids'] ?? [];
+        $supplierLinks = $_POST['supplier_links'] ?? [];
+        $this->ensureItemPriceLinkColumn();
         $lowestTotal = PHP_FLOAT_MAX;
 
         // ─── LOG: Dados brutos recebidos do POST ────────────────────────────
@@ -343,12 +366,15 @@ class PurchaseOrderController extends Controller
                             // erros de precisão de ponto flutuante (ex: 0.2999 * 1000 = 299.90)
                             $totalPrice = round($totalPrice, 2);
                             $supplierTotal += $totalPrice;
+                            $itemLink = trim((string) ($supplierLinks[$sid][$itemId] ?? ''));
+                            $itemLink = $itemLink !== '' ? mb_substr($itemLink, 0, 500) : null;
                             PurchaseOrderItemPrice::create([
                                 'order_id' => $order['id'],
                                 'item_id' => (int) $itemId,
                                 'supplier_id' => $sid,
                                 'unit_price' => $unitPrice,
                                 'total_price' => $totalPrice,
+                                'link' => $itemLink,
                                 'created_at' => date('Y-m-d H:i:s'),
                             ]);
                             $pricesForHistory[$item['id']] = $unitPrice;
