@@ -33,6 +33,9 @@
         #mapFinancials .accordion-button { font-size: 0.85rem; padding: 0.5rem 1rem; }
         .map-price-input { font-size: 0.8rem !important; padding: 4px 6px; }
         .link-toggle-btn.has-link { color: #0d6efd; border-color: #0d6efd; background: #e7f1ff; }
+        .map-link-btn { border: none; background: transparent; cursor: pointer; padding: 0 2px; color: #adb5bd; font-size: 0.9rem; }
+        .map-link-btn.has-link { color: #0d6efd; }
+        .map-link-input-wrap { margin-top: 3px; }
         @media (max-width: 768px) {
             .main-card .card-body, .main-card .card-header { padding: 0.75rem; }
             .page-header h4 { font-size: 1.1rem; }
@@ -1337,8 +1340,8 @@
             const itemId = e.target.dataset.itemId;
             const btn = document.querySelector(`.link-toggle-btn[data-sid="${sid}"][data-item-id="${itemId}"]`);
             if (btn) btn.classList.toggle('has-link', e.target.value.trim() !== '');
-            // Sincroniza com o campo de link do mapa (accordion financeiro), se existir
-            const mapInput = document.querySelector(`.map-fin-link[data-sid="${sid}"][data-item="${itemId}"]`);
+            // Sincroniza com o campo do mapa, se existir
+            const mapInput = document.querySelector(`.map-link-input[data-sid="${sid}"][data-item="${itemId}"]`);
             if (mapInput && mapInput.value !== e.target.value) mapInput.value = e.target.value;
         }
     });
@@ -1393,7 +1396,15 @@
             addedSuppliers.forEach(sid => {
                 const input = document.querySelector(`#supplier-block-${sid} [name="supplier_prices[${sid}][${item.id}]"]`);
                 const val = input ? input.value : '';
-                bodyHtml += `<td class="text-center"><input type="text" inputmode="decimal" class="form-control form-control-sm text-center map-price-input" data-sid="${sid}" data-item="${item.id}" value="${val}" placeholder="0,00" style="font-size:0.85rem;"></td>`;
+                const linkInput = document.querySelector(`#supplier-block-${sid} .supplier-link-input[data-item-id="${item.id}"]`);
+                const linkVal = linkInput ? (linkInput.value || '') : '';
+                bodyHtml += `<td class="text-center">
+                    <input type="text" inputmode="decimal" class="form-control form-control-sm text-center map-price-input" data-sid="${sid}" data-item="${item.id}" value="${val}" placeholder="0,00" style="font-size:0.85rem;">
+                    <div class="map-link-input-wrap input-group input-group-sm ${linkVal ? '' : 'd-none'}" data-sid="${sid}" data-item="${item.id}">
+                        <input type="url" class="form-control form-control-sm map-link-input" data-sid="${sid}" data-item="${item.id}" value="${escAttr(linkVal)}" placeholder="Link" style="font-size:0.75rem;">
+                    </div>
+                    <button type="button" class="map-link-btn ${linkVal ? 'has-link' : ''}" data-sid="${sid}" data-item="${item.id}" title="Adicionar/editar link de compra" onclick="toggleMapLink('${sid}', '${item.id}')"><i class="bi bi-link-45deg"></i> <span style="font-size:0.6rem;">link</span></button>
+                </td>`;
             });
             bodyHtml += '</tr>';
         });
@@ -1435,20 +1446,32 @@
                 setTimeout(renderMapFooter, 150);
             });
         });
+
+        // Bind inputs de link do mapa → sincroniza com o input oculto da lista
+        document.querySelectorAll('.map-link-input').forEach(input => {
+            input.addEventListener('input', function() {
+                const sid = this.dataset.sid;
+                const itemId = this.dataset.item;
+                const listInput = document.querySelector(`#supplier-block-${sid} .supplier-link-input[data-item-id="${itemId}"]`);
+                if (listInput) {
+                    listInput.value = this.value;
+                    refreshLinkToggle(sid, itemId);
+                }
+                const btn = document.querySelector(`.map-link-btn[data-sid="${sid}"][data-item="${itemId}"]`);
+                if (btn) btn.classList.toggle('has-link', this.value.trim() !== '');
+            });
+        });
     }
 
-    // Monta os campos de link de compra (por item) do accordion financeiro do mapa.
-    function buildMapLinksHtml(sid, block) {
-        let out = '';
-        quoteOnlyItems.forEach(it => {
-            const li = block ? block.querySelector('.supplier-link-input[data-item-id="' + it.id + '"]') : null;
-            const lv = li ? (li.value || '') : '';
-            out += '<div class="col-12 col-md-6">'
-                + '<label class="form-label small text-muted mb-0 text-truncate" title="' + escAttr(it.material_name) + '">' + escHtml(it.material_name) + '</label>'
-                + '<input type="url" class="form-control form-control-sm map-fin-link" data-sid="' + sid + '" data-item="' + it.id + '" value="' + escAttr(lv) + '" placeholder="Cole o link do produto (opcional)">'
-                + '</div>';
-        });
-        return out;
+    // Mostra/esconde o campo de link no modo mapa.
+    function toggleMapLink(sid, itemId) {
+        const wrap = document.querySelector(`.map-link-input-wrap[data-sid="${sid}"][data-item="${itemId}"]`);
+        if (!wrap) return;
+        wrap.classList.toggle('d-none');
+        if (!wrap.classList.contains('d-none')) {
+            const input = wrap.querySelector('.map-link-input');
+            if (input) input.focus();
+        }
     }
 
     function renderMapFinancials() {
@@ -1580,13 +1603,6 @@
                                 <input type="text" class="form-control form-control-sm map-vendor-field" data-sid="${sid}" data-field="payment_notes" value="${getVendorVal('payment_notes')}" placeholder="Observações...">
                             </div>
                         </div>
-                        <!-- Links de compra online (opcional) por item -->
-                        <div class="mt-2 pt-2 border-top">
-                            <label class="form-label small fw-bold mb-1"><i class="bi bi-link-45deg"></i> Links de compra online (opcional)</label>
-                            <div class="row g-2">
-                                ${buildMapLinksHtml(sid, block)}
-                            </div>
-                        </div>
                         ${orderType === 'service' ? `
                         <!-- Upload PDF de Materiais (Serviço) - Mapa -->
                         <div class="mt-2 pt-2 border-top svc-pdf-section">
@@ -1608,19 +1624,6 @@
         
         html += '</div>';
         container.innerHTML = html;
-
-        // Bind syncs: links de compra do mapa → input de link da lista
-        container.querySelectorAll('.map-fin-link').forEach(input => {
-            input.addEventListener('input', function() {
-                const sid = this.dataset.sid;
-                const itemId = this.dataset.item;
-                const listInput = document.querySelector(`#supplier-block-${sid} .supplier-link-input[data-item-id="${itemId}"]`);
-                if (listInput) {
-                    listInput.value = this.value;
-                    refreshLinkToggle(sid, itemId);
-                }
-            });
-        });
 
         // Bind syncs: map financials → list financials
         container.querySelectorAll('.map-fin-field').forEach(input => {
