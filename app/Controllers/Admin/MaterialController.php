@@ -878,76 +878,90 @@ class MaterialController extends Controller
         header('Content-Type: text/plain; charset=UTF-8');
         @set_time_limit(0);
 
-        echo "=== Corrigir specification a partir da categoria ===\n\n";
+        echo "=== Corrigir specification (limpeza final dos materiais fora do CSV) ===\n\n";
 
-        // Distintos ANTES
+        // Lista OFICIAL das 22 especificações válidas
+        $oficiais = [
+            'Material Hidráulico', 'Material Elétrico', 'Material Civil', 'Material de Fixação',
+            'Material de Serralheria', 'Material de Ferramentas', 'Equipamento (aquisição)',
+            'Material de Marcenaria', 'Mão de obra', 'Material de Acabamento', 'Material Sanitário',
+            'Material de Segurança / EPI', 'Material de Pintura', 'Canteiro (copa, escritório e apoio)',
+            'Material de Impermeabilização', 'Outros', 'Material de Limpeza', 'Encargos complementares',
+            'Serviços', 'Equipamento (locação)', 'Material de Proteção (obra)', 'Sem Especificação',
+        ];
+        $inList = "'" . implode("','", array_map(fn($s) => str_replace("'", "''", $s), $oficiais)) . "'";
+
+        // Mapa de correção: categoria-lixo (minúscula/variante) -> categoria oficial
+        // Cobre os casos conhecidos em que a categoria vinculada não é exatamente uma das 22.
+        $catFix = [
+            'limpeza'      => 'Material de Limpeza',
+            'material filtro' => 'Outros',
+            'material para filtro' => 'Outros',
+            'mat. civil'   => 'Material Civil',
+            'material'      => 'Outros',
+            'epi'          => 'Material de Segurança / EPI',
+            'iluminação'   => 'Material Elétrico',
+            'esgoto silentium' => 'Material Hidráulico',
+            'cpvc'         => 'Material Hidráulico',
+        ];
+
         $before = \App\Core\Database::fetch(
             "SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(specification), ''), '(vazio)')) t
              FROM materials WHERE active = 1"
         )['t'];
         echo "Especificacoes distintas ANTES: {$before}\n\n";
 
-        // Diagnóstico: quantos materiais têm category_id nulo?
-        $semCategoria = \App\Core\Database::fetch(
-            "SELECT COUNT(*) t FROM materials WHERE active = 1 AND category_id IS NULL"
-        )['t'];
-        echo "Materiais SEM category_id: {$semCategoria}\n";
-
-        $comCategoria = \App\Core\Database::fetch(
-            "SELECT COUNT(*) t FROM materials WHERE active = 1 AND category_id IS NOT NULL"
-        )['t'];
-        echo "Materiais COM category_id: {$comCategoria}\n\n";
-
-        // ESTRATÉGIA 1: quando há categoria vinculada, specification = nome da categoria
-        $affected1 = \App\Core\Database::query(
+        // ESTRATÉGIA A: material com specification FORA das oficiais, mas cuja CATEGORIA
+        // vinculada JÁ é uma das 22 oficiais -> copia o nome da categoria para specification.
+        $affectedA = \App\Core\Database::query(
             "UPDATE materials m
              JOIN material_categories mc ON m.category_id = mc.id
              SET m.specification = mc.name
-             WHERE m.category_id IS NOT NULL
-               AND (m.specification IS NULL OR TRIM(m.specification) <> mc.name)"
+             WHERE m.active = 1
+               AND TRIM(mc.name) IN ({$inList})
+               AND TRIM(COALESCE(m.specification, '')) NOT IN ({$inList})"
         )->rowCount();
-        echo "Estrategia 1 (specification = categoria vinculada): {$affected1} atualizados\n";
+        echo "Estrategia A (spec <- categoria oficial vinculada): {$affectedA} atualizados\n";
 
-        // ESTRATÉGIA 2: para materiais SEM categoria mas cujo specification atual
-        // JÁ é o nome de uma categoria válida, vincular a category_id correspondente
-        $affected2 = \App\Core\Database::query(
-            "UPDATE materials m
-             JOIN material_categories mc ON TRIM(m.specification) = mc.name
-             SET m.category_id = mc.id
-             WHERE m.category_id IS NULL
-               AND TRIM(COALESCE(m.specification, '')) <> ''"
-        )->rowCount();
-        echo "Estrategia 2 (vincular categoria pelo nome da spec valida): {$affected2} atualizados\n";
+        // ESTRATÉGIA B: aplicar o mapa de correção de categorias-lixo conhecidas
+        $affectedB = 0;
+        foreach ($catFix as $lixo => $oficial) {
+            $n = \App\Core\Database::query(
+                "UPDATE materials m
+                 JOIN material_categories mc ON m.category_id = mc.id
+                 SET m.specification = ?
+                 WHERE m.active = 1
+                   AND LOWER(TRIM(mc.name)) = ?
+                   AND TRIM(COALESCE(m.specification, '')) NOT IN ({$inList})",
+                [$oficial, $lixo]
+            )->rowCount();
+            $affectedB += $n;
+        }
+        echo "Estrategia B (mapa de categorias-lixo conhecidas): {$affectedB} atualizados\n";
 
-        // Distintos DEPOIS
         $after = \App\Core\Database::fetch(
             "SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(specification), ''), '(vazio)')) t
              FROM materials WHERE active = 1"
         )['t'];
         echo "\nEspecificacoes distintas DEPOIS: {$after}\n\n";
 
-        // Listar as especificações que AINDA não são categorias válidas (o lixo restante)
+        // O que ainda sobrou fora das oficiais (decisão manual)
         $restantes = \App\Core\Database::fetchAll(
-            "SELECT COALESCE(NULLIF(TRIM(m.specification), ''), '(vazio)') AS spec, COUNT(*) AS qtd
+            "SELECT m.id, m.name, COALESCE(NULLIF(TRIM(m.specification), ''), '(vazio)') AS spec,
+                    mc.name AS cat_name
              FROM materials m
+             LEFT JOIN material_categories mc ON m.category_id = mc.id
              WHERE m.active = 1
-               AND COALESCE(NULLIF(TRIM(m.specification), ''), '(vazio)') NOT IN (
-                   SELECT name FROM material_categories
-               )
-             GROUP BY spec
-             ORDER BY qtd DESC"
+               AND TRIM(COALESCE(m.specification, '')) NOT IN ({$inList})
+             ORDER BY m.name ASC"
         );
-        echo "Especificacoes que NAO sao categorias validas (lixo restante): " . count($restantes) . "\n";
+        echo "Materiais que AINDA sobraram fora das oficiais: " . count($restantes) . "\n";
         foreach ($restantes as $r) {
-            echo "  " . str_pad((string) $r['qtd'], 5) . " | " . $r['spec'] . "\n";
+            echo "  id={$r['id']} | spec=[{$r['spec']}] | cat=[" . ($r['cat_name'] ?? '-') . "] | {$r['name']}\n";
         }
 
-        // Total de categorias cadastradas
-        $totalCats = \App\Core\Database::fetch("SELECT COUNT(*) t FROM material_categories")['t'];
-        echo "\nTotal de CATEGORIAS cadastradas: {$totalCats}\n";
-
-        // Distribuição real de specification (o que vira lista)
-        echo "\n=== Distribuicao atual de specification (o que gera as listas) ===\n";
+        // Distribuição final
+        echo "\n=== Distribuicao FINAL de specification (o que gera as listas) ===\n";
         $dist = \App\Core\Database::fetchAll(
             "SELECT COALESCE(NULLIF(TRIM(specification), ''), '(vazio)') AS spec, COUNT(*) AS qtd
              FROM materials WHERE active = 1
@@ -958,7 +972,8 @@ class MaterialController extends Controller
             echo "  " . str_pad((string) $d['qtd'], 5) . " | " . $d['spec'] . "\n";
         }
 
-        echo "\n=== FIM ===\n";
+        echo "\nAgora rode a recriacao em: /admin/materials/rebuild-lists\n";
+        echo "=== FIM ===\n";
     }
 
     /**
