@@ -882,24 +882,62 @@ class MaterialController extends Controller
             "SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(specification), ''), '(vazio)')) t
              FROM materials WHERE active = 1"
         )['t'];
-        echo "Especificacoes distintas ANTES: {$before}\n";
+        echo "Especificacoes distintas ANTES: {$before}\n\n";
 
-        // Atualiza specification = nome da categoria, quando houver categoria vinculada
-        $affected = \App\Core\Database::query(
+        // Diagnóstico: quantos materiais têm category_id nulo?
+        $semCategoria = \App\Core\Database::fetch(
+            "SELECT COUNT(*) t FROM materials WHERE active = 1 AND category_id IS NULL"
+        )['t'];
+        echo "Materiais SEM category_id: {$semCategoria}\n";
+
+        $comCategoria = \App\Core\Database::fetch(
+            "SELECT COUNT(*) t FROM materials WHERE active = 1 AND category_id IS NOT NULL"
+        )['t'];
+        echo "Materiais COM category_id: {$comCategoria}\n\n";
+
+        // ESTRATÉGIA 1: quando há categoria vinculada, specification = nome da categoria
+        $affected1 = \App\Core\Database::query(
             "UPDATE materials m
              JOIN material_categories mc ON m.category_id = mc.id
              SET m.specification = mc.name
              WHERE m.category_id IS NOT NULL
                AND (m.specification IS NULL OR TRIM(m.specification) <> mc.name)"
         )->rowCount();
-        echo "Materiais atualizados: {$affected}\n";
+        echo "Estrategia 1 (specification = categoria vinculada): {$affected1} atualizados\n";
+
+        // ESTRATÉGIA 2: para materiais SEM categoria mas cujo specification atual
+        // JÁ é o nome de uma categoria válida, vincular a category_id correspondente
+        $affected2 = \App\Core\Database::query(
+            "UPDATE materials m
+             JOIN material_categories mc ON TRIM(m.specification) = mc.name
+             SET m.category_id = mc.id
+             WHERE m.category_id IS NULL
+               AND TRIM(COALESCE(m.specification, '')) <> ''"
+        )->rowCount();
+        echo "Estrategia 2 (vincular categoria pelo nome da spec valida): {$affected2} atualizados\n";
 
         // Distintos DEPOIS
         $after = \App\Core\Database::fetch(
             "SELECT COUNT(DISTINCT COALESCE(NULLIF(TRIM(specification), ''), '(vazio)')) t
              FROM materials WHERE active = 1"
         )['t'];
-        echo "Especificacoes distintas DEPOIS: {$after}\n";
+        echo "\nEspecificacoes distintas DEPOIS: {$after}\n\n";
+
+        // Listar as especificações que AINDA não são categorias válidas (o lixo restante)
+        $restantes = \App\Core\Database::fetchAll(
+            "SELECT COALESCE(NULLIF(TRIM(m.specification), ''), '(vazio)') AS spec, COUNT(*) AS qtd
+             FROM materials m
+             WHERE m.active = 1
+               AND COALESCE(NULLIF(TRIM(m.specification), ''), '(vazio)') NOT IN (
+                   SELECT name FROM material_categories
+               )
+             GROUP BY spec
+             ORDER BY qtd DESC"
+        );
+        echo "Especificacoes que NAO sao categorias validas (lixo restante): " . count($restantes) . "\n";
+        foreach ($restantes as $r) {
+            echo "  " . str_pad((string) $r['qtd'], 5) . " | " . $r['spec'] . "\n";
+        }
 
         echo "\nAgora rode a recriacao de listas em: /admin/materials/rebuild-lists\n";
         echo "=== FIM ===\n";
