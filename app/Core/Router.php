@@ -244,6 +244,7 @@ class Router
             'material-lists/store' => ['MaterialTemplateController', 'store'],
             'material-lists/update' => ['MaterialTemplateController', 'update'],
             'material-lists/delete' => ['MaterialTemplateController', 'delete'],
+            'material-lists/recreate' => ['MaterialTemplateController', 'recreate'],
             'material-lists/items' => ['MaterialTemplateController', 'items'],
             'material-lists/store-item' => ['MaterialTemplateController', 'storeItem'],
             'material-lists/update-item' => ['MaterialTemplateController', 'updateItem'],

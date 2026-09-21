@@ -8,9 +8,14 @@
         <h5 class="mb-0"><i class="bi bi-list-stars"></i> Listas de Materiais Pré-definidas</h5>
         <small class="text-muted">Monte listas reutilizáveis por categoria para agilizar a criação de pedidos.</small>
     </div>
-    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newListModal">
-        <i class="bi bi-plus-lg"></i> Nova Lista
-    </button>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#recreateListsModal" title="Apagar todas as listas e recriar a partir das categorias de materiais">
+            <i class="bi bi-arrow-clockwise"></i> Recriar Listas
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newListModal">
+            <i class="bi bi-plus-lg"></i> Nova Lista
+        </button>
+    </div>
 </div>
 
 <div class="alert alert-warning d-flex align-items-start gap-2 small">
@@ -94,12 +99,21 @@
                                 <th>Material</th>
                                 <th style="width:120px;">Especificação</th>
                                 <th style="width:100px;">Classificação</th>
+                                <th style="width:80px;">Tipo</th>
                                 <th style="width:110px;">Qtd padrão</th>
                                 <th style="width:50px;"></th>
                             </tr>
                         </thead>
                         <tbody id="items-body-<?= $tid ?>">
-                            <?php foreach ($items as $it): $iid = (int) $it['id']; ?>
+                            <?php foreach ($items as $it): $iid = (int) $it['id']; 
+                                $projectType = $it['project_type'] ?? $it['material_project_type'] ?? 'both';
+                                $projectTypeLabels = [
+                                    'construction' => ['🏗️', 'Construção', 'primary'],
+                                    'renovation' => ['🔧', 'Reforma', 'warning'],
+                                    'both' => ['🏗️🔧', 'Ambos', 'secondary'],
+                                ];
+                                $ptInfo = $projectTypeLabels[$projectType] ?? $projectTypeLabels['both'];
+                            ?>
                             <tr id="tpl-item-<?= $iid ?>" class="<?= (int) $it['active'] !== 1 ? 'table-secondary opacity-75' : '' ?>">
                                 <td class="text-center">
                                     <input type="checkbox" class="form-check-input tpl-item-active" data-id="<?= $iid ?>" <?= (int) $it['active'] === 1 ? 'checked' : '' ?>>
@@ -107,6 +121,9 @@
                                 <td><?= htmlspecialchars($it['material_name']) ?></td>
                                 <td class="small text-muted"><?= htmlspecialchars($it['specification'] ?? ($it['category_name'] ?? '')) ?></td>
                                 <td class="small text-muted"><?= htmlspecialchars($it['classification'] ?? '') ?></td>
+                                <td class="text-center">
+                                    <span class="badge bg-<?= $ptInfo[2] ?>" title="<?= $ptInfo[1] ?>" style="font-size:0.7rem;"><?= $ptInfo[0] ?></span>
+                                </td>
                                 <td>
                                     <div class="input-group input-group-sm">
                                         <input type="number" class="form-control tpl-item-qty" data-id="<?= $iid ?>" min="0.01" step="0.01" value="<?= rtrim(rtrim(number_format((float) $it['default_quantity'], 2, '.', ''), '0'), '.') ?>">
@@ -184,6 +201,41 @@
     </div>
 </div>
 
+<!-- Modal Recriar Listas -->
+<div class="modal fade" id="recreateListsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="POST" action="/admin/material-lists/recreate" id="recreateForm">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill"></i> Recriar Todas as Listas</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <strong>Atenção!</strong> Esta ação irá:
+                    <ul class="mb-0 mt-2">
+                        <li><strong>Apagar TODAS</strong> as listas existentes e seus itens</li>
+                        <li>Criar novas listas baseadas nas <strong>categorias de materiais</strong> cadastradas</li>
+                        <li>Cada categoria se tornará uma lista com todos os materiais ativos daquela categoria</li>
+                    </ul>
+                </div>
+                <p class="text-muted small mb-3">
+                    Esta ação <strong>não pode ser desfeita</strong>. Listas personalizadas, quantidades ajustadas e itens desativados serão perdidos.
+                </p>
+                <div class="mb-0">
+                    <label class="form-label fw-bold">Para confirmar, digite <span class="text-danger">RECRIAR</span> abaixo:</label>
+                    <input type="text" class="form-control" name="confirm" id="recreateConfirm" placeholder="Digite RECRIAR" autocomplete="off" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-danger" id="recreateBtn" disabled>
+                    <i class="bi bi-arrow-clockwise"></i> Recriar Todas as Listas
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="/assets/js/searchable-select.js"></script>
 <script>
 const tplMaterials = <?= json_encode($materials) ?>;
@@ -242,6 +294,13 @@ async function addTemplateItem(tid) {
 
     const it = data.item;
     const qtyDisplay = String(it.default_quantity).replace(/\.?0+$/, '') || it.default_quantity;
+    const projectType = it.project_type || 'both';
+    const ptLabels = {
+        'construction': ['🏗️', 'Construção', 'primary'],
+        'renovation': ['🔧', 'Reforma', 'warning'],
+        'both': ['🏗️🔧', 'Ambos', 'secondary']
+    };
+    const ptInfo = ptLabels[projectType] || ptLabels['both'];
     const tr = document.createElement('tr');
     tr.id = 'tpl-item-' + it.id;
     tr.innerHTML = `
@@ -249,6 +308,7 @@ async function addTemplateItem(tid) {
         <td>${escapeHtml(it.material_name)}</td>
         <td class="small text-muted">${escapeHtml(it.specification || '')}</td>
         <td class="small text-muted">${escapeHtml(it.classification || '')}</td>
+        <td class="text-center"><span class="badge bg-${ptInfo[2]}" title="${ptInfo[1]}" style="font-size:0.7rem;">${ptInfo[0]}</span></td>
         <td><div class="input-group input-group-sm">
             <input type="number" class="form-control tpl-item-qty" data-id="${it.id}" min="0.01" step="0.01" value="${qtyDisplay}">
             <span class="input-group-text">${escapeHtml(it.unit || '')}</span>
@@ -343,6 +403,22 @@ document.querySelectorAll('.edit-list-btn').forEach(btn => {
             new bootstrap.Collapse(el, { show: true });
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+    }
+})();
+
+// Validação do campo de confirmação para recriar listas
+(function() {
+    const confirmInput = document.getElementById('recreateConfirm');
+    const recreateBtn = document.getElementById('recreateBtn');
+    if (confirmInput && recreateBtn) {
+        confirmInput.addEventListener('input', function() {
+            recreateBtn.disabled = this.value.trim().toUpperCase() !== 'RECRIAR';
+        });
+        // Reset ao abrir o modal
+        document.getElementById('recreateListsModal')?.addEventListener('show.bs.modal', function() {
+            confirmInput.value = '';
+            recreateBtn.disabled = true;
+        });
     }
 })();
 </script>

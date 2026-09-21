@@ -169,4 +169,48 @@ class ConstructionSite extends Model
             "SELECT * FROM pin_users WHERE active = 1 ORDER BY name ASC"
         );
     }
+
+    /**
+     * Busca obras ativas onde um pin_user é gerente (fase 'weekly')
+     */
+    public static function getByManager(int $pinUserId, string $orderBy = 'name ASC'): array
+    {
+        return Database::fetchAll(
+            "SELECT cs.* FROM construction_sites cs
+             INNER JOIN construction_site_approvers csa ON csa.construction_site_id = cs.id
+             WHERE csa.pin_user_id = ? AND csa.phase = 'weekly' AND cs.status = 'active'
+             ORDER BY {$orderBy}",
+            [$pinUserId]
+        );
+    }
+
+    /**
+     * Busca IDs das obras onde um pin_user é gerente (fase 'weekly')
+     */
+    public static function getManagerSiteIds(int $pinUserId): array
+    {
+        $rows = Database::fetchAll(
+            "SELECT DISTINCT csa.construction_site_id 
+             FROM construction_site_approvers csa
+             INNER JOIN construction_sites cs ON cs.id = csa.construction_site_id
+             WHERE csa.pin_user_id = ? AND csa.phase = 'weekly' AND cs.status = 'active'",
+            [$pinUserId]
+        );
+        return array_column($rows, 'construction_site_id');
+    }
+
+    /**
+     * Verifica se um pin_user é gerente de pelo menos uma obra
+     */
+    public static function isManager(int $pinUserId): bool
+    {
+        $result = Database::fetch(
+            "SELECT 1 FROM construction_site_approvers csa
+             INNER JOIN construction_sites cs ON cs.id = csa.construction_site_id
+             WHERE csa.pin_user_id = ? AND csa.phase = 'weekly' AND cs.status = 'active'
+             LIMIT 1",
+            [$pinUserId]
+        );
+        return !empty($result);
+    }
 }

@@ -145,6 +145,14 @@
                         </select>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Tipo de Projeto</label>
+                        <select class="form-select" name="project_type">
+                            <option value="construction">🏗️ Construção</option>
+                            <option value="renovation">🔧 Reforma</option>
+                        </select>
+                        <small class="text-muted">Define quais materiais estarão disponíveis nas listas pré-definidas.</small>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Data de Início</label>
                         <input type="date" class="form-control" name="started_at">
                     </div>

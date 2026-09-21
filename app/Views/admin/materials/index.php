@@ -53,7 +53,7 @@
                     <td><?= htmlspecialchars($m['unit_name'] ?? '-') ?> <?= $m['unit_abbr'] ? '(' . $m['unit_abbr'] . ')' : '' ?></td>
                     <td><?= $m['active'] ? '<span class="badge bg-success">Ativo</span>' : '<span class="badge bg-secondary">Inativo</span>' ?></td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>" data-project-type="<?= htmlspecialchars($m['project_type'] ?? 'both') ?>"><i class="bi bi-pencil"></i></button>
                         <?php if ($m['active']): ?>
                         <form method="POST" action="/admin/materials/delete" class="d-inline" onsubmit="return confirm('Desativar?')"><input type="hidden" name="id" value="<?= $m['id'] ?>"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
                         <?php elseif (\App\Core\Auth::isSuperAdmin()): ?>
@@ -86,7 +86,7 @@
                     </div>
                 </div>
                 <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>" data-project-type="<?= htmlspecialchars($m['project_type'] ?? 'both') ?>"><i class="bi bi-pencil"></i></button>
                     <?php if ($m['active']): ?><form method="POST" action="/admin/materials/delete" onsubmit="return confirm('Desativar?')"><input type="hidden" name="id" value="<?= $m['id'] ?>"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
                     <?php elseif (\App\Core\Auth::isSuperAdmin()): ?><form method="POST" action="/admin/materials/delete" onsubmit="return confirm('EXCLUIR permanentemente?')"><input type="hidden" name="id" value="<?= $m['id'] ?>"><input type="hidden" name="action" value="permanent"><button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button></form>
                     <?php endif; ?>
@@ -178,6 +178,15 @@
                                 <button type="button" class="btn btn-outline-primary" onclick="showQuickAddMat('unit')"><i class="bi bi-plus"></i></button>
                             </div>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de Projeto</label>
+                            <select class="form-select" name="project_type" id="matProjectType">
+                                <option value="both">🏗️🔧 Ambos (Construção e Reforma)</option>
+                                <option value="construction">🏗️ Somente Construção</option>
+                                <option value="renovation">🔧 Somente Reforma</option>
+                            </select>
+                            <small class="text-muted">Define em quais tipos de obra este material estará disponível nas listas.</small>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -232,6 +241,7 @@ document.querySelectorAll('.edit-material-btn').forEach(btn => {
         document.getElementById('matSpecification').value = this.dataset.specification;
         document.getElementById('matClassification').value = this.dataset.classification;
         document.getElementById('matUnitId').value = this.dataset.unitId;
+        document.getElementById('matProjectType').value = this.dataset.projectType || 'both';
         new bootstrap.Modal(document.getElementById('newMaterialModal')).show();
     });
 });

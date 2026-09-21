@@ -92,6 +92,7 @@ class MaterialController extends Controller
             'category_id' => (int) $this->input('category_id') ?: null,
             'unit_id' => (int) $this->input('unit_id') ?: null,
             'classification' => trim($this->input('classification', '')),
+            'project_type' => $this->input('project_type', 'both'),
             'active' => 1,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
@@ -130,6 +131,7 @@ class MaterialController extends Controller
             'category_id' => (int) $this->input('category_id') ?: null,
             'unit_id' => (int) $this->input('unit_id') ?: null,
             'classification' => trim($this->input('classification', '')),
+            'project_type' => $this->input('project_type', 'both'),
         ]);
 
         $this->setFlash('success', 'Material atualizado com sucesso!');
@@ -190,6 +192,7 @@ class MaterialController extends Controller
             'category_id' => (int) $this->input('category_id') ?: null,
             'unit_id' => (int) $this->input('unit_id') ?: null,
             'classification' => trim($this->input('classification', '')),
+            'project_type' => $this->input('project_type', 'both'),
             'active' => 1,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
@@ -294,7 +297,7 @@ class MaterialController extends Controller
         $total = count($rows);
 
         $db = \App\Core\Database::getConnection();
-        $stmt = $db->prepare("INSERT INTO materials (code, name, specification, classification, unit_id, category_id, active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, NOW())");
+        $stmt = $db->prepare("INSERT INTO materials (code, name, specification, classification, unit_id, category_id, project_type, active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW())");
 
         // Cache de categorias e unidades
         $categories = MaterialCategory::all('name ASC');
@@ -347,7 +350,18 @@ class MaterialController extends Controller
                 if ($existing) { $skipped++; continue; }
             }
 
-            $stmt->execute([$code ?: null, $name, $spec, null, $unitId, $catId]);
+            // Processar tipo de projeto (se disponível na importação)
+            $projectType = 'both'; // default
+            if ($colMap['project_type'] !== null && isset($row[$colMap['project_type']])) {
+                $ptRaw = mb_strtolower(trim((string) $row[$colMap['project_type']]));
+                if (in_array($ptRaw, ['construcao', 'construction', 'construção'], true)) {
+                    $projectType = 'construction';
+                } elseif (in_array($ptRaw, ['reforma', 'renovation'], true)) {
+                    $projectType = 'renovation';
+                }
+            }
+
+            $stmt->execute([$code ?: null, $name, $spec, null, $unitId, $catId, $projectType]);
             $imported++;
         }
 
@@ -364,7 +378,7 @@ class MaterialController extends Controller
      */
     private function mapColumns(?array $header): array
     {
-        $map = ['classification' => 0, 'code' => 1, 'name' => 2, 'unit' => 3];
+        $map = ['classification' => 0, 'code' => 1, 'name' => 2, 'unit' => 3, 'project_type' => null];
         
         if (!$header) return $map;
 
@@ -376,6 +390,7 @@ class MaterialController extends Controller
             elseif (str_contains($col, 'codigo') || str_contains($col, 'cdigo') || str_contains($col, 'code')) $map['code'] = $i;
             elseif (str_contains($col, 'descri') || str_contains($col, 'nome') || str_contains($col, 'name') || str_contains($col, 'insumo')) $map['name'] = $i;
             elseif (str_contains($col, 'unid') || str_contains($col, 'unit')) $map['unit'] = $i;
+            elseif (str_contains($col, 'tipoprojeto') || str_contains($col, 'projecttype') || str_contains($col, 'tipo')) $map['project_type'] = $i;
         }
 
         return $map;
@@ -466,7 +481,7 @@ class MaterialController extends Controller
             "SELECT m.id, m.code, m.name, m.specification,
                     m.category_id, mc.name AS category_name,
                     m.unit_id, mu.name AS unit_name, mu.abbreviation AS unit_abbr,
-                    m.classification, m.active
+                    m.classification, m.project_type, m.active
              FROM materials m
              LEFT JOIN material_categories mc ON m.category_id = mc.id
              LEFT JOIN measurement_units mu ON m.unit_id = mu.id
@@ -493,8 +508,16 @@ class MaterialController extends Controller
             'classificacao',
             'unidade',
             'categoria',
+            'tipo_projeto',
             'ativo',
         ], ';');
+
+        // Mapear project_type para valores legíveis
+        $projectTypeLabels = [
+            'construction' => 'construcao',
+            'renovation' => 'reforma',
+            'both' => 'ambos',
+        ];
 
         foreach ($materials as $m) {
             fputcsv($out, [
@@ -507,6 +530,8 @@ class MaterialController extends Controller
                 $m['unit_abbr'] ?? ($m['unit_name'] ?? ''),
                 // Categoria: nome legível (usada como chave na reimportação)
                 $m['category_name'] ?? '',
+                // Tipo de projeto
+                $projectTypeLabels[$m['project_type'] ?? 'both'] ?? 'ambos',
                 (int) $m['active'],
             ], ';');
         }
@@ -682,6 +707,20 @@ class MaterialController extends Controller
                     $data['active'] = in_array($activeRaw, ['1', 'sim', 'ativo', 'true', 'yes'], true) ? 1 : 0;
                 }
 
+                // Tipo de projeto (opcional)
+                if ($colMap['project_type'] !== null) {
+                    $ptRaw = mb_strtolower(trim((string) ($row[$colMap['project_type']] ?? '')));
+                    // Mapear valores legíveis para o enum
+                    if (in_array($ptRaw, ['construcao', 'construction', 'construção'], true)) {
+                        $data['project_type'] = 'construction';
+                    } elseif (in_array($ptRaw, ['reforma', 'renovation'], true)) {
+                        $data['project_type'] = 'renovation';
+                    } elseif (in_array($ptRaw, ['ambos', 'both', 'todos'], true)) {
+                        $data['project_type'] = 'both';
+                    }
+                    // Se não reconhecer, não altera (mantém o atual)
+                }
+
                 if (empty($data)) { $skipped++; continue; }
 
                 // UPDATE seguro por id — nunca toca no id nem em outras tabelas
@@ -723,6 +762,7 @@ class MaterialController extends Controller
             'classification' => null,
             'unit'           => null,
             'category'       => null,
+            'project_type'   => null,
             'active'         => null,
         ];
 
@@ -739,6 +779,7 @@ class MaterialController extends Controller
             elseif (str_contains($c, 'codigo') || str_contains($c, 'cdigo') || $c === 'code') $map['code'] = $i;
             elseif (str_contains($c, 'descri') || str_contains($c, 'nome') || $c === 'name' || str_contains($c, 'insumo')) $map['name'] = $i;
             elseif (str_contains($c, 'unid') || str_contains($c, 'unit')) $map['unit'] = $i;
+            elseif (str_contains($c, 'tipoprojeto') || str_contains($c, 'projecttype') || str_contains($c, 'tipo')) $map['project_type'] = $i;
             elseif (str_contains($c, 'ativo') || str_contains($c, 'active') || str_contains($c, 'status')) $map['active'] = $i;
         }
 

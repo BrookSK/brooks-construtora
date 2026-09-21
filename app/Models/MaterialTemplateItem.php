@@ -26,6 +26,7 @@ class MaterialTemplateItem extends Model
         return Database::fetchAll(
             "SELECT i.*,
                     m.active AS material_active,
+                    m.project_type AS material_project_type,
                     mc.name AS category_name,
                     mu.abbreviation AS unit_abbr,
                     mu.name AS unit_name

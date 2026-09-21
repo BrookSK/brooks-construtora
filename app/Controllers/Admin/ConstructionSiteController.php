@@ -143,6 +143,7 @@ class ConstructionSiteController extends Controller
             'client_name' => trim($this->input('client_name', '')),
             'description' => trim($this->input('description', '')),
             'status' => $this->input('status', 'active'),
+            'project_type' => $this->input('project_type', 'construction'),
             'started_at' => $this->input('started_at') ?: null,
             'expected_end_at' => $this->input('expected_end_at') ?: null,
             'created_by' => Auth::id(),
@@ -214,6 +215,7 @@ class ConstructionSiteController extends Controller
         }
 
         $status = $this->input('status', 'active');
+        $projectType = $this->input('project_type', 'construction');
         $data = [
             'name' => $name,
             'address' => trim($this->input('address', '')),
@@ -224,6 +226,7 @@ class ConstructionSiteController extends Controller
             'client_name' => trim($this->input('client_name', '')),
             'description' => trim($this->input('description', '')),
             'status' => $status,
+            'project_type' => $projectType,
             'started_at' => $this->input('started_at') ?: null,
             'expected_end_at' => $this->input('expected_end_at') ?: null,
             'updated_at' => date('Y-m-d H:i:s'),

@@ -29,10 +29,15 @@
             <div class="card mb-3">
                 <div class="card-header"><i class="bi bi-buildings"></i> Obra</div>
                 <div class="card-body">
+                    <?php if (!empty($isFilteredByManager)): ?>
+                    <div class="alert alert-info small py-2 mb-2">
+                        <i class="bi bi-person-badge"></i> Mostrando apenas as obras onde você é gerente responsável.
+                    </div>
+                    <?php endif; ?>
                     <select class="form-select" name="construction_site_id" id="constructionSiteSelect">
                         <option value="">-- Selecione a obra (opcional) --</option>
                         <?php foreach ($constructionSites as $site): ?>
-                        <option value="<?= $site['id'] ?>"><?= htmlspecialchars($site['code'] . ' - ' . $site['name']) ?><?= !empty($site['client_name']) ? ' (' . htmlspecialchars($site['client_name']) . ')' : '' ?></option>
+                        <option value="<?= $site['id'] ?>" data-project-type="<?= htmlspecialchars($site['project_type'] ?? 'construction') ?>"><?= htmlspecialchars($site['code'] . ' - ' . $site['name']) ?><?= !empty($site['client_name']) ? ' (' . htmlspecialchars($site['client_name']) . ')' : '' ?></option>
                         <?php endforeach; ?>
                     </select>
                     <small class="text-muted d-block mt-1">Vincule este pedido a uma obra para rastreamento.</small>
@@ -354,7 +359,20 @@ async function applyMaterialList() {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
 
     try {
-        const resp = await fetch('/admin/material-lists/items?template_id=' + encodeURIComponent(sel.value));
+        // Obter tipo de projeto da obra selecionada para filtrar materiais
+        const siteSelect = document.getElementById('constructionSiteSelect');
+        let obraType = '';
+        if (siteSelect && siteSelect.value) {
+            const selectedOption = siteSelect.options[siteSelect.selectedIndex];
+            obraType = selectedOption.dataset.projectType || '';
+        }
+
+        let url = '/admin/material-lists/items?template_id=' + encodeURIComponent(sel.value);
+        if (obraType) {
+            url += '&obra_type=' + encodeURIComponent(obraType);
+        }
+
+        const resp = await fetch(url);
         const data = await resp.json();
 
         if (!data.success || !Array.isArray(data.items)) {
@@ -365,7 +383,12 @@ async function applyMaterialList() {
 
         if (data.items.length === 0) {
             statusEl.style.display = 'block';
-            statusEl.innerHTML = '<div class="alert alert-info small py-2 mb-0"><i class="bi bi-info-circle"></i> Esta lista não tem itens ativos.</div>';
+            let msg = 'Esta lista não tem itens ativos.';
+            if (obraType) {
+                const tipoLabel = obraType === 'construction' ? 'Construção' : 'Reforma';
+                msg = 'Esta lista não tem itens ativos compatíveis com o tipo da obra (' + tipoLabel + ').';
+            }
+            statusEl.innerHTML = '<div class="alert alert-info small py-2 mb-0"><i class="bi bi-info-circle"></i> ' + msg + '</div>';
             return;
         }
 
@@ -382,8 +405,14 @@ async function applyMaterialList() {
             added++;
         });
 
+        let filterMsg = '';
+        if (data.filtered_by_obra_type) {
+            const tipoLabel = data.filtered_by_obra_type === 'construction' ? 'Construção' : 'Reforma';
+            filterMsg = ' <small class="text-primary">(filtrado para ' + tipoLabel + ')</small>';
+        }
+
         statusEl.style.display = 'block';
-        statusEl.innerHTML = '<div class="alert alert-success small py-2 mb-0"><i class="bi bi-check-circle"></i> <strong>' + added + ' item(ns)</strong> carregados da lista <strong>' + (data.template?.name || '') + '</strong>. Revise, desative o que não precisa e ajuste as quantidades antes de enviar.</div>';
+        statusEl.innerHTML = '<div class="alert alert-success small py-2 mb-0"><i class="bi bi-check-circle"></i> <strong>' + added + ' item(ns)</strong> carregados da lista <strong>' + (data.template?.name || '') + '</strong>' + filterMsg + '. Revise, desative o que não precisa e ajuste as quantidades antes de enviar.</div>';
     } catch (e) {
         statusEl.style.display = 'block';
         statusEl.innerHTML = '<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> Erro de conexão ao carregar a lista.</div>';

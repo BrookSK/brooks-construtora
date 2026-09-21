@@ -39,6 +39,11 @@
 <!-- Filtros de Status (botões rápidos) -->
 <div class="d-flex flex-wrap gap-1 mb-2">
     <button class="btn btn-sm btn-outline-secondary filter-btn active" data-status="all">Todos</button>
+    <?php if (!empty($isManager) && !$canSeeAll): ?>
+    <button class="btn btn-sm btn-outline-primary filter-btn" data-filter="my-sites" id="filterMySites" title="Mostrar apenas pedidos das minhas obras">
+        <i class="bi bi-person-badge"></i> Minhas Obras
+    </button>
+    <?php endif; ?>
     <button class="btn btn-sm btn-outline-warning filter-btn" data-status="pending_quote">Cotação</button>
     <button class="btn btn-sm btn-outline-info filter-btn" data-status="pending_approval">Aprovação</button>
     <button class="btn btn-sm btn-outline-success filter-btn" data-status="approved">Aprovados</button>
@@ -227,6 +232,7 @@
                         data-status="<?= $order['status'] ?>"
                         data-supplier="<?= htmlspecialchars($order['supplier_name'] ?? '') ?>"
                         data-site="<?= htmlspecialchars($siteName) ?>"
+                        data-site-id="<?= (int) ($order['construction_site_id'] ?? 0) ?>"
                         data-type="<?= htmlspecialchars($order['order_type'] ?? 'material') ?>"
                         data-financial="<?= !empty($order['financial_reviewed_at']) ? 'reviewed' : 'not_reviewed' ?>"
                         data-purchased="<?= !empty($order['purchased_at']) ? 'purchased' : 'not_purchased' ?>"
@@ -340,6 +346,7 @@
        data-status="<?= $order['status'] ?>"
        data-supplier="<?= htmlspecialchars($order['supplier_name'] ?? '') ?>"
        data-site="<?= htmlspecialchars($siteName) ?>"
+       data-site-id="<?= (int) ($order['construction_site_id'] ?? 0) ?>"
        data-type="<?= htmlspecialchars($order['order_type'] ?? 'material') ?>"
        data-financial="<?= !empty($order['financial_reviewed_at']) ? 'reviewed' : 'not_reviewed' ?>"
        data-purchased="<?= !empty($order['purchased_at']) ? 'purchased' : 'not_purchased' ?>"
@@ -442,9 +449,14 @@
     const urgencySelect = document.getElementById('filterUrgency');
     const clearBtn = document.getElementById('clearFilters');
     const countEl = document.getElementById('filteredCount');
+    const mySitesBtn = document.getElementById('filterMySites');
+
+    // IDs das obras onde o usuário é gerente (vindos do PHP)
+    const managerSiteIds = <?= json_encode(array_map('intval', $managerSiteIds ?? [])) ?>;
 
     let activeStatus = 'all';
     let activeFlag = ''; // filtro rápido por flag: '', 'in_transport' ou 'arrived'
+    let filterMySites = false; // filtro "Minhas Obras"
 
     // Restaurar filtros: prioridade 1 = URL, prioridade 2 = sessionStorage (fallback)
     function loadFilters() {
@@ -456,6 +468,7 @@
             data = {
                 status: params.get('status') || 'all',
                 flag: params.get('flag') || '',
+                mySites: params.get('mySites') === '1',
                 q: params.get('q') || '',
                 material: params.get('material') || '',
                 supplier: params.get('supplier') || '',
@@ -480,6 +493,11 @@
 
         if (!data) return;
 
+        filterMySites = data.mySites || false;
+        if (mySitesBtn) {
+            mySitesBtn.classList.toggle('active', filterMySites);
+        }
+
         activeFlag = data.flag || '';
         if (activeFlag) {
             // Filtro por flag (Em Transporte / Chegou) tem prioridade visual sobre o status
@@ -487,7 +505,11 @@
             statusBtns.forEach(b => b.classList.toggle('active', b.dataset.flag === activeFlag));
         } else if (data.status) {
             activeStatus = data.status;
-            statusBtns.forEach(b => b.classList.toggle('active', b.dataset.status === activeStatus));
+            statusBtns.forEach(b => {
+                if (!b.dataset.filter) {
+                    b.classList.toggle('active', b.dataset.status === activeStatus);
+                }
+            });
         }
         if (data.q && searchInput) searchInput.value = data.q;
         if (data.material && materialInput) materialInput.value = data.material;
@@ -518,6 +540,7 @@
         const data = {
             status: activeStatus,
             flag: activeFlag,
+            mySites: filterMySites,
             q: searchInput ? searchInput.value.trim() : '',
             material: materialInput ? materialInput.value.trim() : '',
             supplier: supplierSelect ? supplierSelect.value : '',
@@ -539,6 +562,7 @@
         const params = new URLSearchParams();
         if (data.status !== 'all') params.set('status', data.status);
         if (data.flag) params.set('flag', data.flag);
+        if (data.mySites) params.set('mySites', '1');
         if (data.q) params.set('q', data.q);
         if (data.material) params.set('material', data.material);
         if (data.supplier) params.set('supplier', data.supplier);
@@ -574,7 +598,13 @@
         rows.forEach(row => {
             let show = true;
 
-            if (activeStatus !== 'all' && row.dataset.status !== activeStatus) show = false;
+            // Filtro "Minhas Obras"
+            if (show && filterMySites && managerSiteIds.length > 0) {
+                const siteId = parseInt(row.dataset.siteId) || 0;
+                if (!managerSiteIds.includes(siteId)) show = false;
+            }
+
+            if (show && activeStatus !== 'all' && row.dataset.status !== activeStatus) show = false;
             if (show && activeFlag === 'in_transport' && row.dataset.inTransport !== 'in_transport') show = false;
             if (show && activeFlag === 'arrived' && row.dataset.arrived !== 'arrived') show = false;
             if (show && search && !(row.dataset.search || '').includes(search)) show = false;
@@ -605,7 +635,18 @@
     // Status buttons (inclui botões por flag: Em Transporte / Chegou)
     statusBtns.forEach(btn => {
         btn.addEventListener('click', function() {
-            statusBtns.forEach(b => b.classList.remove('active'));
+            // Se é o botão "Minhas Obras", trata separadamente
+            if (this.dataset.filter === 'my-sites') {
+                filterMySites = !filterMySites;
+                this.classList.toggle('active', filterMySites);
+                applyFilters();
+                return;
+            }
+
+            // Outros botões de status/flag
+            statusBtns.forEach(b => {
+                if (!b.dataset.filter) b.classList.remove('active');
+            });
             this.classList.add('active');
             if (this.dataset.flag) {
                 // Botão por flag: filtra por in_transport/arrived, sem restringir status
@@ -652,6 +693,8 @@
             statusBtns[0].classList.add('active');
             activeStatus = 'all';
             activeFlag = '';
+            filterMySites = false;
+            if (mySitesBtn) mySitesBtn.classList.remove('active');
             applyFilters();
         });
     }

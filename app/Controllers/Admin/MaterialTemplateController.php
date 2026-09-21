@@ -166,6 +166,89 @@ class MaterialTemplateController extends Controller
         $this->redirect('/admin/material-lists');
     }
 
+    /**
+     * Recriar todas as listas a partir das categorias de materiais.
+     * Apaga todas as listas existentes e cria novas baseadas nas categorias.
+     */
+    public function recreate(): void
+    {
+        if (!$this->isPost()) {
+            $this->redirect('/admin/material-lists');
+            return;
+        }
+
+        // Confirmar ação destrutiva
+        $confirm = $this->input('confirm', '');
+        if ($confirm !== 'RECRIAR') {
+            $this->setFlash('error', 'Confirmação inválida. Digite "RECRIAR" para confirmar.');
+            $this->redirect('/admin/material-lists');
+            return;
+        }
+
+        // 1. Apagar todos os itens e templates existentes
+        $existingTemplates = MaterialTemplate::all();
+        foreach ($existingTemplates as $t) {
+            MaterialTemplateItem::deleteByTemplate((int) $t['id']);
+        }
+        Database::query("DELETE FROM material_templates");
+
+        // 2. Buscar todas as categorias e seus materiais
+        $categories = MaterialCategory::all('name ASC');
+        $listsCreated = 0;
+        $itemsCreated = 0;
+
+        foreach ($categories as $cat) {
+            $catId = (int) $cat['id'];
+            $catName = $cat['name'];
+
+            // Buscar materiais ativos desta categoria
+            $materials = Database::fetchAll(
+                "SELECT m.*, mu.abbreviation AS unit_abbr
+                 FROM materials m
+                 LEFT JOIN measurement_units mu ON m.unit_id = mu.id
+                 WHERE m.category_id = ? AND m.active = 1
+                 ORDER BY m.name ASC",
+                [$catId]
+            );
+
+            if (empty($materials)) {
+                continue; // Pula categorias sem materiais ativos
+            }
+
+            // Criar a lista (template) para esta categoria
+            $templateId = MaterialTemplate::create([
+                'name'            => $catName,
+                'description'     => 'Lista criada automaticamente a partir da categoria "' . $catName . '"',
+                'active'          => 1,
+                'created_by_name' => $this->currentActorName(),
+                'created_at'      => date('Y-m-d H:i:s'),
+            ]);
+            $listsCreated++;
+
+            // Adicionar os materiais como itens da lista
+            $sortOrder = 0;
+            foreach ($materials as $mat) {
+                MaterialTemplateItem::create([
+                    'template_id'      => $templateId,
+                    'material_id'      => (int) $mat['id'],
+                    'material_name'    => $mat['name'],
+                    'specification'    => $mat['specification'] ?? $catName,
+                    'classification'   => $mat['classification'] ?? null,
+                    'unit'             => $mat['unit_abbr'] ?? null,
+                    'project_type'     => $mat['project_type'] ?? 'both',
+                    'default_quantity' => 1,
+                    'sort_order'       => $sortOrder++,
+                    'active'           => 1,
+                    'created_at'       => date('Y-m-d H:i:s'),
+                ]);
+                $itemsCreated++;
+            }
+        }
+
+        $this->setFlash('success', "Listas recriadas com sucesso! {$listsCreated} listas criadas com {$itemsCreated} itens no total.");
+        $this->redirect('/admin/material-lists');
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Endpoints AJAX (JSON)
     // ─────────────────────────────────────────────────────────────
@@ -173,6 +256,10 @@ class MaterialTemplateController extends Controller
     /**
      * AJAX: itens ativos de uma lista, prontos para pré-preencher
      * o formulário de novo pedido.
+     *
+     * Parâmetros opcionais:
+     *   - obra_type: se informado ('construction' ou 'renovation'), filtra
+     *     os itens para mostrar apenas materiais compatíveis com o tipo da obra.
      */
     public function items(): void
     {
@@ -184,6 +271,18 @@ class MaterialTemplateController extends Controller
         }
 
         $rows = MaterialTemplateItem::forTemplate($templateId, true);
+
+        // Filtrar por tipo de projeto da obra, se informado
+        $obraType = $this->input('obra_type', '');
+        if ($obraType === 'construction' || $obraType === 'renovation') {
+            $rows = array_filter($rows, function ($item) use ($obraType) {
+                $itemType = $item['project_type'] ?? 'both';
+                // Inclui se for 'both' ou se coincidir com o tipo da obra
+                return $itemType === 'both' || $itemType === $obraType;
+            });
+            $rows = array_values($rows); // Re-indexar
+        }
+
         $items = array_map(function ($i) {
             return [
                 'id'             => $i['material_id'] !== null ? (int) $i['material_id'] : null,
@@ -200,6 +299,7 @@ class MaterialTemplateController extends Controller
             'success'  => true,
             'template' => ['id' => (int) $template['id'], 'name' => $template['name']],
             'items'    => $items,
+            'filtered_by_obra_type' => $obraType ?: null,
         ]);
     }
 
@@ -236,6 +336,7 @@ class MaterialTemplateController extends Controller
         $specification  = trim($this->input('specification', ''));
         $classification = trim($this->input('classification', ''));
         $unit           = trim($this->input('unit', ''));
+        $projectType    = 'both'; // default
         if ($material) {
             if ($specification === '') {
                 $cat = $material['category_id'] ? MaterialCategory::find((int) $material['category_id']) : null;
@@ -246,6 +347,7 @@ class MaterialTemplateController extends Controller
                 $u = MeasurementUnit::find((int) $material['unit_id']);
                 $unit = $u['abbreviation'] ?? '';
             }
+            $projectType = $material['project_type'] ?? 'both';
         }
 
         $id = MaterialTemplateItem::create([
@@ -255,6 +357,7 @@ class MaterialTemplateController extends Controller
             'specification'    => $specification ?: null,
             'classification'   => $classification ?: null,
             'unit'             => $unit ?: null,
+            'project_type'     => $projectType,
             'default_quantity' => $qty,
             'sort_order'       => (int) $this->input('sort_order', 0),
             'active'           => 1,
@@ -270,6 +373,7 @@ class MaterialTemplateController extends Controller
                 'specification'  => $specification,
                 'classification' => $classification,
                 'unit'           => $unit,
+                'project_type'   => $projectType,
                 'default_quantity' => $qty,
                 'active'         => 1,
             ],

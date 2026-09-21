@@ -22,6 +22,7 @@ use App\Models\MaterialCategory;
 use App\Models\MeasurementUnit;
 use App\Models\Setting;
 use App\Models\PinUser;
+use App\Models\ConstructionSite;
 use App\Services\MailService;
 use App\Services\XlsxService;
 use App\Services\EmailTemplate;
@@ -49,10 +50,24 @@ class PurchaseOrderController extends Controller
     {
         $orders = PurchaseOrder::allWithSupplier();
 
+        // Verificar se o usuário logado é um pin_user com obras vinculadas (gerente)
+        $pinUserId = $_SESSION['pin_user_id'] ?? null;
+        $managerSiteIds = [];
+        $isManager = false;
+        $canSeeAll = Auth::isAdmin() || ($_SESSION['pin_user_role'] ?? null) === 'all';
+
+        if ($pinUserId && !$canSeeAll) {
+            $managerSiteIds = ConstructionSite::getManagerSiteIds((int) $pinUserId);
+            $isManager = !empty($managerSiteIds);
+        }
+
         $this->view('admin.orders.index', [
             'orders' => $orders,
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
+            'managerSiteIds' => $managerSiteIds,
+            'isManager' => $isManager,
+            'canSeeAll' => $canSeeAll,
         ]);
     }
 
@@ -66,10 +81,32 @@ class PurchaseOrderController extends Controller
         $categories = MaterialCategory::all('name ASC');
         $units = MeasurementUnit::all('name ASC');
         $constructionSites = [];
+        $allConstructionSites = [];
+        
+        // Verificar se o usuário logado é um pin_user com obras vinculadas (gerente)
+        $pinUserId = $_SESSION['pin_user_id'] ?? null;
+        $canSeeAll = Auth::isAdmin() || ($_SESSION['pin_user_role'] ?? null) === 'all';
+        $managerSites = [];
+        
         try {
             $chk = Database::fetch("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'construction_sites' LIMIT 1");
             if (!empty($chk)) {
-                $constructionSites = \App\Models\ConstructionSite::allActive();
+                $allConstructionSites = ConstructionSite::allActive();
+                
+                // Se é gerente (não admin/completo), filtrar apenas as obras onde é gerente
+                if ($pinUserId && !$canSeeAll) {
+                    $managerSites = ConstructionSite::getByManager((int) $pinUserId);
+                    // Se o usuário é gerente de pelo menos uma obra, mostra só as dele
+                    // Se não é gerente de nenhuma obra, mostra todas normalmente
+                    if (!empty($managerSites)) {
+                        $constructionSites = $managerSites;
+                    } else {
+                        $constructionSites = $allConstructionSites;
+                    }
+                } else {
+                    // Admin ou permissão completa vê todas
+                    $constructionSites = $allConstructionSites;
+                }
             }
         } catch (\Exception $e) {}
 
@@ -112,6 +149,7 @@ class PurchaseOrderController extends Controller
             'minDaysCount' => (int) Setting::get('orders_min_days_count', '3'),
             'minDaysMode' => Setting::get('orders_min_days_mode', 'warn'),
             'minDaysMessage' => Setting::get('orders_min_days_message', 'Certifique-se de fazer pedidos com antecedência mínima de {days} dias.'),
+            'isFilteredByManager' => !empty($managerSites),
         ]);
     }
 
