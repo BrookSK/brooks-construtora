@@ -35,9 +35,9 @@ class PurchaseOrderReportService
     /**
      * Monta todas as abas e devolve o conteúdo binário do arquivo .xlsx.
      */
-    public static function buildXlsx(): string
+    public static function buildXlsx(?string $from = null, ?string $to = null): string
     {
-        $sheets = self::collect();
+        $sheets = self::collect($from, $to);
         return self::writeXlsx($sheets);
     }
 
@@ -46,19 +46,42 @@ class PurchaseOrderReportService
      * para renderização na tela (dashboard). Cada chave é uma aba/seção
      * com 'headers' e 'rows'.
      *
+     * @param string|null $from Data inicial (YYYY-MM-DD), inclusive.
+     * @param string|null $to   Data final (YYYY-MM-DD), inclusive.
      * @return array<string,array{headers:string[],rows:array<int,array<int,string>>}>
      */
-    public static function collectData(): array
+    public static function collectData(?string $from = null, ?string $to = null): array
     {
-        return self::collect();
+        return self::collect($from, $to);
     }
 
     /**
      * Nome de arquivo sugerido para download.
      */
-    public static function suggestedFilename(): string
+    public static function suggestedFilename(?string $from = null, ?string $to = null): string
     {
-        return 'relatorio_pedidos_' . date('Y-m-d_His') . '.xlsx';
+        $sufixo = '';
+        if ($from || $to) {
+            $sufixo = '_' . ($from ?: 'inicio') . '_a_' . ($to ?: 'hoje');
+        }
+        return 'relatorio_pedidos' . $sufixo . '_' . date('Y-m-d_His') . '.xlsx';
+    }
+
+    /**
+     * Normaliza uma data recebida (querystring) para o formato YYYY-MM-DD.
+     * Retorna null se vazia ou inválida (evita SQL malformado/injeção).
+     */
+    public static function normalizeDate(?string $d): ?string
+    {
+        if (!$d) return null;
+        $d = trim($d);
+        if ($d === '') return null;
+        // Aceita apenas AAAA-MM-DD.
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) !== 1) return null;
+        // Valida se é uma data real.
+        [$y, $m, $day] = array_map('intval', explode('-', $d));
+        if (!checkdate($m, $day, $y)) return null;
+        return $d;
     }
 
     // =================================================================
@@ -66,9 +89,11 @@ class PurchaseOrderReportService
     // =================================================================
 
     /**
+     * @param string|null $from Data inicial (YYYY-MM-DD), inclusive.
+     * @param string|null $to   Data final (YYYY-MM-DD), inclusive.
      * @return array<string,array{headers:string[],rows:array<int,array<int,string>>}>
      */
-    private static function collect(): array
+    private static function collect(?string $from = null, ?string $to = null): array
     {
         $poCols = self::tableColumns('purchase_orders');
         if (empty($poCols)) {
@@ -85,14 +110,51 @@ class PurchaseOrderReportService
         $hasQuoteStart = in_array('quote_started_at', $poCols, true);
         $hasDeadline   = in_array('deadline', $poCols, true);
 
-        $nc = self::NOT_CANCELLED;
+        // Normaliza o período. As datas já vêm validadas (YYYY-MM-DD) e são
+        // interpoladas com segurança pois o formato é garantido.
+        $from = self::normalizeDate($from);
+        $to   = self::normalizeDate($to);
+        // Filtro por data sobre po.created_at (com alias "po").
+        $dPo = '';
+        // Filtro por data sem alias (tabela purchase_orders direta).
+        $dBare = '';
+        if ($from) {
+            $dPo   .= " AND po.created_at >= '$from 00:00:00'";
+            $dBare .= " AND created_at >= '$from 00:00:00'";
+        }
+        if ($to) {
+            $dPo   .= " AND po.created_at <= '$to 23:59:59'";
+            $dBare .= " AND created_at <= '$to 23:59:59'";
+        }
+
+        $nc = self::NOT_CANCELLED . $dPo;
         $sheets = [];
 
+        // Rótulo do período para exibição.
+        if ($from && $to)      $periodoLabel = "De $from até $to";
+        elseif ($from)         $periodoLabel = "A partir de $from";
+        elseif ($to)           $periodoLabel = "Até $to";
+        else                   $periodoLabel = 'Todo o histórico';
+
+        // --- 0. Período aplicado --------------------------------------
+        $sheets['0. Periodo'] = [
+            'headers' => ['Filtro aplicado', 'Valor'],
+            'rows'    => [
+                ['Período', $periodoLabel],
+                ['Data inicial', $from ?: '—'],
+                ['Data final', $to ?: '—'],
+                ['Gerado em', date('d/m/Y H:i')],
+            ],
+        ];
+
         // --- 1. Resumo geral ------------------------------------------
-        $total        = (int) (self::fetch("SELECT COUNT(*) c FROM purchase_orders")['c'] ?? 0);
+        $total        = (int) (self::fetch("SELECT COUNT(*) c FROM purchase_orders po WHERE 1=1$dPo")['c'] ?? 0);
         $totalValidos = (int) (self::fetch("SELECT COUNT(*) c FROM purchase_orders po WHERE $nc")['c'] ?? 0);
-        $porStatus    = self::all("SELECT status, COUNT(*) c FROM purchase_orders GROUP BY status ORDER BY c DESC");
-        $valorTotal   = (float) (self::fetch("SELECT COALESCE(SUM(total_price),0) v FROM purchase_order_items")['v'] ?? 0);
+        $porStatus    = self::all("SELECT status, COUNT(*) c FROM purchase_orders po WHERE 1=1$dPo GROUP BY status ORDER BY c DESC");
+        $valorTotal   = (float) (self::fetch("SELECT COALESCE(SUM(i.total_price),0) v
+                            FROM purchase_order_items i
+                            JOIN purchase_orders po ON po.id = i.order_id
+                            WHERE $nc")['v'] ?? 0);
 
         $resumo = [];
         $resumo[] = ['Total de pedidos (todos)', (string) $total];
@@ -380,10 +442,9 @@ class PurchaseOrderReportService
         }
 
         // --- 12. Materiais aprovados por categoria (menor preço cotado) --
-        // Para cada item de pedidos APROVADOS que tenha pelo menos um preço
-        // cotado, considera o MENOR total cotado entre os fornecedores
-        // (valor real, não média) e soma por categoria do material.
-        $sheets['12. Aprovados por Categoria'] = self::approvedByCategory($nc);
+        // Uma linha por material com o MENOR preço unitário aprovado no período.
+        // A quantidade mostrada é o total pedido do material dentro do período.
+        $sheets['12. Aprovados por Categoria'] = self::approvedByCategory($dPo);
 
         return $sheets;
     }
@@ -405,10 +466,11 @@ class PurchaseOrderReportService
      *   - A categoria vem de material_categories.name (via materials.category_id).
      *     Sem categoria, usa a classificação/especificação como rótulo.
      *
-     * @param string $nc Cláusula que exclui cancelados (mantida por consistência).
+     * @param string $dateFilter Fragmento SQL de filtro de data (alias "po"),
+     *                           ex.: " AND po.created_at >= '...'". Pode ser vazio.
      * @return array{headers:string[],rows:array<int,array<int,string>>}
      */
-    private static function approvedByCategory(string $nc): array
+    private static function approvedByCategory(string $dateFilter = ''): array
     {
         $itemCols = self::tableColumns('purchase_order_items');
         if (empty($itemCols)) {
@@ -508,14 +570,19 @@ class PurchaseOrderReportService
             $excludeParams = [];
         }
 
-        // Uma linha por material: pega o MENOR preço unitário aprovado entre
-        // todos os pedidos aprovados. O pedido mostrado é aquele onde esse
-        // menor preço foi encontrado.
+        // Filtro de status aprovado + período (data). O período usa o alias "po".
+        $whereBase = "po.status = 'approved' AND $priceFilter $sourceFilter $dateFilter";
+
+        // Uma linha por material: pega o MENOR preço unitário aprovado no
+        // período. Também traz a QUANTIDADE total pedida do material dentro
+        // do período (soma de todas as ocorrências aprovadas). O pedido
+        // mostrado é aquele onde o menor preço foi encontrado.
         $sql = "SELECT
                     x.categoria,
                     x.material,
                     x.preco_unit,
-                    x.pedido
+                    x.pedido,
+                    q.qtd_total
                 FROM (
                     SELECT
                         $categoriaExpr AS categoria,
@@ -526,9 +593,7 @@ class PurchaseOrderReportService
                     JOIN purchase_orders po ON po.id = i.order_id
                     $joinMaterial
                     $joinCategory
-                    WHERE po.status = 'approved'
-                      AND $priceFilter
-                      $sourceFilter
+                    WHERE $whereBase
                 ) x
                 JOIN (
                     SELECT categoria, material, MIN(preco_unit) AS menor_unit
@@ -541,17 +606,34 @@ class PurchaseOrderReportService
                         JOIN purchase_orders po ON po.id = i.order_id
                         $joinMaterial
                         $joinCategory
-                        WHERE po.status = 'approved'
-                          AND $priceFilter
-                          $sourceFilter
+                        WHERE $whereBase
                     ) y
                     GROUP BY categoria, material
                 ) mn ON mn.categoria = x.categoria AND mn.material = x.material AND mn.menor_unit = x.preco_unit
+                JOIN (
+                    SELECT categoria, material, COALESCE(SUM(qtd),0) AS qtd_total
+                    FROM (
+                        SELECT
+                            $categoriaExpr AS categoria,
+                            $materialExpr  AS material,
+                            $qtdExpr AS qtd
+                        FROM purchase_order_items i
+                        JOIN purchase_orders po ON po.id = i.order_id
+                        $joinMaterial
+                        $joinCategory
+                        WHERE $whereBase
+                    ) z
+                    GROUP BY categoria, material
+                ) q ON q.categoria = x.categoria AND q.material = x.material
                 GROUP BY x.categoria, x.material
                 ORDER BY x.categoria ASC, x.material ASC";
 
+        // A cláusula $whereBase (com $excludeParams) aparece 3x na SQL, então
+        // repetimos os parâmetros de exclusão de obra na mesma ordem.
+        $params = array_merge($excludeParams, $excludeParams, $excludeParams);
+
         try {
-            $data = self::all($sql, $excludeParams);
+            $data = self::all($sql, $params);
         } catch (Throwable $e) {
             return [
                 'headers' => ['Aviso'],
@@ -577,30 +659,34 @@ class PurchaseOrderReportService
         foreach (array_keys($subtotalCat) as $cat) {
             $itens    = $porCategoria[$cat];
             $subTotal = 0.0;
-            $rows[] = ['▸ ' . $cat, '', ''];
+            $subQtd   = 0.0;
+            $rows[] = ['▸ ' . $cat, '', '', ''];
             foreach ($itens as $it) {
                 $unit = (float) $it['preco_unit'];
+                $qtd  = (float) $it['qtd_total'];
                 $subTotal += $unit;
+                $subQtd   += $qtd;
                 $totalLinhas++;
                 $rows[] = [
                     '   ' . (string) $it['material'],
                     (string) $it['pedido'],
+                    self::qty($qtd),
                     self::money($unit),
                 ];
             }
-            $rows[] = ['   Subtotal ' . $cat, '', self::money($subTotal)];
-            $rows[] = ['', '', ''];
+            $rows[] = ['   Subtotal ' . $cat, '', self::qty($subQtd), self::money($subTotal)];
+            $rows[] = ['', '', '', ''];
             $totalGeral += $subTotal;
         }
 
         if (empty($rows)) {
-            $rows[] = ['(nenhum item aprovado com preço)', '', self::money(0)];
+            $rows[] = ['(nenhum item aprovado com preço)', '', '', self::money(0)];
         } else {
-            $rows[] = ['TOTAL GERAL (' . $totalLinhas . ' materiais)', '', self::money($totalGeral)];
+            $rows[] = ['TOTAL GERAL (' . $totalLinhas . ' materiais)', '', '', self::money($totalGeral)];
         }
 
         return [
-            'headers' => ['Categoria / Material', 'Pedido (menor preço)', 'Menor Preço Unit. (R$)'],
+            'headers' => ['Categoria / Material', 'Pedido (menor preço)', 'Qtd. no período', 'Menor Preço Unit. (R$)'],
             'rows'    => $rows,
         ];
     }

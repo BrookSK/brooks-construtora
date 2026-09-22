@@ -21,6 +21,19 @@ $valueByLabel = function (array $rows, string $label): string {
 };
 $esc = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
+// Filtro de período (vindos do controller).
+$filterFrom   = $filterFrom   ?? null;
+$filterTo     = $filterTo     ?? null;
+$filterPreset = $filterPreset ?? 'all';
+
+// Querystring atual para preservar o filtro no botão de download.
+$downloadQuery = http_build_query(array_filter([
+    'preset' => ($filterPreset && $filterPreset !== 'custom') ? $filterPreset : null,
+    'from'   => $filterFrom,
+    'to'     => $filterTo,
+], fn($v) => $v !== null && $v !== ''));
+$downloadUrl = '/admin/relatorio-pedidos/download' . ($downloadQuery ? ('?' . $downloadQuery) : '');
+
 $resumo      = $rowsOf($data, '1. Resumo Geral');
 $mensal      = $rowsOf($data, '2. Media Mensal');
 $cotacao     = $rowsOf($data, '3. Tempo Medio Cotacao');
@@ -73,9 +86,63 @@ ob_start();
         <h5 class="mb-0"><i class="bi bi-bar-chart-line"></i> Relatório de Pedidos de Compra</h5>
         <small class="text-muted">Indicadores gerais · atualizados agora (<?= date('d/m/Y H:i') ?>)</small>
     </div>
-    <a href="/admin/relatorio-pedidos/download" class="btn btn-success">
+    <a href="<?= $esc($downloadUrl) ?>" class="btn btn-success">
         <i class="bi bi-file-earmark-spreadsheet"></i> Baixar Excel
     </a>
+</div>
+
+<!-- Filtro de período -->
+<?php
+$periodoLabel = 'Todo o histórico';
+if ($filterFrom && $filterTo)      $periodoLabel = 'De ' . date('d/m/Y', strtotime($filterFrom)) . ' até ' . date('d/m/Y', strtotime($filterTo));
+elseif ($filterFrom)               $periodoLabel = 'A partir de ' . date('d/m/Y', strtotime($filterFrom));
+elseif ($filterTo)                 $periodoLabel = 'Até ' . date('d/m/Y', strtotime($filterTo));
+
+$presets = [
+    'all' => 'Tudo',
+    '30'  => 'Últimos 30 dias',
+    '90'  => 'Últimos 90 dias',
+    '180' => 'Últimos 180 dias',
+    '365' => 'Último ano',
+];
+?>
+<div class="card shadow-sm mb-3">
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <span class="small text-muted me-1"><i class="bi bi-funnel"></i> Período:</span>
+            <?php foreach ($presets as $pk => $plabel): ?>
+                <a href="/admin/relatorio-pedidos?preset=<?= $esc($pk) ?>"
+                   class="btn btn-sm <?= $filterPreset === $pk ? 'btn-primary' : 'btn-outline-secondary' ?>">
+                    <?= $esc($plabel) ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+        <form method="get" action="/admin/relatorio-pedidos" class="row g-2 align-items-end">
+            <div class="col-auto">
+                <label class="form-label small mb-0">De</label>
+                <input type="date" name="from" value="<?= $esc($filterFrom) ?>" class="form-control form-control-sm">
+            </div>
+            <div class="col-auto">
+                <label class="form-label small mb-0">Até</label>
+                <input type="date" name="to" value="<?= $esc($filterTo) ?>" class="form-control form-control-sm">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="bi bi-search"></i> Aplicar
+                </button>
+            </div>
+            <div class="col-auto">
+                <a href="/admin/relatorio-pedidos?preset=all" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-x-circle"></i> Limpar
+                </a>
+            </div>
+            <div class="col-auto ms-auto">
+                <span class="badge bg-light text-dark border">
+                    <i class="bi bi-calendar-range"></i> <?= $esc($periodoLabel) ?>
+                </span>
+            </div>
+        </form>
+    </div>
 </div>
 
 <?php if (!empty($error)): ?>
@@ -268,7 +335,7 @@ $renderTable = function (array $headers, array $rows, string $emptyMsg = 'Sem da
 </div>
 
 <div class="d-flex justify-content-end mt-3">
-    <a href="/admin/relatorio-pedidos/download" class="btn btn-success">
+    <a href="<?= $esc($downloadUrl) ?>" class="btn btn-success">
         <i class="bi bi-file-earmark-spreadsheet"></i> Baixar Excel completo
     </a>
 </div>

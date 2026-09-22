@@ -48,10 +48,12 @@ class AnalyticsController extends Controller
      */
     public function index(): void
     {
+        [$from, $to, $preset] = $this->resolvePeriod();
+
         $error = null;
         $data = [];
         try {
-            $data = PurchaseOrderReportService::collectData();
+            $data = PurchaseOrderReportService::collectData($from, $to);
         } catch (\Throwable $e) {
             $error = 'Não foi possível carregar os indicadores: ' . $e->getMessage();
         }
@@ -63,7 +65,44 @@ class AnalyticsController extends Controller
             'currentPage' => 'analytics_orders',
             'data'        => $data,
             'error'       => $error,
+            'filterFrom'  => $from,
+            'filterTo'    => $to,
+            'filterPreset'=> $preset,
         ]);
+    }
+
+    /**
+     * Lê o período da querystring e resolve presets (30/90/180/365 dias).
+     * Retorna [from(YYYY-MM-DD|null), to(YYYY-MM-DD|null), preset(string)].
+     *
+     * @return array{0:?string,1:?string,2:string}
+     */
+    private function resolvePeriod(): array
+    {
+        $preset = (string) ($_GET['preset'] ?? '');
+        $from = PurchaseOrderReportService::normalizeDate($_GET['from'] ?? null);
+        $to   = PurchaseOrderReportService::normalizeDate($_GET['to'] ?? null);
+
+        $presetDays = [
+            '30'  => 30,
+            '90'  => 90,
+            '180' => 180,
+            '365' => 365,
+        ];
+        if (isset($presetDays[$preset])) {
+            $to   = date('Y-m-d');
+            $from = date('Y-m-d', strtotime('-' . $presetDays[$preset] . ' days'));
+        } elseif ($preset === 'all') {
+            $from = null;
+            $to   = null;
+        } elseif ($from || $to) {
+            // Datas manuais -> marca como período customizado.
+            $preset = 'custom';
+        } else {
+            $preset = 'all';
+        }
+
+        return [$from, $to, $preset];
     }
 
     /**
@@ -71,8 +110,10 @@ class AnalyticsController extends Controller
      */
     public function download(): void
     {
+        [$from, $to] = $this->resolvePeriod();
+
         try {
-            $binary = PurchaseOrderReportService::buildXlsx();
+            $binary = PurchaseOrderReportService::buildXlsx($from, $to);
         } catch (\Throwable $e) {
             http_response_code(500);
             header('Content-Type: text/plain; charset=utf-8');
@@ -80,7 +121,7 @@ class AnalyticsController extends Controller
             exit;
         }
 
-        $filename = PurchaseOrderReportService::suggestedFilename();
+        $filename = PurchaseOrderReportService::suggestedFilename($from, $to);
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
