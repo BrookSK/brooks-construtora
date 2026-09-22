@@ -243,6 +243,94 @@
         if (btn) removeItem(parseInt(btn.getAttribute('data-remove'), 10));
     });
 
+    function escapeHtml(str) {
+        return String(str == null ? '' : str)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // ─── Item em "modo leve" (sem SearchableSelect) ──────────────────────
+    // Usado para inserir em massa itens que JÁ têm material definido (lista
+    // pré-definida). O seletor de busca (SearchableSelect) é caríssimo para
+    // centenas de linhas — cada instância clona todos os materiais no DOM,
+    // o que congela/derruba o navegador. Aqui o material aparece como texto
+    // (já foi escolhido pela lista) e mantemos os MESMOS inputs ocultos, de
+    // forma que o envio e o autosave funcionam igual às linhas normais.
+    // Retorna os elementos criados (não os anexa ao DOM) para permitir
+    // inserção em lote via DocumentFragment.
+    function buildFastItem(prefill) {
+        itemCount++;
+        const idx = itemCount;
+        const p = prefill || {};
+        const name = p.name || '';
+        const spec = p.specification || '';
+        const cls = p.classification || '';
+        const unit = p.unit || '';
+        const qty = p.quantity || 1;
+        const maxDate = currentMaxDate();
+
+        const tr = document.createElement('tr');
+        tr.id = 'item-row-' + idx;
+        tr.innerHTML =
+            '<td>' +
+                '<div class="fw-semibold small">' + escapeHtml(name) + '</div>' +
+                '<input type="hidden" name="items[' + idx + '][material_id]" id="mid-' + idx + '" value="' + escapeHtml(String(p.id || '')) + '">' +
+                '<input type="hidden" name="items[' + idx + '][material_name]" id="mname-' + idx + '" value="' + escapeHtml(name) + '">' +
+            '</td>' +
+            '<td><input type="text" class="form-control form-control-sm" name="items[' + idx + '][specification]" id="spec-' + idx + '" value="' + escapeHtml(spec) + '" readonly></td>' +
+            '<td><input type="text" class="form-control form-control-sm" name="items[' + idx + '][classification]" id="class-' + idx + '" value="' + escapeHtml(cls) + '" readonly></td>' +
+            '<input type="hidden" name="items[' + idx + '][unit]" id="unit-' + idx + '" value="' + escapeHtml(unit) + '">' +
+            '<td><input type="number" class="form-control form-control-sm" name="items[' + idx + '][quantity]" min="0.01" step="0.01" value="' + escapeHtml(String(qty)) + '" required></td>' +
+            '<td><input type="date" class="form-control form-control-sm item-date" name="items[' + idx + '][needed_date]" id="idate-' + idx + '"' + (MIN_DATE ? ' min="' + MIN_DATE + '"' : '') + (maxDate ? ' max="' + maxDate + '"' : '') + ' title="Data específica (opcional) — até a data máxima informada acima"></td>' +
+            '<td><button type="button" class="btn btn-sm btn-outline-danger" data-remove="' + idx + '"><i class="bi bi-trash"></i></button></td>';
+
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.id = 'item-card-' + idx;
+        card.innerHTML =
+            '<span class="item-number">#' + idx + '</span>' +
+            '<div class="d-flex gap-2 align-items-center mb-2">' +
+                '<div class="flex-grow-1 fw-semibold small">' + escapeHtml(name) + '</div>' +
+                '<button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" data-remove="' + idx + '"><i class="bi bi-trash"></i></button>' +
+            '</div>' +
+            '<div class="item-details" id="details-m-' + idx + '">' +
+                (spec ? '<span class="badge bg-light text-dark">' + escapeHtml(spec) + '</span>' : '') +
+                (cls ? '<span class="badge bg-light text-dark">' + escapeHtml(cls) + '</span>' : '') +
+            '</div>' +
+            '<div class="d-flex align-items-center gap-2 mt-2">' +
+                '<label class="form-label mb-0 small fw-bold">Qtd:</label>' +
+                '<input type="number" class="form-control form-control-sm qty-mobile" style="max-width:100px;" data-idx="' + idx + '" min="0.01" step="0.01" value="' + escapeHtml(String(qty)) + '">' +
+            '</div>' +
+            '<div class="d-flex align-items-center gap-2 mt-2">' +
+                '<label class="form-label mb-0 small fw-bold">Data (opc.):</label>' +
+                '<input type="date" class="form-control form-control-sm date-mobile" style="max-width:170px;" data-idx="' + idx + '"' + (MIN_DATE ? ' min="' + MIN_DATE + '"' : '') + (maxDate ? ' max="' + maxDate + '"' : '') + '>' +
+            '</div>';
+
+        return { tr: tr, card: card, idx: idx };
+    }
+
+    // Liga a sincronização qtd/data entre desktop e mobile de uma linha leve.
+    // Feito com delegação seria melhor, mas para manter compatível com o
+    // resto do código (que usa listeners por linha), religamos por linha —
+    // ainda assim é barato porque não há SearchableSelect envolvido.
+    function wireFastItem(idx) {
+        const tr = document.getElementById('item-row-' + idx);
+        const card = document.getElementById('item-card-' + idx);
+        if (!tr || !card) return;
+        const qtyM = card.querySelector('.qty-mobile');
+        const qtyD = tr.querySelector('[name="items[' + idx + '][quantity]"]');
+        if (qtyM && qtyD) {
+            qtyM.addEventListener('input', function () { qtyD.value = this.value; });
+            qtyD.addEventListener('input', function () { qtyM.value = this.value; });
+        }
+        const dm = card.querySelector('.date-mobile');
+        const di = document.getElementById('idate-' + idx);
+        if (dm && di) {
+            dm.addEventListener('input', function () { di.value = this.value; });
+            di.addEventListener('input', function () { dm.value = this.value; });
+        }
+    }
+
     function updateMobileDetails(idx, ds) {
         const el = document.getElementById('details-m-' + idx);
         if (!el) return;
@@ -300,27 +388,31 @@
                 return;
             }
 
-            let added = 0;
-            data.items.forEach(function (it) {
-                addItem({
-                    id: it.id || '',
-                    name: it.name || '',
-                    specification: it.specification || '',
-                    classification: it.classification || '',
-                    unit: it.unit || '',
-                    quantity: it.quantity || 1
-                });
-                added++;
-            });
-
             let filterMsg = '';
             if (data.filtered_by_obra_type) {
                 const tipoLabel = data.filtered_by_obra_type === 'construction' ? 'Construção' : 'Reforma';
                 filterMsg = ' <small class="text-primary">(filtrado para ' + tipoLabel + ')</small>';
             }
 
-            statusEl.style.display = 'block';
-            statusEl.innerHTML = '<div class="alert alert-success small py-2 mb-0"><i class="bi bi-check-circle"></i> <strong>' + added + ' item(ns)</strong> carregados da lista <strong>' + ((data.template && data.template.name) || '') + '</strong>' + filterMsg + '. Revise, remova o que não precisa e ajuste as quantidades antes de enviar.</div>';
+            // Listas muito grandes geram uma tabela enorme para revisar. Avisa
+            // e confirma antes de despejar tudo, para evitar carga acidental.
+            if (data.items.length > 60) {
+                const ok = window.confirm(
+                    'Esta lista tem ' + data.items.length + ' itens. Todos serão adicionados e você ' +
+                    'precisará revisar e remover o que não precisa. Deseja continuar?'
+                );
+                if (!ok) {
+                    statusEl.style.display = 'none';
+                    return;
+                }
+            }
+
+            // Inserção em massa (pode ser 500+ itens). Para não travar/derrubar
+            // o navegador: itens em "modo leve" (sem SearchableSelect), inseridos
+            // em lotes via DocumentFragment + requestAnimationFrame, com o
+            // autosave suspenso até o final.
+            const templateName = (data.template && data.template.name) || '';
+            await loadItemsInChunks(data.items, statusEl, templateName, filterMsg);
         } catch (e) {
             statusEl.style.display = 'block';
             statusEl.innerHTML = '<div class="alert alert-danger small py-2 mb-0"><i class="bi bi-x-circle"></i> Erro de conexão ao carregar a lista.</div>';
@@ -328,6 +420,70 @@
             btn.disabled = false;
             btn.innerHTML = originalHtml;
         }
+    }
+
+    // Insere os itens em lotes, cedendo o controle ao navegador entre cada
+    // lote (requestAnimationFrame) para a página não congelar. Mostra
+    // progresso e, ao terminar, retoma e dispara um único autosave.
+    function loadItemsInChunks(items, statusEl, templateName, filterMsg) {
+        return new Promise(function (resolve) {
+            const total = items.length;
+            const CHUNK = 40;
+            const bodyDesktop = document.getElementById('itemsBodyDesktop');
+            const bodyMobile = document.getElementById('itemsBodyMobile');
+            let i = 0;
+
+            // Suspende o autosave durante toda a carga.
+            saveSuspended = true;
+            statusEl.style.display = 'block';
+
+            function renderProgress(done) {
+                const pct = total ? Math.round((done / total) * 100) : 100;
+                statusEl.innerHTML =
+                    '<div class="small text-muted mb-1"><i class="bi bi-hourglass-split"></i> Carregando itens... ' + done + ' de ' + total + '</div>' +
+                    '<div class="progress" style="height:6px;"><div class="progress-bar" role="progressbar" style="width:' + pct + '%;"></div></div>';
+            }
+
+            function step() {
+                const fragD = document.createDocumentFragment();
+                const fragM = document.createDocumentFragment();
+                const wired = [];
+                const end = Math.min(i + CHUNK, total);
+                for (; i < end; i++) {
+                    const it = items[i];
+                    const built = buildFastItem({
+                        id: it.id || '',
+                        name: it.name || '',
+                        specification: it.specification || '',
+                        classification: it.classification || '',
+                        unit: it.unit || '',
+                        quantity: it.quantity || 1
+                    });
+                    fragD.appendChild(built.tr);
+                    fragM.appendChild(built.card);
+                    wired.push(built.idx);
+                }
+                bodyDesktop.appendChild(fragD);
+                bodyMobile.appendChild(fragM);
+                // Religa qtd/data das linhas recém-inseridas.
+                wired.forEach(wireFastItem);
+
+                if (i < total) {
+                    renderProgress(i);
+                    requestAnimationFrame(step);
+                } else {
+                    updateItemCount();
+                    // Retoma o autosave e salva UMA vez só.
+                    saveSuspended = false;
+                    saveDraft();
+                    statusEl.innerHTML = '<div class="alert alert-success small py-2 mb-0"><i class="bi bi-check-circle"></i> <strong>' + total + ' item(ns)</strong> carregados da lista <strong>' + escapeHtml(templateName) + '</strong>' + filterMsg + '. Revise, remova o que não precisa e ajuste as quantidades antes de enviar.</div>';
+                    resolve();
+                }
+            }
+
+            renderProgress(0);
+            requestAnimationFrame(step);
+        });
     }
 
     const applyListBtn = document.getElementById('applyListBtn');
@@ -759,7 +915,14 @@
             .catch(function () { return null; });
     }
 
+    // Quando true, o autosave fica suspenso. Usado durante a carga em massa
+    // de uma lista pré-definida (centenas de itens): em vez de disparar o
+    // salvamento a cada item inserido (o que congela a página), suspendemos
+    // e salvamos uma única vez ao final.
+    let saveSuspended = false;
+
     function scheduleSave() {
+        if (saveSuspended) return;
         clearTimeout(saveTimer);
         saveTimer = setTimeout(saveDraft, 800);
     }
@@ -852,35 +1015,71 @@
         const notesEl = document.querySelector('[name="notes"]');
         if (notesEl && draft.notes) notesEl.value = draft.notes;
 
-        // Itens
-        draft.items.forEach(function (item) {
-            // Só ignora linhas COMPLETAMENTE vazias. Se tiver nome, id ou até só
-            // quantidade, restaura mesmo assim — assim a pessoa vê o item e pode
-            // corrigir, em vez de ele sumir silenciosamente (o que fazia o envio
-            // acabar sem itens válidos e "não ir").
-            var hasContent = (item.name && item.name.trim())
+        // Itens: só considera linhas com algum conteúdo. Se tiver nome, id ou
+        // até só especificação, restaura mesmo assim — assim a pessoa vê o item
+        // e pode corrigir, em vez de ele sumir silenciosamente.
+        const validItems = (draft.items || []).filter(function (item) {
+            return (item.name && item.name.trim())
                 || (item.id && String(item.id).trim())
                 || (item.specification && item.specification.trim());
-            if (!hasContent) return;
-            addItem({
-                id:             item.id || '',
-                name:           item.name,
-                specification:  item.specification || '',
-                classification: item.classification || '',
-                unit:           item.unit || '',
-                quantity:       item.quantity || 1,
-            });
-            // Restaura data do item após addItem (precisa do índice inserido)
-            if (item.needed_date) {
-                const lastIdx = itemCount;
-                const dateEl = document.getElementById('idate-' + lastIdx);
-                const dateMobEl = document.querySelector('#item-card-' + lastIdx + ' .date-mobile');
-                if (dateEl) dateEl.value = item.needed_date;
-                if (dateMobEl) dateMobEl.value = item.needed_date;
-            }
         });
 
-        showSaveIndicator('saved');
+        // Restaura em lote no "modo leve" (sem SearchableSelect) e em chunks,
+        // pela mesma razão da lista pré-definida: um rascunho pode ter centenas
+        // de itens e restaurar com o seletor pesado congelava/derrubava a
+        // página. O material já está definido no rascunho, então o modo leve
+        // atende. O autosave fica suspenso durante a restauração.
+        saveSuspended = true;
+        const bodyDesktop = document.getElementById('itemsBodyDesktop');
+        const bodyMobile = document.getElementById('itemsBodyMobile');
+        const CHUNK = 40;
+        let i = 0;
+
+        function restoreChunk() {
+            const fragD = document.createDocumentFragment();
+            const fragM = document.createDocumentFragment();
+            const wired = [];
+            const end = Math.min(i + CHUNK, validItems.length);
+            for (; i < end; i++) {
+                const item = validItems[i];
+                const built = buildFastItem({
+                    id:             item.id || '',
+                    name:           item.name,
+                    specification:  item.specification || '',
+                    classification: item.classification || '',
+                    unit:           item.unit || '',
+                    quantity:       item.quantity || 1,
+                });
+                fragD.appendChild(built.tr);
+                fragM.appendChild(built.card);
+                wired.push({ idx: built.idx, date: item.needed_date });
+            }
+            bodyDesktop.appendChild(fragD);
+            bodyMobile.appendChild(fragM);
+            wired.forEach(function (w) {
+                wireFastItem(w.idx);
+                if (w.date) {
+                    const dateEl = document.getElementById('idate-' + w.idx);
+                    const dateMobEl = document.querySelector('#item-card-' + w.idx + ' .date-mobile');
+                    if (dateEl) dateEl.value = w.date;
+                    if (dateMobEl) dateMobEl.value = w.date;
+                }
+            });
+
+            if (i < validItems.length) {
+                requestAnimationFrame(restoreChunk);
+            } else {
+                updateItemCount();
+                saveSuspended = false;
+                showSaveIndicator('saved');
+            }
+        }
+
+        if (validItems.length) {
+            requestAnimationFrame(restoreChunk);
+        } else {
+            showSaveIndicator('saved');
+        }
     }
 
     // Observar mudanças no formulário para disparar autosave
