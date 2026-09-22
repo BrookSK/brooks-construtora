@@ -562,9 +562,8 @@ class PurchaseOrderReportService
                     WHERE cs.code IN ($inCodes) OR $likeNome
                 )";
             // Parâmetros de UMA ocorrência da cláusula, na ordem: codes, nomes.
-            $oneSet = array_merge($excluirCodes, $excluirNomes);
-            // A cláusula aparece 2x na SQL (subquery x e y), então repetimos.
-            $excludeParams = array_merge($oneSet, $oneSet);
+            // A repetição (para cada subquery) é feita na montagem de $params.
+            $excludeParams = array_merge($excluirCodes, $excluirNomes);
             $sourceFilter .= ' ' . $excludeSitesSql;
         } else {
             $excludeParams = [];
