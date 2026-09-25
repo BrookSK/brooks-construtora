@@ -492,7 +492,7 @@
             } catch(e) {}
         }
 
-        if (!data) return;
+        if (!data) return false;
 
         filterMySites = data.mySites || false;
         if (mySitesBtn) {
@@ -534,6 +534,8 @@
                 panel.classList.add('show');
             }
         }
+
+        return true;
     }
 
     // Salvar filtros no sessionStorage e na URL
@@ -763,7 +765,16 @@
     }
 
     // Inicializar
-    loadFilters();
+    const hadSavedFilters = loadFilters();
+
+    // Se é gerente (tem obras vinculadas) e não havia nenhum filtro salvo,
+    // já inicia com "Minhas Obras" ativo. O gerente ainda pode desligar para
+    // ver os pedidos das demais obras.
+    if (!hadSavedFilters && managerSiteIds.length > 0) {
+        filterMySites = true;
+        if (mySitesBtn) mySitesBtn.classList.add('active');
+    }
+
     applyFilters();
 })();
 </script>
