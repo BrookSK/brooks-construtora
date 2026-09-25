@@ -5821,8 +5821,9 @@ class PurchaseOrderController extends Controller
         $observationsNew = trim($_POST['observations_new'] ?? '');
         $observationsCurrent = trim($_POST['observations_current'] ?? '');
 
-        // Se o usuário não preencheu, manter comportamento anterior
-        $newDescription = $observationsNew !== '' ? $observationsNew : (($order['description'] ? $order['description'] . ' ' : '') . '[Split de ' . $order['code'] . ']');
+        // Se o usuário não preencheu a observação do novo pedido, NÃO herdar a
+        // observação do pedido original — deixar apenas a marca do split.
+        $newDescription = $observationsNew !== '' ? $observationsNew : ('[Split de ' . $order['code'] . ']');
 
         $newOrderData = [
             'code' => $code,
