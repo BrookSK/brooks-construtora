@@ -971,17 +971,27 @@ class PurchaseOrderController extends Controller
                 $personName
             );
 
-            // E-mail de rejeição (fase 3) - via fila
-            $emails = Setting::get('orders_completed_emails', '');
-            if (!empty($emails)) {
+            // Notificação de rejeição: só para quem tem relação com o pedido —
+            // responsáveis configurados na obra (fase 'completed'), o solicitante
+            // e o cotador. Não usa a lista global genérica.
+            $rejectRecipients = $this->resolveRejectionRecipients($order);
+
+            // E-mail de rejeição - via fila
+            if (!empty($rejectRecipients['emails'])) {
                 $subject = "Pedido REJEITADO - {$order['code']}";
                 $body = EmailTemplate::purchaseOrderRejected($order, $personName, $notes);
-                NotificationService::queueEmails($emails, $subject, $body, $order['id'], 'order_rejected');
+                NotificationService::queueEmails(
+                    implode(',', $rejectRecipients['emails']),
+                    $subject,
+                    $body,
+                    $order['id'],
+                    'order_rejected'
+                );
             }
 
-            // Webhook de rejeição (usa os dados da fase 3 - conclusão)
+            // Webhook de rejeição
             $webhookUrl = Setting::get('orders_completed_webhook', '');
-            if (!empty($webhookUrl)) {
+            if (!empty($webhookUrl) && !empty($rejectRecipients['phones'])) {
                 $orderSuppliers = PurchaseOrderSupplier::getByOrder($order['id']);
                 $supplierNames = !empty($orderSuppliers) ? array_column($orderSuppliers, 'supplier_name') : [];
                 $supplierDisplay = !empty($supplierNames) ? implode(', ', $supplierNames) : ($order['supplier_name'] ?? 'N/A');
@@ -1002,10 +1012,10 @@ class PurchaseOrderController extends Controller
                     'rejected_by' => $personName,
                     'rejected_at' => date('Y-m-d H:i:s'),
                     'reason' => $notes,
-                    'phone' => Setting::get('orders_completed_phone', ''),
-                    'phone_name' => Setting::get('orders_completed_phone_name', ''),
+                    'phone' => implode(',', $rejectRecipients['phones']),
+                    'phone_name' => implode(',', $rejectRecipients['phone_names']),
                     'message' => $message,
-                ]);
+                ], $order['id']);
             }
 
             $this->view('site.orders.approval_success', [
@@ -2717,6 +2727,67 @@ class PurchaseOrderController extends Controller
         }
 
         return ['send_global' => $sendGlobal, 'send_site' => $sendSite, 'site_users' => $siteUsers];
+    }
+
+    /**
+     * Helper: resolve destinatários da notificação de REJEIÇÃO.
+     *
+     * Regra: só recebe quem tem relação com o pedido —
+     *   1) responsáveis configurados na obra (fase 'completed');
+     *   2) o solicitante (quem criou o pedido);
+     *   3) o cotador (quem cotou).
+     * Quem não se enquadra em nenhum desses NÃO é notificado (não há lista global).
+     *
+     * Retorna ['emails' => [...], 'phones' => [...], 'phone_names' => [...]] sem duplicados.
+     */
+    private function resolveRejectionRecipients(array $order): array
+    {
+        $emails = [];
+        // phones: mapa telefone => nome, para manter phone/phone_name alinhados e sem duplicar
+        $phones = [];
+
+        $addUser = function (?array $user) use (&$emails, &$phones) {
+            if (empty($user)) return;
+            if (!empty($user['active']) && (int) $user['active'] !== 1) return;
+            if (!empty($user['email']) && filter_var($user['email'], FILTER_VALIDATE_EMAIL)) {
+                $emails[strtolower(trim($user['email']))] = trim($user['email']);
+            }
+            if (!empty($user['phone'])) {
+                $phone = trim($user['phone']);
+                if (!isset($phones[$phone])) {
+                    $phones[$phone] = trim($user['name'] ?? '');
+                }
+            }
+        };
+
+        // 1) Responsáveis configurados na obra (fase 'completed')
+        $constructionSiteId = !empty($order['construction_site_id']) ? (int) $order['construction_site_id'] : null;
+        if ($constructionSiteId) {
+            foreach (ConstructionSite::getApprovers($constructionSiteId, 'completed') as $u) {
+                $addUser($u);
+            }
+        }
+
+        // 2) Solicitante (quem criou o pedido)
+        if (!empty($order['created_by'])) {
+            $addUser(PinUser::find((int) $order['created_by']));
+        }
+
+        // 3) Cotador (gravado por nome no pedido) — buscar contato em pin_users
+        if (!empty($order['quoted_by_name'])) {
+            $quoter = Database::fetch(
+                "SELECT * FROM pin_users WHERE active = 1 AND name = ? LIMIT 1",
+                [trim($order['quoted_by_name'])]
+            );
+            $addUser($quoter);
+        }
+
+        // $phones é um mapa [telefone => nome]; alinhamos os dois arrays pelo índice.
+        return [
+            'emails' => array_values($emails),
+            'phones' => array_keys($phones),        // telefones
+            'phone_names' => array_values($phones), // nomes na mesma ordem dos telefones
+        ];
     }
 
     // ============================
