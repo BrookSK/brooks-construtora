@@ -348,6 +348,7 @@ class PurchaseOrderController extends Controller
                             'specification' => $item['specification'] ?? '',
                             'classification' => $item['classification'] ?? '',
                             'unit' => $item['unit'] ?? '',
+                            'notes' => $item['notes'] ?? null,
                             'quantity' => $distQty,
                             'source_type' => $distIsLocal ? 'stock_use' : 'stock_transfer',
                             'stock_from_site_id' => $distSiteId ?: null,
@@ -1827,6 +1828,26 @@ class PurchaseOrderController extends Controller
         } catch (\Exception $e) {
             // Silencioso: se falhar, o create sem a coluna ainda funciona (link ignorado).
         }
+
+        $this->ensureItemNotesColumn();
+    }
+
+    private function ensureItemNotesColumn(): void
+    {
+        try {
+            $c = Database::fetch(
+                "SELECT 1 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'purchase_order_items'
+                   AND COLUMN_NAME = 'notes' LIMIT 1"
+            );
+            if (empty($c)) {
+                Database::getConnection()->exec(
+                    "ALTER TABLE purchase_order_items ADD COLUMN notes VARCHAR(1000) DEFAULT NULL AFTER link"
+                );
+            }
+        } catch (\Exception $e) {
+            // Silencioso: se falhar, o create sem a coluna ainda funciona (notes ignorado).
+        }
     }
 
     /**
@@ -2003,6 +2024,7 @@ class PurchaseOrderController extends Controller
                             'specification' => $item['specification'] ?? '',
                             'classification' => $item['classification'] ?? '',
                             'unit' => $item['unit'] ?? '',
+                            'notes' => $item['notes'] ?? null,
                             'quantity' => $distQty,
                             'source_type' => $distIsLocal ? 'stock_use' : 'stock_transfer',
                             'stock_from_site_id' => $distSiteId ?: null,
@@ -2022,6 +2044,7 @@ class PurchaseOrderController extends Controller
                             'specification' => $item['specification'] ?? '',
                             'classification' => $item['classification'] ?? '',
                             'link' => $this->cleanLink($item['link'] ?? null),
+                            'notes' => $item['notes'] ?? null,
                             'unit' => $item['unit'] ?? '',
                             'quantity' => $purchaseQty,
                             'source_type' => 'purchase',
@@ -2058,6 +2081,7 @@ class PurchaseOrderController extends Controller
                         'material_name' => $item['material_name'],
                         'specification' => $item['specification'] ?? '',
                         'classification' => $item['classification'] ?? '',
+                        'notes' => $item['notes'] ?? null,
                         'unit' => $item['unit'] ?? '',
                         'quantity' => $fromStockQty,
                         'source_type' => $sourceType,
@@ -2077,6 +2101,7 @@ class PurchaseOrderController extends Controller
                             'specification' => $item['specification'] ?? '',
                             'classification' => $item['classification'] ?? '',
                             'link' => $this->cleanLink($item['link'] ?? null),
+                            'notes' => $item['notes'] ?? null,
                             'unit' => $item['unit'] ?? '',
                             'quantity' => $quantity - $fromStockQty,
                             'source_type' => 'purchase',
@@ -2093,6 +2118,7 @@ class PurchaseOrderController extends Controller
                     'specification' => $item['specification'] ?? '',
                     'classification' => $item['classification'] ?? '',
                     'link' => $this->cleanLink($item['link'] ?? null),
+                    'notes' => $item['notes'] ?? null,
                     'unit' => $item['unit'] ?? '',
                     'quantity' => $quantity,
                     'source_type' => null,

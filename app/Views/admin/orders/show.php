@@ -301,6 +301,9 @@ $baseUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https'
                                 <?php if (!empty($item['already_purchased'])): ?>
                                 <br><span class="badge bg-info" style="font-size:0.6rem;"><i class="bi bi-bag-check"></i> Já comprado <?= !empty($item['already_purchased_qty']) ? number_format($item['already_purchased_qty'], $item['already_purchased_qty'] == (int)$item['already_purchased_qty'] ? 0 : 2) : '' ?><?= $item['already_purchased_price'] ? ' — R$ ' . number_format($item['already_purchased_price'], 2, ',', '.') : '' ?></span>
                                 <?php endif; ?>
+                                <?php if (!empty($item['notes'])): ?>
+                                <br><small class="text-muted" style="font-size:0.72rem;"><i class="bi bi-chat-left-text"></i> <?= nl2br(htmlspecialchars($item['notes'])) ?></small>
+                                <?php endif; ?>
                             </td>
                             <td><?= htmlspecialchars($item['specification'] ?? '-') ?></td>
                             <td><?= htmlspecialchars($item['classification'] ?? '-') ?></td>
