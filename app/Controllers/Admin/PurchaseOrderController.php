@@ -2163,6 +2163,14 @@ class PurchaseOrderController extends Controller
         if (!empty($changes['removed'])) $changesSummary[] = count($changes['removed']) . ' item(ns) removido(s)';
         if (!empty($changes['changed'])) $changesSummary[] = count($changes['changed']) . ' item(ns) alterado(s)';
 
+        // Atualizar observações do pedido se foram alteradas
+        $newDescription = trim((string) $this->input('description', ''));
+        $oldDescription = trim((string) ($order['description'] ?? ''));
+        if ($newDescription !== $oldDescription) {
+            PurchaseOrder::updateById($id, ['description' => $newDescription !== '' ? $newDescription : null]);
+            $changesSummary[] = 'observações do pedido alteradas';
+        }
+
         // Atualizar obra se foi alterada
         $newConstructionSiteId = $this->input('construction_site_id', '');
         $oldConstructionSiteId = (int) ($order['construction_site_id'] ?? 0);

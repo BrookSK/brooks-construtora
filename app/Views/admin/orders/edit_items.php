@@ -53,6 +53,16 @@
     <?php endif; ?>
 
     <div class="card mb-3">
+        <div class="card-header">
+            <i class="bi bi-chat-left-text"></i> Observações do Pedido
+        </div>
+        <div class="card-body py-2">
+            <textarea name="description" class="form-control form-control-sm" rows="3" placeholder="Observações gerais do pedido (opcional). Ex: Extensão 50 m..."><?= htmlspecialchars($order['description'] ?? '') ?></textarea>
+            <small class="text-muted mt-1 d-block">Estas observações aparecem nos detalhes do pedido e para quem for cotar.</small>
+        </div>
+    </div>
+
+    <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span><i class="bi bi-list-check"></i> Itens do Pedido <span class="badge bg-primary ms-1" id="itemCountBadge">0</span></span>
             <button type="button" class="btn btn-sm btn-primary" id="addItemBtn">
