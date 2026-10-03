@@ -19,6 +19,9 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <span class="badge bg-secondary order-count-badge"><?= count($orders) ?> pedidos</span>
     <div class="d-flex flex-wrap gap-1 justify-content-end">
+        <button type="button" id="btnPrintPdf" class="btn btn-outline-danger btn-sm" title="Imprimir PDF dos pedidos filtrados">
+            <i class="bi bi-file-earmark-pdf"></i> <span class="d-none d-sm-inline">Imprimir PDF</span><span class="d-sm-none">PDF</span>
+        </button>
         <?php if (\App\Core\Auth::hasPermission('orders.create')): ?>
         <a href="/admin/orders/tracking" class="btn btn-outline-dark btn-sm">
             <i class="bi bi-clipboard-check"></i> <span class="d-none d-sm-inline">Acompanhamento</span><span class="d-sm-none">Acomp.</span>
@@ -763,6 +766,207 @@
 
         trs.forEach(tr => tbody.appendChild(tr));
     }
+
+    // ===== Imprimir PDF dos pedidos filtrados =====
+    const statusLabelsMap = {
+        draft: 'Rascunho', pending_quote: 'Aguard. Cotação', quoted: 'Cotado',
+        pending_approval: 'Aguard. Aprovação', approved: 'Aprovado',
+        rejected: 'Rejeitado', cancelled: 'Cancelado'
+    };
+    const urgencyLabelsMap = { low: 'Baixa', medium: 'Média', high: 'Alta', critical: 'Crítica' };
+
+    function fmtDateBR(iso) {
+        if (!iso) return '-';
+        const p = iso.split('-');
+        return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+    }
+
+    function buildFiltersSummary() {
+        const parts = [];
+        const statusBtnActive = document.querySelector('.filter-btn.active:not([data-filter])');
+        if (activeFlag === 'in_transport') parts.push('Situação: Em Transporte');
+        else if (activeFlag === 'arrived') parts.push('Situação: Chegou');
+        else if (activeStatus && activeStatus !== 'all') parts.push('Status: ' + (statusLabelsMap[activeStatus] || activeStatus));
+        if (filterMySites) parts.push('Apenas minhas obras');
+        if (searchInput && searchInput.value.trim()) parts.push('Busca: "' + searchInput.value.trim() + '"');
+        if (materialInput && materialInput.value.trim()) parts.push('Material: "' + materialInput.value.trim() + '"');
+        if (supplierSelect && supplierSelect.value) parts.push('Fornecedor: ' + (supplierSelect.value === '__NA__' ? 'Sem fornecedor' : supplierSelect.value));
+        if (siteSelect && siteSelect.value) parts.push('Obra: ' + siteSelect.value);
+        if (typeSelect && typeSelect.value) parts.push('Tipo: ' + (typeSelect.value === 'service' ? 'Serviço' : 'Material'));
+        if (financialSelect && financialSelect.value) {
+            const fm = { reviewed: 'Conferido', not_reviewed: 'Não conferido', all: 'Todos' };
+            parts.push('Financeiro: ' + (fm[financialSelect.value] || financialSelect.value));
+        }
+        if (purchasedSelect && purchasedSelect.value) parts.push('Comprado: ' + (purchasedSelect.value === 'purchased' ? 'Sim' : 'Não'));
+        if (stockDispatchedSelect && stockDispatchedSelect.value) parts.push('Saiu Estoque: ' + (stockDispatchedSelect.value === 'dispatched' ? 'Sim' : 'Não'));
+        if (dateFrom && dateFrom.value) parts.push('De: ' + fmtDateBR(dateFrom.value));
+        if (dateTo && dateTo.value) parts.push('Até: ' + fmtDateBR(dateTo.value));
+        if (requesterSelect && requesterSelect.value) parts.push('Solicitante: ' + requesterSelect.value);
+        if (urgencySelect && urgencySelect.value) parts.push('Urgência: ' + (urgencyLabelsMap[urgencySelect.value] || urgencySelect.value));
+        return parts;
+    }
+
+    function escapeHtmlPrint(t) {
+        const d = document.createElement('div');
+        d.textContent = (t == null ? '' : String(t));
+        return d.innerHTML;
+    }
+
+    function printFilteredOrders() {
+        // Coletar apenas as linhas visíveis da tabela desktop
+        const visibleRows = Array.from(document.querySelectorAll('.d-none.d-md-block tr.order-row'))
+            .filter(tr => tr.style.display !== 'none');
+
+        if (visibleRows.length === 0) {
+            alert('Nenhum pedido para imprimir com os filtros atuais.');
+            return;
+        }
+
+        let totalValue = 0;
+        let bodyRows = '';
+        visibleRows.forEach(tr => {
+            const code = tr.querySelector('td:nth-child(1) a')?.textContent.trim() || '';
+            const site = tr.dataset.site || '-';
+            const supplier = tr.dataset.supplier || 'N/A';
+            const requester = tr.dataset.requester || '-';
+            const date = fmtDateBR(tr.dataset.date || '');
+
+            // Código: incluir selo de "Serviço" se for o caso
+            let codeHtml = escapeHtmlPrint(code);
+            if (tr.dataset.type === 'service') {
+                codeHtml += ' <span class="tag tag-dark">Serviço</span>';
+            }
+
+            // Status: label base + selos extras (iguais aos badges da listagem)
+            let statusHtml = escapeHtmlPrint(statusLabelsMap[tr.dataset.status] || tr.dataset.status || '');
+            const extraTags = [];
+            if (tr.dataset.status === 'pending_quote' && tr.querySelector('.badge .bi-play-fill')) {
+                extraTags.push('<span class="tag tag-green">Cotação Iniciada</span>');
+            }
+            if (tr.dataset.financial === 'reviewed') extraTags.push('<span class="tag tag-purple">Financeiro</span>');
+            if (tr.dataset.arrived === 'arrived') extraTags.push('<span class="tag tag-green">Chegou</span>');
+            else if (tr.dataset.inTransport === 'in_transport') extraTags.push('<span class="tag tag-blue">Em Transporte</span>');
+            else if (tr.dataset.purchased === 'purchased') extraTags.push('<span class="tag tag-orange">Comprado</span>');
+            if (tr.dataset.stockDispatched === 'dispatched') extraTags.push('<span class="tag tag-gray">Saiu Estoque</span>');
+            if (extraTags.length) statusHtml += '<div class="tags">' + extraTags.join(' ') + '</div>';
+
+            // Urgência
+            const urgency = urgencyLabelsMap[tr.dataset.urgency] || tr.dataset.urgency || '';
+
+            // Prazo + indicador de atraso/hoje/dias (igual listagem)
+            let deadlineHtml = '-';
+            if (tr.dataset.deadline) {
+                deadlineHtml = fmtDateBR(tr.dataset.deadline);
+                const daysLeft = Math.floor((new Date(tr.dataset.deadline + 'T00:00:00') - new Date(new Date().toDateString())) / 86400000);
+                if (daysLeft < 0) deadlineHtml += ' <span class="tag tag-red">Atrasado</span>';
+                else if (daysLeft === 0) deadlineHtml += ' <span class="tag tag-yellow">Hoje</span>';
+                else if (daysLeft <= 2) deadlineHtml += ` <span class="tag tag-yellow">${daysLeft}d</span>`;
+            }
+
+            // Valor: valor principal + NF (quando houver), extraídos da célula renderizada
+            const valueCell = tr.querySelector('td:nth-child(7)');
+            let valueHtml = '-';
+            if (valueCell) {
+                const strong = valueCell.querySelector('strong');
+                if (strong) {
+                    const valueText = strong.textContent.trim();
+                    valueHtml = escapeHtmlPrint(valueText);
+                    const num = parseFloat(valueText.replace(/[^0-9,.-]/g, '').replace(/\./g, '').replace(',', '.'));
+                    if (!isNaN(num)) totalValue += num;
+                }
+                // NF (small com "NF:")
+                const nfSmall = Array.from(valueCell.querySelectorAll('small')).find(s => s.textContent.includes('NF:'));
+                if (nfSmall) {
+                    valueHtml += '<div class="tags"><span class="muted">' + escapeHtmlPrint(nfSmall.textContent.trim()) + '</span></div>';
+                }
+            }
+
+            bodyRows += `<tr>
+                <td>${codeHtml}</td>
+                <td>${escapeHtmlPrint(site)}</td>
+                <td>${escapeHtmlPrint(supplier)}</td>
+                <td>${statusHtml}</td>
+                <td>${escapeHtmlPrint(urgency)}</td>
+                <td>${deadlineHtml}</td>
+                <td class="num">${valueHtml}</td>
+                <td>${escapeHtmlPrint(requester)}</td>
+                <td>${escapeHtmlPrint(date)}</td>
+            </tr>`;
+        });
+
+        const totalFmt = 'R$ ' + totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const filters = buildFiltersSummary();
+        const filtersHtml = filters.length
+            ? '<div class="filters">' + filters.map(f => '<span>' + escapeHtmlPrint(f) + '</span>').join('') + '</div>'
+            : '<div class="filters"><span>Sem filtros aplicados (todos os pedidos ativos)</span></div>';
+
+        const now = new Date();
+        const nowStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        const win = window.open('', '_blank');
+        win.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+        <title>Pedidos - Brooks Construtora</title>
+        <style>
+            * { box-sizing: border-box; }
+            body { font-family: Arial, Helvetica, sans-serif; color: #222; margin: 24px; }
+            .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #222; padding-bottom: 10px; margin-bottom: 12px; }
+            .head h1 { font-size: 18px; margin: 0 0 2px; }
+            .head .sub { font-size: 11px; color: #666; }
+            .filters { font-size: 10px; color: #444; margin-bottom: 10px; }
+            .filters span { display: inline-block; background: #f0f0f0; border: 1px solid #ddd; border-radius: 10px; padding: 2px 8px; margin: 0 4px 4px 0; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; }
+            th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
+            th { background: #222; color: #fff; font-size: 10px; }
+            td.num, th.num { text-align: right; white-space: nowrap; }
+            tbody tr:nth-child(even) { background: #f7f7f7; }
+            tfoot td { font-weight: bold; background: #eee; }
+            .count { font-size: 11px; margin-bottom: 6px; }
+            .tags { margin-top: 2px; }
+            .tag { display: inline-block; font-size: 8px; line-height: 1.4; padding: 1px 5px; border-radius: 8px; color: #fff; white-space: nowrap; }
+            .tag-dark { background: #343a40; }
+            .tag-green { background: #198754; }
+            .tag-blue { background: #0d6efd; }
+            .tag-orange { background: #e67e22; }
+            .tag-gray { background: #607d8b; }
+            .tag-purple { background: #8b5cf6; }
+            .tag-red { background: #dc3545; }
+            .tag-yellow { background: #ffc107; color: #000; }
+            .muted { font-size: 8px; color: #666; }
+            @media print {
+                body { margin: 10mm; }
+                .tag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                tbody tr:nth-child(even), th, tfoot td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+        </style></head><body>
+            <div class="head">
+                <div>
+                    <h1>BROOKS CONSTRUTORA</h1>
+                    <div class="sub">Relatório de Pedidos de Materiais</div>
+                </div>
+                <div class="sub" style="text-align:right;">Gerado em ${nowStr}</div>
+            </div>
+            ${filtersHtml}
+            <div class="count">${visibleRows.length} pedido(s)</div>
+            <table>
+                <thead><tr>
+                    <th>Código</th><th>Obra</th><th>Fornecedor</th><th>Status</th>
+                    <th>Urgência</th><th>Prazo</th><th class="num">Valor</th><th>Solicitante</th><th>Data</th>
+                </tr></thead>
+                <tbody>${bodyRows}</tbody>
+                <tfoot><tr>
+                    <td colspan="6">Total estimado</td>
+                    <td class="num">${totalFmt}</td>
+                    <td colspan="2"></td>
+                </tr></tfoot>
+            </table>
+        </body></html>`);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); }, 300);
+    }
+
+    const btnPrintPdf = document.getElementById('btnPrintPdf');
+    if (btnPrintPdf) btnPrintPdf.addEventListener('click', printFilteredOrders);
 
     // Inicializar
     const hadSavedFilters = loadFilters();
