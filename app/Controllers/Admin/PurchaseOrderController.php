@@ -614,6 +614,14 @@ class PurchaseOrderController extends Controller
         $spareItems = PurchaseOrderSpareItem::getByOrder($id);
         $materials = $order['status'] === 'approved' ? Material::allActive() : [];
 
+        // Em pedidos aprovados com split (itens divididos entre fornecedores), o
+        // subtotal_items/subtotal_final gravado nos fornecedores reflete a cotação
+        // original (todos os itens cotados), não os itens efetivamente aprovados com
+        // cada um. Recalcula para exibição a partir de approved_supplier_id dos itens.
+        if (($order['status'] ?? '') === 'approved') {
+            $orderSuppliers = $this->recalcApprovedSupplierSubtotals($orderSuppliers, $items);
+        }
+
         $this->view('admin.orders.show', [
             'order' => $order,
             'items' => $items,
@@ -627,6 +635,81 @@ class PurchaseOrderController extends Controller
             'user' => Auth::user(),
             'flash' => $this->getFlash(),
         ]);
+    }
+
+    /**
+     * Recalcula o subtotal de insumos e o total (com financeiros) de cada fornecedor
+     * APROVADO com base apenas nos itens efetivamente atribuídos a ele
+     * (purchase_order_items.approved_supplier_id). Usado só para exibição na tela de
+     * detalhes, corrigindo pedidos com aprovação dividida (split) entre fornecedores.
+     *
+     * Não altera o banco; apenas ajusta o array repassado à view.
+     *
+     * @param array $orderSuppliers Lista de purchase_order_suppliers (com financeiros)
+     * @param array $items          Itens do pedido (com approved_supplier_id/total_price)
+     * @return array                orderSuppliers com subtotal_items/subtotal_final/total ajustados
+     */
+    private function recalcApprovedSupplierSubtotals(array $orderSuppliers, array $items): array
+    {
+        // Quantos fornecedores aprovados existem no pedido
+        $approvedCount = 0;
+        foreach ($orderSuppliers as $os) {
+            if (!empty($os['approved'])) $approvedCount++;
+        }
+
+        // Sem split (0 ou 1 fornecedor aprovado): mantém os valores originais
+        if ($approvedCount < 2) {
+            return $orderSuppliers;
+        }
+
+        // Soma dos itens aprovados por fornecedor (apenas itens com approved_supplier_id)
+        $subtotalBySupplier = [];
+        foreach ($items as $it) {
+            $sid = (int) ($it['approved_supplier_id'] ?? 0);
+            if ($sid <= 0) continue;
+            $subtotalBySupplier[$sid] = ($subtotalBySupplier[$sid] ?? 0) + (float) ($it['total_price'] ?? 0);
+        }
+
+        // Reescreve os totais de cada fornecedor aprovado aplicando seus financeiros
+        foreach ($orderSuppliers as &$os) {
+            if (empty($os['approved'])) continue;
+
+            $sid = (int) $os['supplier_id'];
+            $subItems = round((float) ($subtotalBySupplier[$sid] ?? 0), 2);
+
+            $finalTotal = $this->applySupplierFinancials($subItems, $os);
+
+            $os['subtotal_items'] = $subItems;
+            $os['subtotal_final'] = $finalTotal;
+            $os['total'] = $finalTotal;
+        }
+        unset($os);
+
+        return $orderSuppliers;
+    }
+
+    /**
+     * Aplica desconto, acréscimo, IPI, ICMS e frete de um fornecedor sobre um subtotal
+     * de insumos, usando a mesma fórmula da cotação/aprovação.
+     */
+    private function applySupplierFinancials(float $subItems, array $os): float
+    {
+        $discType = $os['discount_type'] ?? 'percent';
+        $discVal = (float) ($os['discount_value'] ?? 0);
+        $surType = $os['surcharge_type'] ?? 'percent';
+        $surVal = (float) ($os['surcharge_value'] ?? 0);
+        $ipi = (float) ($os['ipi_percent'] ?? 0);
+        $icms = (float) ($os['icms_percent'] ?? 0);
+        $freight = (float) ($os['freight'] ?? 0);
+
+        $total = $subItems;
+        if ($discVal > 0) $total -= ($discType === 'percent') ? $subItems * ($discVal / 100) : $discVal;
+        if ($surVal > 0) $total += ($surType === 'percent') ? $subItems * ($surVal / 100) : $surVal;
+        if ($ipi > 0) $total += $subItems * ($ipi / 100);
+        if ($icms > 0) $total += $subItems * ($icms / 100);
+        if ($freight > 0) $total += $freight;
+
+        return round($total, 2);
     }
 
     /**

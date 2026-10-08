@@ -882,7 +882,7 @@ class PurchaseOrderController extends Controller
                     $sid = $os['supplier_id'];
                     if (!isset($approvedSupplierIds[$sid]) || !isset($subtotalBySupplier[$sid])) continue;
                     
-                    $subItems = $subtotalBySupplier[$sid];
+                    $subItems = round((float) $subtotalBySupplier[$sid], 2);
                     $discVal = (float)($os['discount_value'] ?? 0);
                     $discType = $os['discount_type'] ?? 'percent';
                     $surVal = (float)($os['surcharge_value'] ?? 0);
@@ -891,15 +891,24 @@ class PurchaseOrderController extends Controller
                     $icms = (float)($os['icms_percent'] ?? 0);
                     $freight = (float)($os['freight'] ?? 0);
 
-                    if ($discVal > 0) {
-                        $totalWithFinancials -= ($discType === 'percent') ? $subItems * ($discVal / 100) : $discVal;
-                    }
-                    if ($surVal > 0) {
-                        $totalWithFinancials += ($surType === 'percent') ? $subItems * ($surVal / 100) : $surVal;
-                    }
-                    if ($ipi > 0) $totalWithFinancials += $subItems * ($ipi / 100);
-                    if ($icms > 0) $totalWithFinancials += $subItems * ($icms / 100);
-                    if ($freight > 0) $totalWithFinancials += $freight;
+                    // Total deste fornecedor isolado (apenas seus itens aprovados + financeiros)
+                    $supplierFinal = $subItems;
+                    if ($discVal > 0) $supplierFinal -= ($discType === 'percent') ? $subItems * ($discVal / 100) : $discVal;
+                    if ($surVal > 0) $supplierFinal += ($surType === 'percent') ? $subItems * ($surVal / 100) : $surVal;
+                    if ($ipi > 0) $supplierFinal += $subItems * ($ipi / 100);
+                    if ($icms > 0) $supplierFinal += $subItems * ($icms / 100);
+                    if ($freight > 0) $supplierFinal += $freight;
+                    $supplierFinal = round($supplierFinal, 2);
+
+                    // Persistir o subtotal/total REAL do fornecedor neste pedido (itens aprovados dele),
+                    // substituindo o valor da cotação original (que considerava todos os itens cotados).
+                    PurchaseOrderSupplier::updateById($os['id'], [
+                        'subtotal_items' => $subItems,
+                        'subtotal_final' => $supplierFinal,
+                        'total' => $supplierFinal,
+                    ]);
+
+                    $totalWithFinancials += ($supplierFinal - $subItems);
                 }
                 $approvedTotal = $totalWithFinancials;
             }
