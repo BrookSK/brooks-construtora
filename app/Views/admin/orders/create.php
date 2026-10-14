@@ -186,6 +186,7 @@
                                     <th style="min-width:250px;">Material</th>
                                     <th style="min-width:120px;">Especificação</th>
                                     <th style="min-width:100px;">Classificação</th>
+                                    <th class="col-img-header" style="width:70px; display:none;">Imagem</th>
                                     <th style="width:90px;">Qtd</th>
                                     <th style="width:50px;"></th>
                                 </tr>
@@ -340,6 +341,20 @@
 .item-card .item-details .badge { font-weight:400; font-size:0.7rem; }
 </style>
 
+<!-- Lightbox de imagem do material -->
+<div class="modal fade" id="imageLightboxModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-0">
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body text-center p-0 pb-3">
+                <img id="lightboxImg" src="" alt="Imagem do material" style="max-width:100%; max-height:75vh; object-fit:contain;">
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="/assets/js/searchable-select.js"></script>
 <script>
 const materials = <?= json_encode($materials) ?>;
@@ -484,7 +499,7 @@ function buildMaterialOptions(prefill) {
     materials.forEach(m => {
         const label = m.name + (m.classification ? ' - ' + m.classification : '') + (m.specification ? ' (' + m.specification + ')' : '');
         const selected = prefill && prefill.id == m.id ? 'selected' : '';
-        opts += `<option value="${m.id}" data-name="${m.name}" data-spec="${m.specification || m.category_name || ''}" data-class="${m.classification || ''}" data-unit="${m.unit_abbr || m.unit_name || ''}" ${selected}>${label}</option>`;
+        opts += `<option value="${m.id}" data-name="${m.name}" data-spec="${m.specification || m.category_name || ''}" data-class="${m.classification || ''}" data-unit="${m.unit_abbr || m.unit_name || ''}" data-image="${m.image || ''}" ${selected}>${label}</option>`;
     });
     return opts;
 }
@@ -506,6 +521,7 @@ function addItem(prefill = null) {
         </td>
         <td><input type="text" class="form-control form-control-sm" name="items[${idx}][specification]" id="spec-${idx}" value="${prefill?.specification || ''}" readonly></td>
         <td><input type="text" class="form-control form-control-sm" name="items[${idx}][classification]" id="class-${idx}" value="${prefill?.classification || ''}" readonly></td>
+        <td class="col-img-cell text-center" id="img-cell-${idx}" style="display:none;"></td>
         <input type="hidden" name="items[${idx}][unit]" id="unit-${idx}" value="${prefill?.unit || ''}">
         <td><input type="number" class="form-control form-control-sm" name="items[${idx}][quantity]" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required></td>
         <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(${idx})"><i class="bi bi-trash"></i></button></td>
@@ -522,6 +538,7 @@ function addItem(prefill = null) {
             document.getElementById('spec-' + idx).value = dataset.spec || '';
             document.getElementById('class-' + idx).value = dataset.class || '';
             document.getElementById('unit-' + idx).value = dataset.unit || '';
+            setItemImage(idx, dataset.image || '');
             // Sync mobile
             updateMobileDetails(idx, { dataset });
         }
@@ -546,6 +563,7 @@ function addItem(prefill = null) {
         <div class="item-details" id="details-m-${idx}">
             ${prefill ? `<span class="badge bg-light text-dark">${prefill.specification||''}</span><span class="badge bg-light text-dark">${prefill.classification||''}</span>` : '<span class="text-muted" style="font-size:0.75rem;">Busque um material acima</span>'}
         </div>
+        <div class="mt-2" id="img-m-${idx}" style="display:none;"></div>
         <div class="d-flex align-items-center gap-2 mt-2">
             <label class="form-label mb-0 small fw-bold">Qtd:</label>
             <input type="number" class="form-control form-control-sm qty-mobile" style="max-width:100px;" data-idx="${idx}" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required>
@@ -563,6 +581,7 @@ function addItem(prefill = null) {
             document.getElementById('spec-' + idx).value = dataset.spec || '';
             document.getElementById('class-' + idx).value = dataset.class || '';
             document.getElementById('unit-' + idx).value = dataset.unit || '';
+            setItemImage(idx, dataset.image || '');
             updateMobileDetails(idx, { dataset });
         }
     });
@@ -592,6 +611,41 @@ function removeItem(idx) {
     document.getElementById('item-row-' + idx)?.remove();
     document.getElementById('item-card-' + idx)?.remove();
     updateItemCount();
+    refreshImageColumn();
+}
+
+// Preenche (ou limpa) a miniatura da imagem de um item, desktop e mobile
+function setItemImage(idx, imageUrl) {
+    const cell = document.getElementById('img-cell-' + idx);
+    const mobileWrap = document.getElementById('img-m-' + idx);
+    if (imageUrl) {
+        const thumb = `<img src="${imageUrl}" alt="Imagem do material" class="item-thumb" onclick="openImageLightbox('${imageUrl}')" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;cursor:zoom-in;">`;
+        if (cell) { cell.innerHTML = thumb; }
+        if (mobileWrap) {
+            mobileWrap.innerHTML = `<img src="${imageUrl}" alt="Imagem do material" onclick="openImageLightbox('${imageUrl}')" style="max-height:120px;max-width:100%;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;cursor:zoom-in;">`;
+            mobileWrap.style.display = '';
+        }
+    } else {
+        if (cell) { cell.innerHTML = ''; }
+        if (mobileWrap) { mobileWrap.innerHTML = ''; mobileWrap.style.display = 'none'; }
+    }
+    refreshImageColumn();
+}
+
+// Mostra a coluna "Imagem" (desktop) só se ao menos um item tiver imagem
+function refreshImageColumn() {
+    const hasAny = Array.from(document.querySelectorAll('.col-img-cell')).some(td => td.querySelector('img'));
+    document.querySelectorAll('.col-img-header, .col-img-cell').forEach(el => {
+        el.style.display = hasAny ? '' : 'none';
+    });
+}
+
+// Lightbox simples para expandir a imagem
+function openImageLightbox(url) {
+    document.getElementById('lightboxImg').src = url;
+    const modalEl = document.getElementById('imageLightboxModal');
+    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modal.show();
 }
 
 function updateMobileDetails(idx, opt) {

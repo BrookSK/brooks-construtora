@@ -85,7 +85,7 @@ class MaterialController extends Controller
             return;
         }
 
-        Material::create([
+        $data = [
             'code' => trim($this->input('code', '')) ?: null,
             'name' => $name,
             'specification' => trim($this->input('specification', '')),
@@ -95,7 +95,14 @@ class MaterialController extends Controller
             'project_type' => $this->input('project_type', 'both'),
             'active' => 1,
             'created_at' => date('Y-m-d H:i:s'),
-        ]);
+        ];
+
+        $imageUrl = $this->handleImageUpload();
+        if ($imageUrl !== null) {
+            $data['image'] = $imageUrl;
+        }
+
+        $this->createMaterialSafe($data);
 
         $this->setFlash('success', 'Material cadastrado com sucesso!');
         $this->redirect('/admin/materials');
@@ -124,7 +131,7 @@ class MaterialController extends Controller
             return;
         }
 
-        Material::updateById($id, [
+        $data = [
             'code' => trim($this->input('code', '')) ?: null,
             'name' => $name,
             'specification' => trim($this->input('specification', '')),
@@ -132,10 +139,122 @@ class MaterialController extends Controller
             'unit_id' => (int) $this->input('unit_id') ?: null,
             'classification' => trim($this->input('classification', '')),
             'project_type' => $this->input('project_type', 'both'),
-        ]);
+        ];
+
+        $imageUrl = $this->handleImageUpload();
+        if ($imageUrl !== null) {
+            // Remove imagem anterior ao substituir
+            if (!empty($material['image']) && file_exists(ROOT_PATH . '/public' . $material['image'])) {
+                @unlink(ROOT_PATH . '/public' . $material['image']);
+            }
+            $data['image'] = $imageUrl;
+        }
+
+        $this->updateMaterialSafe($id, $data);
 
         $this->setFlash('success', 'Material atualizado com sucesso!');
         $this->redirect('/admin/materials');
+    }
+
+    /**
+     * Processa o upload da imagem do material (campo "image").
+     * Retorna a URL pública (/uploads/materials/...) ou null se nenhum arquivo foi enviado.
+     */
+    private function handleImageUpload(): ?string
+    {
+        if (!isset($_FILES['image']) || $_FILES['image']['error'] === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+
+        if ($_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            $this->setFlash('error', 'Erro no upload da imagem.');
+            return null;
+        }
+
+        $file         = $_FILES['image'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+        if (!in_array($file['type'], $allowedTypes, true)) {
+            $this->setFlash('error', 'Tipo de imagem não permitido. Use JPG, PNG, WEBP ou GIF.');
+            return null;
+        }
+
+        if ($file['size'] > 5 * 1024 * 1024) {
+            $this->setFlash('error', 'Imagem muito grande. Máximo 5 MB.');
+            return null;
+        }
+
+        $ext       = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $filename  = 'mat_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $uploadDir = ROOT_PATH . '/public/uploads/materials/';
+
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        if (move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
+            return '/uploads/materials/' . $filename;
+        }
+
+        $this->setFlash('error', 'Não foi possível salvar a imagem.');
+        return null;
+    }
+
+    /**
+     * Garante que a coluna "image" exista rodando a migration 052 sob demanda.
+     */
+    private function ensureImageColumn(): void
+    {
+        $migrationFile = ROOT_PATH . '/database/migrations/052_add_image_to_materials.sql';
+        if (!file_exists($migrationFile)) {
+            return;
+        }
+        $sql = preg_replace('/--[^\n]*/', '', file_get_contents($migrationFile));
+        $pdo = \App\Core\Database::getConnection();
+        foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
+            try { $pdo->exec($stmt); } catch (\PDOException $ignore) {}
+        }
+    }
+
+    /**
+     * Cria o material tratando o caso da coluna "image" ainda não existir.
+     */
+    private function createMaterialSafe(array $data): void
+    {
+        try {
+            Material::create($data);
+        } catch (\PDOException $e) {
+            if ($this->isMissingImageColumn($e)) {
+                $this->ensureImageColumn();
+                Material::create($data);
+            } else {
+                throw $e;
+            }
+        }
+    }
+
+    /**
+     * Atualiza o material tratando o caso da coluna "image" ainda não existir.
+     */
+    private function updateMaterialSafe(int $id, array $data): void
+    {
+        try {
+            Material::updateById($id, $data);
+        } catch (\PDOException $e) {
+            if ($this->isMissingImageColumn($e)) {
+                $this->ensureImageColumn();
+                Material::updateById($id, $data);
+            } else {
+                throw $e;
+            }
+        }
+    }
+
+    private function isMissingImageColumn(\PDOException $e): bool
+    {
+        $msg = $e->getMessage();
+        return stripos($msg, 'Unknown column') !== false
+            || stripos($msg, "doesn't exist") !== false;
     }
 
     public function delete(): void

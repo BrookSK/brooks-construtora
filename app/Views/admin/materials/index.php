@@ -53,7 +53,7 @@
                     <td><?= htmlspecialchars($m['unit_name'] ?? '-') ?> <?= $m['unit_abbr'] ? '(' . $m['unit_abbr'] . ')' : '' ?></td>
                     <td><?= $m['active'] ? '<span class="badge bg-success">Ativo</span>' : '<span class="badge bg-secondary">Inativo</span>' ?></td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>" data-project-type="<?= htmlspecialchars($m['project_type'] ?? 'both') ?>"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>" data-project-type="<?= htmlspecialchars($m['project_type'] ?? 'both') ?>" data-image="<?= htmlspecialchars($m['image'] ?? '') ?>"><i class="bi bi-pencil"></i></button>
                         <?php if ($m['active']): ?>
                         <form method="POST" action="/admin/materials/delete" class="d-inline" onsubmit="return confirm('Desativar?')"><input type="hidden" name="id" value="<?= $m['id'] ?>"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
                         <?php elseif (\App\Core\Auth::isSuperAdmin()): ?>
@@ -86,7 +86,7 @@
                     </div>
                 </div>
                 <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>" data-project-type="<?= htmlspecialchars($m['project_type'] ?? 'both') ?>"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-primary edit-material-btn" data-id="<?= $m['id'] ?>" data-name="<?= htmlspecialchars($m['name']) ?>" data-code="<?= htmlspecialchars($m['code'] ?? '') ?>" data-specification="<?= htmlspecialchars($m['specification'] ?? '') ?>" data-category-id="<?= $m['category_id'] ?? '' ?>" data-unit-id="<?= $m['unit_id'] ?? '' ?>" data-classification="<?= htmlspecialchars($m['classification'] ?? '') ?>" data-project-type="<?= htmlspecialchars($m['project_type'] ?? 'both') ?>" data-image="<?= htmlspecialchars($m['image'] ?? '') ?>"><i class="bi bi-pencil"></i></button>
                     <?php if ($m['active']): ?><form method="POST" action="/admin/materials/delete" onsubmit="return confirm('Desativar?')"><input type="hidden" name="id" value="<?= $m['id'] ?>"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
                     <?php elseif (\App\Core\Auth::isSuperAdmin()): ?><form method="POST" action="/admin/materials/delete" onsubmit="return confirm('EXCLUIR permanentemente?')"><input type="hidden" name="id" value="<?= $m['id'] ?>"><input type="hidden" name="action" value="permanent"><button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button></form>
                     <?php endif; ?>
@@ -132,7 +132,7 @@
         <div class="modal-content">
             <!-- Step 1: Formulário principal -->
             <div id="matStep1">
-                <form method="POST" action="/admin/materials/store" id="materialForm">
+                <form method="POST" action="/admin/materials/store" id="materialForm" enctype="multipart/form-data">
                     <div class="modal-header">
                         <h5 class="modal-title" id="materialModalTitle">Novo Material</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -186,6 +186,14 @@
                                 <option value="renovation">🔧 Somente Reforma</option>
                             </select>
                             <small class="text-muted">Define em quais tipos de obra este material estará disponível nas listas.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Imagem do Material</label>
+                            <input type="file" class="form-control" name="image" id="matImage" accept="image/*">
+                            <small class="text-muted">Opcional. JPG, PNG, WEBP ou GIF (máx. 5 MB).</small>
+                            <div id="matImagePreviewWrap" class="mt-2" style="display:none;">
+                                <img id="matImagePreview" src="" alt="Pré-visualização" style="max-height:120px;max-width:100%;border-radius:6px;border:1px solid #dee2e6;">
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -242,8 +250,29 @@ document.querySelectorAll('.edit-material-btn').forEach(btn => {
         document.getElementById('matClassification').value = this.dataset.classification;
         document.getElementById('matUnitId').value = this.dataset.unitId;
         document.getElementById('matProjectType').value = this.dataset.projectType || 'both';
+        // Preview da imagem atual (se houver)
+        const wrap = document.getElementById('matImagePreviewWrap');
+        const img = document.getElementById('matImagePreview');
+        if (this.dataset.image) {
+            img.src = this.dataset.image;
+            wrap.style.display = '';
+        } else {
+            img.src = '';
+            wrap.style.display = 'none';
+        }
         new bootstrap.Modal(document.getElementById('newMaterialModal')).show();
     });
+});
+
+// Preview ao selecionar um novo arquivo
+document.getElementById('matImage').addEventListener('change', function() {
+    const wrap = document.getElementById('matImagePreviewWrap');
+    const img = document.getElementById('matImagePreview');
+    const file = this.files && this.files[0];
+    if (file) {
+        img.src = URL.createObjectURL(file);
+        wrap.style.display = '';
+    }
 });
 
 // Reset modal + voltar pro step 1 ao fechar
@@ -254,6 +283,8 @@ document.getElementById('newMaterialModal').addEventListener('hidden.bs.modal', 
     document.getElementById('materialForm').action = '/admin/materials/store';
     document.getElementById('materialForm').reset();
     document.getElementById('matId').value = '';
+    document.getElementById('matImagePreviewWrap').style.display = 'none';
+    document.getElementById('matImagePreview').src = '';
 });
 
 // Sync category name

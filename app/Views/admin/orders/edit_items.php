@@ -77,6 +77,7 @@
                             <th style="min-width:250px;">Material</th>
                             <th style="min-width:120px;">Especificação</th>
                             <th style="min-width:100px;">Classificação</th>
+                            <th class="col-img-header" style="width:70px; display:none;">Imagem</th>
                             <th style="min-width:160px;">Link da compra</th>
                             <th style="min-width:160px;">Observação</th>
                             <th style="width:90px;">Qtd</th>
@@ -128,6 +129,20 @@
     </div>
 </div>
 
+<!-- Lightbox de imagem do material -->
+<div class="modal fade" id="imageLightboxModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-0">
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body text-center p-0 pb-3">
+                <img id="lightboxImg" src="" alt="Imagem do material" style="max-width:100%; max-height:75vh; object-fit:contain;">
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="/assets/js/searchable-select.js"></script>
 <script>
 const materials = <?= json_encode($materials) ?>;
@@ -148,7 +163,7 @@ function buildMaterialOptions(prefill) {
     materials.forEach(m => {
         const label = m.name + (m.classification ? ' - ' + m.classification : '') + (m.specification ? ' (' + m.specification + ')' : '');
         const selected = prefill && prefill.id == m.id ? 'selected' : '';
-        opts += `<option value="${m.id}" data-name="${m.name}" data-spec="${m.specification || m.category_name || ''}" data-class="${m.classification || ''}" data-unit="${m.unit_abbr || m.unit_name || ''}" ${selected}>${label}</option>`;
+        opts += `<option value="${m.id}" data-name="${m.name}" data-spec="${m.specification || m.category_name || ''}" data-class="${m.classification || ''}" data-unit="${m.unit_abbr || m.unit_name || ''}" data-image="${m.image || ''}" ${selected}>${label}</option>`;
     });
     return opts;
 }
@@ -170,6 +185,7 @@ function addItem(prefill = null) {
         </td>
         <td><input type="text" class="form-control form-control-sm" name="items[${idx}][specification]" id="spec-${idx}" value="${prefill?.specification || ''}" readonly></td>
         <td><input type="text" class="form-control form-control-sm" name="items[${idx}][classification]" id="class-${idx}" value="${prefill?.classification || ''}" readonly></td>
+        <td class="col-img-cell text-center" id="img-cell-${idx}" style="display:none;"></td>
         <td><input type="url" class="form-control form-control-sm" name="items[${idx}][link]" id="link-${idx}" value="${prefill?.link || ''}" placeholder="https://..."></td>
         <td><input type="text" class="form-control form-control-sm" name="items[${idx}][notes]" id="notes-${idx}" value="${prefill?.notes ? escapeHtmlAttr(prefill.notes) : ''}" placeholder="Observação (opcional)"></td>
         <td><input type="number" class="form-control form-control-sm" name="items[${idx}][quantity]" min="0.01" step="0.01" value="${prefill?.quantity || 1}" required></td>
@@ -186,6 +202,7 @@ function addItem(prefill = null) {
             document.getElementById('spec-' + idx).value = dataset.spec || '';
             document.getElementById('class-' + idx).value = dataset.class || '';
             document.getElementById('unit-' + idx).value = dataset.unit || '';
+            setItemImage(idx, dataset.image || '');
         }
     });
 
@@ -197,10 +214,39 @@ function addItem(prefill = null) {
     updateItemCount();
 }
 
+// Preenche (ou limpa) a miniatura da imagem de um item
+function setItemImage(idx, imageUrl) {
+    const cell = document.getElementById('img-cell-' + idx);
+    if (!cell) return;
+    if (imageUrl) {
+        cell.innerHTML = `<img src="${imageUrl}" alt="Imagem do material" onclick="openImageLightbox('${imageUrl}')" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;cursor:zoom-in;">`;
+    } else {
+        cell.innerHTML = '';
+    }
+    refreshImageColumn();
+}
+
+// Mostra a coluna "Imagem" só se ao menos um item tiver imagem
+function refreshImageColumn() {
+    const hasAny = Array.from(document.querySelectorAll('.col-img-cell')).some(td => td.querySelector('img'));
+    document.querySelectorAll('.col-img-header, .col-img-cell').forEach(el => {
+        el.style.display = hasAny ? '' : 'none';
+    });
+}
+
+// Lightbox simples para expandir a imagem
+function openImageLightbox(url) {
+    document.getElementById('lightboxImg').src = url;
+    const modalEl = document.getElementById('imageLightboxModal');
+    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
 function removeItem(idx) {
     const row = document.getElementById('item-row-' + idx);
     if (row) row.remove();
     updateItemCount();
+    refreshImageColumn();
 }
 
 // Carregar itens existentes
@@ -211,6 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
         $freshSpec = $item['specification'] ?? '';
         $freshClass = $item['classification'] ?? '';
         $freshUnit = $item['unit'] ?? '';
+        $freshImage = '';
         if (!empty($item['material_id'])) {
             foreach ($materials as $mat) {
                 if ((int)$mat['id'] === (int)$item['material_id']) {
@@ -218,6 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     $freshSpec = $mat['specification'] ?? $freshSpec;
                     $freshClass = $mat['classification'] ?? $freshClass;
                     $freshUnit = $mat['unit_abbr'] ?? $mat['unit_name'] ?? $freshUnit;
+                    $freshImage = $mat['image'] ?? '';
                     break;
                 }
             }
@@ -228,6 +276,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'specification' => $freshSpec,
             'classification' => $freshClass,
             'unit' => $freshUnit,
+            'image' => $freshImage,
             'quantity' => (float) $item['quantity'],
             'link' => $item['link'] ?? '',
             'notes' => $item['notes'] ?? '',
