@@ -19,6 +19,9 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <span class="badge bg-secondary order-count-badge"><?= count($orders) ?> pedidos</span>
     <div class="d-flex flex-wrap gap-1 justify-content-end">
+        <a href="/admin/orders/export-all" class="btn btn-outline-success btn-sm" title="Exportar todos os pedidos com todas as informações (XLSX)">
+            <i class="bi bi-file-earmark-spreadsheet"></i> <span class="d-none d-sm-inline">Exportar Tudo</span><span class="d-sm-none">XLSX</span>
+        </a>
         <button type="button" id="btnPrintPdf" class="btn btn-outline-danger btn-sm" title="Imprimir PDF dos pedidos filtrados">
             <i class="bi bi-file-earmark-pdf"></i> <span class="d-none d-sm-inline">Imprimir PDF</span><span class="d-sm-none">PDF</span>
         </button>

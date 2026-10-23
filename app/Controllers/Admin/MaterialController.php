@@ -660,6 +660,50 @@ class MaterialController extends Controller
     }
 
     /**
+     * Exportação COMPLETA de materiais (XLSX): todas as colunas da tabela
+     * materials + categoria/unidade legíveis + último preço, e uma aba com
+     * todo o histórico de preços. (O CSV de export() continua sendo o formato
+     * de reimportação.)
+     */
+    public function exportFull(): void
+    {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
+        $materials = \App\Services\FullExportService::tryFetchAll([
+            "SELECT mc.name AS categoria_nome, mu.name AS unidade_nome, mu.abbreviation AS unidade_abrev,
+                    (SELECT h.unit_price FROM material_price_history h WHERE h.material_id = m.id
+                      ORDER BY h.id DESC LIMIT 1) AS ultimo_preco,
+                    (SELECT COUNT(*) FROM purchase_order_items i WHERE i.material_id = m.id) AS qtd_itens_em_pedidos,
+                    m.*
+             FROM materials m
+             LEFT JOIN material_categories mc ON m.category_id = mc.id
+             LEFT JOIN measurement_units mu ON m.unit_id = mu.id
+             ORDER BY m.id ASC",
+            "SELECT mc.name AS categoria_nome, mu.name AS unidade_nome, mu.abbreviation AS unidade_abrev, m.*
+             FROM materials m
+             LEFT JOIN material_categories mc ON m.category_id = mc.id
+             LEFT JOIN measurement_units mu ON m.unit_id = mu.id
+             ORDER BY m.id ASC",
+        ]) ?? [];
+
+        $export = new \App\Services\FullExportService();
+        $export->addSheet('Materiais', $materials);
+        $export->addSheet('Histórico de Preços', \App\Services\FullExportService::tryFetchAll([
+            "SELECT m.name AS material_nome, s.name AS fornecedor_nome, h.*
+             FROM material_price_history h
+             LEFT JOIN materials m ON m.id = h.material_id
+             LEFT JOIN suppliers s ON s.id = h.supplier_id
+             ORDER BY h.material_id ASC, h.id ASC",
+            "SELECT h.* FROM material_price_history h ORDER BY h.id ASC",
+        ]));
+        $export->addSheet('Categorias', \App\Services\FullExportService::tryFetchAll(["SELECT * FROM material_categories ORDER BY id"]));
+        $export->addSheet('Unidades', \App\Services\FullExportService::tryFetchAll(["SELECT * FROM measurement_units ORDER BY id"]));
+
+        $export->download('materiais_completo_' . date('Y-m-d_His') . '.xlsx');
+    }
+
+    /**
      * Reimportar o arquivo corrigido, ATUALIZANDO os materiais existentes por id.
      *
      * Regras de segurança:

@@ -7,6 +7,9 @@
         <a href="/admin/materials/export" class="btn btn-outline-primary btn-sm">
             <i class="bi bi-download"></i> <span class="d-none d-sm-inline">Exportar</span>
         </a>
+        <a href="/admin/materials/export-full" class="btn btn-outline-secondary btn-sm" title="Exportar todos os materiais com todas as informações (XLSX)">
+            <i class="bi bi-file-earmark-spreadsheet"></i> <span class="d-none d-sm-inline">Exportar Completo</span>
+        </a>
         <a href="/admin/materials/import" class="btn btn-outline-success btn-sm">
             <i class="bi bi-upload"></i> <span class="d-none d-sm-inline">Importar</span>
         </a>

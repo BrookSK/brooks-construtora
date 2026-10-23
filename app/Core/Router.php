@@ -141,6 +141,7 @@ class Router
             'orders/test-webhook' => ['PurchaseOrderController', 'testWebhook'],
             'orders/price-history' => ['PurchaseOrderController', 'priceHistory'],
             'orders/export' => ['PurchaseOrderController', 'export'],
+            'orders/export-all' => ['PurchaseOrderController', 'exportAll'],
             'orders/upload-payment' => ['PurchaseOrderController', 'uploadPayment'],
             'orders/validate-payment-cnpj' => ['PurchaseOrderController', 'validatePaymentCnpj'],
             'orders/mark-paid' => ['PurchaseOrderController', 'markPaid'],
@@ -264,6 +265,7 @@ class Router
             'materials/import' => ['MaterialController', 'import'],
             'materials/import-process' => ['MaterialController', 'importProcess'],
             'materials/export' => ['MaterialController', 'export'],
+            'materials/export-full' => ['MaterialController', 'exportFull'],
             'materials/reimport-process' => ['MaterialController', 'reimportProcess'],
 
             // Fornecedores - Contatos/Vendedores

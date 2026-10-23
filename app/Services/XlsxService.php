@@ -11,9 +11,28 @@ class XlsxService
     private array $sheets = [];
     private int $currentSheet = 0;
 
+    /**
+     * Quando true, só valores int/float viram número; strings numéricas
+     * (CNPJ, telefone, códigos com zero à esquerda) ficam como texto.
+     */
+    private bool $strictTypes = false;
+
     public function __construct()
     {
         $this->addSheet('Planilha1');
+    }
+
+    public function setStrictTypes(bool $strict): void
+    {
+        $this->strictTypes = $strict;
+    }
+
+    private function isNumericCell($cell): bool
+    {
+        if ($this->strictTypes) {
+            return is_int($cell) || is_float($cell);
+        }
+        return is_numeric($cell);
     }
 
     /**
@@ -238,7 +257,7 @@ class XlsxService
             foreach ($sheet['rows'] as $row) {
                 foreach ($row['cells'] as $cell) {
                     $val = (string) $cell;
-                    if (!is_numeric($cell) && $val !== '' && !isset($map[$val])) {
+                    if (!$this->isNumericCell($cell) && $val !== '' && !isset($map[$val])) {
                         $map[$val] = $index;
                         $strings[] = $val;
                         $index++;
@@ -286,7 +305,7 @@ class XlsxService
 
                 if ($val === '') {
                     $xml .= '<c r="' . $ref . '" s="' . $styleId . '"/>';
-                } elseif (is_numeric($cellVal)) {
+                } elseif ($this->isNumericCell($cellVal)) {
                     $xml .= '<c r="' . $ref . '" s="' . $styleId . '"><v>' . $cellVal . '</v></c>';
                 } elseif (isset($stringMap[$val])) {
                     $xml .= '<c r="' . $ref . '" t="s" s="' . $styleId . '"><v>' . $stringMap[$val] . '</v></c>';

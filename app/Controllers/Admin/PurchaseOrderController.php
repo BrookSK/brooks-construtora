@@ -25,6 +25,7 @@ use App\Models\PinUser;
 use App\Models\ConstructionSite;
 use App\Services\MailService;
 use App\Services\XlsxService;
+use App\Services\FullExportService;
 use App\Services\EmailTemplate;
 use App\Services\NotificationService;
 
@@ -3007,6 +3008,117 @@ class PurchaseOrderController extends Controller
         }
 
         $xlsx->download('Pedido_' . $order['code'] . '.xlsx');
+    }
+
+    /**
+     * Exportar TODOS os pedidos com todas as informações (XLSX multi-abas).
+     *
+     * Abas: Pedidos (1 linha por pedido), Itens (1 linha por item),
+     * Cotações por fornecedor, Preços por fornecedor/item, Histórico,
+     * Pagamentos, Entregas, Comentários e Sobressalentes.
+     * Todas as colunas das tabelas são incluídas dinamicamente (exceto tokens
+     * de links públicos). As colunas "pedido_id"/"pedido_codigo" ligam as abas.
+     */
+    public function exportAll(): void
+    {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
+        $urgencyLabels = ['low' => 'Baixa', 'medium' => 'Média', 'high' => 'Alta', 'critical' => 'Crítica'];
+        $typeLabels = ['material' => 'Material', 'service' => 'Serviço'];
+
+        // ---------- Pedidos ----------
+        $approvedSub = "(SELECT GROUP_CONCAT(s2.name SEPARATOR ' | ') FROM purchase_order_suppliers pos2
+                          JOIN suppliers s2 ON s2.id = pos2.supplier_id
+                          WHERE pos2.order_id = po.id AND pos2.approved = 1) AS fornecedores_aprovados,
+                        (SELECT SUM(pos3.subtotal_final) FROM purchase_order_suppliers pos3
+                          WHERE pos3.order_id = po.id AND pos3.approved = 1) AS total_final_aprovado,";
+        $itemsSub = "(SELECT COUNT(*) FROM purchase_order_items i WHERE i.order_id = po.id) AS qtd_itens,
+                     (SELECT SUM(i.total_price) FROM purchase_order_items i WHERE i.order_id = po.id) AS soma_itens,";
+
+        $orders = FullExportService::tryFetchAll([
+            "SELECT cs.code AS obra_codigo, cs.name AS obra_nome,
+                    s.name AS fornecedor_nome, s.cnpj AS fornecedor_cnpj,
+                    {$approvedSub} {$itemsSub} po.*
+             FROM purchase_orders po
+             LEFT JOIN construction_sites cs ON cs.id = po.construction_site_id
+             LEFT JOIN suppliers s ON s.id = po.supplier_id
+             ORDER BY po.id ASC",
+            // Fallback sem obras / sem multi-fornecedor
+            "SELECT s.name AS fornecedor_nome, s.cnpj AS fornecedor_cnpj, {$itemsSub} po.*
+             FROM purchase_orders po
+             LEFT JOIN suppliers s ON s.id = po.supplier_id
+             ORDER BY po.id ASC",
+        ]) ?? [];
+
+        $orderRows = [];
+        foreach ($orders as $o) {
+            $orderRows[] = array_merge([
+                'pedido_id' => $o['id'],
+                'pedido_codigo' => $o['code'],
+                'status_descricao' => $this->statusLabel((string) ($o['status'] ?? '')),
+                'tipo_descricao' => $typeLabels[$o['order_type'] ?? ''] ?? ($o['order_type'] ?? ''),
+                'urgencia_descricao' => $urgencyLabels[$o['urgency'] ?? ''] ?? ($o['urgency'] ?? ''),
+                'solicitante' => $o['created_by_name'] ?? '',
+                'data_criacao' => $o['created_at'] ?? '',
+                'observacoes' => $o['description'] ?? '',
+            ], $o);
+        }
+
+        $export = new FullExportService();
+        $export->addSheet('Pedidos', $orderRows);
+
+        // ---------- Itens ----------
+        $items = FullExportService::tryFetchAll([
+            "SELECT po.id AS pedido_id, po.code AS pedido_codigo, po.status AS pedido_status,
+                    cs.code AS obra_codigo, cs.name AS obra_nome, po.created_by_name AS solicitante,
+                    m.code AS material_codigo, mc.name AS material_categoria,
+                    sa.name AS fornecedor_aprovado_item, csf.name AS estoque_obra_origem,
+                    poi.*
+             FROM purchase_order_items poi
+             JOIN purchase_orders po ON po.id = poi.order_id
+             LEFT JOIN construction_sites cs ON cs.id = po.construction_site_id
+             LEFT JOIN materials m ON m.id = poi.material_id
+             LEFT JOIN material_categories mc ON mc.id = m.category_id
+             LEFT JOIN suppliers sa ON sa.id = poi.approved_supplier_id
+             LEFT JOIN construction_sites csf ON csf.id = poi.stock_from_site_id
+             ORDER BY poi.order_id ASC, poi.id ASC",
+            "SELECT po.id AS pedido_id, po.code AS pedido_codigo, po.status AS pedido_status,
+                    po.created_by_name AS solicitante, poi.*
+             FROM purchase_order_items poi
+             JOIN purchase_orders po ON po.id = poi.order_id
+             ORDER BY poi.order_id ASC, poi.id ASC",
+        ]);
+        $export->addSheet('Itens', $items);
+
+        // ---------- Tabelas relacionadas (1:N por pedido) ----------
+        $related = [
+            'Cotações Fornecedores' => ['purchase_order_suppliers', 'LEFT JOIN suppliers s ON s.id = t.supplier_id', 's.name AS fornecedor_nome, s.cnpj AS fornecedor_cnpj,'],
+            'Preços por Fornecedor' => ['purchase_order_item_prices', 'LEFT JOIN suppliers s ON s.id = t.supplier_id LEFT JOIN purchase_order_items it ON it.id = t.item_id', 's.name AS fornecedor_nome, it.material_name AS item_material,'],
+            'Histórico' => ['purchase_order_history', '', ''],
+            'Pagamentos' => ['purchase_order_payments', '', ''],
+            'Entregas' => ['purchase_order_deliveries', '', ''],
+            'Comentários' => ['purchase_order_comments', '', ''],
+            'Sobressalentes' => ['purchase_order_spare_items', '', ''],
+        ];
+
+        foreach ($related as $sheetName => [$table, $joins, $extraCols]) {
+            $rows = FullExportService::tryFetchAll([
+                "SELECT po.code AS pedido_codigo, {$extraCols} t.*
+                 FROM {$table} t
+                 LEFT JOIN purchase_orders po ON po.id = t.order_id
+                 {$joins}
+                 ORDER BY t.order_id ASC, t.id ASC",
+                "SELECT po.code AS pedido_codigo, t.*
+                 FROM {$table} t
+                 LEFT JOIN purchase_orders po ON po.id = t.order_id
+                 ORDER BY t.order_id ASC, t.id ASC",
+                "SELECT t.* FROM {$table} t ORDER BY t.id ASC",
+            ]);
+            $export->addSheet($sheetName, $rows);
+        }
+
+        $export->download('pedidos_completo_' . date('Y-m-d_His') . '.xlsx');
     }
 
     private function statusLabel(string $status): string
