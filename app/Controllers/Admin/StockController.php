@@ -49,6 +49,84 @@ class StockController extends Controller
     }
 
     /**
+     * Exportar TODO o estoque com todas as informações (XLSX multi-abas):
+     * Estoque (saldo por material/depósito, com dados completos do material),
+     * Movimentações (histórico completo) e Depósitos.
+     */
+    public function export(): void
+    {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
+        $items = \App\Services\FullExportService::tryFetchAll([
+            "SELECT sl.code AS deposito_codigo, sl.name AS deposito_nome,
+                    COALESCE(cs.code, csd.code) AS obra_codigo, COALESCE(cs.name, csd.name) AS obra_nome,
+                    m.code AS material_codigo, m.name AS material_nome, m.specification AS material_especificacao,
+                    m.classification AS material_classificacao, mc.name AS material_categoria,
+                    mu.name AS unidade_nome, mu.abbreviation AS unidade_abrev,
+                    m.project_type AS material_tipo_projeto, m.active AS material_ativo,
+                    si.*
+             FROM stock_items si
+             LEFT JOIN materials m ON m.id = si.material_id
+             LEFT JOIN material_categories mc ON mc.id = m.category_id
+             LEFT JOIN measurement_units mu ON mu.id = m.unit_id
+             LEFT JOIN stock_locations sl ON sl.id = si.stock_location_id
+             LEFT JOIN construction_sites cs ON cs.id = sl.construction_site_id
+             LEFT JOIN construction_sites csd ON csd.id = si.construction_site_id
+             ORDER BY sl.name ASC, m.name ASC",
+            // Fallback para schemas sem colunas novas
+            "SELECT sl.code AS deposito_codigo, sl.name AS deposito_nome,
+                    m.name AS material_nome, m.specification AS material_especificacao,
+                    m.classification AS material_classificacao, mc.name AS material_categoria,
+                    mu.name AS unidade_nome, mu.abbreviation AS unidade_abrev, si.*
+             FROM stock_items si
+             LEFT JOIN materials m ON m.id = si.material_id
+             LEFT JOIN material_categories mc ON mc.id = m.category_id
+             LEFT JOIN measurement_units mu ON mu.id = m.unit_id
+             LEFT JOIN stock_locations sl ON sl.id = si.stock_location_id
+             ORDER BY si.id ASC",
+            "SELECT * FROM stock_items ORDER BY id ASC",
+        ]) ?? [];
+
+        $movements = \App\Services\FullExportService::tryFetchAll([
+            "SELECT m.code AS material_codigo, m.name AS material_nome, m.specification AS material_especificacao,
+                    m.classification AS material_classificacao, mu.abbreviation AS unidade_abrev,
+                    sl_from.name AS deposito_origem, sl_to.name AS deposito_destino,
+                    cs_from.name AS obra_origem, cs_to.name AS obra_destino,
+                    po.code AS pedido_codigo, sm.*
+             FROM stock_movements sm
+             LEFT JOIN materials m ON m.id = sm.material_id
+             LEFT JOIN measurement_units mu ON mu.id = m.unit_id
+             LEFT JOIN stock_locations sl_from ON sl_from.id = sm.from_location_id
+             LEFT JOIN stock_locations sl_to ON sl_to.id = sm.to_location_id
+             LEFT JOIN construction_sites cs_from ON cs_from.id = sm.from_site_id
+             LEFT JOIN construction_sites cs_to ON cs_to.id = sm.to_site_id
+             LEFT JOIN purchase_orders po ON po.id = sm.order_id
+             ORDER BY sm.id ASC",
+            "SELECT m.name AS material_nome, sm.*
+             FROM stock_movements sm
+             LEFT JOIN materials m ON m.id = sm.material_id
+             ORDER BY sm.id ASC",
+        ]);
+
+        $locations = \App\Services\FullExportService::tryFetchAll([
+            "SELECT cs.code AS obra_codigo, cs.name AS obra_nome,
+                    (SELECT COUNT(*) FROM stock_items si WHERE si.stock_location_id = sl.id) AS qtd_itens,
+                    sl.*
+             FROM stock_locations sl
+             LEFT JOIN construction_sites cs ON cs.id = sl.construction_site_id
+             ORDER BY sl.id ASC",
+            "SELECT * FROM stock_locations ORDER BY id ASC",
+        ]);
+
+        $export = new \App\Services\FullExportService();
+        $export->addSheet('Estoque', $items);
+        $export->addSheet('Movimentações', $movements);
+        $export->addSheet('Depósitos', $locations);
+        $export->download('estoque_completo_' . date('Y-m-d_His') . '.xlsx');
+    }
+
+    /**
      * CRUD de depósitos/estoques
      */
     public function locations(): void

@@ -19,6 +19,9 @@ ob_start();
         </form>
     </div>
     <div class="d-flex gap-2 flex-wrap">
+        <a href="/admin/stock/export" class="btn btn-outline-success btn-sm" title="Exportar todo o estoque com todas as informações (XLSX)">
+            <i class="bi bi-file-earmark-spreadsheet"></i> Exportar
+        </a>
         <a href="/admin/stock/locations" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-geo-alt"></i> Depósitos
         </a>
