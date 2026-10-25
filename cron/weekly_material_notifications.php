@@ -26,6 +26,12 @@ App\Core\Autoloader::register();
 $config = require ROOT_PATH . '/app/Config/app.php';
 $app = new App\Core\Application($config);
 
+// Modo somente consulta dos pedidos (Config. de Pedidos): nada de lista semanal
+if (App\Core\OrdersReadOnly::isActive()) {
+    echo "Skipped: modo somente consulta de pedidos ativo.\n";
+    return;
+}
+
 use App\Models\WeeklyMaterialRequest;
 use App\Models\Setting;
 use App\Controllers\Admin\WeeklyMaterialController;

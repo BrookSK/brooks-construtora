@@ -21,5 +21,11 @@ if (!$token || $token !== $cronToken) {
     exit;
 }
 
+// Modo somente consulta dos pedidos: não gera ciclos nem envia/cobra listas
+if (App\Core\OrdersReadOnly::isActive()) {
+    echo 'Skipped: modo somente consulta de pedidos ativo.';
+    exit;
+}
+
 // Executar o cron
 require ROOT_PATH . '/cron/weekly_material_notifications.php';

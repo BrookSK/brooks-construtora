@@ -356,6 +356,7 @@ class Router
         $path = implode('/', $segments);
 
         // Verifica se a rota existe diretamente
+        $routeKey = $path;
         if (isset($routes[$path])) {
             $controllerName = 'App\\Controllers\\Admin\\' . $routes[$path][0];
             $methodName = $routes[$path][1];
@@ -368,6 +369,7 @@ class Router
                     $controllerName = 'App\\Controllers\\Admin\\' . $routes[$testPath][0];
                     $methodName = $routes[$testPath][1];
                     $this->params = array_slice($segments, $i);
+                    $routeKey = $testPath;
                     $found = true;
                     break;
                 }
@@ -377,6 +379,12 @@ class Router
                 $this->show404();
                 return;
             }
+        }
+
+        // Modo somente consulta dos pedidos (Config. de Pedidos)
+        if (OrdersReadOnly::blocks('admin', $routeKey)) {
+            OrdersReadOnly::deny('admin');
+            return;
         }
 
         $this->executeController($controllerName, $methodName);
@@ -576,6 +584,7 @@ class Router
 
         $path = implode('/', $segments);
 
+        $routeKey = $path;
         if (isset($routes[$path])) {
             $controllerName = 'App\\Controllers\\Site\\' . $routes[$path][0];
             $methodName = $routes[$path][1];
@@ -588,6 +597,7 @@ class Router
                     $controllerName = 'App\\Controllers\\Site\\' . $routes[$testPath][0];
                     $methodName = $routes[$testPath][1];
                     $this->params = array_slice($segments, $i);
+                    $routeKey = $testPath;
                     $found = true;
                     break;
                 }
@@ -597,6 +607,12 @@ class Router
                 $this->show404();
                 return;
             }
+        }
+
+        // Modo somente consulta dos pedidos (Config. de Pedidos)
+        if (OrdersReadOnly::blocks('site', $routeKey)) {
+            OrdersReadOnly::deny('site');
+            return;
         }
 
         $this->executeController($controllerName, $methodName);
