@@ -3024,6 +3024,39 @@ class PurchaseOrderController extends Controller
         @set_time_limit(300);
         @ini_set('memory_limit', '512M');
 
+        // Filtro opcional:
+        //  - mode=pending  → pedidos ainda não revisados pelo financeiro
+        //                    (exceto cancelados/rejeitados)
+        //  - ids=1,2,3     → apenas os pedidos selecionados (POST ou GET)
+        $mode = (string) ($_GET['mode'] ?? $_POST['mode'] ?? 'all');
+        $filterIds = null;
+        $fileLabel = 'completo';
+
+        if ($mode === 'pending') {
+            $rows = FullExportService::tryFetchAll([
+                "SELECT id FROM purchase_orders
+                 WHERE financial_reviewed_at IS NULL AND status NOT IN ('cancelled','rejected')",
+            ]) ?? [];
+            $filterIds = array_map('intval', array_column($rows, 'id'));
+            $fileLabel = 'em_andamento';
+        } elseif ($mode === 'selected') {
+            $raw = $_POST['ids'] ?? $_GET['ids'] ?? '';
+            $raw = is_array($raw) ? $raw : explode(',', (string) $raw);
+            $filterIds = array_values(array_unique(array_filter(array_map('intval', $raw), fn($v) => $v > 0)));
+            if (empty($filterIds)) {
+                $this->setFlash('error', 'Selecione ao menos um pedido para exportar.');
+                $this->redirect('/admin/orders');
+                return;
+            }
+            $fileLabel = 'selecionados';
+        }
+
+        // IDs já convertidos para int, seguro para interpolar
+        $inList = $filterIds === null ? null : (empty($filterIds) ? '0' : implode(',', $filterIds));
+        $wherePo = $inList === null ? '' : "WHERE po.id IN ({$inList})";
+        $whereItem = $inList === null ? '' : "WHERE poi.order_id IN ({$inList})";
+        $whereRel = $inList === null ? '' : "WHERE t.order_id IN ({$inList})";
+
         $urgencyLabels = ['low' => 'Baixa', 'medium' => 'Média', 'high' => 'Alta', 'critical' => 'Crítica'];
         $typeLabels = ['material' => 'Material', 'service' => 'Serviço'];
 
@@ -3043,11 +3076,13 @@ class PurchaseOrderController extends Controller
              FROM purchase_orders po
              LEFT JOIN construction_sites cs ON cs.id = po.construction_site_id
              LEFT JOIN suppliers s ON s.id = po.supplier_id
+             {$wherePo}
              ORDER BY po.id ASC",
             // Fallback sem obras / sem multi-fornecedor
             "SELECT s.name AS fornecedor_nome, s.cnpj AS fornecedor_cnpj, {$itemsSub} po.*
              FROM purchase_orders po
              LEFT JOIN suppliers s ON s.id = po.supplier_id
+             {$wherePo}
              ORDER BY po.id ASC",
         ]) ?? [];
 
@@ -3082,11 +3117,13 @@ class PurchaseOrderController extends Controller
              LEFT JOIN material_categories mc ON mc.id = m.category_id
              LEFT JOIN suppliers sa ON sa.id = poi.approved_supplier_id
              LEFT JOIN construction_sites csf ON csf.id = poi.stock_from_site_id
+             {$whereItem}
              ORDER BY poi.order_id ASC, poi.id ASC",
             "SELECT po.id AS pedido_id, po.code AS pedido_codigo, po.status AS pedido_status,
                     po.created_by_name AS solicitante, poi.*
              FROM purchase_order_items poi
              JOIN purchase_orders po ON po.id = poi.order_id
+             {$whereItem}
              ORDER BY poi.order_id ASC, poi.id ASC",
         ]);
         $export->addSheet('Itens', $items);
@@ -3108,17 +3145,19 @@ class PurchaseOrderController extends Controller
                  FROM {$table} t
                  LEFT JOIN purchase_orders po ON po.id = t.order_id
                  {$joins}
+                 {$whereRel}
                  ORDER BY t.order_id ASC, t.id ASC",
                 "SELECT po.code AS pedido_codigo, t.*
                  FROM {$table} t
                  LEFT JOIN purchase_orders po ON po.id = t.order_id
+                 {$whereRel}
                  ORDER BY t.order_id ASC, t.id ASC",
-                "SELECT t.* FROM {$table} t ORDER BY t.id ASC",
+                "SELECT t.* FROM {$table} t {$whereRel} ORDER BY t.id ASC",
             ]);
             $export->addSheet($sheetName, $rows);
         }
 
-        $export->download('pedidos_completo_' . date('Y-m-d_His') . '.xlsx');
+        $export->download('pedidos_' . $fileLabel . '_' . date('Y-m-d_His') . '.xlsx');
     }
 
     private function statusLabel(string $status): string

@@ -19,9 +19,21 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <span class="badge bg-secondary order-count-badge"><?= count($orders) ?> pedidos</span>
     <div class="d-flex flex-wrap gap-1 justify-content-end">
-        <a href="/admin/orders/export-all" class="btn btn-outline-success btn-sm" title="Exportar todos os pedidos com todas as informações (XLSX)">
-            <i class="bi bi-file-earmark-spreadsheet"></i> <span class="d-none d-sm-inline">Exportar Tudo</span><span class="d-sm-none">XLSX</span>
-        </a>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Exportar pedidos com todas as informações (XLSX)">
+                <i class="bi bi-file-earmark-spreadsheet"></i> <span class="d-none d-sm-inline">Exportar</span><span class="d-sm-none">XLSX</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="/admin/orders/export-all"><i class="bi bi-collection"></i> Todos os pedidos</a></li>
+                <li><a class="dropdown-item" href="/admin/orders/export-all?mode=pending"><i class="bi bi-hourglass-split"></i> Em andamento (não revisados pelo financeiro)</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><button type="button" class="dropdown-item" id="btnExportSelected"><i class="bi bi-check2-square"></i> Selecionados (<span id="exportSelectedCount">0</span>)</button></li>
+            </ul>
+        </div>
+        <form id="exportSelectedForm" method="POST" action="/admin/orders/export-all" class="d-none">
+            <input type="hidden" name="mode" value="selected">
+            <input type="hidden" name="ids" id="exportSelectedIds" value="">
+        </form>
         <button type="button" id="btnPrintPdf" class="btn btn-outline-danger btn-sm" title="Imprimir PDF dos pedidos filtrados">
             <i class="bi bi-file-earmark-pdf"></i> <span class="d-none d-sm-inline">Imprimir PDF</span><span class="d-sm-none">PDF</span>
         </button>
@@ -206,6 +218,7 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
+                        <th style="width:28px;"><input type="checkbox" class="form-check-input" id="exportSelectAll" title="Selecionar todos os pedidos visíveis" aria-label="Selecionar todos os pedidos visíveis"></th>
                         <th>Código</th>
                         <th>Obra</th>
                         <th>Fornecedor</th>
@@ -252,6 +265,9 @@
                         data-deadline="<?= !empty($order['deadline']) ? $order['deadline'] : '' ?>"
                         data-items="<?= htmlspecialchars(strtolower($order['items_names'] ?? '')) ?>"
                         data-search="<?= htmlspecialchars(strtolower(($order['code'] ?? '') . ' ' . ($order['supplier_name'] ?? '') . ' ' . $siteName . ' ' . ($order['created_by_name'] ?? '') . ' ' . ($order['description'] ?? ''))) ?>">
+                        <td>
+                            <input type="checkbox" class="form-check-input export-select" value="<?= (int) $order['id'] ?>" aria-label="Selecionar pedido <?= htmlspecialchars($order['code']) ?> para exportação">
+                        </td>
                         <td>
                             <a href="/admin/orders/show/<?= $order['id'] ?>" class="fw-bold text-decoration-none">
                                 <?= htmlspecialchars($order['code']) ?>
@@ -828,7 +844,7 @@
         let totalValue = 0;
         let bodyRows = '';
         visibleRows.forEach(tr => {
-            const code = tr.querySelector('td:nth-child(1) a')?.textContent.trim() || '';
+            const code = tr.querySelector('td:nth-child(2) a')?.textContent.trim() || '';
             const site = tr.dataset.site || '-';
             const supplier = tr.dataset.supplier || 'N/A';
             const requester = tr.dataset.requester || '-';
@@ -867,7 +883,7 @@
             }
 
             // Valor: valor principal + NF (quando houver), extraídos da célula renderizada
-            const valueCell = tr.querySelector('td:nth-child(7)');
+            const valueCell = tr.querySelector('td:nth-child(8)');
             let valueHtml = '-';
             if (valueCell) {
                 const strong = valueCell.querySelector('strong');
@@ -970,6 +986,35 @@
 
     const btnPrintPdf = document.getElementById('btnPrintPdf');
     if (btnPrintPdf) btnPrintPdf.addEventListener('click', printFilteredOrders);
+
+    // ---- Exportação dos pedidos selecionados ----
+    const exportChecks = () => Array.from(document.querySelectorAll('.export-select'));
+    const exportCountEl = document.getElementById('exportSelectedCount');
+    const updateExportCount = () => {
+        if (exportCountEl) exportCountEl.textContent = exportChecks().filter(c => c.checked).length;
+    };
+    document.addEventListener('change', e => {
+        if (e.target.classList && e.target.classList.contains('export-select')) updateExportCount();
+    });
+    const selectAll = document.getElementById('exportSelectAll');
+    if (selectAll) selectAll.addEventListener('change', () => {
+        // Marca/desmarca apenas as linhas visíveis (respeita os filtros)
+        exportChecks().forEach(c => {
+            const tr = c.closest('tr');
+            if (tr && tr.style.display !== 'none') c.checked = selectAll.checked;
+        });
+        updateExportCount();
+    });
+    const btnExportSelected = document.getElementById('btnExportSelected');
+    if (btnExportSelected) btnExportSelected.addEventListener('click', () => {
+        const ids = exportChecks().filter(c => c.checked).map(c => c.value);
+        if (!ids.length) {
+            alert('Marque os pedidos na tabela (caixa à esquerda do código) para exportar.');
+            return;
+        }
+        document.getElementById('exportSelectedIds').value = ids.join(',');
+        document.getElementById('exportSelectedForm').submit();
+    });
 
     // Inicializar
     const hadSavedFilters = loadFilters();
