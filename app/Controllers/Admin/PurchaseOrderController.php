@@ -77,6 +77,11 @@ class PurchaseOrderController extends Controller
      */
     public function create(): void
     {
+        if ($this->newOrdersDisabled()) {
+            $this->redirect('/admin/orders?new_disabled=1');
+            return;
+        }
+
         $suppliers = Supplier::allActive();
         $materials = Material::allActive();
         $categories = MaterialCategory::all('name ASC');
@@ -159,6 +164,12 @@ class PurchaseOrderController extends Controller
      */
     public function store(): void
     {
+        if ($this->newOrdersDisabled()) {
+            $this->setFlash('error', Setting::get('orders_new_disabled_message', '') ?: 'Sistema migrado para a Vetriks. Faça seu pedido por lá.');
+            $this->redirect('/admin/orders?new_disabled=1');
+            return;
+        }
+
         if (!$this->isPost()) {
             $this->redirect('/admin/orders');
             return;
@@ -2654,6 +2665,8 @@ class PurchaseOrderController extends Controller
             'orders_weekly_materials_admin_phone',
             'orders_weekly_materials_admin_name',
             'spare_items_weekly_budget',
+            'orders_new_disabled',
+            'orders_new_disabled_message',
         ];
 
         $data = [];
@@ -2678,6 +2691,9 @@ class PurchaseOrderController extends Controller
         }
         if (!isset($_POST['orders_min_days_enabled'])) {
             $data['orders_min_days_enabled'] = '0';
+        }
+        if (!isset($_POST['orders_new_disabled'])) {
+            $data['orders_new_disabled'] = '0';
         }
 
         Setting::setMultiple($data);
@@ -3158,6 +3174,12 @@ class PurchaseOrderController extends Controller
         }
 
         $export->download('pedidos_' . $fileLabel . '_' . date('Y-m-d_His') . '.xlsx');
+    }
+
+    /** Config. de Pedidos → "Bloquear novos pedidos" */
+    private function newOrdersDisabled(): bool
+    {
+        return Setting::get('orders_new_disabled', '0') === '1';
     }
 
     private function statusLabel(string $status): string

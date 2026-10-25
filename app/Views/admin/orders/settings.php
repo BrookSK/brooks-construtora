@@ -2,6 +2,23 @@
 <?php ob_start(); ?>
 
 <form method="POST" action="/admin/orders/settings/update">
+    <!-- Bloqueio de novos pedidos (migração de sistema) -->
+    <div class="card mb-4 border-warning">
+        <div class="card-header"><i class="bi bi-slash-circle"></i> <strong>Bloquear novos pedidos</strong></div>
+        <div class="card-body">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" name="orders_new_disabled" value="1" id="ordersNewDisabled" <?= ($settings['orders_new_disabled'] ?? '0') === '1' ? 'checked' : '' ?>>
+                <label class="form-check-label fw-bold" for="ordersNewDisabled">Desativar criação de novos pedidos</label>
+            </div>
+            <p class="text-muted small mb-3">
+                Quando ativado, ao clicar em "Novo Pedido" aparece um aviso com a mensagem abaixo e o formulário não abre.
+                Pedidos já existentes continuam funcionando normalmente (cotação, aprovação, compra, transporte, financeiro).
+            </p>
+            <label class="form-label" for="ordersNewDisabledMessage">Mensagem do aviso</label>
+            <textarea class="form-control" name="orders_new_disabled_message" id="ordersNewDisabledMessage" rows="2" placeholder="Sistema migrado para a Vetriks. Faça seu pedido por lá."><?= htmlspecialchars($settings['orders_new_disabled_message'] ?? 'Sistema migrado para a Vetriks. Faça seu pedido por lá.') ?></textarea>
+        </div>
+    </div>
+
     <!-- PIN de acesso rápido -->
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">

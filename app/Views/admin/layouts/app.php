@@ -775,5 +775,48 @@
         };
     })();
     </script>
+
+    <?php
+    // Bloqueio de novos pedidos (Config. de Pedidos → "Bloquear novos pedidos")
+    $ordersNewDisabled = false;
+    $ordersNewDisabledMsg = '';
+    try {
+        $ordersNewDisabled = \App\Models\Setting::get('orders_new_disabled', '0') === '1';
+        $ordersNewDisabledMsg = \App\Models\Setting::get('orders_new_disabled_message', '') ?: 'Sistema migrado para a Vetriks. Faça seu pedido por lá.';
+    } catch (\Throwable $e) {}
+    ?>
+    <?php if ($ordersNewDisabled): ?>
+    <div class="modal fade" id="ordersDisabledModal" tabindex="-1" aria-labelledby="ordersDisabledTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ordersDisabledTitle"><i class="bi bi-info-circle"></i> Novos pedidos desativados</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body" style="white-space:pre-line;"><?= htmlspecialchars($ordersNewDisabledMsg) ?></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        // Intercepta qualquer link para "Novo Pedido" e mostra o aviso
+        document.addEventListener('click', function (e) {
+            const a = e.target.closest('a[href]');
+            if (!a) return;
+            const path = new URL(a.href, location.origin).pathname.replace(/\/+$/, '');
+            if (path !== '/admin/orders/create') return;
+            e.preventDefault();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('ordersDisabledModal')).show();
+        }, true);
+        // Se chegou redirecionado do bloqueio no servidor, abre o aviso
+        if (new URLSearchParams(location.search).get('new_disabled') === '1') {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('ordersDisabledModal')).show();
+        }
+    })();
+    </script>
+    <?php endif; ?>
 </body>
 </html>
