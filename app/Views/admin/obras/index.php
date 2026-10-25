@@ -3,9 +3,14 @@
 
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     <h5 class="mb-0"><i class="bi bi-buildings"></i> Obras</h5>
-    <a href="/admin/obras/create" class="btn btn-primary">
-        <i class="bi bi-plus-lg"></i> Nova Obra
-    </a>
+    <div class="d-flex gap-2">
+        <a href="/admin/obras/responsaveis" class="btn btn-outline-primary">
+            <i class="bi bi-person-check"></i> Responsáveis
+        </a>
+        <a href="/admin/obras/create" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Nova Obra
+        </a>
+    </div>
 </div>
 
 <?php if (!empty($flash)): ?>

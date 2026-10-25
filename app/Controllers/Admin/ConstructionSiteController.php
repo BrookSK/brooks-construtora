@@ -74,6 +74,126 @@ class ConstructionSiteController extends Controller
         return true;
     }
 
+    /** Fases de notificação (mesmas da edição da obra). */
+    private const PHASES = [
+        'quote' => 'Cotação',
+        'approval' => 'Aprovação',
+        'completed' => 'Conclusão',
+        'payment' => 'Pagamento',
+        'delivery' => 'Entrega',
+        'spare' => 'Sobressalentes',
+        'transport' => 'Transporte',
+        'weekly' => 'Lista Semanal',
+    ];
+
+    private const STATUS_LABELS = ['active' => 'Ativa', 'inactive' => 'Inativa', 'completed' => 'Concluída'];
+
+    /** Todos os vínculos obra × fase × usuário. */
+    private function fetchResponsibles(): array
+    {
+        return Database::fetchAll(
+            "SELECT csa.construction_site_id AS site_id, csa.phase, csa.created_at AS vinculado_em,
+                    cs.code AS site_code, cs.name AS site_name, cs.status AS site_status,
+                    pu.id AS user_id, pu.name AS user_name, pu.phone AS user_phone,
+                    pu.email AS user_email, pu.role AS user_role, pu.active AS user_active
+             FROM construction_site_approvers csa
+             INNER JOIN construction_sites cs ON cs.id = csa.construction_site_id
+             INNER JOIN pin_users pu ON pu.id = csa.pin_user_id
+             ORDER BY cs.name ASC, csa.phase ASC, pu.name ASC"
+        );
+    }
+
+    /**
+     * Relação de responsáveis por obra e fase (com filtros por usuário/fase/obra).
+     */
+    public function responsibles(): void
+    {
+        if (!$this->ensureTableExists()) return;
+
+        $rows = $this->fetchResponsibles();
+        $sites = Database::fetchAll("SELECT id, code, name, status FROM construction_sites ORDER BY name ASC");
+
+        // Matriz: obra → fase → [usuários]
+        $matrix = [];
+        $users = [];
+        foreach ($rows as $r) {
+            $matrix[$r['site_id']][$r['phase']][] = $r;
+            $users[$r['user_id']] = $r['user_name'];
+        }
+        asort($users, SORT_NATURAL | SORT_FLAG_CASE);
+
+        $this->view('admin.obras.responsibles', [
+            'sites' => $sites,
+            'matrix' => $matrix,
+            'users' => $users,
+            'phases' => self::PHASES,
+            'statusLabels' => self::STATUS_LABELS,
+            'user' => Auth::user(),
+            'flash' => $this->getFlash(),
+        ]);
+    }
+
+    /**
+     * Exporta a relação (1 linha por vínculo obra × fase × usuário) em XLSX.
+     * Respeita os filtros user_id, phase e status da tela.
+     */
+    public function exportResponsibles(): void
+    {
+        if (!$this->ensureTableExists()) return;
+
+        $userId = (int) ($_GET['user_id'] ?? 0);
+        $phase = (string) ($_GET['phase'] ?? '');
+        $status = (string) ($_GET['status'] ?? '');
+
+        $rows = array_filter($this->fetchResponsibles(), function ($r) use ($userId, $phase, $status) {
+            return (!$userId || (int) $r['user_id'] === $userId)
+                && ($phase === '' || $r['phase'] === $phase)
+                && ($status === '' || $r['site_status'] === $status);
+        });
+
+        $xlsx = new \App\Services\XlsxService();
+        $xlsx->setStrictTypes(true);
+        $xlsx->setSheetName('Responsáveis');
+        $xlsx->setColumnWidths([12, 35, 12, 16, 30, 18, 30, 12, 10, 18]);
+        $xlsx->addRow(['Obra Código', 'Obra', 'Status Obra', 'Fase', 'Usuário', 'Telefone', 'E-mail', 'Perfil', 'Usuário Ativo', 'Vinculado em'], 'header');
+        foreach ($rows as $r) {
+            $xlsx->addRow([
+                (string) ($r['site_code'] ?? ''),
+                (string) $r['site_name'],
+                self::STATUS_LABELS[$r['site_status']] ?? (string) $r['site_status'],
+                self::PHASES[$r['phase']] ?? (string) $r['phase'],
+                (string) $r['user_name'],
+                (string) ($r['user_phone'] ?? ''),
+                (string) ($r['user_email'] ?? ''),
+                (string) ($r['user_role'] ?? ''),
+                (int) $r['user_active'] ? 'Sim' : 'Não',
+                (string) ($r['vinculado_em'] ?? ''),
+            ]);
+        }
+
+        // Aba 2: matriz obra × fase (nomes separados por vírgula)
+        $xlsx->addSheet('Matriz');
+        $xlsx->setColumnWidths(array_merge([12, 35, 12], array_fill(0, count(self::PHASES), 30)));
+        $xlsx->addRow(array_merge(['Obra Código', 'Obra', 'Status'], array_values(self::PHASES)), 'header');
+        $byPhase = [];
+        foreach ($rows as $r) {
+            $byPhase[$r['site_id']]['site'] = $r;
+            $byPhase[$r['site_id']][$r['phase']][] = $r['user_name'];
+        }
+        $sites = Database::fetchAll("SELECT id, code, name, status FROM construction_sites ORDER BY name ASC");
+        foreach ($sites as $s) {
+            if ($status !== '' && $s['status'] !== $status) continue;
+            if (($userId || $phase !== '') && !isset($byPhase[$s['id']])) continue;
+            $line = [(string) ($s['code'] ?? ''), (string) $s['name'], self::STATUS_LABELS[$s['status']] ?? (string) $s['status']];
+            foreach (array_keys(self::PHASES) as $p) {
+                $line[] = implode(', ', $byPhase[$s['id']][$p] ?? []);
+            }
+            $xlsx->addRow($line);
+        }
+
+        $xlsx->download('responsaveis_obras_' . date('Y-m-d_His') . '.xlsx');
+    }
+
     /**
      * Listagem de obras
      */

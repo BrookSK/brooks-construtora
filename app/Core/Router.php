@@ -229,6 +229,8 @@ class Router
             'obras/update' => ['ConstructionSiteController', 'update'],
             'obras/delete' => ['ConstructionSiteController', 'delete'],
             'obras/search' => ['ConstructionSiteController', 'search'],
+            'obras/responsaveis' => ['ConstructionSiteController', 'responsibles'],
+            'obras/responsaveis/export' => ['ConstructionSiteController', 'exportResponsibles'],
 
             // Fornecedores
             'suppliers' => ['SupplierController', 'index'],
