@@ -429,7 +429,6 @@ class PainelObrasService
      * - numero_parcelas (campo do cadastro, quando não houver no Nibo)
      */
     public static function getDashboardData(string $periodo, string $company = 'completo'): array
-    public static function getDashboardData(string $periodo, string $company = 'completo'): array
     {
         // Busca dados enriquecidos DO NIBO
         $data = self::dados($company, $periodo);
