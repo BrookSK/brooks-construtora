@@ -847,8 +847,10 @@ window.poToggleAllCc=function(checked){
     console.log('[DEBUG] Todos CCs desmarcados');
   }
   
-  // Re-renderiza a lista
-  poRenderConfigCc();
+  // Atualiza apenas os checkboxes individuais sem re-renderizar
+  document.querySelectorAll('#po-cfg-cc-list input[type="checkbox"]').forEach(cb=>{
+    cb.checked = checked;
+  });
 };
 
 window.poToggleAllObras=function(checked){
@@ -865,8 +867,10 @@ window.poToggleAllObras=function(checked){
     console.log('[DEBUG] Todas obras desmarcadas');
   }
   
-  // Re-renderiza a lista
-  poRenderConfigObras();
+  // Atualiza apenas os checkboxes individuais sem re-renderizar
+  document.querySelectorAll('#po-cfg-obras-list input[type="checkbox"]').forEach(cb=>{
+    cb.checked = checked;
+  });
 };
 
 // ─── Funções de Busca/Filtro ─────────────────────────────────────────
