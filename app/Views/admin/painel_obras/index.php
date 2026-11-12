@@ -739,6 +739,10 @@ window.poRenderConfigCc=function(){
   // Atualiza checkbox "Selecionar Todos" após renderizar
   const allChecked = selected.length === 0 || selected.length === _d.centros_custo.length;
   document.getElementById('po-cfg-select-all').checked = allChecked;
+  
+  // Limpa campo de busca
+  const searchField = document.getElementById('po-cfg-search-cc');
+  if(searchField) searchField.value = '';
 };
 
 window.poRenderConfigObras=function(){
@@ -761,6 +765,10 @@ window.poRenderConfigObras=function(){
   // Atualiza checkbox "Selecionar Todos" após renderizar
   const allChecked = selected.length === 0 || selected.length === _d.obras.length;
   document.getElementById('po-cfg-select-all-obras').checked = allChecked;
+  
+  // Limpa campo de busca
+  const searchField = document.getElementById('po-cfg-search-obras');
+  if(searchField) searchField.value = '';
 };
 
 window.poToggleCc=function(ccId,checked){
@@ -860,6 +868,54 @@ window.poToggleAllObras=function(checked){
   // Re-renderiza a lista
   poRenderConfigObras();
 };
+
+// ─── Funções de Busca/Filtro ─────────────────────────────────────────
+
+window.poFilterCcList=function(searchTerm){
+  if(searchTerm===undefined){
+    searchTerm = document.getElementById('po-cfg-search-cc').value;
+  }
+  searchTerm = (searchTerm || '').toLowerCase();
+  
+  const labels = document.querySelectorAll('#po-cfg-cc-list label');
+  
+  let visibleCount = 0;
+  labels.forEach(label=>{
+    const text = label.textContent.toLowerCase();
+    if(text.includes(searchTerm)){
+      label.style.display = 'flex';
+      visibleCount++;
+    }else{
+      label.style.display = 'none';
+    }
+  });
+  
+  console.log('[DEBUG] Filtro CC:', searchTerm, '- Visíveis:', visibleCount, 'de', labels.length);
+};
+
+window.poFilterObrasList=function(searchTerm){
+  if(searchTerm===undefined){
+    searchTerm = document.getElementById('po-cfg-search-obras').value;
+  }
+  searchTerm = (searchTerm || '').toLowerCase();
+  
+  const labels = document.querySelectorAll('#po-cfg-obras-list label');
+  
+  let visibleCount = 0;
+  labels.forEach(label=>{
+    const text = label.textContent.toLowerCase();
+    if(text.includes(searchTerm)){
+      label.style.display = 'flex';
+      visibleCount++;
+    }else{
+      label.style.display = 'none';
+    }
+  });
+  
+  console.log('[DEBUG] Filtro Obras:', searchTerm, '- Visíveis:', visibleCount, 'de', labels.length);
+};
+
+// ─────────────────────────────────────────────────────────────────────
 
 window.poSalvarConfig=function(){
   console.log('[DEBUG] Salvando configurações...');
@@ -1000,9 +1056,12 @@ window.poMudarTab=function(tab){
       </h6>
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;max-height:300px;overflow-y:auto">
         <div style="margin-bottom:10px">
+          <input type="text" id="po-cfg-search-cc" placeholder="Buscar centro de custo..." 
+                 oninput="poFilterCcList(this.value)"
+                 style="width:100%;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;margin-bottom:8px">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#2563eb;font-size:13px">
             <input type="checkbox" id="po-cfg-select-all" onchange="poToggleAllCc(this.checked)" style="width:16px;height:16px">
-            <span style="font-weight:600">Selecionar Todos</span>
+            <span style="font-weight:600">Selecionar / Desmarcar Todos</span>
           </label>
         </div>
         <div style="border-top:1px solid #e2e8f0;padding-top:10px;display:grid;gap:8px" id="po-cfg-cc-list">
@@ -1015,11 +1074,14 @@ window.poMudarTab=function(tab){
       <h6 style="color:#0f172a;font-size:13px;font-weight:600;margin-bottom:12px">
         <i class="bi bi-buildings"></i> Obras Visíveis
       </h6>
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;max-height:200px;overflow-y:auto">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;max-height:300px;overflow-y:auto">
         <div style="margin-bottom:10px">
+          <input type="text" id="po-cfg-search-obras" placeholder="Buscar obra por código ou nome..." 
+                 oninput="poFilterObrasList(this.value)"
+                 style="width:100%;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;margin-bottom:8px">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#2563eb;font-size:13px">
             <input type="checkbox" id="po-cfg-select-all-obras" onchange="poToggleAllObras(this.checked)" style="width:16px;height:16px">
-            <span style="font-weight:600">Selecionar Todas</span>
+            <span style="font-weight:600">Selecionar / Desmarcar Todas</span>
           </label>
         </div>
         <div style="border-top:1px solid #e2e8f0;padding-top:10px;display:grid;gap:8px" id="po-cfg-obras-list">
