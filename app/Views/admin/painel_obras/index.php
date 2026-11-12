@@ -1,6 +1,6 @@
 <?php $pageTitle = 'Painel de Obras'; $currentPage = 'painel_obras'; ?>
 <?php ob_start(); ?>
-<link rel="stylesheet" href="/css/painel-obras-light.css">
+<link rel="stylesheet" href="/assets/css/painel-obras-light.css">
 <style>
 /* Override do layout para tema escuro nesta página */
 .main-content { background: #f8f9fa !important; }

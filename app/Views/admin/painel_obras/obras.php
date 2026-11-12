@@ -1,6 +1,6 @@
 <?php $pageTitle = 'Obras — Painel Financeiro'; $currentPage = 'painel_obras'; ?>
 <?php ob_start(); ?>
-<link rel="stylesheet" href="/css/painel-obras-light.css">
+<link rel="stylesheet" href="/assets/css/painel-obras-light.css">
 <style>
 .main-content{background:#0b1220!important} body{background:#0b1220!important}
 .top-bar{background:#151f32!important;color:#e2e8f0!important;box-shadow:none!important;border-bottom:1px solid rgba(255,255,255,.06)!important}
