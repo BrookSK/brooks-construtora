@@ -538,30 +538,6 @@ class PainelObrasService
                 }
             }
             
-            // ADICIONA LANÇAMENTOS MANUAIS REALIZADOS (se tabela existir)
-            try {
-                $lancsManuais = Database::fetchAll(
-                    "SELECT l.valor, c.nome AS categoria_nome
-                     FROM painel_obras_lancamentos l
-                     LEFT JOIN painel_obras_categorias_servico c ON c.id = l.categoria_id
-                     WHERE l.obra_id = ? AND l.status = 'Realizado' AND l.tipo = 'Despesa'",
-                    [$obraId]
-                );
-                
-                foreach ($lancsManuais as $lm) {
-                    $valor = (float)$lm['valor'];
-                    $gasto += $valor;
-                    
-                    $catObra = $lm['categoria_nome'] ?? 'Lançamento Manual';
-                    if (!isset($gastoDetalhado[$catObra])) {
-                        $gastoDetalhado[$catObra] = 0;
-                    }
-                    $gastoDetalhado[$catObra] += $valor;
-                }
-            } catch (\Throwable $e) {
-                // Tabela não existe ou erro - ignora silenciosamente
-            }
-            
             // A PAGAR do Nibo (status='open' ou 'overdue')
             $aPagar = 0;
             $aPagarDetalhado = [];
@@ -580,30 +556,6 @@ class PainelObrasService
                     
                     $lancsAPagar[] = $l;
                 }
-            }
-            
-            // ADICIONA LANÇAMENTOS MANUAIS PREVISTOS (se tabela existir)
-            try {
-                $lancsManuaisPrevistos = Database::fetchAll(
-                    "SELECT l.valor, c.nome AS categoria_nome
-                     FROM painel_obras_lancamentos l
-                     LEFT JOIN painel_obras_categorias_servico c ON c.id = l.categoria_id
-                     WHERE l.obra_id = ? AND l.status = 'Previsto' AND l.tipo = 'Despesa'",
-                    [$obraId]
-                );
-                
-                foreach ($lancsManuaisPrevistos as $lm) {
-                    $valor = (float)$lm['valor'];
-                    $aPagar += $valor;
-                    
-                    $catObra = $lm['categoria_nome'] ?? 'Lançamento Manual';
-                    if (!isset($aPagarDetalhado[$catObra])) {
-                        $aPagarDetalhado[$catObra] = 0;
-                    }
-                    $aPagarDetalhado[$catObra] += $valor;
-                }
-            } catch (\Throwable $e) {
-                // Tabela não existe ou erro - ignora silenciosamente
             }
             
             // A RECEBER do Nibo (receivables)
