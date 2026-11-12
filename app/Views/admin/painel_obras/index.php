@@ -780,22 +780,27 @@ window.poToggleCc=function(ccId,checked){
   }
   
   // Se lista estava vazia (= todos selecionados), inicializa com todos os IDs
-  if(_poConfig.centros_custo_visiveis.length === 0) {
+  if(_poConfig.centros_custo_visiveis.length === 0 && !checked) {
+    // Só inicializa se estiver DESMARCANDO (pois vazio = todos marcados)
     _poConfig.centros_custo_visiveis = _d.centros_custo.map(cc=>cc.id);
-    console.log('[DEBUG] Lista inicializada com todos os CCs');
+    console.log('[DEBUG] Lista inicializada com todos os CCs:', _poConfig.centros_custo_visiveis);
   }
   
   if(checked){
     // Adiciona se não estiver na lista
     if(!_poConfig.centros_custo_visiveis.includes(ccId)){
       _poConfig.centros_custo_visiveis.push(ccId);
+      console.log('[DEBUG] CC adicionado:', ccId);
     }
   }else{
     // Remove da lista
+    const lengthBefore = _poConfig.centros_custo_visiveis.length;
     _poConfig.centros_custo_visiveis = _poConfig.centros_custo_visiveis.filter(id=>id!==ccId);
+    console.log('[DEBUG] CC removido:', ccId, '- Antes:', lengthBefore, 'Depois:', _poConfig.centros_custo_visiveis.length);
   }
   
-  console.log('[DEBUG] CCs visíveis:', _poConfig.centros_custo_visiveis.length, 'de', _d.centros_custo.length);
+  console.log('[DEBUG] CCs visíveis ATUAIS:', _poConfig.centros_custo_visiveis);
+  console.log('[DEBUG] Total:', _poConfig.centros_custo_visiveis.length, 'de', _d.centros_custo.length);
   
   // Atualiza checkbox "Selecionar Todos"
   const allSelected = _poConfig.centros_custo_visiveis.length === _d.centros_custo.length;
@@ -811,22 +816,27 @@ window.poToggleObra=function(obraId,checked){
   }
   
   // Se lista estava vazia (= todos selecionados), inicializa com todos os IDs
-  if(_poConfig.obras_visiveis.length === 0) {
+  if(_poConfig.obras_visiveis.length === 0 && !checked) {
+    // Só inicializa se estiver DESMARCANDO (pois vazio = todos marcados)
     _poConfig.obras_visiveis = _d.obras.map(o=>o.id);
-    console.log('[DEBUG] Lista inicializada com todas as obras');
+    console.log('[DEBUG] Lista inicializada com todas as obras:', _poConfig.obras_visiveis);
   }
   
   if(checked){
     // Adiciona se não estiver na lista
     if(!_poConfig.obras_visiveis.includes(obraId)){
       _poConfig.obras_visiveis.push(obraId);
+      console.log('[DEBUG] Obra adicionada:', obraId);
     }
   }else{
     // Remove da lista
+    const lengthBefore = _poConfig.obras_visiveis.length;
     _poConfig.obras_visiveis = _poConfig.obras_visiveis.filter(id=>id!==obraId);
+    console.log('[DEBUG] Obra removida:', obraId, '- Antes:', lengthBefore, 'Depois:', _poConfig.obras_visiveis.length);
   }
   
-  console.log('[DEBUG] Obras visíveis:', _poConfig.obras_visiveis.length, 'de', _d.obras.length);
+  console.log('[DEBUG] Obras visíveis ATUAIS:', _poConfig.obras_visiveis);
+  console.log('[DEBUG] Total:', _poConfig.obras_visiveis.length, 'de', _d.obras.length);
   
   // Atualiza checkbox "Selecionar Todos"
   const allSelected = _poConfig.obras_visiveis.length === _d.obras.length;
@@ -922,16 +932,21 @@ window.poFilterObrasList=function(searchTerm){
 // ─────────────────────────────────────────────────────────────────────
 
 window.poSalvarConfig=function(){
-  console.log('[DEBUG] Salvando configurações...');
-  console.log('[DEBUG] CCs visíveis:', _poConfig.centros_custo_visiveis);
-  console.log('[DEBUG] Obras visíveis:', _poConfig.obras_visiveis);
+  console.log('[DEBUG] ========== SALVANDO CONFIGURAÇÕES ==========');
+  console.log('[DEBUG] Estado atual do _poConfig:', JSON.parse(JSON.stringify(_poConfig)));
+  console.log('[DEBUG] CCs visíveis (length):', _poConfig.centros_custo_visiveis?.length);
+  console.log('[DEBUG] CCs visíveis (array):', _poConfig.centros_custo_visiveis);
+  console.log('[DEBUG] Obras visíveis (length):', _poConfig.obras_visiveis?.length);
+  console.log('[DEBUG] Obras visíveis (array):', _poConfig.obras_visiveis);
+  console.log('[DEBUG] Total de CCs disponíveis:', _d.centros_custo?.length);
+  console.log('[DEBUG] Total de obras disponíveis:', _d.obras?.length);
   
   // Se todos estão selecionados, salva array vazio (= todos visíveis)
   const ccTodos = _d.centros_custo && _poConfig.centros_custo_visiveis.length === _d.centros_custo.length;
   const obrasTodas = _d.obras && _poConfig.obras_visiveis.length === _d.obras.length;
   
-  console.log('[DEBUG] Todos CCs selecionados?', ccTodos);
-  console.log('[DEBUG] Todas obras selecionadas?', obrasTodas);
+  console.log('[DEBUG] Todos CCs selecionados?', ccTodos, '(', _poConfig.centros_custo_visiveis.length, '===', _d.centros_custo?.length, ')');
+  console.log('[DEBUG] Todas obras selecionadas?', obrasTodas, '(', _poConfig.obras_visiveis.length, '===', _d.obras?.length, ')');
   
   const configToSave = {
     centros_custo_visiveis: ccTodos ? [] : _poConfig.centros_custo_visiveis,
@@ -939,7 +954,9 @@ window.poSalvarConfig=function(){
     filtros_ativos: _poConfig.filtros_ativos || {}
   };
   
-  console.log('[DEBUG] Config a ser salva:', configToSave);
+  console.log('[DEBUG] ========== CONFIG A SER ENVIADA ==========');
+  console.log('[DEBUG]', JSON.stringify(configToSave, null, 2));
+  console.log('[DEBUG] ============================================');
   
   fetch('/admin/painel-obras/config/save', {
     method:'POST',
@@ -948,7 +965,9 @@ window.poSalvarConfig=function(){
   })
   .then(r=>r.json())
   .then(res=>{
-    console.log('[DEBUG] Resposta do servidor:', res);
+    console.log('[DEBUG] ========== RESPOSTA DO SERVIDOR ==========');
+    console.log('[DEBUG]', res);
+    console.log('[DEBUG] ============================================');
     if(res.ok){
       poToast('Configurações salvas!');
       poFecharConfig();
@@ -959,7 +978,9 @@ window.poSalvarConfig=function(){
     }
   })
   .catch(err=>{
-    console.error('[DEBUG] Erro ao salvar:', err);
+    console.error('[DEBUG] ========== ERRO AO SALVAR ==========');
+    console.error('[DEBUG]', err);
+    console.error('[DEBUG] ======================================');
     poToast('Erro de conexão','error');
   });
 };
