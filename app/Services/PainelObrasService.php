@@ -500,7 +500,7 @@ class PainelObrasService
             // Filtra lançamentos desta obra
             $lancsObra = array_filter($lancamentos, fn($l) => $l['obra_id'] === $obraId);
             
-            // Gasto REAL do Nibo (somente status='paid')
+            // Gasto REAL do Nibo (somente status='paid' E type='payable' - DESPESAS)
             $gasto = 0;
             $gastoDetalhado = []; // Por categoria de obra
             $gastoDetalhado_nibo = []; // Por categoria Nibo (original)
@@ -508,7 +508,8 @@ class PainelObrasService
             $lancsGastos = [];
             
             foreach ($lancsObra as $l) {
-                if ($l['status'] === 'paid') {
+                // IMPORTANTE: Só conta como GASTO se for DESPESA (payable) e estiver PAGO
+                if ($l['status'] === 'paid' && $l['type'] === 'payable') {
                     $valor = (float)$l['valor_rateado'];
                     $gasto += $valor;
                     
@@ -538,13 +539,26 @@ class PainelObrasService
                 }
             }
             
-            // A PAGAR do Nibo (status='open' ou 'overdue')
+            // RECEITAS RECEBIDAS (receivable + paid)
+            $receitasRecebidas = 0;
+            $lancsReceitasRecebidas = [];
+            
+            foreach ($lancsObra as $l) {
+                if ($l['type'] === 'receivable' && $l['status'] === 'paid') {
+                    $valor = (float)$l['valor_rateado'];
+                    $receitasRecebidas += $valor;
+                    $lancsReceitasRecebidas[] = $l;
+                }
+            }
+            
+            // A PAGAR do Nibo (status='open' ou 'overdue' E type='payable' - DESPESAS)
             $aPagar = 0;
             $aPagarDetalhado = [];
             $lancsAPagar = [];
             
             foreach ($lancsObra as $l) {
-                if (in_array($l['status'], ['open', 'overdue'])) {
+                // Só conta como A PAGAR se for DESPESA (payable)
+                if ($l['type'] === 'payable' && in_array($l['status'], ['open', 'overdue'])) {
                     $valor = (float)$l['valor_rateado'];
                     $aPagar += $valor;
                     
@@ -558,7 +572,7 @@ class PainelObrasService
                 }
             }
             
-            // A RECEBER do Nibo (receivables)
+            // A RECEBER do Nibo (receivables - RECEITAS)
             $aReceber = 0;
             $lancsAReceber = [];
             

@@ -1097,7 +1097,28 @@ window.poVerLancamentos=function(obraId,codigo){
   const obra=_d.obras.find(o=>o.id===obraId);
   
   document.getElementById('po-modal-title').textContent='Lançamentos da Obra '+codigo;
-  document.getElementById('po-modal-subtitle').textContent=(obra?obra.nome:'')+' • Total gasto: '+BRL(obra?obra.gasto:0);
+  
+  // Calcula totais de receitas e despesas em "Pagos"
+  let totalReceitas = 0;
+  let totalDespesas = 0;
+  lancs.pagos.forEach(l => {
+    if (l.type === 'receivable') {
+      totalReceitas += (l.valor_rateado || 0);
+    } else {
+      totalDespesas += (l.valor_rateado || 0);
+    }
+  });
+  
+  // Adiciona resumo visual no subtítulo com cores
+  const saldo = totalReceitas - totalDespesas;
+  const resumoHtml = `
+    <span>${obra?obra.nome:''}</span> • 
+    <span style="color:#dc2626">Despesas: ${BRL(totalDespesas)}</span> • 
+    <span style="color:#059669">Receitas: ${BRL(totalReceitas)}</span> • 
+    <span style="color:${saldo >= 0 ? '#059669' : '#dc2626'};font-weight:600">Saldo: ${BRL(saldo)}</span>
+  `;
+  document.getElementById('po-modal-subtitle').innerHTML = resumoHtml;
+  
   document.getElementById('po-tab-count-pagos').textContent=lancs.pagos.length;
   document.getElementById('po-tab-count-a_pagar').textContent=lancs.a_pagar.length;
   document.getElementById('po-tab-count-a_receber').textContent=lancs.a_receber.length;
@@ -1127,19 +1148,36 @@ window.poMudarTab=function(tab){
     const statusLabel=l.status==='paid'?'Pago':l.status==='overdue'?'Vencido':'Em aberto';
     const catNome=l.categoria_nibo_nome||'Sem categoria';
     const catObra=l.categoria_obra||'Não mapeado';
-    return `<div class="po-lanc-item">
+    
+    // Identifica se é RECEITA ou DESPESA
+    const isReceita = l.type === 'receivable';
+    const tipoLabel = isReceita ? 'RECEITA' : 'DESPESA';
+    const tipoBg = isReceita ? 'rgba(16,185,129,.08)' : 'rgba(239,68,68,.08)';
+    const tipoBorder = isReceita ? 'rgba(16,185,129,.3)' : 'rgba(239,68,68,.3)';
+    const tipoColor = isReceita ? '#059669' : '#dc2626';
+    const tipoIcon = isReceita ? 'bi-arrow-down-circle-fill' : 'bi-arrow-up-circle-fill';
+    
+    return `<div class="po-lanc-item" style="background:${tipoBg};border:1px solid ${tipoBorder};border-left:4px solid ${tipoColor}">
       <div class="po-lanc-header">
         <div>
-          <div style="font-weight:600;color:var(--po-txt);margin-bottom:4px">${l.description||'—'}</div>
-          <div class="po-lanc-info"><strong>Fornecedor:</strong> ${l.contact_name||'—'}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <i class="${tipoIcon}" style="color:${tipoColor};font-size:18px" title="${tipoLabel}"></i>
+            <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${isReceita?'rgba(16,185,129,.2)':'rgba(239,68,68,.2)'};color:${tipoColor};letter-spacing:0.5px">${tipoLabel}</span>
+            <span style="font-weight:600;color:var(--po-txt)">${l.description||'—'}</span>
+          </div>
+          <div class="po-lanc-info"><strong style="color:${tipoColor}">${isReceita?'Cliente':'Fornecedor'}:</strong> ${l.contact_name||'—'}</div>
           <div class="po-lanc-info"><strong>Vencimento:</strong> ${l.due_date?l.due_date.substring(0,10).split('-').reverse().join('/'):'—'}</div>
           <div class="po-lanc-info"><strong>Centro de custo:</strong> ${l.cost_center||'—'}</div>
-          <span class="po-lanc-cat" title="Categoria Nibo original"><i class="bi bi-tag"></i> ${catNome}</span>
-          <span class="po-lanc-cat" style="background:rgba(34,211,238,.15);color:var(--po-cyan)" title="Categoria de obra mapeada"><i class="bi bi-folder"></i> ${catObra}</span>
+          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+            <span class="po-lanc-cat" title="Categoria Nibo original"><i class="bi bi-tag"></i> ${catNome}</span>
+            <span class="po-lanc-cat" style="background:rgba(34,211,238,.15);color:var(--po-cyan)" title="Categoria de obra mapeada"><i class="bi bi-folder"></i> ${catObra}</span>
+          </div>
         </div>
         <div style="text-align:right">
-          <div class="po-lanc-valor">${BRL(l.valor_rateado||0)}</div>
-          <span class="po-pill ${statusClass}" style="margin-top:4px"><span class="dot" style="background:var(--po-${statusClass==='ok'?'green':statusClass==='danger'?'red':'yellow'})"></span>${statusLabel}</span>
+          <div class="po-lanc-valor" style="color:${tipoColor};font-size:20px;font-weight:700">
+            ${isReceita?'+ ':' '} ${BRL(l.valor_rateado||0)}
+          </div>
+          <span class="po-pill ${statusClass}" style="margin-top:6px"><span class="dot" style="background:var(--po-${statusClass==='ok'?'green':statusClass==='danger'?'red':'yellow'})"></span>${statusLabel}</span>
         </div>
       </div>
     </div>`;

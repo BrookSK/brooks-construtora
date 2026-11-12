@@ -349,47 +349,36 @@ class PainelObrasController extends Controller
     public function obrasCategorias(): void
     {
         $company = (string) $this->input('company', 'brooks');
-        $periodo = (string) $this->input('periodo', date('Y-m'));
         
         try {
-            // Busca dados do dashboard para pegar apenas categorias com gastos REAIS
-            $dashboardData = PainelObrasService::getDashboardData($periodo, $company);
+            // Busca categorias DIRETAMENTE DO NIBO
+            $categories = NiboService::categories($company);
             
-            // Pega categorias que têm gastos ou a pagar (valores > 0)
-            $categoriasComGasto = [];
-            foreach (($dashboardData['gasto_por_cat'] ?? []) as $cat => $valor) {
-                if ($valor > 0) {
-                    $categoriasComGasto[] = $cat;
-                }
-            }
+            error_log('[PainelObras] Total de categorias do Nibo: ' . count($categories));
             
-            $categoriasComAPagar = [];
-            foreach (($dashboardData['a_pagar_por_cat'] ?? []) as $cat => $valor) {
-                if ($valor > 0) {
-                    $categoriasComAPagar[] = $cat;
-                }
-            }
+            // Formata para o frontend (todas as categorias para ambos os tipos)
+            $categoriasFormatadas = array_map(function($cat) {
+                return [
+                    'id' => $cat['id'],  // ID do Nibo
+                    'nome' => $cat['name'],
+                    'codigo' => $cat['id'],
+                ];
+            }, $categories);
             
-            // Combina e remove duplicados
-            $categorias = array_unique(array_merge($categoriasComGasto, $categoriasComAPagar));
-            
-            // Remove "Sem categoria / Não mapeado" da lista
-            $categorias = array_filter($categorias, fn($cat) => $cat !== 'Sem categoria / Não mapeado');
-            
-            // Ordena alfabeticamente
-            sort($categorias);
-            
-            error_log('[PainelObras] Categorias COM gastos > 0 retornadas: ' . count($categorias) . ' - ' . implode(', ', array_slice($categorias, 0, 5)));
-            
-            // Retorna no formato esperado pelo frontend (separado por tipo)
+            // Retorna as mesmas categorias para Construção e Reforma
+            // (o usuário decide quais usar em cada obra)
             $this->json([
-                'Construção' => $categorias,
-                'Reforma' => $categorias, // Mesmas categorias para ambos os tipos
+                'Construção' => $categoriasFormatadas,
+                'Reforma' => $categoriasFormatadas,
             ]);
+            
         } catch (\Throwable $e) {
-            error_log('[PainelObrasController] Erro ao buscar categorias: ' . $e->getMessage());
-            // Fallback vazio se houver erro
-            $this->json(['Construção' => [], 'Reforma' => []]);
+            error_log('[PainelObrasController] Erro ao buscar categorias do Nibo: ' . $e->getMessage());
+            $this->json([
+                'Construção' => [],
+                'Reforma' => [],
+                'erro' => $e->getMessage()
+            ]);
         }
     }
 
@@ -575,25 +564,23 @@ class PainelObrasController extends Controller
         $obraId = (int)$this->input('obra_id',0);
         
         try {
-            // Busca os valores orçados salvos na tabela painel_obras_custos_previstos
+            // Busca os valores orçados salvos (com ID do Nibo)
             $linhas = Database::fetchAll(
                 "SELECT 
                     cp.id,
                     cp.obra_id,
-                    cp.categoria_id,
+                    cp.categoria_nibo_id,
+                    cp.categoria_nome,
                     cp.valor_previsto,
                     cp.observacoes,
-                    cp.updated_at,
-                    c.nome as categoria_nome,
-                    c.codigo as categoria_codigo
+                    cp.updated_at
                 FROM painel_obras_custos_previstos cp
-                JOIN painel_obras_categorias_servico c ON c.id = cp.categoria_id
                 WHERE cp.obra_id = ?
-                ORDER BY c.ordem, c.nome",
+                ORDER BY cp.categoria_nome",
                 [$obraId]
             );
             
-            // Formata para o frontend esperar
+            // Formata para o frontend esperar (nome => valor)
             $valores = [];
             foreach ($linhas as $linha) {
                 $valores[$linha['categoria_nome']] = $linha['valor_previsto'];
@@ -628,7 +615,7 @@ class PainelObrasController extends Controller
         try { 
             $obra = PainelObra::find($obraId); 
         } catch (\Throwable $e) { 
-            $this->json(['ok'=>false,'error'=>'Migração não executada.'],500); 
+            $this->json(['ok'=>false,'error'=>'Tabela não existe. Execute a migração.'],500); 
             return; 
         }
         
@@ -639,21 +626,7 @@ class PainelObrasController extends Controller
         
         $valores = $this->input('valores',[]);
         
-        // Busca todas as categorias personalizadas ativas
-        try {
-            $categoriasDb = Database::fetchAll(
-                "SELECT id, codigo, nome FROM painel_obras_categorias_servico WHERE ativo = 1"
-            );
-        } catch (\Throwable $e) {
-            $this->json(['ok'=>false,'error'=>'Erro ao buscar categorias: ' . $e->getMessage()],500);
-            return;
-        }
-        
-        // Cria um mapa nome => id
-        $categoriaMap = [];
-        foreach ($categoriasDb as $cat) {
-            $categoriaMap[$cat['nome']] = $cat['id'];
-        }
+        error_log('[ORCAMENTO] Valores recebidos: ' . print_r($valores, true));
         
         // Verifica se há algum valor preenchido
         $totalOrcado = 0;
@@ -664,61 +637,91 @@ class PainelObrasController extends Controller
             }
         }
         
-        // Valida se há pelo menos um valor
         if ($totalOrcado <= 0) {
             $this->json(['ok'=>false,'error'=>'Informe pelo menos um valor orçado.'],422);
             return;
         }
         
-        // Salva os valores na tabela painel_obras_custos_previstos
+        // Busca categorias do Nibo para pegar o ID
+        try {
+            $company = $obra['company'] ?? 'brooks';
+            $categoriasNibo = NiboService::categories($company);
+            
+            // Cria mapa nome => id
+            $categoriaMap = [];
+            foreach ($categoriasNibo as $cat) {
+                $categoriaMap[$cat['name']] = $cat['id'];
+            }
+            
+            error_log('[ORCAMENTO] Categorias do Nibo mapeadas: ' . count($categoriaMap));
+            
+        } catch (\Throwable $e) {
+            error_log('[ORCAMENTO] Erro ao buscar categorias do Nibo: ' . $e->getMessage());
+            $this->json(['ok'=>false,'error'=>'Erro ao buscar categorias do Nibo.'],500);
+            return;
+        }
+        
+        // Salva os valores usando o ID da categoria do Nibo
         $categoriasInseridas = 0;
         $categoriasAtualizadas = 0;
+        $erros = [];
         
         foreach ($valores as $catNome => $val) {
             $valorOrcado = is_numeric($val) ? (float)$val : $this->parseMoeda($val);
             
-            // Só processa se valor > 0
             if ($valorOrcado <= 0) {
                 continue;
             }
             
-            // Busca o ID da categoria
+            // Busca o ID da categoria no Nibo
             if (!isset($categoriaMap[$catNome])) {
-                error_log("[PainelObrasController] Categoria não encontrada: $catNome");
+                $erro = "Categoria do Nibo não encontrada: $catNome";
+                error_log("[ORCAMENTO] $erro");
+                $erros[] = $erro;
                 continue;
             }
             
-            $categoriaId = $categoriaMap[$catNome];
+            $categoriaNiboId = $categoriaMap[$catNome];
             
             try {
-                // Verifica se já existe um registro para esta obra + categoria
+                // Verifica se já existe
                 $existe = Database::fetch(
-                    "SELECT id FROM painel_obras_custos_previstos WHERE obra_id = ? AND categoria_id = ?",
-                    [$obraId, $categoriaId]
+                    "SELECT id FROM painel_obras_custos_previstos WHERE obra_id = ? AND categoria_nibo_id = ?",
+                    [$obraId, $categoriaNiboId]
                 );
                 
                 if ($existe) {
                     // Atualiza
                     Database::query(
-                        "UPDATE painel_obras_custos_previstos SET valor_previsto = ?, updated_at = NOW() WHERE obra_id = ? AND categoria_id = ?",
-                        [$valorOrcado, $obraId, $categoriaId]
+                        "UPDATE painel_obras_custos_previstos 
+                         SET valor_previsto = ?, categoria_nome = ?, updated_at = NOW() 
+                         WHERE obra_id = ? AND categoria_nibo_id = ?",
+                        [$valorOrcado, $catNome, $obraId, $categoriaNiboId]
                     );
                     $categoriasAtualizadas++;
                 } else {
                     // Insere novo
                     Database::query(
-                        "INSERT INTO painel_obras_custos_previstos (obra_id, categoria_id, valor_previsto, created_at) VALUES (?, ?, ?, NOW())",
-                        [$obraId, $categoriaId, $valorOrcado]
+                        "INSERT INTO painel_obras_custos_previstos 
+                         (obra_id, categoria_nibo_id, categoria_nome, valor_previsto, created_at) 
+                         VALUES (?, ?, ?, ?, NOW())",
+                        [$obraId, $categoriaNiboId, $catNome, $valorOrcado]
                     );
                     $categoriasInseridas++;
                 }
             } catch (\Throwable $e) {
-                error_log('[PainelObrasController] Erro ao salvar orçamento: ' . $e->getMessage());
+                $erro = 'Erro ao salvar ' . $catNome . ': ' . $e->getMessage();
+                error_log('[ORCAMENTO] ' . $erro);
+                $erros[] = $erro;
             }
         }
         
         if ($categoriasInseridas === 0 && $categoriasAtualizadas === 0) {
-            $this->json(['ok'=>false,'error'=>'Nenhuma categoria foi salva. Verifique os valores informados.'],422);
+            $msgErro = 'Nenhuma categoria foi salva.';
+            if (!empty($erros)) {
+                $msgErro .= ' Erros: ' . implode('; ', $erros);
+            }
+            $this->json(['ok'=>false,'error'=>$msgErro],422);
             return;
         }
         
@@ -726,7 +729,8 @@ class PainelObrasController extends Controller
             'ok' => true, 
             'inseridas' => $categoriasInseridas,
             'atualizadas' => $categoriasAtualizadas,
-            'total' => $categoriasInseridas + $categoriasAtualizadas
+            'total' => $categoriasInseridas + $categoriasAtualizadas,
+            'erros' => $erros
         ]);
     }
 

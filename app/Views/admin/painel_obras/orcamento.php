@@ -224,13 +224,23 @@ function orcSalvar(){
   
   // Adiciona valores formatados corretamente
   let temValor = false;
+  let valoresLog = {};
+  
   document.querySelectorAll('.orc-val').forEach(i=>{
     const valor=parseMoeda(i.value);
+    const catNome = i.dataset.cat;
+    
+    console.log('[ORCAMENTO] Campo:', catNome, '| Valor digitado:', i.value, '| Valor parseado:', valor);
+    
     if(valor>0){
-      formData.append('valores['+i.dataset.cat+']',valor);
+      formData.append('valores['+catNome+']', valor);
+      valoresLog[catNome] = valor;
       temValor = true;
     }
   });
+  
+  console.log('[ORCAMENTO] Valores a enviar:', valoresLog);
+  console.log('[ORCAMENTO] FormData entries:', Array.from(formData.entries()));
   
   if(!temValor){
     const e=document.getElementById('orc-err');
@@ -242,6 +252,8 @@ function orcSalvar(){
   fetch('/admin/painel-obras/orcamento/salvar',{method:'POST',body:formData})
     .then(r=>r.json())
     .then(res=>{
+      console.log('[ORCAMENTO] Resposta do servidor:', res);
+      
       if(!res.ok){
         const e=document.getElementById('orc-err');
         e.textContent=res.error||'Erro ao salvar';
