@@ -643,10 +643,21 @@ window.poResetFiltros=function(){
 };
 
 function renderCat(gasto,orcado){
+  // Filtra apenas categorias com valores > 0
+  const categoriasComValor = catObra.filter(cat => {
+    const g = gasto[cat] || 0;
+    const o = orcado[cat] || 0;
+    return (g > 0 || o > 0);
+  });
+  
+  console.log('[PAINEL OBRAS] renderCat - Total categorias:', catObra.length);
+  console.log('[PAINEL OBRAS] renderCat - Categorias com valor > 0:', categoriasComValor.length);
+  console.log('[PAINEL OBRAS] renderCat - Categorias filtradas:', categoriasComValor);
+  
   const all=[...Object.values(gasto),...Object.values(orcado)];
   const mx=Math.max(...all,1);
   const el=document.getElementById('po-cat-rows');
-  el.innerHTML=catObra.map(cat=>{
+  el.innerHTML=categoriasComValor.map(cat=>{
     const g=gasto[cat]||0,o=orcado[cat]||0;
     const gP=(g/mx)*100,oP=(o/mx)*100;
     const dv=g-o;

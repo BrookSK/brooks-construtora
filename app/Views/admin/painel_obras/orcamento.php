@@ -37,7 +37,7 @@
 </div>
 
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-  <h5 style="margin:0;color:#f8fafc">Orçamento por Obra e Categoria</h5>
+  <h5 style="margin:0;color:#0f172a">Orçamento por Obra e Categoria</h5>
   <select id="orc-obra-sel" class="orc-inp" style="max-width:340px" onchange="orcCarregar()">
     <option value="">— Selecionar obra —</option>
     <?php foreach($obras as $o): ?>
@@ -50,8 +50,8 @@
   <div class="orc-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
       <div>
-        <span style="font-size:14px;font-weight:600;color:#f8fafc">Versão vigente: <span id="orc-versao" style="color:#60a5fa">—</span></span>
-        <span style="font-size:12px;color:#94a3b8;margin-left:12px">Vigência: <span id="orc-vigencia">—</span></span>
+        <span style="font-size:14px;font-weight:600;color:#0f172a">Versão vigente: <span id="orc-versao" style="color:#3b82f6">—</span></span>
+        <span style="font-size:12px;color:#64748b;margin-left:12px">Vigência: <span id="orc-vigencia">—</span></span>
       </div>
       <button class="orc-btn-g" onclick="orcNovaVersao()"><i class="bi bi-plus-circle"></i> Nova revisão</button>
     </div>
@@ -61,9 +61,9 @@
         <tr><td colspan="2" style="text-align:center;padding:24px;color:#94a3b8">Selecione uma obra acima.</td></tr>
       </tbody>
       <tfoot>
-        <tr style="border-top:1px solid rgba(255,255,255,.1)">
-          <td style="font-weight:700;color:#f8fafc;padding:10px 16px">Total</td>
-          <td style="text-align:right;font-weight:700;color:#60a5fa;padding:10px 16px" id="orc-total">—</td>
+        <tr style="border-top:1px solid #e2e8f0">
+          <td style="font-weight:700;color:#0f172a;padding:10px 16px">Total</td>
+          <td style="text-align:right;font-weight:700;color:#3b82f6;padding:10px 16px" id="orc-total">—</td>
         </tr>
       </tfoot>
     </table>
@@ -79,8 +79,8 @@
 <div id="orc-modal" class="orc-modal">
   <div class="orc-modal-box">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <h5 style="margin:0;color:#f8fafc">Novo Orçamento</h5>
-      <button style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer" onclick="document.getElementById('orc-modal').style.display='none'">×</button>
+      <h5 style="margin:0;color:#0f172a">Novo Orçamento</h5>
+      <button style="background:none;border:none;color:#64748b;font-size:20px;cursor:pointer" onclick="document.getElementById('orc-modal').style.display='none'">×</button>
     </div>
     <div style="margin-bottom:12px">
       <label class="orc-label">Data de vigência *</label>
@@ -101,8 +101,8 @@
         <?php endforeach; ?>
       </tbody>
       <tfoot>
-        <tr><td style="font-weight:700;color:#f8fafc;padding:10px 16px">Total</td>
-            <td style="text-align:right;font-weight:700;color:#60a5fa;padding:10px 16px" id="orc-mo-total">R$ 0,00</td></tr>
+        <tr><td style="font-weight:700;color:#0f172a;padding:10px 16px">Total</td>
+            <td style="text-align:right;font-weight:700;color:#3b82f6;padding:10px 16px" id="orc-mo-total">R$ 0,00</td></tr>
       </tfoot>
     </table>
     <div id="orc-err" style="color:#fca5a5;font-size:13px;display:none;margin-bottom:10px"></div>

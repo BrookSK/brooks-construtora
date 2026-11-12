@@ -36,14 +36,23 @@ class PainelObrasController extends Controller
         if (!NiboService::isValidCompany($company)) $company = 'brooks';
         $competencia = (string) $this->input('periodo', date('Y-m'));
 
-        // Busca categorias que TÊM gastos para passar ao frontend
+        // Busca categorias que TÊM gastos > 0 para passar ao frontend
         $categoriasObra = [];
         try {
             $dashboardData = PainelObrasService::getDashboardData($competencia, $company);
-            $categoriasComGasto = array_keys($dashboardData['gasto_por_cat'] ?? []);
-            $categoriasComAPagar = array_keys($dashboardData['a_pagar_por_cat'] ?? []);
-            $categoriasObra = array_unique(array_merge($categoriasComGasto, $categoriasComAPagar));
-            $categoriasObra = array_filter($categoriasObra, fn($cat) => $cat !== 'Sem categoria / Não mapeado');
+            
+            foreach (($dashboardData['gasto_por_cat'] ?? []) as $cat => $valor) {
+                if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado') {
+                    $categoriasObra[] = $cat;
+                }
+            }
+            
+            foreach (($dashboardData['a_pagar_por_cat'] ?? []) as $cat => $valor) {
+                if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado' && !in_array($cat, $categoriasObra)) {
+                    $categoriasObra[] = $cat;
+                }
+            }
+            
             sort($categoriasObra);
         } catch (\Throwable $e) {
             // Se falhar, usa array vazio (visão limpa)
@@ -348,12 +357,23 @@ class PainelObrasController extends Controller
         $periodo = (string) $this->input('periodo', date('Y-m'));
         
         try {
-            // Busca dados do dashboard para pegar apenas categorias com gastos
+            // Busca dados do dashboard para pegar apenas categorias com gastos REAIS
             $dashboardData = PainelObrasService::getDashboardData($periodo, $company);
             
-            // Pega categorias que têm gastos ou a pagar
-            $categoriasComGasto = array_keys($dashboardData['gasto_por_cat'] ?? []);
-            $categoriasComAPagar = array_keys($dashboardData['a_pagar_por_cat'] ?? []);
+            // Pega categorias que têm gastos ou a pagar (valores > 0)
+            $categoriasComGasto = [];
+            foreach (($dashboardData['gasto_por_cat'] ?? []) as $cat => $valor) {
+                if ($valor > 0) {
+                    $categoriasComGasto[] = $cat;
+                }
+            }
+            
+            $categoriasComAPagar = [];
+            foreach (($dashboardData['a_pagar_por_cat'] ?? []) as $cat => $valor) {
+                if ($valor > 0) {
+                    $categoriasComAPagar[] = $cat;
+                }
+            }
             
             // Combina e remove duplicados
             $categorias = array_unique(array_merge($categoriasComGasto, $categoriasComAPagar));
@@ -364,7 +384,7 @@ class PainelObrasController extends Controller
             // Ordena alfabeticamente
             sort($categorias);
             
-            error_log('[PainelObras] Categorias COM gastos retornadas: ' . count($categorias));
+            error_log('[PainelObras] Categorias COM gastos > 0 retornadas: ' . count($categorias) . ' - ' . implode(', ', array_slice($categorias, 0, 5)));
             
             // Retorna no formato esperado pelo frontend (separado por tipo)
             $this->json([
@@ -487,17 +507,59 @@ class PainelObrasController extends Controller
 
     public function orcamento(): void
     {
-        try { $obras = PainelObra::allWithFilter(); } catch (\Throwable $e) { $obras = []; }
+        // Busca configuração de filtro do usuário
+        $user = Auth::user();
+        $config = null;
+        try {
+            $config = Database::fetch(
+                "SELECT obras_visiveis FROM painel_obras_config WHERE user_id = ?",
+                [$user['id']]
+            );
+        } catch (\Throwable $e) {
+            $config = null;
+        }
         
-        // Busca apenas categorias com gastos (visão limpa)
+        // Decodifica os filtros de obras
+        $obrasVisiveisIds = [];
+        if ($config && !empty($config['obras_visiveis'])) {
+            $obrasVisiveisIds = json_decode($config['obras_visiveis'], true) ?: [];
+        }
+        
+        // Busca obras aplicando o filtro se houver
+        try {
+            if (!empty($obrasVisiveisIds)) {
+                // Aplica filtro: apenas obras selecionadas
+                $placeholders = implode(',', array_fill(0, count($obrasVisiveisIds), '?'));
+                $obras = Database::fetchAll(
+                    "SELECT * FROM painel_obras WHERE id IN ($placeholders) ORDER BY codigo ASC",
+                    $obrasVisiveisIds
+                );
+            } else {
+                // Nenhum filtro = mostra todas
+                $obras = Database::fetchAll("SELECT * FROM painel_obras ORDER BY codigo ASC");
+            }
+        } catch (\Throwable $e) {
+            $obras = [];
+        }
+        
+        // Busca apenas categorias com gastos > 0 (visão limpa)
         $categoriasObra = [];
         try {
             $competencia = date('Y-m');
             $dashboardData = PainelObrasService::getDashboardData($competencia, 'brooks');
-            $categoriasComGasto = array_keys($dashboardData['gasto_por_cat'] ?? []);
-            $categoriasComAPagar = array_keys($dashboardData['a_pagar_por_cat'] ?? []);
-            $categoriasObra = array_unique(array_merge($categoriasComGasto, $categoriasComAPagar));
-            $categoriasObra = array_filter($categoriasObra, fn($cat) => $cat !== 'Sem categoria / Não mapeado');
+            
+            foreach (($dashboardData['gasto_por_cat'] ?? []) as $cat => $valor) {
+                if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado') {
+                    $categoriasObra[] = $cat;
+                }
+            }
+            
+            foreach (($dashboardData['a_pagar_por_cat'] ?? []) as $cat => $valor) {
+                if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado' && !in_array($cat, $categoriasObra)) {
+                    $categoriasObra[] = $cat;
+                }
+            }
+            
             sort($categoriasObra);
         } catch (\Throwable $e) {
             $categoriasObra = [];
@@ -539,17 +601,31 @@ class PainelObrasController extends Controller
         $v = (PainelObra::versaoVigente($obraId) ?? 0) + 1;
         if ($v >= 2 && !$motivo) { $this->json(['ok'=>false,'error'=>'Motivo da revisão obrigatório a partir da v2.'],422); return; }
         
-        // Busca apenas categorias com gastos (visão limpa)
+        // Busca apenas categorias com gastos > 0 (visão limpa)
         $categorias = [];
         try {
             $competencia = date('Y-m');
             $dashboardData = PainelObrasService::getDashboardData($competencia, 'brooks');
-            $categoriasComGasto = array_keys($dashboardData['gasto_por_cat'] ?? []);
-            $categoriasComAPagar = array_keys($dashboardData['a_pagar_por_cat'] ?? []);
-            $categorias = array_unique(array_merge($categoriasComGasto, $categoriasComAPagar));
-            $categorias = array_filter($categorias, fn($cat) => $cat !== 'Sem categoria / Não mapeado');
+            
+            foreach (($dashboardData['gasto_por_cat'] ?? []) as $cat => $valor) {
+                if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado') {
+                    $categorias[] = $cat;
+                }
+            }
+            
+            foreach (($dashboardData['a_pagar_por_cat'] ?? []) as $cat => $valor) {
+                if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado' && !in_array($cat, $categorias)) {
+                    $categorias[] = $cat;
+                }
+            }
         } catch (\Throwable $e) {
             $categorias = [];
+        }
+        
+        // Se não houver categorias com gastos, não cria nenhum orçamento
+        if (empty($categorias)) {
+            $this->json(['ok'=>false,'error'=>'Nenhuma categoria com gastos encontrada para esta obra no período atual.'],422);
+            return;
         }
         
         foreach ($categorias as $cat) {
