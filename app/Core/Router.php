@@ -378,9 +378,10 @@ class Router
             'finance/sync-page' => ['FinanceController', 'syncPage'],
             'finance/sync-finish' => ['FinanceController', 'syncFinish'],
             'finance/save-token' => ['FinanceController', 'saveToken'],
-            'finance/history' => ['FinanceController', 'history'],
-            'finance/logs' => ['FinanceController', 'logs'],
+            'finance/history'    => ['FinanceController', 'history'],
+            'finance/logs'       => ['FinanceController', 'logs'],
             'finance/clear-logs' => ['FinanceController', 'clearLogs'],
+            'finance/categories' => ['FinanceController', 'categories'],
         ];
 
         $path = implode('/', $segments);

@@ -120,6 +120,12 @@
                     <input type="hidden" id="filterCostCenter" value="">
                 </div>
                 <div class="col-6 col-md-3 col-xl-2">
+                    <label class="form-label small mb-1">Categoria</label>
+                    <input id="filterCategoryInput" class="form-control form-control-sm" list="categoryList" placeholder="Todas — digite para buscar" autocomplete="off">
+                    <datalist id="categoryList"></datalist>
+                    <input type="hidden" id="filterCategory" value="">
+                </div>
+                <div class="col-6 col-md-3 col-xl-2">
                     <label class="form-label small mb-1">Situação</label>
                     <div class="dropdown">
                         <button class="btn btn-sm btn-outline-secondary w-100 dropdown-toggle text-start d-flex justify-content-between align-items-center" type="button" id="statusDropdownBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
@@ -664,6 +670,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         return {
             costCenter: el('filterCostCenter').value,
             contact: el('filterContact').value,
+            category: el('filterCategory').value,
             statuses: statuses,     // multiseleção de situação
             postponed: postponed,   // combinável
         };
@@ -690,6 +697,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         if (f.postponed && !x.date_changed) return false; // combina com a situação
         if (f.costCenter && !matchContact(x, f.costCenter, 'cost_center')) return false;
         if (f.contact && !matchContact(x, f.contact, 'contact')) return false;
+        if (f.category && !matchContact(x, f.category, 'category')) return false;
         const { start, end } = periodRange();
         const d = parseDate(x.due_date);
         if (!d) return false;
@@ -714,6 +722,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         if (f.postponed && !x.date_changed) return false;
         if (f.costCenter && !matchContact(x, f.costCenter, 'cost_center')) return false;
         if (f.contact && !matchContact(x, f.contact, 'contact')) return false;
+        if (f.category && !matchContact(x, f.category, 'category')) return false;
         return true;
     }
     // Vencimento contábil: SEMPRE a data de vencimento (fixa, due_date).
@@ -745,30 +754,36 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         const fdata = state.filters || {};
         // União: começa com as listas da API e agrega TUDO que aparece nos
         // lançamentos carregados (garante lista completa de fornecedores/clientes).
-        const cMap = {}, kMap = {};
+        const cMap = {}, kMap = {}, catMap = {};
         (fdata.costcenters || []).forEach(c => { if (c && c.name) cMap[c.id || c.name] = c.name; });
         (fdata.contacts || []).forEach(c => { if (c && c.name) kMap[c.id || c.name] = c.name; });
+        (fdata.categories || []).forEach(c => { if (c && c.name) catMap[c.id || c.name] = c.name; });
 
         [...state.payables, ...state.receivables].forEach(x => {
             if (x.cost_center && x.cost_center !== '—') cMap[x.cost_center_id || x.cost_center] = x.cost_center;
             const nm = (x.contact_name && x.contact_name !== '—') ? x.contact_name
                      : ((x.description && !x.contact_id) ? null : null);
             if (nm) kMap[x.contact_id || nm] = nm;
+            if (x.category && x.category !== '—') catMap[x.category_id || x.category] = x.category;
         });
 
         const centers = Object.entries(cMap).map(([id,name]) => ({ id, name }))
             .sort((a,b) => a.name.localeCompare(b.name));
         const contacts = Object.entries(kMap).map(([id,name]) => ({ id, name }))
             .sort((a,b) => a.name.localeCompare(b.name));
+        const categories = Object.entries(catMap).map(([id,name]) => ({ id, name }))
+            .sort((a,b) => a.name.localeCompare(b.name));
 
         // Guarda as listas para casar nome→valor ao digitar
         contactOptions = contacts;
         costCenterOptions = centers;
+        categoryOptions = categories;
         fillDatalist('contactList', contacts);
         fillDatalist('costCenterList', centers);
+        fillDatalist('categoryList', categories);
     }
     // Mapas de opções {id,name} para os campos digitáveis
-    let contactOptions = [], costCenterOptions = [];
+    let contactOptions = [], costCenterOptions = [], categoryOptions = [];
     // values = [{id, name}] — preenche o <datalist> com os NOMES
     function fillDatalist(datalistId, values) {
         const dl = el(datalistId);
@@ -1575,6 +1590,10 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
             resolveTypedFilter('filterCostCenterInput', 'filterCostCenter', costCenterOptions);
             refresh();
         });
+        el('filterCategoryInput').addEventListener('input', function () {
+            resolveTypedFilter('filterCategoryInput', 'filterCategory', categoryOptions);
+            refresh();
+        });
 
         // Multiseleção de Situação (checkboxes no dropdown)
         document.querySelectorAll('.status-opt').forEach(c => c.addEventListener('change', function () {
@@ -1597,8 +1616,8 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         el('btnClearFilters').addEventListener('click', function () {
             el('filterPeriod').value = 'this-year';
             el('filterStart').value = ''; el('filterEnd').value = '';
-            el('filterContact').value = ''; el('filterCostCenter').value = '';
-            el('filterContactInput').value = ''; el('filterCostCenterInput').value = '';
+            el('filterContact').value = ''; el('filterCostCenter').value = ''; el('filterCategory').value = '';
+            el('filterContactInput').value = ''; el('filterCostCenterInput').value = ''; el('filterCategoryInput').value = '';
             document.querySelectorAll('.status-opt').forEach(c => c.checked = false);
             updateStatusLabel();
             toggleCustomDates();

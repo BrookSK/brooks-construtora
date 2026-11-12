@@ -145,6 +145,8 @@ class FinanceController extends Controller
 
             foreach (($p['filters']['costcenters'] ?? []) as $cc) { if (!empty($cc['id'])) $ccMap[$cc['id']] = $cc['name']; }
             foreach (($p['filters']['contacts'] ?? []) as $ct) { if (!empty($ct['id'])) $contactMap[$ct['id']] = $ct['name']; }
+            if (!isset($catMap)) $catMap = [];
+            foreach (($p['filters']['categories'] ?? []) as $ca) { if (!empty($ca['id'])) $catMap[$ca['id']] = $ca['name']; }
 
             if ($latestAt === null || ($row['created_at'] ?? '') > $latestAt) $latestAt = $row['created_at'] ?? null;
         }
@@ -161,13 +163,17 @@ class FinanceController extends Controller
         return [
             'generated_at' => $latestAt,
             'masters' => [],
-            'filters' => ['costcenters' => $toList($ccMap), 'contacts' => $toList($contactMap)],
-            'accounts' => $accounts,
-            'payables' => $payables,
+            'filters' => [
+                'costcenters' => $toList($ccMap),
+                'contacts'    => $toList($contactMap),
+                'categories'  => $toList($catMap ?? []),
+            ],
+            'accounts'    => $accounts,
+            'payables'    => $payables,
             'receivables' => $receivables,
             'totals' => [
-                'balance' => $balance,
-                'payables' => count($payables),
+                'balance'     => $balance,
+                'payables'    => count($payables),
                 'receivables' => count($receivables),
             ],
             'errors' => [],
@@ -330,12 +336,16 @@ class FinanceController extends Controller
 
         $ccMap = [];
         $contactMap = [];
+        $catMap = [];
         foreach (array_merge($payables, $receivables) as $x) {
             if (!empty($x['cost_center_id']) && !empty($x['cost_center']) && $x['cost_center'] !== '—') {
                 $ccMap[(string) $x['cost_center_id']] = $x['cost_center'];
             }
             if (!empty($x['contact_id']) && !empty($x['contact_name']) && $x['contact_name'] !== '—') {
                 $contactMap[(string) $x['contact_id']] = $x['contact_name'];
+            }
+            if (!empty($x['category_id']) && !empty($x['category']) && $x['category'] !== '—') {
+                $catMap[(string) $x['category_id']] = $x['category'];
             }
         }
         $toList = function (array $m) {
@@ -349,13 +359,17 @@ class FinanceController extends Controller
             'ok' => true,
             'generated_at' => date('Y-m-d H:i:s'),
             'masters' => [],
-            'filters' => ['costcenters' => $toList($ccMap), 'contacts' => $toList($contactMap)],
-            'accounts' => $accounts,
-            'payables' => $payables,
+            'filters' => [
+                'costcenters' => $toList($ccMap),
+                'contacts'    => $toList($contactMap),
+                'categories'  => $toList($catMap),
+            ],
+            'accounts'    => $accounts,
+            'payables'    => $payables,
             'receivables' => $receivables,
             'totals' => [
-                'balance' => $balance,
-                'payables' => count($payables),
+                'balance'     => $balance,
+                'payables'    => count($payables),
                 'receivables' => count($receivables),
             ],
             'errors' => [],
@@ -421,5 +435,40 @@ class FinanceController extends Controller
     {
         @file_put_contents(self::logFile(), '');
         $this->json(['ok' => true]);
+    }
+
+    /**
+     * Retorna as categorias do Nibo para uma empresa — usadas no filtro da tela de Financeiro.
+     * Lê do snapshot (campo filters.categories) ou do cache do NiboCategoriesService.
+     */
+    public function categories(): void
+    {
+        $company = $this->resolveCompany('brooks');
+
+        // 1. Tenta pegar do snapshot (já salvo, sem nova chamada à API)
+        if ($company !== 'completo') {
+            $snapshot = NiboSyncSnapshot::latest($company);
+            if ($snapshot) {
+                $payload = NiboSyncSnapshot::decodePayload($snapshot);
+                $cats = $payload['filters']['categories'] ?? [];
+                if (!empty($cats)) {
+                    $this->json(['ok' => true, 'company' => $company, 'categories' => $cats]);
+                    return;
+                }
+            }
+        }
+
+        // 2. Fallback: NiboCategoriesService (cache local ou API)
+        try {
+            $map = \App\Services\NiboCategoriesService::mapa($company === 'completo' ? 'brooks' : $company);
+            $cats = [];
+            foreach ($map as $id => $info) {
+                $cats[] = ['id' => $id, 'name' => $info['nome'], 'type' => $info['tipo'], 'path' => $info['caminho']];
+            }
+            usort($cats, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+            $this->json(['ok' => true, 'company' => $company, 'categories' => $cats]);
+        } catch (\Throwable $e) {
+            $this->json(['ok' => true, 'company' => $company, 'categories' => [], 'error' => $e->getMessage()]);
+        }
     }
 }

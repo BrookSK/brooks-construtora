@@ -240,4 +240,408 @@ class PainelObrasService
             'valor_rateado'       => $valor,
         ])];
     }
+
+    /**
+     * Obtém dados consolidados do dashboard - 100% BASEADO NO NIBO
+     * TODOS os dados vêm da API do Nibo, exceto:
+     * - valor_contratado (campo do cadastro)
+     * - numero_parcelas (campo do cadastro, quando não houver no Nibo)
+     */
+    public static function getDashboardData(string $periodo, string $company = 'completo'): array
+    {
+        // Busca dados enriquecidos DO NIBO
+        $data = self::dados($company, $periodo);
+        $lancamentos = $data['lancamentos']; // TODOS os lançamentos do Nibo filtrados
+        $obrasMap = $data['obras_map'];
+        $catMap = $data['cat_map']; // Categorias DO NIBO
+        $deParaMap = $data['depara_map']; // Mapeamento
+        
+        // Filtra apenas obras únicas
+        $obras = [];
+        $obrasVistas = [];
+        foreach ($obrasMap as $key => $obra) {
+            $id = $obra['id'];
+            if (!in_array($id, $obrasVistas)) {
+                $obras[] = $obra;
+                $obrasVistas[] = $id;
+            }
+        }
+        
+        // Processa cada obra COM DADOS 100% DO NIBO
+        $obrasProcessadas = [];
+        $totalContratado = $totalOrcado = $totalGasto = $totalAPagar = 0;
+        $obrasComEstouro = $obrasComAtencao = 0;
+        $gastoPorCat = [];
+        $aPagarPorCat = [];
+        $obrasAlerta = [];
+        $conciliacaoLista = [];
+        $fornecedoresPorObra = [];
+        $lancamentosPorObra = [];
+        
+        foreach ($obras as $obra) {
+            $obraId = $obra['id'];
+            
+            // ÚNICO CAMPO DO CADASTRO: valor_contratado
+            $contratado = (float)($obra['valor_contratado'] ?? 0);
+            
+            // TUDO ABAIXO VEM DO NIBO ↓↓↓
+            
+            // Filtra lançamentos desta obra
+            $lancsObra = array_filter($lancamentos, fn($l) => $l['obra_id'] === $obraId);
+            
+            // Gasto REAL do Nibo (somente status='paid')
+            $gasto = 0;
+            $gastoDetalhado = []; // Por categoria de obra
+            $gastoDetalhado_nibo = []; // Por categoria Nibo (original)
+            $fornecedores = [];
+            $lancsGastos = [];
+            
+            foreach ($lancsObra as $l) {
+                if ($l['status'] === 'paid') {
+                    $valor = (float)$l['valor_rateado'];
+                    $gasto += $valor;
+                    
+                    // Agrupa por categoria DE OBRA
+                    $catObra = $l['categoria_obra'] ?? 'Sem categoria / Não mapeado';
+                    if (!isset($gastoDetalhado[$catObra])) {
+                        $gastoDetalhado[$catObra] = 0;
+                    }
+                    $gastoDetalhado[$catObra] += $valor;
+                    
+                    // Agrupa por categoria NIBO (original)
+                    $catNibo = $l['categoria_nibo_nome'] ?? 'Sem categoria';
+                    if (!isset($gastoDetalhado_nibo[$catNibo])) {
+                        $gastoDetalhado_nibo[$catNibo] = 0;
+                    }
+                    $gastoDetalhado_nibo[$catNibo] += $valor;
+                    
+                    // Fornecedores
+                    $fornecedor = $l['contact_name'] ?? 'Não informado';
+                    if (!isset($fornecedores[$fornecedor])) {
+                        $fornecedores[$fornecedor] = 0;
+                    }
+                    $fornecedores[$fornecedor] += $valor;
+                    
+                    // Guarda lançamento completo
+                    $lancsGastos[] = $l;
+                }
+            }
+            
+            // A PAGAR do Nibo (status='open' ou 'overdue')
+            $aPagar = 0;
+            $aPagarDetalhado = [];
+            $lancsAPagar = [];
+            
+            foreach ($lancsObra as $l) {
+                if (in_array($l['status'], ['open', 'overdue'])) {
+                    $valor = (float)$l['valor_rateado'];
+                    $aPagar += $valor;
+                    
+                    $catObra = $l['categoria_obra'] ?? 'Sem categoria / Não mapeado';
+                    if (!isset($aPagarDetalhado[$catObra])) {
+                        $aPagarDetalhado[$catObra] = 0;
+                    }
+                    $aPagarDetalhado[$catObra] += $valor;
+                    
+                    $lancsAPagar[] = $l;
+                }
+            }
+            
+            // A RECEBER do Nibo (receivables)
+            $aReceber = 0;
+            $lancsAReceber = [];
+            
+            foreach ($lancsObra as $l) {
+                if ($l['type'] === 'receivable' && in_array($l['status'], ['open', 'overdue'])) {
+                    $valor = (float)$l['valor_rateado'];
+                    $aReceber += $valor;
+                    $lancsAReceber[] = $l;
+                }
+            }
+            
+            // ORÇADO = Gasto + A Pagar (estimativa baseada no comprometido)
+            // OU usa valor cadastrado se existir
+            $orcado = (float)($obra['orcamento_estimado'] ?? 0);
+            if ($orcado <= 0) {
+                // Orçamento versionado manual (se existir)
+                $orcadoVersionado = \App\Models\PainelObra::orcadoTotal($obraId);
+                if ($orcadoVersionado > 0) {
+                    $orcado = $orcadoVersionado;
+                } else {
+                    // Estimativa: gasto + a pagar + margem 10%
+                    $orcado = ($gasto + $aPagar) * 1.1;
+                }
+            }
+            
+            $desvio = $gasto - $orcado;
+            $desvioPct = $orcado > 0 ? ($desvio / $orcado) * 100 : 0;
+            
+            // Situação
+            $situacao = 'ok';
+            if ($desvioPct > 5) {
+                $situacao = 'danger';
+                $obrasComEstouro++;
+            } elseif ($desvioPct > 0) {
+                $situacao = 'warn';
+                $obrasComAtencao++;
+            }
+            
+            // Top 3 categorias
+            arsort($gastoDetalhado);
+            $topCats = array_slice(array_keys($gastoDetalhado), 0, 3);
+            
+            // Top 3 fornecedores
+            arsort($fornecedores);
+            $topFornecedores = array_slice($fornecedores, 0, 3, true);
+            
+            $obraProcessada = [
+                'id' => $obraId,
+                'codigo' => $obra['codigo'] ?? 'OBRA-' . $obraId,
+                'nome' => $obra['nome'] ?? 'Obra ' . $obraId,
+                'tipo' => $obra['tipo'] ?? 'Reforma',
+                'cliente' => $obra['cliente'] ?? null,
+                'contratado' => $contratado, // ÚNICO campo do cadastro
+                'orcado' => $orcado,
+                'gasto' => $gasto, // DO NIBO
+                'a_pagar' => $aPagar, // DO NIBO
+                'a_receber' => $aReceber, // DO NIBO
+                'desvio' => $desvio,
+                'desvio_pct' => $desvioPct,
+                'situacao' => $situacao,
+                'gasto_cat' => $gastoDetalhado, // Categoria de obra
+                'gasto_cat_nibo' => $gastoDetalhado_nibo, // Categoria Nibo original
+                'a_pagar_cat' => $aPagarDetalhado,
+                'top_cats' => $topCats,
+                'top_fornecedores' => $topFornecedores, // DO NIBO
+                'qtd_lancamentos_pagos' => count($lancsGastos), // DO NIBO
+                'qtd_lancamentos_abertos' => count($lancsAPagar), // DO NIBO
+                'qtd_lancamentos_receber' => count($lancsAReceber), // DO NIBO
+            ];
+            
+            $obrasProcessadas[] = $obraProcessada;
+            
+            // Guarda lançamentos por obra para detalhamento
+            $lancamentosPorObra[$obraId] = [
+                'pagos' => $lancsGastos,
+                'a_pagar' => $lancsAPagar,
+                'a_receber' => $lancsAReceber,
+            ];
+            
+            $totalContratado += $contratado;
+            $totalOrcado += $orcado;
+            $totalGasto += $gasto;
+            $totalAPagar += $aPagar;
+            
+            // Obras em alerta
+            if ($desvioPct > 0) {
+                $obrasAlerta[] = $obraProcessada;
+            }
+            
+            // Gasto por categoria (consolidado de todas as obras)
+            foreach ($gastoDetalhado as $cat => $valorGasto) {
+                if (!isset($gastoPorCat[$cat])) {
+                    $gastoPorCat[$cat] = 0;
+                }
+                $gastoPorCat[$cat] += $valorGasto;
+            }
+            
+            // A pagar por categoria (consolidado)
+            foreach ($aPagarDetalhado as $cat => $valorAPagar) {
+                if (!isset($aPagarPorCat[$cat])) {
+                    $aPagarPorCat[$cat] = 0;
+                }
+                $aPagarPorCat[$cat] += $valorAPagar;
+            }
+        }
+        
+        // Ordena obras em alerta (piores primeiro)
+        usort($obrasAlerta, fn($a, $b) => $b['desvio_pct'] <=> $a['desvio_pct']);
+        $obrasAlerta = array_slice($obrasAlerta, 0, 3);
+        
+        // Ordena obras por código
+        usort($obrasProcessadas, fn($a, $b) => strcmp($a['codigo'], $b['codigo']));
+        
+        // Fluxo mensal (12 meses) - DO NIBO
+        $fluxoMensal = self::getFluxoMensal($lancamentos);
+        
+        // Totais por fornecedor (todas as obras) - DO NIBO
+        $fornecedorGlobal = [];
+        foreach ($lancamentos as $l) {
+            if ($l['status'] === 'paid') {
+                $fornecedor = $l['contact_name'] ?? 'Não informado';
+                if (!isset($fornecedorGlobal[$fornecedor])) {
+                    $fornecedorGlobal[$fornecedor] = 0;
+                }
+                $fornecedorGlobal[$fornecedor] += (float)$l['valor_rateado'];
+            }
+        }
+        arsort($fornecedorGlobal);
+        $topFornecedoresGlobal = array_slice($fornecedorGlobal, 0, 10, true);
+        
+        // Totais por categoria Nibo (original) - DO NIBO
+        $categoriaNiboGlobal = [];
+        foreach ($lancamentos as $l) {
+            if ($l['status'] === 'paid') {
+                $catNibo = $l['categoria_nibo_nome'] ?? 'Sem categoria';
+                if (!isset($categoriaNiboGlobal[$catNibo])) {
+                    $categoriaNiboGlobal[$catNibo] = 0;
+                }
+                $categoriaNiboGlobal[$catNibo] += (float)$l['valor_rateado'];
+            }
+        }
+        arsort($categoriaNiboGlobal);
+        
+        // Categorias não mapeadas (DO NIBO)
+        $naoMapeadas = count(array_unique(array_column(
+            array_filter($data['sem_categoria'], fn($l) => $l['status'] === 'paid'),
+            'categoria_nibo_id'
+        )));
+        
+        // Lançamentos sem obra (DO NIBO)
+        $semObra = $data['sem_obra'];
+        $semObraTotal = array_sum(array_map(fn($l) => 
+            $l['status'] === 'paid' ? (float)$l['valor_rateado'] : 0, 
+            $semObra
+        ));
+        
+        return [
+            'kpis' => [
+                'obras_total' => count($obras),
+                'contratado' => $totalContratado,
+                'orcado' => $totalOrcado,
+                'gasto' => $totalGasto, // DO NIBO
+                'a_pagar' => $totalAPagar, // DO NIBO
+                'desvio' => $totalGasto - $totalOrcado,
+                'obras_estouro' => $obrasComEstouro,
+                'obras_atencao' => $obrasComAtencao,
+            ],
+            'obras' => $obrasProcessadas,
+            'obras_alerta' => $obrasAlerta,
+            'gasto_por_cat' => $gastoPorCat, // Categorias de obra
+            'a_pagar_por_cat' => $aPagarPorCat,
+            'categorias_nibo' => $categoriaNiboGlobal, // Categorias Nibo originais
+            'fornecedores' => $topFornecedoresGlobal, // DO NIBO
+            'fluxo_mensal' => $fluxoMensal, // DO NIBO
+            'lancamentos_por_obra' => $lancamentosPorObra, // Detalhamento completo DO NIBO
+            'nao_mapeadas' => $naoMapeadas,
+            'sem_obra_count' => count($semObra),
+            'sem_obra_total' => $semObraTotal,
+            'sem_obra_lancamentos' => array_slice($semObra, 0, 50), // Primeiros 50
+            'synced_at' => $data['synced_at'], // Timestamp da sincronização
+            'periodo' => $data['periodo'], // Período filtrado
+        ];
+    }
+    
+    /**
+     * Sincroniza parcelas contratuais com lançamentos do Nibo
+     */
+    private static function syncParcelasWithNibo(array $lancamentos, array $obras): void
+    {
+        foreach ($obras as $obra) {
+            $parcelas = \App\Models\PainelObraParcela::getByObra($obra['id']);
+            
+            foreach ($parcelas as $parcela) {
+                // Se parcela já tem vínculo com Nibo, atualiza status
+                if (!empty($parcela['nibo_schedule_id'])) {
+                    // Busca lançamento correspondente
+                    $lancamento = array_filter($lancamentos, fn($l) => 
+                        (string)($l['schedule_id'] ?? '') === $parcela['nibo_schedule_id']
+                    );
+                    
+                    if (!empty($lancamento)) {
+                        $lanc = reset($lancamento);
+                        $valorRecebido = ($lanc['status'] === 'paid') ? (float)$lanc['valor_rateado'] : 0;
+                        $dataRecebimento = ($lanc['status'] === 'paid') ? ($lanc['due_date'] ?? null) : null;
+                        
+                        \App\Models\PainelObraParcela::syncWithNibo(
+                            $parcela['id'],
+                            $valorRecebido,
+                            $dataRecebimento
+                        );
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Valor a pagar da obra (lançamentos em aberto)
+     */
+    private static function aPagarObra(array $lancamentos, int $obraId): float
+    {
+        $total = 0.0;
+        foreach ($lancamentos as $l) {
+            if ($l['obra_id'] === $obraId && 
+                $l['type'] === 'payable' && 
+                in_array($l['status'], ['open', 'overdue'])) {
+                $total += (float) $l['valor_rateado'];
+            }
+        }
+        return $total;
+    }
+    
+    /**
+     * Busca total da planilha de controle para um período
+     */
+    private static function getPlanilhaTotal(int $obraId, string $periodo): ?float
+    {
+        // Converte período para competência (YYYY-MM)
+        $competencia = substr($periodo, 0, 7);
+        
+        $row = Database::fetch(
+            "SELECT total_planilha FROM painel_obras_planilha 
+             WHERE obra_id = ? AND competencia = ?",
+            [$obraId, $competencia]
+        );
+        
+        return $row ? (float)$row['total_planilha'] : null;
+    }
+    
+    /**
+     * Calcula fluxo mensal (12 meses)
+     */
+    private static function getFluxoMensal(array $lancamentos): array
+    {
+        $meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        $anoAtual = (int)date('Y');
+        
+        $fluxo = [];
+        
+        for ($i = 1; $i <= 12; $i++) {
+            $mesIni = sprintf('%04d-%02d-01', $anoAtual, $i);
+            $mesFim = date('Y-m-t', strtotime($mesIni));
+            
+            $pago = 0;
+            $aPagar = 0;
+            $previsto = 0;
+            
+            foreach ($lancamentos as $l) {
+                $dataRef = $l['due_date'] ?? $l['forecast_date'] ?? '';
+                if ($dataRef < $mesIni || $dataRef > $mesFim) {
+                    continue;
+                }
+                
+                $valor = (float)($l['valor_rateado'] ?? 0);
+                
+                if ($l['status'] === 'paid') {
+                    $pago += $valor;
+                } elseif ($l['status'] === 'open') {
+                    $aPagar += $valor;
+                } else {
+                    $previsto += $valor;
+                }
+            }
+            
+            $fluxo[] = [
+                'mes' => $i,
+                'label' => $meses[$i - 1],
+                'pago' => $pago,
+                'a_pagar' => $aPagar,
+                'previsto' => $previsto,
+            ];
+        }
+        
+        return $fluxo;
+    }
 }
+

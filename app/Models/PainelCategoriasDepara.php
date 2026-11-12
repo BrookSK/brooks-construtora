@@ -42,4 +42,23 @@ class PainelCategoriasDepara extends Model
             );
         }
     }
+
+    /**
+     * Busca de-para por ID ou nome da categoria Nibo
+     */
+    public static function findByNiboCategory(?string $catNiboId, string $catNiboNome): ?array
+    {
+        // Tenta por ID primeiro
+        if ($catNiboId) {
+            $row = Database::fetch("SELECT * FROM painel_categorias_depara WHERE categoria_nibo_id = ?", [$catNiboId]);
+            if ($row) {
+                return $row;
+            }
+        }
+        
+        // Tenta por nome
+        $row = Database::fetch("SELECT * FROM painel_categorias_depara WHERE categoria_nibo_nome = ?", [$catNiboNome]);
+        
+        return $row ?: null;
+    }
 }
