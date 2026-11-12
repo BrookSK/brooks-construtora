@@ -727,7 +727,7 @@ class PainelObrasService
             $semObra
         ));
         
-        return [
+        $resultado = [
             'kpis' => [
                 'obras_total' => count($obras),
                 'contratado' => $totalContratado,
@@ -754,6 +754,9 @@ class PainelObrasService
             'periodo' => $data['periodo'], // Período filtrado
         ];
         
+        error_log('[PainelObrasService/getDashboardData] ===== FIM (sucesso) =====');
+        return $resultado;
+        
         } catch (\Throwable $e) {
             error_log('[PainelObrasService/getDashboardData] ===== ERRO FATAL =====');
             error_log('[PainelObrasService/getDashboardData] Tipo: ' . get_class($e));
@@ -764,8 +767,6 @@ class PainelObrasService
             error_log($e->getTraceAsString());
             throw $e; // Re-lança
         }
-        
-        error_log('[PainelObrasService/getDashboardData] ===== FIM (sucesso) =====');
     }
     
     /**
