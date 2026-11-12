@@ -355,17 +355,23 @@ const mesAtual = new Date().getMonth()+1;
 const catObra = <?=json_encode($categoriasObra)?>;
 
 window.poLoad = function(){
+  const poEl = document.getElementById('po');
+  if (!poEl) {
+    console.error('Elemento #po não encontrado');
+    return;
+  }
+  
   const per = document.getElementById('po-periodo').value;
   const co  = document.getElementById('po-company').value;
   
   // Mostra loading
-  document.getElementById('po').innerHTML = '<div style="text-align:center;padding:100px 20px;color:#94a3b8"><div class="spinner-border" role="status"></div><div style="margin-top:16px">Carregando dados do Nibo...</div></div>';
+  poEl.innerHTML = '<div style="text-align:center;padding:100px 20px;color:#94a3b8"><div class="spinner-border" role="status"></div><div style="margin-top:16px">Carregando dados do Nibo...</div></div>';
   
   fetch('/admin/painel-obras/dashboard-data?periodo='+per+'&company='+co)
     .then(r=>r.json()).then(res=>{
       if(!res.ok){
         const msg = res.error || 'Erro desconhecido';
-        document.getElementById('po').innerHTML = '<div style="text-align:center;padding:100px 20px"><div style="color:#fca5a5;font-size:48px;margin-bottom:16px"><i class="bi bi-exclamation-triangle"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Erro ao carregar dados</div><div style="color:#94a3b8;font-size:14px;margin-bottom:24px">'+msg+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Tentar novamente</button></div>';
+        poEl.innerHTML = '<div style="text-align:center;padding:100px 20px"><div style="color:#fca5a5;font-size:48px;margin-bottom:16px"><i class="bi bi-exclamation-triangle"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Erro ao carregar dados</div><div style="color:#94a3b8;font-size:14px;margin-bottom:24px">'+msg+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Tentar novamente</button></div>';
         poToast('Erro: '+msg,'error');
         return;
       }
@@ -377,16 +383,26 @@ window.poLoad = function(){
       
       // Verifica se há obras cadastradas
       if(res.data.kpis.obras_total === 0) {
-        document.getElementById('po').innerHTML = '<div style="text-align:center;padding:100px 20px"><div style="color:#60a5fa;font-size:48px;margin-bottom:16px"><i class="bi bi-building-exclamation"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Nenhuma obra/centro de custo encontrado</div><div style="color:#94a3b8;font-size:14px;margin-bottom:16px">O painel de obras funciona a partir dos centros de custo do Nibo.</div><div style="color:#94a3b8;font-size:13px;margin-bottom:24px">Certifique-se de que:<br>1. Há dados sincronizados do Nibo (aba Financeiro)<br>2. Os lançamentos têm centros de custo associados</div><a href="/admin/finance" class="po-btn-primary"><i class="bi bi-arrow-clockwise"></i> Ir para Financeiro</a></div>';
+        poEl.innerHTML = '<div style="text-align:center;padding:100px 20px"><div style="color:#60a5fa;font-size:48px;margin-bottom:16px"><i class="bi bi-building-exclamation"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Nenhuma obra/centro de custo encontrado</div><div style="color:#94a3b8;font-size:14px;margin-bottom:16px">O painel de obras funciona a partir dos centros de custo do Nibo.</div><div style="color:#94a3b8;font-size:13px;margin-bottom:24px">Certifique-se de que:<br>1. Há dados sincronizados do Nibo (aba Financeiro)<br>2. Os lançamentos têm centros de custo associados</div><a href="/admin/finance" class="po-btn-primary"><i class="bi bi-arrow-clockwise"></i> Ir para Financeiro</a></div>';
         return;
       }
       
       _d=res.data; renderAll(res.data,res.synced_at);
     }).catch(e=>{
-      document.getElementById('po').innerHTML = '<div style="text-align:center;padding:100px 20px"><div style="color:#fca5a5;font-size:48px;margin-bottom:16px"><i class="bi bi-wifi-off"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Falha de conexão</div><div style="color:#94a3b8;font-size:14px;margin-bottom:24px">'+e.message+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Recarregar</button></div>';
+      console.error('Erro ao carregar:', e);
+      poEl.innerHTML = '<div style="text-align:center;padding:100px 20px"><div style="color:#fca5a5;font-size:48px;margin-bottom:16px"><i class="bi bi-wifi-off"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Falha de conexão</div><div style="color:#94a3b8;font-size:14px;margin-bottom:24px">'+e.message+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Recarregar</button></div>';
       poToast('Falha: '+e.message,'error');
     });
 };
+
+// Aguarda o DOM carregar
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(poLoad, 100);
+  });
+} else {
+  setTimeout(poLoad, 100);
+}
 
 function renderAll(d,at){
   renderKpis(d.kpis);
@@ -696,7 +712,7 @@ window.poMudarTab=function(tab){
   }).join('');
 };
 
-poLoad();
+// poLoad(); // Removido - já é chamado no DOMContentLoaded acima
 })();
 </script>
 <?php $content = ob_get_clean(); ?>
