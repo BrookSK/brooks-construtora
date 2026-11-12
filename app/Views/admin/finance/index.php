@@ -256,10 +256,10 @@
                                 <th class="text-nowrap">Previsto inicial</th>
                                 <th class="text-nowrap">Postergado p/</th>
                                 <th class="text-nowrap">Dias venc.</th>
-                                <th>Quem</th><th>Descrição</th><th>Centro de custo</th><th class="text-end">Quanto</th>
+                                <th>Quem</th><th>Descrição</th><th>Centro de custo</th><th>Categoria</th><th class="text-end">Quanto</th>
                             </tr>
                         </thead>
-                        <tbody id="overdueList"><tr><td colspan="8" class="text-center text-muted py-3">—</td></tr></tbody>
+                        <tbody id="overdueList"><tr><td colspan="9" class="text-center text-muted py-3">—</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -274,9 +274,9 @@
                         <div class="table-responsive" style="max-height:420px;">
                             <table class="table table-sm table-hover mb-0 align-middle">
                                 <thead class="table-light" style="position:sticky;top:0;">
-                                    <tr><th>Quando</th><th>Quem</th><th class="text-end">Quanto</th><th>Situação</th></tr>
+                                    <tr><th>Quando</th><th>Quem</th><th>Centro de custo</th><th>Categoria</th><th class="text-end">Quanto</th><th>Situação</th></tr>
                                 </thead>
-                                <tbody id="payList"><tr><td colspan="4" class="text-center text-muted py-3">—</td></tr></tbody>
+                                <tbody id="payList"><tr><td colspan="6" class="text-center text-muted py-3">—</td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -290,9 +290,9 @@
                         <div class="table-responsive" style="max-height:420px;">
                             <table class="table table-sm table-hover mb-0 align-middle">
                                 <thead class="table-light" style="position:sticky;top:0;">
-                                    <tr><th>Quando</th><th>Quem</th><th class="text-end">Quanto</th><th>Situação</th></tr>
+                                    <tr><th>Quando</th><th>Quem</th><th>Centro de custo</th><th>Categoria</th><th class="text-end">Quanto</th><th>Situação</th></tr>
                                 </thead>
-                                <tbody id="recList"><tr><td colspan="4" class="text-center text-muted py-3">—</td></tr></tbody>
+                                <tbody id="recList"><tr><td colspan="6" class="text-center text-muted py-3">—</td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -410,9 +410,9 @@
                 </div>
             </div>
 
-            <!-- Resumos por centro de custo e por fornecedor/cliente -->
+            <!-- Resumos por centro de custo, categoria e fornecedor/cliente -->
             <div class="row g-3 mb-3">
-                <div class="col-12 col-lg-6">
+                <div class="col-12 col-lg-4">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-white fw-semibold"><i class="bi bi-diagram-3"></i> Total por centro de custo</div>
                         <div class="table-responsive" style="max-height:320px;">
@@ -423,7 +423,18 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-12 col-lg-6">
+                <div class="col-12 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white fw-semibold"><i class="bi bi-tags"></i> Total por categoria</div>
+                        <div class="table-responsive" style="max-height:320px;">
+                            <table class="table table-sm mb-0 align-middle">
+                                <thead class="table-light" style="position:sticky;top:0;"><tr><th>Categoria</th><th class="text-end text-success">Recebe</th><th class="text-end text-danger">Paga</th></tr></thead>
+                                <tbody id="byCategory"><tr><td colspan="3" class="text-center text-muted py-3">—</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-white fw-semibold"><i class="bi bi-people"></i> Total por fornecedor / cliente</div>
                         <div class="table-responsive" style="max-height:320px;">
@@ -863,7 +874,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         el('overdueCount').textContent = rows.length;
         const tb = el('overdueList');
         if (!rows.length) {
-            tb.innerHTML = '<tr><td colspan="7" class="text-center text-success py-3"><i class="bi bi-check2-circle"></i> Nenhuma conta vencida em aberto.</td></tr>';
+            tb.innerHTML = '<tr><td colspan="9" class="text-center text-success py-3"><i class="bi bi-check2-circle"></i> Nenhuma conta vencida em aberto.</td></tr>';
             return;
         }
         const today = new Date(); today.setHours(0,0,0,0);
@@ -889,7 +900,8 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
                 + '<td><span class="badge bg-danger">' + dias + ' d</span></td>'
                 + '<td>' + esc(r.contact_name) + '</td>'
                 + '<td style="min-width:220px; white-space:normal; word-break:break-word;">' + esc(r.description) + '</td>'
-                + '<td>' + esc(r.cost_center) + '</td>'
+                + '<td>' + esc(r.cost_center || '—') + '</td>'
+                + '<td>' + esc(r.category || '—') + '</td>'
                 + '<td class="text-end fw-semibold" style="color:' + valColor + ';">' + fmtMoneyFull(r.value) + '</td></tr>';
         }).join('');
     }
@@ -899,13 +911,15 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         const rows = items.slice().sort((a,b) => (parseDate(a.due_date)||0) - (parseDate(b.due_date)||0));
         el(totalId).textContent = fmtMoneyFull(sum(rows));
         const tb = el(tbodyId);
-        if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Nada no período.</td></tr>'; return; }
+        if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">Nada no período.</td></tr>'; return; }
         tb.innerHTML = rows.map(r => {
             const changed = !!r.date_changed;
             const rowClass = changed ? ' class="row-postponed"' : '';
             const mark = changed ? ' <i class="bi bi-arrow-repeat" style="color:#6f42c1;" title="Data postergada"></i>' : '';
             return '<tr' + rowClass + '><td>' + dateLabel(r.due_date) + mark + '</td>'
                 + '<td>' + esc(r.contact_name && r.contact_name !== '—' ? r.contact_name : (r.description||'—')) + '</td>'
+                + '<td>' + esc(r.cost_center || '—') + '</td>'
+                + '<td>' + esc(r.category || '—') + '</td>'
                 + '<td class="text-end fw-semibold ' + valClass + '">' + fmtMoneyFull(r.value) + '</td>'
                 + '<td>' + statusBadge(r.status) + '</td></tr>';
         }).join('');
@@ -1187,6 +1201,8 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
 
         // Resumo por centro de custo
         renderGroupTable('byCostCenter', fpay, frec, x => (x.cost_center && x.cost_center !== '—') ? x.cost_center : 'Sem centro de custo');
+        // Resumo por categoria
+        renderGroupTable('byCategory', fpay, frec, x => (x.category && x.category !== '—') ? x.category : 'Sem categoria');
         // Resumo por fornecedor/cliente
         renderGroupTable('byContact', fpay, frec, x => (x.contact_name && x.contact_name !== '—') ? x.contact_name : (x.description || 'Outros'));
 

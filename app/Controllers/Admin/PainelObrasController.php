@@ -77,36 +77,6 @@ class PainelObrasController extends Controller
         }
     }
 
-        try {
-            $dados = PainelObrasService::dados($company, $competencia);
-        } catch (\Throwable $e) {
-            // Snapshot não encontrado ou outro erro
-            $dados = ['lancamentos'=>[],'sem_obra'=>[],'sem_categoria'=>[],'obras_map'=>[],'depara_map'=>[],'cat_map'=>[],'synced_at'=>null,'periodo'=>['ini'=>'','fim'=>'']];
-        }
-
-        try {
-            $obras = PainelObra::allAtivas();
-        } catch (\Throwable $e) {
-            $obras = [];
-        }
-
-        // Fluxo mensal usa TODOS os lançamentos do snapshot (não filtrados por obra)
-        $snapshot    = NiboSyncSnapshot::latest($company);
-        $todosLanc   = [];
-        if ($snapshot) {
-            $payload  = NiboSyncSnapshot::decodePayload($snapshot);
-            $todosLanc = array_merge($payload['payables'] ?? [], $payload['receivables'] ?? []);
-        }
-
-        try {
-            $result = $this->calcularKpis($obras, $dados, $competencia, $todosLanc);
-        } catch (\Throwable $e) {
-            $result = $this->estruturaVazia($todosLanc);
-        }
-
-        $this->json(['ok' => true, 'data' => $result, 'synced_at' => $dados['synced_at'] ?? ($snapshot['created_at'] ?? null)]);
-    }
-
     // ─── Cadastro de Obras ────────────────────────────────────────────
 
     public function obras(): void
