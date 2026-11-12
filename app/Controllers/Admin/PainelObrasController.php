@@ -66,6 +66,56 @@ class PainelObrasController extends Controller
             $snapshot = NiboSyncSnapshot::latest($company === 'completo' ? 'brooks' : $company);
             $syncedAt = $snapshot ? $snapshot['created_at'] : null;
             
+            // Aplica filtros do usuário
+            $user = Auth::user();
+            $config = Database::fetch(
+                "SELECT centros_custo_visiveis, obras_visiveis 
+                 FROM painel_obras_config 
+                 WHERE user_id = ?",
+                [$user['id']]
+            );
+            
+            if ($config) {
+                $ccVisiveis = json_decode($config['centros_custo_visiveis'] ?? '[]', true) ?: [];
+                $obrasVisiveis = json_decode($config['obras_visiveis'] ?? '[]', true) ?: [];
+                
+                // Filtra obras se houver filtro ativo
+                if (!empty($obrasVisiveis)) {
+                    $dashboardData['obras'] = array_filter(
+                        $dashboardData['obras'],
+                        fn($o) => in_array($o['id'], $obrasVisiveis)
+                    );
+                    $dashboardData['obras'] = array_values($dashboardData['obras']); // Reindex
+                }
+                
+                // Recalcula KPIs com obras filtradas
+                if (!empty($obrasVisiveis)) {
+                    $totalContratado = $totalOrcado = $totalGasto = $totalAPagar = 0;
+                    $obrasEstouro = $obrasAtencao = 0;
+                    
+                    foreach ($dashboardData['obras'] as $obra) {
+                        $totalContratado += $obra['contratado'];
+                        $totalOrcado += $obra['orcado'];
+                        $totalGasto += $obra['gasto'];
+                        $totalAPagar += $obra['a_pagar'];
+                        
+                        if ($obra['situacao'] === 'danger') $obrasEstouro++;
+                        if ($obra['situacao'] === 'warn') $obrasAtencao++;
+                    }
+                    
+                    $dashboardData['kpis'] = [
+                        'obras_total' => count($dashboardData['obras']),
+                        'contratado' => $totalContratado,
+                        'orcado' => $totalOrcado,
+                        'gasto' => $totalGasto,
+                        'a_pagar' => $totalAPagar,
+                        'desvio' => $totalGasto - $totalOrcado,
+                        'obras_estouro' => $obrasEstouro,
+                        'obras_atencao' => $obrasAtencao,
+                    ];
+                }
+            }
+            
             $this->json([
                 'ok' => true,
                 'data' => $dashboardData,
@@ -90,7 +140,21 @@ class PainelObrasController extends Controller
                 (string) $this->input('situacao', ''),
                 (string) $this->input('q', '')
             );
-            foreach ($obras as &$o) { $o['completude'] = $this->completude($o); }
+            
+            // Carrega custos previstos para cada obra
+            foreach ($obras as &$o) {
+                $o['completude'] = $this->completude($o);
+                try {
+                    $o['custos_previstos'] = Database::fetchAll(
+                        "SELECT categoria_id, valor_previsto 
+                         FROM painel_obras_custos_previstos 
+                         WHERE obra_id = ?",
+                        [$o['id']]
+                    );
+                } catch (\Throwable $e) {
+                    $o['custos_previstos'] = [];
+                }
+            }
             unset($o);
         } catch (\Throwable $e) { $obras = []; }
 
@@ -147,8 +211,29 @@ class PainelObrasController extends Controller
             'situacao'        => $this->input('situacao','Ativa'),
             'responsavel'     => trim((string)$this->input('responsavel','')) ?: null,
             'observacoes'     => trim((string)$this->input('observacoes','')) ?: null,
+            'valor_entrada'   => $this->parseMoeda($this->input('valor_entrada','0')),
+            'numero_parcelas' => (int)$this->input('numero_parcelas',0) ?: null,
+            'frequencia_parcelas' => trim((string)$this->input('frequencia_parcelas','')) ?: null,
+            'carencia_meses'  => (int)$this->input('carencia_meses',0),
             'created_by'      => $user['id'],
         ]);
+        
+        // Salva custos previstos
+        $custosJson = (string)$this->input('custos_previstos','{}');
+        $custos = json_decode($custosJson, true) ?: [];
+        
+        if (!empty($custos)) {
+            foreach ($custos as $catId => $valor) {
+                if ($valor > 0) {
+                    Database::insert('painel_obras_custos_previstos', [
+                        'obra_id' => $id,
+                        'categoria_id' => (int)$catId,
+                        'valor_previsto' => (float)$valor,
+                    ]);
+                }
+            }
+        }
+        
         $this->json(['ok'=>true,'id'=>$id]);
     }
 
@@ -169,6 +254,7 @@ class PainelObrasController extends Controller
         }
         $ccs  = json_decode((string)$this->input('centros_custo','[]'),true) ?: [];
         $alts = array_values(array_filter(array_map('trim', explode(',', (string)$this->input('codigos_alt','')))));
+        
         PainelObra::updateById($id, [
             'codigo'          => $codigo,
             'nome'            => trim((string)$this->input('nome','')),
@@ -183,8 +269,33 @@ class PainelObrasController extends Controller
             'situacao'        => $this->input('situacao','Ativa'),
             'responsavel'     => trim((string)$this->input('responsavel','')) ?: null,
             'observacoes'     => trim((string)$this->input('observacoes','')) ?: null,
+            'valor_entrada'   => $this->parseMoeda($this->input('valor_entrada','0')),
+            'numero_parcelas' => (int)$this->input('numero_parcelas',0) ?: null,
+            'frequencia_parcelas' => trim((string)$this->input('frequencia_parcelas','')) ?: null,
+            'carencia_meses'  => (int)$this->input('carencia_meses',0),
             'updated_by'      => $user['id'],
         ]);
+        
+        // Salva custos previstos
+        $custosJson = (string)$this->input('custos_previstos','{}');
+        $custos = json_decode($custosJson, true) ?: [];
+        
+        if (!empty($custos)) {
+            // Remove custos antigos
+            Database::query("DELETE FROM painel_obras_custos_previstos WHERE obra_id = ?", [$id]);
+            
+            // Insere novos
+            foreach ($custos as $catId => $valor) {
+                if ($valor > 0) {
+                    Database::insert('painel_obras_custos_previstos', [
+                        'obra_id' => $id,
+                        'categoria_id' => (int)$catId,
+                        'valor_previsto' => (float)$valor,
+                    ]);
+                }
+            }
+        }
+        
         $this->json(['ok'=>true]);
     }
 
@@ -193,6 +304,108 @@ class PainelObrasController extends Controller
         if (!$this->isPost()) { $this->json(['ok'=>false],400); return; }
         try { PainelObra::deleteById((int)$this->input('id',0)); } catch (\Throwable $e) {}
         $this->json(['ok'=>true]);
+    }
+
+    public function obrasCategorias(): void
+    {
+        try {
+            $categorias = Database::fetchAll(
+                "SELECT id, codigo, nome, tipo_obra, ordem 
+                 FROM painel_obras_categorias_servico 
+                 WHERE ativo = 1 
+                 ORDER BY tipo_obra, ordem"
+            );
+            
+            $result = [
+                'Construção' => [],
+                'Reforma' => []
+            ];
+            
+            foreach ($categorias as $cat) {
+                $tipo = $cat['tipo_obra'];
+                if ($tipo === 'Ambos') {
+                    $result['Construção'][] = $cat;
+                    $result['Reforma'][] = $cat;
+                } else {
+                    $result[$tipo][] = $cat;
+                }
+            }
+            
+            $this->json($result);
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] Erro ao buscar categorias: ' . $e->getMessage());
+            $this->json(['Construção' => [], 'Reforma' => []]);
+        }
+    }
+
+    // ─── Configurações de Visualização ────────────────────────────────
+
+    public function configGet(): void
+    {
+        $user = Auth::user();
+        try {
+            $config = Database::fetch(
+                "SELECT centros_custo_visiveis, obras_visiveis, filtros_ativos 
+                 FROM painel_obras_config 
+                 WHERE user_id = ?",
+                [$user['id']]
+            );
+            
+            if ($config) {
+                $this->json([
+                    'centros_custo_visiveis' => json_decode($config['centros_custo_visiveis'] ?? '[]', true) ?: [],
+                    'obras_visiveis' => json_decode($config['obras_visiveis'] ?? '[]', true) ?: [],
+                    'filtros_ativos' => json_decode($config['filtros_ativos'] ?? '{}', true) ?: [],
+                ]);
+            } else {
+                $this->json([
+                    'centros_custo_visiveis' => [],
+                    'obras_visiveis' => [],
+                    'filtros_ativos' => [],
+                ]);
+            }
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] Erro ao buscar config: ' . $e->getMessage());
+            $this->json(['centros_custo_visiveis' => [], 'obras_visiveis' => [], 'filtros_ativos' => []]);
+        }
+    }
+
+    public function configSave(): void
+    {
+        if (!$this->isPost()) { $this->json(['ok'=>false],400); return; }
+        
+        $user = Auth::user();
+        $body = file_get_contents('php://input');
+        $data = json_decode($body, true) ?: [];
+        
+        $centrosCusto = $data['centros_custo_visiveis'] ?? [];
+        $obras = $data['obras_visiveis'] ?? [];
+        $filtros = $data['filtros_ativos'] ?? [];
+        
+        try {
+            $exists = Database::fetch("SELECT id FROM painel_obras_config WHERE user_id = ?", [$user['id']]);
+            
+            if ($exists) {
+                Database::query(
+                    "UPDATE painel_obras_config 
+                     SET centros_custo_visiveis = ?, obras_visiveis = ?, filtros_ativos = ?, updated_at = NOW()
+                     WHERE user_id = ?",
+                    [json_encode($centrosCusto), json_encode($obras), json_encode($filtros), $user['id']]
+                );
+            } else {
+                Database::insert('painel_obras_config', [
+                    'user_id' => $user['id'],
+                    'centros_custo_visiveis' => json_encode($centrosCusto),
+                    'obras_visiveis' => json_encode($obras),
+                    'filtros_ativos' => json_encode($filtros),
+                ]);
+            }
+            
+            $this->json(['ok' => true]);
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] Erro ao salvar config: ' . $e->getMessage());
+            $this->json(['ok' => false, 'error' => 'Erro ao salvar configurações.'], 500);
+        }
     }
 
     // ─── Aditivos ─────────────────────────────────────────────────────

@@ -111,6 +111,16 @@ body { background: #0b1220 !important; }
 .po-sync-badge { display:flex;align-items:center;gap:6px;font-size:12px;color:var(--po-green-t);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:20px;padding:4px 12px; }
 .po-sync-badge .dot { width:7px;height:7px;border-radius:50%;background:var(--po-green);animation:pulse 2s infinite; }
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* Modal */
+.po-modal{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px}
+.po-modal-box{background:var(--po-card-bg);border:1px solid rgba(255,255,255,.08);border-radius:16px;width:100%;max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.po-modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.po-modal-title{margin:0;color:var(--po-txt);font-size:18px;font-weight:600}
+.po-btn-close{background:none;border:none;color:var(--po-txt2);font-size:28px;line-height:1;cursor:pointer;padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:all .15s}
+.po-btn-close:hover{background:rgba(255,255,255,.05);color:var(--po-txt)}
+.po-modal-footer{border-top:1px solid var(--po-border);padding-top:20px;margin-top:20px}
+.po-btn-secondary{background:rgba(100,116,139,.15);border:1px solid rgba(100,116,139,.3);color:var(--po-txt2);padding:8px 18px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.po-btn-secondary:hover{background:rgba(100,116,139,.25);border-color:rgba(100,116,139,.4)}
 </style>
 
 <div id="po">
@@ -170,6 +180,9 @@ body { background: #0b1220 !important; }
   <a href="/admin/painel-obras/planilha"><i class="bi bi-table"></i> Planilha de Controle</a>
   <a href="/admin/painel-obras/depara"><i class="bi bi-arrow-left-right"></i> De-para Categorias</a>
   <a href="/admin/painel-obras/pauta"><i class="bi bi-calendar-check"></i> Pauta de Revisão</a>
+  <button class="po-btn-config" onclick="poAbrirConfig()" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:#60a5fa;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;margin-left:auto">
+    <i class="bi bi-funnel"></i> Filtros
+  </button>
 </div>
 
 <!-- KPIs -->
@@ -668,6 +681,145 @@ window.poToast=function(msg,type='ok'){
   setTimeout(()=>e.remove(),3200);
 };
 
+// ─── Configurações e Filtros ──────────────────────────────────────────
+
+let _poConfig = {
+  centros_custo_visiveis: [],
+  obras_visiveis: []
+};
+
+window.poAbrirConfig=function(){
+  // Busca configuração atual do usuário
+  fetch('/admin/painel-obras/config/get')
+    .then(r=>r.json())
+    .then(cfg=>{
+      _poConfig=cfg||{centros_custo_visiveis:[],obras_visiveis:[]};
+      poRenderConfigCc();
+      poRenderConfigObras();
+      document.getElementById('po-modal-config').style.display='flex';
+    })
+    .catch(()=>poToast('Erro ao carregar configurações','error'));
+};
+
+window.poFecharConfig=function(){
+  document.getElementById('po-modal-config').style.display='none';
+};
+
+window.poRenderConfigCc=function(){
+  if(!_d||!_d.centros_custo) return;
+  const selected=_poConfig.centros_custo_visiveis||[];
+  const all=selected.length===0||selected.length===_d.centros_custo.length;
+  
+  document.getElementById('po-cfg-select-all').checked=all;
+  
+  const html=_d.centros_custo.map(cc=>{
+    const isChecked=selected.length===0||selected.includes(cc.id);
+    return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--po-text-secondary)">
+      <input type="checkbox" value="${cc.id}" ${isChecked?'checked':''} 
+             onchange="poToggleCc('${cc.id}',this.checked)"
+             style="width:16px;height:16px">
+      <span>${cc.name}</span>
+    </label>`;
+  }).join('');
+  
+  document.getElementById('po-cfg-cc-list').innerHTML=html;
+};
+
+window.poRenderConfigObras=function(){
+  if(!_d||!_d.obras) return;
+  const selected=_poConfig.obras_visiveis||[];
+  const all=selected.length===0||selected.length===_d.obras.length;
+  
+  document.getElementById('po-cfg-select-all-obras').checked=all;
+  
+  const html=_d.obras.map(o=>{
+    const isChecked=selected.length===0||selected.includes(o.id);
+    return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--po-text-secondary)">
+      <input type="checkbox" value="${o.id}" ${isChecked?'checked':''} 
+             onchange="poToggleObra(${o.id},this.checked)"
+             style="width:16px;height:16px">
+      <span>${o.codigo} - ${o.nome}</span>
+    </label>`;
+  }).join('');
+  
+  document.getElementById('po-cfg-obras-list').innerHTML=html;
+};
+
+window.poToggleCc=function(ccId,checked){
+  if(!_poConfig.centros_custo_visiveis) _poConfig.centros_custo_visiveis=[];
+  if(checked){
+    if(!_poConfig.centros_custo_visiveis.includes(ccId)){
+      _poConfig.centros_custo_visiveis.push(ccId);
+    }
+  }else{
+    _poConfig.centros_custo_visiveis=_poConfig.centros_custo_visiveis.filter(id=>id!==ccId);
+  }
+};
+
+window.poToggleObra=function(obraId,checked){
+  if(!_poConfig.obras_visiveis) _poConfig.obras_visiveis=[];
+  if(checked){
+    if(!_poConfig.obras_visiveis.includes(obraId)){
+      _poConfig.obras_visiveis.push(obraId);
+    }
+  }else{
+    _poConfig.obras_visiveis=_poConfig.obras_visiveis.filter(id=>id!==obraId);
+  }
+};
+
+window.poToggleAllCc=function(checked){
+  if(!_d||!_d.centros_custo) return;
+  if(checked){
+    _poConfig.centros_custo_visiveis=_d.centros_custo.map(cc=>cc.id);
+  }else{
+    _poConfig.centros_custo_visiveis=[];
+  }
+  poRenderConfigCc();
+};
+
+window.poToggleAllObras=function(checked){
+  if(!_d||!_d.obras) return;
+  if(checked){
+    _poConfig.obras_visiveis=_d.obras.map(o=>o.id);
+  }else{
+    _poConfig.obras_visiveis=[];
+  }
+  poRenderConfigObras();
+};
+
+window.poSalvarConfig=function(){
+  fetch('/admin/painel-obras/config/save',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(_poConfig)
+  })
+  .then(r=>r.json())
+  .then(res=>{
+    if(res.ok){
+      poToast('Configurações salvas!');
+      poFecharConfig();
+      poLoad(); // Recarrega dashboard com novos filtros
+    }else{
+      poToast('Erro ao salvar: '+(res.error||''),'error');
+    }
+  })
+  .catch(()=>poToast('Erro de conexão','error'));
+};
+
+window.poLimparFiltros=function(){
+  _poConfig={centros_custo_visiveis:[],obras_visiveis:[]};
+  poRenderConfigCc();
+  poRenderConfigObras();
+  poToast('Filtros limpos. Clique em Salvar para aplicar.');
+};
+
+window.poToast=function(msg,type='ok'){
+  const c=document.getElementById('po-toast');
+  const e=document.createElement('div');
+  e.className='po-toast-item '+type; e.textContent=msg; c.appendChild(e);
+  setTimeout(()=>e.remove(),3200);
+};
+
 window.poVerLancamentos=function(obraId,codigo){
   if(!_d||!_d.lancamentos_por_obra||!_d.lancamentos_por_obra[obraId]){
     poToast('Lançamentos não disponíveis.','error');
@@ -729,5 +881,60 @@ window.poMudarTab=function(tab){
 // poLoad(); // Removido - já é chamado no DOMContentLoaded acima
 })();
 </script>
+
+<!-- Modal de Configurações/Filtros -->
+<div id="po-modal-config" class="po-modal" style="display:none">
+  <div class="po-modal-box" style="max-width:600px">
+    <div class="po-modal-header">
+      <h5 class="po-modal-title">Configurações de Visualização</h5>
+      <button class="po-btn-close" onclick="poFecharConfig()">×</button>
+    </div>
+    
+    <div style="margin:20px 0">
+      <h6 style="color:var(--po-text-primary);font-size:13px;font-weight:600;margin-bottom:12px">
+        <i class="bi bi-building"></i> Centros de Custo Visíveis
+      </h6>
+      <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;max-height:300px;overflow-y:auto">
+        <div style="margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--po-blue-t);font-size:13px">
+            <input type="checkbox" id="po-cfg-select-all" onchange="poToggleAllCc(this.checked)" style="width:16px;height:16px">
+            <span style="font-weight:600">Selecionar Todos</span>
+          </label>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:10px;display:grid;gap:8px" id="po-cfg-cc-list">
+          <!-- Preenchido via JavaScript -->
+        </div>
+      </div>
+    </div>
+    
+    <div style="margin:20px 0">
+      <h6 style="color:var(--po-text-primary);font-size:13px;font-weight:600;margin-bottom:12px">
+        <i class="bi bi-buildings"></i> Obras Visíveis
+      </h6>
+      <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;max-height:200px;overflow-y:auto">
+        <div style="margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--po-blue-t);font-size:13px">
+            <input type="checkbox" id="po-cfg-select-all-obras" onchange="poToggleAllObras(this.checked)" style="width:16px;height:16px">
+            <span style="font-weight:600">Selecionar Todas</span>
+          </label>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:10px;display:grid;gap:8px" id="po-cfg-obras-list">
+          <!-- Preenchido via JavaScript -->
+        </div>
+      </div>
+    </div>
+    
+    <div class="po-modal-footer" style="display:flex;gap:10px;margin-top:20px">
+      <button class="po-btn" onclick="poSalvarConfig()">
+        <i class="bi bi-check2"></i> Salvar Filtros
+      </button>
+      <button class="po-btn-secondary" onclick="poLimparFiltros()">
+        <i class="bi bi-arrow-counterclockwise"></i> Limpar Filtros
+      </button>
+      <button class="po-btn-secondary" onclick="poFecharConfig()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <?php $content = ob_get_clean(); ?>
 <?php require ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>
