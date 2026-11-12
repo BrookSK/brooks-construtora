@@ -2,28 +2,29 @@
 <?php ob_start(); ?>
 <link rel="stylesheet" href="/assets/css/painel-obras-light.css">
 <style>
-.main-content{background:#0b1220!important} body{background:#0b1220!important}
-.top-bar{background:#151f32!important;color:#e2e8f0!important;box-shadow:none!important;border-bottom:1px solid rgba(255,255,255,.06)!important}
-.top-bar h5{color:#f8fafc!important} .top-bar .text-muted{color:#94a3b8!important}
-.top-bar .badge{background:rgba(59,130,246,.2)!important;color:#93c5fd!important}
-#pl-pg{font-family:'Inter',system-ui,sans-serif;color:#e2e8f0;padding-bottom:48px}
-.pl-card{background:#151f32;border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden}
-.pl-inp{background:#0f1829;border:1px solid rgba(255,255,255,.1);color:#e2e8f0;border-radius:8px;padding:8px 12px;width:100%;outline:none;font-size:14px}
-.pl-inp:focus{border-color:#3b82f6} .pl-inp option{background:#0f1829}
-.pl-label{font-size:12px;color:#94a3b8;margin-bottom:4px;display:block}
+/* Override do layout para tema claro nesta página */
+.main-content{background:#f8f9fa!important} body{background:#f8f9fa!important}
+.top-bar{background:#ffffff!important;color:#1e293b!important;box-shadow:none!important;border-bottom:1px solid #e2e8f0!important}
+.top-bar h5{color:#0f172a!important} .top-bar .text-muted{color:#64748b!important}
+.top-bar .badge{background:rgba(59,130,246,.2)!important;color:#2563eb!important}
+#pl-pg{font-family:'Inter',system-ui,sans-serif;color:#1e293b;padding-bottom:48px}
+.pl-card{background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}
+.pl-inp{background:#f8f9fa;border:1px solid #e2e8f0;color:#1e293b;border-radius:8px;padding:8px 12px;width:100%;outline:none;font-size:14px}
+.pl-inp:focus{border-color:#3b82f6} .pl-inp option{background:#ffffff}
+.pl-label{font-size:12px;color:#64748b;margin-bottom:4px;display:block}
 .pl-btn-p{background:linear-gradient(135deg,#3b82f6,#22d3ee);color:#fff;border:none;border-radius:10px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
-.pl-btn-g{background:#151f32;border:1px solid rgba(255,255,255,.12);color:#e2e8f0;border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer}
-.pl-btn-sm{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:#60a5fa;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer}
+.pl-btn-g{background:#ffffff;border:1px solid #e2e8f0;color:#1e293b;border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer}
+.pl-btn-sm{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:#2563eb;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer}
 .pl-table{width:100%;border-collapse:collapse}
-.pl-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
-.pl-table td{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;color:#e2e8f0;vertical-align:middle}
+.pl-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#64748b;padding:10px 16px;border-bottom:1px solid #e2e8f0}
+.pl-table td{padding:10px 16px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#1e293b;vertical-align:middle}
 .pl-table tr:last-child td{border-bottom:none}
 .pl-table tbody tr:hover{background:rgba(59,130,246,.05)}
-.pl-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1050;align-items:center;justify-content:center;padding:16px}
-.pl-modal-box{background:#151f32;border:1px solid rgba(255,255,255,.08);border-radius:16px;width:100%;max-width:460px;padding:28px}
+.pl-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1050;align-items:center;justify-content:center;padding:16px}
+.pl-modal-box{background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;width:100%;max-width:460px;padding:28px}
 .pl-subnav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
-.pl-subnav a{font-size:13px;padding:6px 14px;border-radius:8px;color:#94a3b8;text-decoration:none;border:1px solid rgba(255,255,255,.06);transition:all .15s}
-.pl-subnav a:hover,.pl-subnav a.active{background:rgba(59,130,246,.12);color:#60a5fa;border-color:rgba(59,130,246,.3)}
+.pl-subnav a{font-size:13px;padding:6px 14px;border-radius:8px;color:#64748b;text-decoration:none;border:1px solid #e2e8f0;transition:all .15s}
+.pl-subnav a:hover,.pl-subnav a.active{background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)}
 </style>
 
 <div id="pl-pg">

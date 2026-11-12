@@ -1,30 +1,32 @@
 <?php $pageTitle = 'De-para de Categorias'; $currentPage = 'painel_obras'; ?>
-<?php ob_start(); $cats=$categoriasObra; ?>
+<?php ob_start(); ?>
+<?php $cats = $categoriasObra ?? []; ?>
 <link rel="stylesheet" href="/assets/css/painel-obras-light.css">
 <style>
-.main-content{background:#0b1220!important} body{background:#0b1220!important}
-.top-bar{background:#151f32!important;color:#e2e8f0!important;box-shadow:none!important;border-bottom:1px solid rgba(255,255,255,.06)!important}
-.top-bar h5{color:#f8fafc!important} .top-bar .text-muted{color:#94a3b8!important}
-.top-bar .badge{background:rgba(59,130,246,.2)!important;color:#93c5fd!important}
-#dp-pg{font-family:'Inter',system-ui,sans-serif;color:#e2e8f0;padding-bottom:48px}
-.dp-card{background:#151f32;border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden;margin-bottom:16px}
-.dp-inp{background:#0f1829;border:1px solid rgba(255,255,255,.1);color:#e2e8f0;border-radius:8px;padding:7px 12px;width:100%;outline:none;font-size:13px}
-.dp-inp:focus{border-color:#3b82f6} .dp-inp option{background:#0f1829}
+/* Override do layout para tema claro nesta página */
+.main-content{background:#f8f9fa!important} body{background:#f8f9fa!important}
+.top-bar{background:#ffffff!important;color:#1e293b!important;box-shadow:none!important;border-bottom:1px solid #e2e8f0!important}
+.top-bar h5{color:#0f172a!important} .top-bar .text-muted{color:#64748b!important}
+.top-bar .badge{background:rgba(59,130,246,.2)!important;color:#2563eb!important}
+#dp-pg{font-family:'Inter',system-ui,sans-serif;color:#1e293b;padding-bottom:48px}
+.dp-card{background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:16px}
+.dp-inp{background:#f8f9fa;border:1px solid #e2e8f0;color:#1e293b;border-radius:8px;padding:7px 12px;width:100%;outline:none;font-size:13px}
+.dp-inp:focus{border-color:#3b82f6} .dp-inp option{background:#ffffff}
 .dp-btn-p{background:linear-gradient(135deg,#3b82f6,#22d3ee);color:#fff;border:none;border-radius:10px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer}
-.dp-btn-g{background:#151f32;border:1px solid rgba(255,255,255,.12);color:#e2e8f0;border-radius:10px;padding:7px 12px;font-size:13px;cursor:pointer}
-.dp-btn-d{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer}
-.dp-row{display:grid;grid-template-columns:1fr 220px 100px auto;gap:8px;align-items:center;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.04)}
+.dp-btn-g{background:#ffffff;border:1px solid #e2e8f0;color:#1e293b;border-radius:10px;padding:7px 12px;font-size:13px;cursor:pointer}
+.dp-btn-d{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#dc2626;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer}
+.dp-row{display:grid;grid-template-columns:1fr 220px 100px auto;gap:8px;align-items:center;padding:10px 20px;border-bottom:1px solid #f1f5f9}
 .dp-row:last-child{border-bottom:none}
 @media(max-width:760px){.dp-row{grid-template-columns:1fr;}}
 .dp-table{width:100%;border-collapse:collapse}
-.dp-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
-.dp-table td{padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;color:#e2e8f0;vertical-align:middle}
+.dp-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#64748b;padding:10px 16px;border-bottom:1px solid #e2e8f0}
+.dp-table td{padding:9px 16px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#1e293b;vertical-align:middle}
 .dp-table tr:last-child td{border-bottom:none}
 .dp-table tbody tr:hover{background:rgba(59,130,246,.05)}
 .dp-subnav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
-.dp-subnav a{font-size:13px;padding:6px 14px;border-radius:8px;color:#94a3b8;text-decoration:none;border:1px solid rgba(255,255,255,.06);transition:all .15s}
-.dp-subnav a:hover,.dp-subnav a.active{background:rgba(59,130,246,.12);color:#60a5fa;border-color:rgba(59,130,246,.3)}
-.dp-warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:12px 20px;font-size:13px;color:#fcd34d;margin-bottom:0}
+.dp-subnav a{font-size:13px;padding:6px 14px;border-radius:8px;color:#64748b;text-decoration:none;border:1px solid #e2e8f0;transition:all .15s}
+.dp-subnav a:hover,.dp-subnav a.active{background:rgba(59,130,246,.12);color:#2563eb;border-color:rgba(59,130,246,.3)}
+.dp-warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:12px 20px;font-size:13px;color:#d97706;margin-bottom:0}
 </style>
 
 <div id="dp-pg">

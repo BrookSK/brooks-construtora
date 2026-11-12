@@ -79,13 +79,38 @@ class PainelObrasController extends Controller
                 $ccVisiveis = json_decode($config['centros_custo_visiveis'] ?? '[]', true) ?: [];
                 $obrasVisiveis = json_decode($config['obras_visiveis'] ?? '[]', true) ?: [];
                 
+                error_log('[PainelObras] Config carregada - CCs: ' . count($ccVisiveis) . ', Obras: ' . count($obrasVisiveis));
+                error_log('[PainelObras] Obras visíveis IDs: ' . json_encode($obrasVisiveis));
+                
                 // Filtra obras se houver filtro ativo
                 if (!empty($obrasVisiveis)) {
+                    // Converte IDs para inteiros para comparação
+                    $obrasVisiveis = array_map('intval', $obrasVisiveis);
+                    
+                    error_log('[PainelObras] Total de obras ANTES do filtro: ' . count($dashboardData['obras']));
+                    
+                    // Log das primeiras 3 obras para debug
+                    if (!empty($dashboardData['obras'])) {
+                        $sample = array_slice($dashboardData['obras'], 0, 3);
+                        foreach ($sample as $s) {
+                            error_log('[PainelObras] Obra sample - ID: ' . $s['id'] . ' (type: ' . gettype($s['id']) . '), Nome: ' . $s['nome']);
+                        }
+                    }
+                    
                     $dashboardData['obras'] = array_filter(
                         $dashboardData['obras'],
-                        fn($o) => in_array($o['id'], $obrasVisiveis)
+                        function($o) use ($obrasVisiveis) {
+                            $obraId = (int)$o['id'];
+                            $match = in_array($obraId, $obrasVisiveis);
+                            if ($match) {
+                                error_log('[PainelObras] Obra INCLUÍDA: ID=' . $obraId . ', Nome=' . $o['nome']);
+                            }
+                            return $match;
+                        }
                     );
                     $dashboardData['obras'] = array_values($dashboardData['obras']); // Reindex
+                    
+                    error_log('[PainelObras] Total de obras DEPOIS do filtro: ' . count($dashboardData['obras']));
                 }
                 
                 // Recalcula KPIs com obras filtradas
