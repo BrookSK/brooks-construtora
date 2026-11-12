@@ -30,6 +30,7 @@
 <div class="orc-subnav">
   <a href="/admin/painel-obras"><i class="bi bi-speedometer2"></i> Dashboard</a>
   <a href="/admin/painel-obras/obras"><i class="bi bi-buildings"></i> Obras</a>
+  <a href="/admin/painel-obras/lancamentos"><i class="bi bi-cash-stack"></i> Lançamentos</a>
   <a href="/admin/painel-obras/orcamento" class="active"><i class="bi bi-calculator"></i> Orçamento</a>
   <a href="/admin/painel-obras/planilha"><i class="bi bi-table"></i> Planilha de Controle</a>
   <a href="/admin/painel-obras/depara"><i class="bi bi-arrow-left-right"></i> De-para Categorias</a>
@@ -96,7 +97,7 @@
         <?php foreach($categoriasObra as $cat): ?>
         <tr>
           <td><?=htmlspecialchars($cat)?></td>
-          <td><input class="orc-inp orc-val" data-cat="<?=htmlspecialchars($cat)?>" placeholder="R$ 0,00" oninput="fmtMoeda(this);orcCalcTotal()" style="text-align:right"></td>
+          <td><input class="orc-inp orc-val" data-cat="<?=htmlspecialchars($cat)?>" placeholder="R$ 0,00" oninput="orcFmtValor(this);orcCalcTotal()" style="text-align:right"></td>
         </tr>
         <?php endforeach; ?>
       </tbody>
@@ -116,6 +117,17 @@
 </div>
 <script>
 const BRL=v=>v==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
+
+function orcFmtValor(el){
+  let v=el.value.replace(/\D/g,'');
+  v=(parseInt(v||'0')/100).toFixed(2);
+  el.value='R$ '+v.replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+}
+
+function parseMoeda(v){
+  return parseFloat(String(v).replace(/[R$\s.]/g,'').replace(',','.'))||0;
+}
+
 function orcCarregar(){
   const id=document.getElementById('orc-obra-sel').value;
   if(!id){document.getElementById('orc-area').style.display='none';return;}
@@ -134,13 +146,18 @@ function orcCarregar(){
     document.getElementById('orc-total').textContent=BRL(tot);
     if(res.historico?.length){
       document.getElementById('orc-historico').innerHTML=`<table class="orc-table"><thead><tr><th>Versão</th><th>Vigência</th><th style="text-align:right">Total</th><th>Motivo</th></tr></thead><tbody>${
-        res.historico.map(h=>`<tr><td style="padding:8px 16px">v${h.versao}</td><td style="padding:8px 16px">${h.data_vigencia||'—'}</td><td style="text-align:right;padding:8px 16px">${BRL(h.total)}</td><td style="color:#94a3b8;padding:8px 16px">${h.motivo_revisao||'—'}</td></tr>`).join('')
+        res.historico.map(h=>`<tr><td style="padding:8px 16px">v${h.versao}</td><td style="padding:8px 16px">${h.data_vigencia||'—'}</td><td style="text-align:right;padding:8px 16px">${BRL(h.total)}</td><td style="color:#64748b;padding:8px 16px">${h.motivo_revisao||'—'}</td></tr>`).join('')
       }</tbody></table>`;
     } else {document.getElementById('orc-historico').textContent='Nenhuma versão cadastrada ainda.';}
+  }).catch(e=>{
+    console.error('Erro ao carregar orçamento:',e);
+    alert('Erro ao carregar dados do orçamento');
   });
 }
+
 function orcNovaVersao(){
-  if(!document.getElementById('orc-obra-sel').value){alert('Selecione uma obra primeiro.');return;}
+  const obraId=document.getElementById('orc-obra-sel').value;
+  if(!obraId){alert('Selecione uma obra primeiro.');return;}
   const v=parseInt(document.getElementById('orc-versao').textContent)||0;
   document.getElementById('orc-motivo-wrap').style.display=v>=1?'block':'none';
   document.getElementById('orc-vig').value=new Date().toISOString().substring(0,10);
@@ -149,24 +166,61 @@ function orcNovaVersao(){
   document.getElementById('orc-err').style.display='none';
   document.getElementById('orc-modal').style.display='flex';
 }
+
 function orcCalcTotal(){
-  let t=0;document.querySelectorAll('.orc-val').forEach(i=>{t+=parseMoeda(i.value);});
+  let t=0;
+  document.querySelectorAll('.orc-val').forEach(i=>{
+    t+=parseMoeda(i.value);
+  });
   document.getElementById('orc-mo-total').textContent=BRL(t);
 }
+
 function orcSalvar(){
   const id=document.getElementById('orc-obra-sel').value;
   const v=parseInt(document.getElementById('orc-versao').textContent)||0;
   const motivo=document.getElementById('orc-motivo').value.trim();
-  if(v>=1&&!motivo){const e=document.getElementById('orc-err');e.textContent='Motivo obrigatório a partir da v2.';e.style.display='block';return;}
-  const p=new URLSearchParams({obra_id:id,data_vigencia:document.getElementById('orc-vig').value,motivo_revisao:motivo});
-  document.querySelectorAll('.orc-val').forEach(i=>p.append('valores['+i.dataset.cat+']',i.value));
-  fetch('/admin/painel-obras/orcamento/salvar',{method:'POST',body:p}).then(r=>r.json()).then(res=>{
-    if(!res.ok){const e=document.getElementById('orc-err');e.textContent=res.error||'Erro';e.style.display='block';return;}
-    document.getElementById('orc-modal').style.display='none';orcCarregar();
+  
+  if(v>=1&&!motivo){
+    const e=document.getElementById('orc-err');
+    e.textContent='Motivo obrigatório a partir da v2.';
+    e.style.display='block';
+    return;
+  }
+  
+  const p=new URLSearchParams({
+    obra_id:id,
+    data_vigencia:document.getElementById('orc-vig').value,
+    motivo_revisao:motivo
   });
+  
+  // Adiciona valores formatados corretamente
+  document.querySelectorAll('.orc-val').forEach(i=>{
+    const valor=parseMoeda(i.value);
+    if(valor>0){
+      p.append('valores['+i.dataset.cat+']',valor);
+    }
+  });
+  
+  fetch('/admin/painel-obras/orcamento/salvar',{method:'POST',body:p})
+    .then(r=>r.json())
+    .then(res=>{
+      if(!res.ok){
+        const e=document.getElementById('orc-err');
+        e.textContent=res.error||'Erro ao salvar';
+        e.style.display='block';
+        return;
+      }
+      document.getElementById('orc-modal').style.display='none';
+      // Recarrega os dados
+      orcCarregar();
+    })
+    .catch(e=>{
+      console.error('Erro ao salvar:',e);
+      const er=document.getElementById('orc-err');
+      er.textContent='Erro de conexão';
+      er.style.display='block';
+    });
 }
-function fmtMoeda(el){let v=el.value.replace(/\D/g,'');v=(parseInt(v||'0')/100).toFixed(2);el.value='R$ '+v.replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
-function parseMoeda(v){return parseFloat(String(v).replace(/[R$\s.]/g,'').replace(',','.'))||0;}
 </script>
 <?php $content = ob_get_clean(); ?>
 <?php require ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>

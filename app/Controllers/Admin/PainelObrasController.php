@@ -622,19 +622,55 @@ class PainelObrasController extends Controller
             $categorias = [];
         }
         
-        // Se não houver categorias com gastos, não cria nenhum orçamento
-        if (empty($categorias)) {
-            $this->json(['ok'=>false,'error'=>'Nenhuma categoria com gastos encontrada para esta obra no período atual.'],422);
+        // Verifica se há algum valor preenchido
+        $totalOrcado = 0;
+        foreach ($valores as $cat => $val) {
+            $valorParsed = is_numeric($val) ? (float)$val : $this->parseMoeda($val);
+            if ($valorParsed > 0) {
+                $totalOrcado += $valorParsed;
+                // Adiciona categoria se não estiver na lista
+                if (!in_array($cat, $categorias)) {
+                    $categorias[] = $cat;
+                }
+            }
+        }
+        
+        // Valida se há pelo menos um valor
+        if ($totalOrcado <= 0) {
+            $this->json(['ok'=>false,'error'=>'Informe pelo menos um valor orçado.'],422);
             return;
         }
         
+        // Salva apenas categorias que foram preenchidas OU que têm gastos
+        $categoriasInseridas = 0;
         foreach ($categorias as $cat) {
-            Database::query(
-                "INSERT INTO painel_obras_orcamento (obra_id,categoria_obra,valor_orcado,versao,data_vigencia,motivo_revisao,created_by) VALUES (?,?,?,?,?,?,?)",
-                [$obraId,$cat,$this->parseMoeda($valores[$cat]??'0'),$v,$vigencia,$motivo?:null,$user['id']]
-            );
+            $valorOrcado = 0;
+            
+            // Verifica se foi informado valor para esta categoria
+            if (isset($valores[$cat])) {
+                $valorOrcado = is_numeric($valores[$cat]) ? (float)$valores[$cat] : $this->parseMoeda($valores[$cat]);
+            }
+            
+            // Insere apenas se houver valor > 0
+            if ($valorOrcado > 0) {
+                try {
+                    Database::query(
+                        "INSERT INTO painel_obras_orcamento (obra_id,categoria_obra,valor_orcado,versao,data_vigencia,motivo_revisao,created_by) VALUES (?,?,?,?,?,?,?)",
+                        [$obraId,$cat,$valorOrcado,$v,$vigencia,$motivo?:null,$user['id']]
+                    );
+                    $categoriasInseridas++;
+                } catch (\Throwable $e) {
+                    error_log('[PainelObrasController] Erro ao inserir orçamento: ' . $e->getMessage());
+                }
+            }
         }
-        $this->json(['ok'=>true,'versao'=>$v]);
+        
+        if ($categoriasInseridas === 0) {
+            $this->json(['ok'=>false,'error'=>'Nenhuma categoria foi salva. Verifique os valores informados.'],422);
+            return;
+        }
+        
+        $this->json(['ok'=>true,'versao'=>$v,'inseridas'=>$categoriasInseridas]);
     }
 
     // ─── Planilha de Controle ─────────────────────────────────────────
@@ -1018,3 +1054,334 @@ class PainelObrasController extends Controller
         return (float)$v;
     }
 }
+
+    // ─── Lançamentos Financeiros ─────────────────────────────────────────────
+    
+    public function lancamentos(): void
+    {
+        // Busca configuração de filtro do usuário
+        $user = Auth::user();
+        $config = null;
+        try {
+            $config = Database::fetch(
+                "SELECT obras_visiveis FROM painel_obras_config WHERE user_id = ?",
+                [$user['id']]
+            );
+        } catch (\Throwable $e) {
+            $config = null;
+        }
+        
+        // Decodifica os filtros de obras
+        $obrasVisiveisIds = [];
+        if ($config && !empty($config['obras_visiveis'])) {
+            $obrasVisiveisIds = json_decode($config['obras_visiveis'], true) ?: [];
+        }
+        
+        // Busca obras aplicando o filtro se houver
+        try {
+            if (!empty($obrasVisiveisIds)) {
+                $placeholders = implode(',', array_fill(0, count($obrasVisiveisIds), '?'));
+                $obras = Database::fetchAll(
+                    "SELECT * FROM painel_obras WHERE id IN ($placeholders) ORDER BY codigo ASC",
+                    $obrasVisiveisIds
+                );
+            } else {
+                $obras = Database::fetchAll("SELECT * FROM painel_obras ORDER BY codigo ASC");
+            }
+        } catch (\Throwable $e) {
+            $obras = [];
+        }
+        
+        $this->view('admin.painel_obras.lancamentos', [
+            'pageTitle'   => 'Lançamentos Financeiros',
+            'currentPage' => 'painel_obras',
+            'user'        => Auth::user(),
+            'flash'       => $this->getFlash(),
+            'obras'       => $obras,
+        ]);
+    }
+    
+    public function lancamentosListar(): void
+    {
+        $obraId = (int)$this->input('obra_id', 0);
+        $categoriaId = (int)$this->input('categoria_id', 0);
+        $status = $this->input('status', '');
+        $tipo = $this->input('tipo', '');
+        
+        $where = '1=1';
+        $params = [];
+        
+        if ($obraId > 0) {
+            $where .= ' AND l.obra_id = ?';
+            $params[] = $obraId;
+        }
+        if ($categoriaId > 0) {
+            $where .= ' AND l.categoria_id = ?';
+            $params[] = $categoriaId;
+        }
+        if ($status) {
+            $where .= ' AND l.status = ?';
+            $params[] = $status;
+        }
+        if ($tipo) {
+            $where .= ' AND l.tipo = ?';
+            $params[] = $tipo;
+        }
+        
+        try {
+            $lancamentos = Database::fetchAll(
+                "SELECT l.*, o.codigo AS obra_codigo, o.nome AS obra_nome, o.valor_contratado
+                 FROM painel_obras_lancamentos l
+                 LEFT JOIN painel_obras o ON o.id = l.obra_id
+                 WHERE {$where}
+                 ORDER BY l.data_lancamento DESC, l.id DESC",
+                $params
+            );
+            
+            // Calcular summary
+            $contratado = 0;
+            $realizadoManual = 0;
+            $previsto = 0;
+            $realizadoNibo = 0;
+            
+            $whereObra = $obraId > 0 ? 'WHERE id = ?' : '1=1';
+            $paramsObra = $obraId > 0 ? [$obraId] : [];
+            
+            $obrasData = Database::fetchAll(
+                "SELECT id, valor_contratado FROM painel_obras WHERE {$whereObra}",
+                $paramsObra
+            );
+            
+            $obrasIds = array_column($obrasData, 'id');
+            
+            foreach ($obrasData as $o) {
+                $contratado += (float)($o['valor_contratado'] ?? 0);
+            }
+            
+            // Lançamentos manuais realizados
+            $whereSum = $obraId > 0 ? 'AND obra_id = ?' : '';
+            $paramsSum = $obraId > 0 ? [$obraId] : [];
+            
+            $sumRealizado = Database::fetch(
+                "SELECT COALESCE(SUM(valor), 0) AS total 
+                 FROM painel_obras_lancamentos 
+                 WHERE status = 'Realizado' AND tipo = 'Despesa' {$whereSum}",
+                $paramsSum
+            );
+            $realizadoManual = (float)($sumRealizado['total'] ?? 0);
+            
+            $sumPrevisto = Database::fetch(
+                "SELECT COALESCE(SUM(valor), 0) AS total 
+                 FROM painel_obras_lancamentos 
+                 WHERE status = 'Previsto' AND tipo = 'Despesa' {$whereSum}",
+                $paramsSum
+            );
+            $previsto = (float)($sumPrevisto['total'] ?? 0);
+            
+            // Buscar gastos do Nibo para as obras filtradas
+            try {
+                $competencia = date('Y-m');
+                $company = 'brooks';
+                $dashboardData = PainelObrasService::getDashboardData($competencia, $company);
+                
+                // Se filtrou por obra específica, pega só dessa obra
+                if ($obraId > 0) {
+                    $obraData = array_values(array_filter(
+                        $dashboardData['obras'], 
+                        fn($o) => $o['id'] === $obraId
+                    ));
+                    $realizadoNibo = !empty($obraData) ? (float)($obraData[0]['gasto'] ?? 0) : 0;
+                } else {
+                    // Soma gastos de todas as obras
+                    $realizadoNibo = (float)($dashboardData['kpis']['gasto'] ?? 0);
+                }
+            } catch (\Throwable $e) {
+                error_log('[PainelObrasController] Erro ao buscar gastos Nibo: ' . $e->getMessage());
+                $realizadoNibo = 0;
+            }
+            
+            // Total realizado = manual + Nibo
+            $realizado = $realizadoManual + $realizadoNibo;
+            $saldo = $contratado - $realizado;
+            
+            $this->json([
+                'lancamentos' => $lancamentos,
+                'summary' => [
+                    'contratado' => $contratado,
+                    'realizado' => $realizado,
+                    'realizado_manual' => $realizadoManual,
+                    'realizado_nibo' => $realizadoNibo,
+                    'previsto' => $previsto,
+                    'saldo' => $saldo,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] Erro ao listar lançamentos: ' . $e->getMessage());
+            $this->json(['lancamentos' => [], 'summary' => []]);
+        }
+    }
+    
+    public function lancamentosSalvar(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['ok' => false], 400);
+            return;
+        }
+        
+        $id = (int)$this->input('id', 0);
+        $obraId = (int)$this->input('obra_id', 0);
+        $categoriaId = (int)$this->input('categoria_id', 0);
+        $tipo = $this->input('tipo', 'Despesa');
+        $status = $this->input('status', 'Previsto');
+        $descricao = trim($this->input('descricao', ''));
+        $valor = (float)$this->input('valor', 0);
+        $dataLancamento = $this->input('data_lancamento', '');
+        $dataVencimento = $this->input('data_vencimento', '');
+        $observacoes = trim($this->input('observacoes', ''));
+        
+        if (!$obraId || !$categoriaId || !$descricao || $valor <= 0 || !$dataLancamento) {
+            $this->json(['ok' => false, 'error' => 'Campos obrigatórios não preenchidos.'], 422);
+            return;
+        }
+        
+        $user = Auth::user();
+        
+        try {
+            if ($id > 0) {
+                // Atualizar
+                Database::query(
+                    "UPDATE painel_obras_lancamentos 
+                     SET obra_id = ?, categoria_id = ?, tipo = ?, status = ?, descricao = ?, 
+                         valor = ?, data_lancamento = ?, data_vencimento = ?, observacoes = ?, updated_at = NOW()
+                     WHERE id = ?",
+                    [$obraId, $categoriaId, $tipo, $status, $descricao, $valor, $dataLancamento, $dataVencimento ?: null, $observacoes, $id]
+                );
+            } else {
+                // Criar
+                Database::insert('painel_obras_lancamentos', [
+                    'obra_id' => $obraId,
+                    'categoria_id' => $categoriaId,
+                    'tipo' => $tipo,
+                    'status' => $status,
+                    'descricao' => $descricao,
+                    'valor' => $valor,
+                    'data_lancamento' => $dataLancamento,
+                    'data_vencimento' => $dataVencimento ?: null,
+                    'observacoes' => $observacoes,
+                    'created_by' => $user['id'],
+                ]);
+            }
+            
+            $this->json(['ok' => true]);
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] Erro ao salvar lançamento: ' . $e->getMessage());
+            $this->json(['ok' => false, 'error' => 'Erro ao salvar: ' . $e->getMessage()], 500);
+        }
+    }
+    
+    public function lancamentosDeletar(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['ok' => false], 400);
+            return;
+        }
+        
+        $id = (int)$this->input('id', 0);
+        
+        try {
+            Database::query("DELETE FROM painel_obras_lancamentos WHERE id = ?", [$id]);
+            $this->json(['ok' => true]);
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] Erro ao deletar lançamento: ' . $e->getMessage());
+            $this->json(['ok' => false, 'error' => 'Erro ao deletar.'], 500);
+        }
+    }
+    
+    // ─── Categorias ───────────────────────────────────────────────────────────
+    
+    public function categorias(): void
+    {
+        try {
+            $categorias = Database::fetchAll(
+                "SELECT * FROM painel_obras_categorias_servico WHERE ativo = 1 ORDER BY ordem ASC, nome ASC"
+            );
+            $this->json(['categorias' => $categorias]);
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] Erro ao listar categorias: ' . $e->getMessage());
+            $this->json(['categorias' => []]);
+        }
+    }
+    
+    public function categoriasSalvar(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['ok' => false], 400);
+            return;
+        }
+        
+        $id = (int)$this->input('id', 0);
+        $nome = trim($this->input('nome', ''));
+        $codigo = trim($this->input('codigo', ''));
+        $tipoObra = $this->input('tipo_obra', 'Ambos');
+        
+        if (!$nome || !$codigo) {
+            $this->json(['ok' => false, 'error' => 'Nome e código são obrigatórios.'], 422);
+            return;
+        }
+        
+        try {
+            if ($id > 0) {
+                // Atualizar
+                Database::query(
+                    "UPDATE painel_obras_categorias_servico 
+                     SET nome = ?, codigo = ?, tipo_obra = ?, updated_at = NOW()
+                     WHERE id = ?",
+                    [$nome, $codigo, $tipoObra, $id]
+                );
+            } else {
+                // Criar
+                $ordem = Database::fetch("SELECT COALESCE(MAX(ordem), 0) + 1 AS prox FROM painel_obras_categorias_servico");
+                Database::insert('painel_obras_categorias_servico', [
+                    'nome' => $nome,
+                    'codigo' => $codigo,
+                    'tipo_obra' => $tipoObra,
+                    'ordem' => $ordem['prox'] ?? 1,
+                    'ativo' => 1,
+                ]);
+            }
+            
+            $this->json(['ok' => true]);
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] Erro ao salvar categoria: ' . $e->getMessage());
+            $this->json(['ok' => false, 'error' => 'Erro ao salvar: ' . $e->getMessage()], 500);
+        }
+    }
+    
+    public function categoriasDeletar(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['ok' => false], 400);
+            return;
+        }
+        
+        $id = (int)$this->input('id', 0);
+        
+        try {
+            // Verifica se há lançamentos usando esta categoria
+            $count = Database::fetch(
+                "SELECT COUNT(*) AS total FROM painel_obras_lancamentos WHERE categoria_id = ?",
+                [$id]
+            );
+            
+            if ($count && $count['total'] > 0) {
+                $this->json(['ok' => false, 'error' => 'Esta categoria possui lançamentos vinculados e não pode ser excluída.'], 422);
+                return;
+            }
+            
+            Database::query("DELETE FROM painel_obras_categorias_servico WHERE id = ?", [$id]);
+            $this->json(['ok' => true]);
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] Erro ao deletar categoria: ' . $e->getMessage());
+            $this->json(['ok' => false, 'error' => 'Erro ao deletar.'], 500);
+        }
+    }
