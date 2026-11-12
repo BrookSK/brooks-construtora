@@ -19,11 +19,8 @@ use App\Models\NiboSyncSnapshot;
  */
 class PainelObrasController extends Controller
 {
-    private const CATEGORIAS_OBRA = [
-        'Material Básico', 'Mão de Obra', 'Equipamento/Locação',
-        'Material de Acabamento', 'Instalações',
-        'Administração/Indiretos', 'Projetos e Taxas', 'Imprevistos',
-    ];
+    // Removido CATEGORIAS_OBRA hardcoded
+    // Agora as categorias vêm do Nibo através do de-para
 
     public function __construct()
     {
@@ -333,33 +330,55 @@ class PainelObrasController extends Controller
 
     public function obrasCategorias(): void
     {
+        $company = (string) $this->input('company', 'brooks');
+        
         try {
-            $categorias = Database::fetchAll(
-                "SELECT id, codigo, nome, tipo_obra, ordem 
-                 FROM painel_obras_categorias_servico 
-                 WHERE ativo = 1 
-                 ORDER BY tipo_obra, ordem"
-            );
+            // Busca TODAS as categorias do Nibo
+            $catMapNibo = NiboCategoriesService::mapa($company);
             
-            $result = [
-                'Construção' => [],
-                'Reforma' => []
-            ];
+            error_log('[PainelObras] Total de categorias do Nibo: ' . count($catMapNibo));
             
-            foreach ($categorias as $cat) {
-                $tipo = $cat['tipo_obra'];
-                if ($tipo === 'Ambos') {
-                    $result['Construção'][] = $cat;
-                    $result['Reforma'][] = $cat;
-                } else {
-                    $result[$tipo][] = $cat;
+            $categorias = [];
+            foreach ($catMapNibo as $id => $cat) {
+                $nome = $cat['nome'] ?? '';
+                if ($nome && $nome !== '—') {
+                    $categorias[] = [
+                        'id' => $id,
+                        'nome' => $nome,
+                        'caminho' => $cat['caminho'] ?? '',
+                    ];
                 }
             }
             
-            $this->json($result);
+            // Remove duplicados por nome
+            $nomes = [];
+            $categoriasUnicas = [];
+            foreach ($categorias as $cat) {
+                if (!in_array($cat['nome'], $nomes)) {
+                    $nomes[] = $cat['nome'];
+                    $categoriasUnicas[] = $cat['nome']; // Retorna apenas os nomes
+                }
+            }
+            
+            // Ordena alfabeticamente
+            sort($categoriasUnicas);
+            
+            error_log('[PainelObras] Categorias únicas retornadas: ' . count($categoriasUnicas));
+            
+            // Retorna no formato esperado pelo frontend (separado por tipo)
+            $this->json([
+                'Construção' => $categoriasUnicas,
+                'Reforma' => $categoriasUnicas, // Mesmas categorias para ambos os tipos
+            ]);
         } catch (\Throwable $e) {
-            error_log('[PainelObrasController] Erro ao buscar categorias: ' . $e->getMessage());
-            $this->json(['Construção' => [], 'Reforma' => []]);
+            error_log('[PainelObrasController] Erro ao buscar categorias do Nibo: ' . $e->getMessage());
+            // Fallback: retorna categorias padrão se houver erro
+            $fallback = [
+                'Material Básico', 'Mão de Obra', 'Equipamento/Locação',
+                'Material de Acabamento', 'Instalações',
+                'Administração/Indiretos', 'Projetos e Taxas', 'Imprevistos',
+            ];
+            $this->json(['Construção' => $fallback, 'Reforma' => $fallback]);
         }
     }
 
@@ -574,6 +593,23 @@ class PainelObrasController extends Controller
             if (!isset($deParaMap[$id])) $semEntrada[] = ['id'=>$id,'nome'=>$cat['nome'],'caminho'=>$cat['caminho']??''];
         }
 
+        // Busca categorias de obra únicas já mapeadas para sugestões
+        $categoriasObraExistentes = Database::fetchAll(
+            "SELECT DISTINCT categoria_obra FROM painel_categorias_depara 
+             WHERE categoria_obra IS NOT NULL AND categoria_obra != '' 
+             ORDER BY categoria_obra"
+        );
+        $categoriasObra = array_column($categoriasObraExistentes, 'categoria_obra');
+        
+        // Se não houver nenhuma, fornece sugestões padrão
+        if (empty($categoriasObra)) {
+            $categoriasObra = [
+                'Material Básico', 'Mão de Obra', 'Equipamento/Locação',
+                'Material de Acabamento', 'Instalações',
+                'Administração/Indiretos', 'Projetos e Taxas', 'Imprevistos',
+            ];
+        }
+
         $this->view('admin.painel_obras.depara',[
             'pageTitle'      => 'De-para de Categorias',
             'currentPage'    => 'painel_obras',
@@ -583,7 +619,7 @@ class PainelObrasController extends Controller
             'deParaMap'      => $deParaMap,
             'naoMapeadas'    => $naoMapeadas,
             'semEntrada'     => $semEntrada,
-            'categoriasObra' => self::CATEGORIAS_OBRA,
+            'categoriasObra' => $categoriasObra,
             'company'        => $company,
             'companies'      => NiboService::companies(),
         ]);

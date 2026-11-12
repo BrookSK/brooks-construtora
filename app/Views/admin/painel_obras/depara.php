@@ -41,7 +41,12 @@
 </div>
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-  <h5 style="margin:0;color:#f8fafc">De-para: Categorias Nibo → Categoria de Obra</h5>
+  <div>
+    <h5 style="margin:0;color:#0f172a">De-para: Categorias Nibo → Categoria de Obra</h5>
+    <p style="font-size:13px;color:#64748b;margin:4px 0 0 0">
+      Mapeie as categorias do Nibo para categorias de obra. Você pode digitar novas categorias ou selecionar das existentes.
+    </p>
+  </div>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
     <select id="dp-company" class="dp-inp" style="max-width:200px" onchange="location.href='/admin/painel-obras/depara?company='+this.value">
       <?php foreach($companies as $k=>$l): ?>
@@ -65,13 +70,23 @@
   <?php foreach($semEntrada as $cat): ?>
   <div class="dp-row" id="nm-<?=htmlspecialchars($cat['id'],ENT_ATTR)?>">
     <div>
-      <div style="font-size:13px;font-weight:600;color:#e2e8f0"><?=htmlspecialchars($cat['nome'])?></div>
+      <div style="font-size:13px;font-weight:600;color:#1e293b"><?=htmlspecialchars($cat['nome'])?></div>
       <div style="font-size:11px;color:#64748b"><?=htmlspecialchars($cat['caminho']??'')?></div>
     </div>
-    <select class="dp-inp dp-catobra" data-id="<?=htmlspecialchars($cat['id'],ENT_ATTR)?>" data-nome="<?=htmlspecialchars($cat['nome'],ENT_ATTR)?>">
-      <option value="">— Selecionar —</option>
-      <?php foreach($cats as $c): ?><option><?=htmlspecialchars($c)?></option><?php endforeach; ?>
-    </select>
+    <div>
+      <input type="text" 
+             list="cat-obras-<?=htmlspecialchars($cat['id'],ENT_ATTR)?>" 
+             class="dp-inp dp-catobra" 
+             data-id="<?=htmlspecialchars($cat['id'],ENT_ATTR)?>" 
+             data-nome="<?=htmlspecialchars($cat['nome'],ENT_ATTR)?>"
+             placeholder="Digite ou selecione..."
+             style="width:100%">
+      <datalist id="cat-obras-<?=htmlspecialchars($cat['id'],ENT_ATTR)?>">
+        <?php foreach($cats as $c): ?>
+        <option value="<?=htmlspecialchars($c)?>"><?=htmlspecialchars($c)?></option>
+        <?php endforeach; ?>
+      </datalist>
+    </div>
     <div style="display:flex;align-items:center;gap:6px;white-space:nowrap">
       <input type="checkbox" class="dp-ignorar" id="ig-<?=htmlspecialchars($cat['id'],ENT_ATTR)?>">
       <label for="ig-<?=htmlspecialchars($cat['id'],ENT_ATTR)?>" style="font-size:11px;color:#94a3b8;cursor:pointer">Ignorar</label>

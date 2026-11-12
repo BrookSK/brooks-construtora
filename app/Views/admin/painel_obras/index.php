@@ -419,8 +419,25 @@ window.poLoad = function(){
       console.log('[PAINEL OBRAS] 📊 KPIs:', res.data.kpis);
       console.log('[PAINEL OBRAS] 🏗️  Total de obras:', res.data.obras?.length || 0);
       console.log('[PAINEL OBRAS] 📋 Lançamentos por obra:', Object.keys(res.data.lancamentos_por_obra || {}).length + ' obras com lançamentos');
+      
+      // ⚠️ ALERTA: Se houver mais obras com lançamentos do que obras cadastradas
+      const obrasComLancs = Object.keys(res.data.lancamentos_por_obra || {}).length;
+      const obrasCadastradas = res.data.obras?.length || 0;
+      if (obrasComLancs > obrasCadastradas) {
+        console.warn('%c[PAINEL OBRAS] ⚠️  ATENÇÃO: Há ' + obrasComLancs + ' obras com lançamentos, mas apenas ' + obrasCadastradas + ' cadastradas!', 'color: #f59e0b; font-weight: bold; font-size: 13px');
+        console.warn('[PAINEL OBRAS] Isso significa que existem centros de custo no Nibo que não foram convertidos em obras.');
+        console.warn('[PAINEL OBRAS] IDs das obras com lançamentos:', Object.keys(res.data.lancamentos_por_obra || {}));
+        console.warn('[PAINEL OBRAS] IDs das obras cadastradas:', (res.data.obras || []).map(o => o.id));
+      }
+      
       console.log('[PAINEL OBRAS] 🏷️  Categorias Nibo:', Object.keys(res.data.categorias_nibo || {}).length + ' categorias');
+      if (Object.keys(res.data.categorias_nibo || {}).length > 0) {
+        console.log('[PAINEL OBRAS] 📋 Lista de categorias Nibo:', Object.keys(res.data.categorias_nibo || {}).slice(0, 10).join(', ') + '...');
+      }
       console.log('[PAINEL OBRAS] 📦 Gasto por categoria obra:', Object.keys(res.data.gasto_por_cat || {}).length + ' categorias');
+      if (Object.keys(res.data.gasto_por_cat || {}).length > 0) {
+        console.log('[PAINEL OBRAS] 💰 Categorias com gasto:', Object.keys(res.data.gasto_por_cat || {}).join(', '));
+      }
       console.log('[PAINEL OBRAS] ⚠️  Sem obra vinculada:', res.data.sem_obra_count || 0, 'lançamentos (total: R$', (res.data.sem_obra_total || 0).toFixed(2), ')');
       console.log('[PAINEL OBRAS] 🔄 Sincronização:', res.synced_at || 'N/A');
       
