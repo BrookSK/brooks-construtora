@@ -32,66 +32,38 @@ class PainelObrasController extends Controller
 
     public function index(): void
     {
-        error_log('[PainelObras/index] ===== INÍCIO =====');
+        $company     = (string) $this->input('company', 'brooks');
+        if (!NiboService::isValidCompany($company)) $company = 'brooks';
+        $competencia = (string) $this->input('periodo', date('Y-m'));
         
-        try {
-            $company     = (string) $this->input('company', 'brooks');
-            if (!NiboService::isValidCompany($company)) $company = 'brooks';
-            $competencia = (string) $this->input('periodo', date('Y-m'));
-            
-            error_log('[PainelObras/index] Company: ' . $company . ', Competência: ' . $competencia);
-
-            // Busca categorias que TÊM gastos > 0 para passar ao frontend
-            $categoriasObra = [];
-            try {
-                error_log('[PainelObras/index] Chamando getDashboardData...');
-                $dashboardData = PainelObrasService::getDashboardData($competencia, $company);
-                error_log('[PainelObras/index] getDashboardData executado com sucesso');
-                
-                foreach (($dashboardData['gasto_por_cat'] ?? []) as $cat => $valor) {
-                    if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado') {
-                        $categoriasObra[] = $cat;
-                    }
-                }
-                
-                foreach (($dashboardData['a_pagar_por_cat'] ?? []) as $cat => $valor) {
-                    if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado' && !in_array($cat, $categoriasObra)) {
-                        $categoriasObra[] = $cat;
-                    }
-                }
-                
-                sort($categoriasObra);
-                error_log('[PainelObras/index] Categorias processadas: ' . count($categoriasObra));
-            } catch (\Throwable $e) {
-                error_log('[PainelObras/index] ERRO em getDashboardData: ' . $e->getMessage());
-                error_log('[PainelObras/index] Arquivo: ' . $e->getFile() . ' Linha: ' . $e->getLine());
-                error_log('[PainelObras/index] Trace: ' . $e->getTraceAsString());
-                // Se falhar, usa array vazio (visão limpa)
-                $categoriasObra = [];
+        // Busca categorias que TÊM gastos > 0 para passar ao frontend
+        $categoriasObra = [];
+        $dashboardData = PainelObrasService::getDashboardData($competencia, $company);
+        
+        foreach (($dashboardData['gasto_por_cat'] ?? []) as $cat => $valor) {
+            if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado') {
+                $categoriasObra[] = $cat;
             }
-
-            error_log('[PainelObras/index] Renderizando view...');
-            $this->view('admin.painel_obras.index', [
-                'pageTitle'      => 'Painel de Obras',
-                'currentPage'    => 'painel_obras',
-                'user'           => Auth::user(),
-                'flash'          => $this->getFlash(),
-                'company'        => $company,
-                'companies'      => NiboService::companies(),
-                'competencia'    => $competencia,
-                'categoriasObra' => $categoriasObra,
-            ]);
-            error_log('[PainelObras/index] ===== FIM (sucesso) =====');
-        } catch (\Throwable $e) {
-            error_log('[PainelObras/index] ===== ERRO FATAL =====');
-            error_log('[PainelObras/index] Tipo: ' . get_class($e));
-            error_log('[PainelObras/index] Mensagem: ' . $e->getMessage());
-            error_log('[PainelObras/index] Arquivo: ' . $e->getFile());
-            error_log('[PainelObras/index] Linha: ' . $e->getLine());
-            error_log('[PainelObras/index] Stack Trace:');
-            error_log($e->getTraceAsString());
-            throw $e; // Re-lança para gerar o 500
         }
+        
+        foreach (($dashboardData['a_pagar_por_cat'] ?? []) as $cat => $valor) {
+            if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado' && !in_array($cat, $categoriasObra)) {
+                $categoriasObra[] = $cat;
+            }
+        }
+        
+        sort($categoriasObra);
+
+        $this->view('admin.painel_obras.index', [
+            'pageTitle'      => 'Painel de Obras',
+            'currentPage'    => 'painel_obras',
+            'user'           => Auth::user(),
+            'flash'          => $this->getFlash(),
+            'company'        => $company,
+            'companies'      => NiboService::companies(),
+            'competencia'    => $competencia,
+            'categoriasObra' => $categoriasObra,
+        ]);
     }
 
     public function dashboardData(): void
