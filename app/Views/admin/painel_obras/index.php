@@ -369,6 +369,9 @@ const PCT = v => (v>0?'+':'')+v.toFixed(1).replace('.',',')+' %';
 const mesAtual = new Date().getMonth()+1;
 const catObra = <?=json_encode($categoriasObra)?>;
 
+console.log('[PAINEL OBRAS] Categorias carregadas:', catObra);
+console.log('[PAINEL OBRAS] Total de categorias:', catObra ? catObra.length : 0);
+
 window.poLoad = function(){
   console.log('%c[PAINEL OBRAS] ========== CARREGANDO DADOS ==========', 'color: #3b82f6; font-weight: bold; font-size: 14px');
   
