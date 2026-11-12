@@ -23,9 +23,8 @@ try {
     $app = \App\Core\Application::getInstance();
     if (!$app) {
         echo "   ⚠ Application null, criando nova instância...\n";
-        // Força a criação da Application
-        require_once __DIR__ . '/app/Config/app.php';
-        $config = getConfig();
+        // Carrega configuração
+        $config = require __DIR__ . '/app/Config/app.php';
         $app = new \App\Core\Application($config);
     }
     echo "   ✓ OK\n\n";
