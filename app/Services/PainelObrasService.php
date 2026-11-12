@@ -584,18 +584,35 @@ class PainelObrasService
                 }
             }
             
-            // ORÇADO = Gasto + A Pagar (estimativa baseada no comprometido)
-            // OU usa valor cadastrado se existir
-            $orcado = (float)($obra['orcamento_estimado'] ?? 0);
-            if ($orcado <= 0) {
-                // Orçamento versionado manual (se existir)
-                $orcadoVersionado = \App\Models\PainelObra::orcadoTotal($obraId);
-                if ($orcadoVersionado > 0) {
-                    $orcado = $orcadoVersionado;
-                } else {
-                    // Estimativa: gasto + a pagar + margem 10%
-                    $orcado = ($gasto + $aPagar) * 1.1;
+            // ORÇADO = Soma dos custos previstos cadastrados na aba "Custos Previstos"
+            $orcado = 0;
+            $orcadoDetalhado = []; // Por categoria
+            try {
+                $custosPrevistos = Database::fetchAll(
+                    "SELECT categoria_nome, valor_previsto
+                     FROM painel_obras_custos_previstos 
+                     WHERE obra_id = ?",
+                    [$obraId]
+                );
+                
+                foreach ($custosPrevistos as $custo) {
+                    $valorPrevisto = (float)$custo['valor_previsto'];
+                    $orcado += $valorPrevisto;
+                    $orcadoDetalhado[$custo['categoria_nome']] = $valorPrevisto;
                 }
+                
+                error_log('[PainelObras] Obra ' . $obraId . ' - Orçado da tabela custos_previstos: R$ ' . number_format($orcado, 2, ',', '.'));
+            } catch (\Throwable $e) {
+                error_log('[PainelObras] Erro ao buscar custos previstos da obra ' . $obraId . ': ' . $e->getMessage());
+                $orcado = 0;
+                $orcadoDetalhado = [];
+            }
+            
+            // Se não houver custos previstos cadastrados, usa estimativa baseada no comprometido
+            if ($orcado <= 0) {
+                // Estimativa: gasto + a pagar + margem 10%
+                $orcado = ($gasto + $aPagar) * 1.1;
+                error_log('[PainelObras] Obra ' . $obraId . ' - Usando estimativa: R$ ' . number_format($orcado, 2, ',', '.'));
             }
             
             $desvio = $gasto - $orcado;
@@ -626,7 +643,8 @@ class PainelObrasService
                 'tipo' => $obra['tipo'] ?? 'Reforma',
                 'cliente' => $obra['cliente'] ?? null,
                 'contratado' => $contratado, // ÚNICO campo do cadastro
-                'orcado' => $orcado,
+                'orcado' => $orcado, // Soma dos custos previstos
+                'orcado_cat' => $orcadoDetalhado, // Custos previstos por categoria
                 'gasto' => $gasto, // DO NIBO
                 'a_pagar' => $aPagar, // DO NIBO
                 'a_receber' => $aReceber, // DO NIBO
@@ -716,6 +734,29 @@ class PainelObrasService
         }
         arsort($categoriaNiboGlobal);
         
+        // ORÇADO POR CATEGORIA - busca da tabela de custos previstos
+        $orcadoPorCat = [];
+        try {
+            $custosPrevistos = Database::fetchAll(
+                "SELECT 
+                    cp.categoria_nome,
+                    SUM(cp.valor_previsto) as total_previsto
+                FROM painel_obras_custos_previstos cp
+                INNER JOIN painel_obras o ON o.id = cp.obra_id
+                WHERE o.situacao = 'Ativa'
+                GROUP BY cp.categoria_nome"
+            );
+            
+            foreach ($custosPrevistos as $custo) {
+                $orcadoPorCat[$custo['categoria_nome']] = (float)$custo['total_previsto'];
+            }
+            
+            error_log('[PainelObras] Orçado por categoria (custos previstos): ' . print_r($orcadoPorCat, true));
+        } catch (\Throwable $e) {
+            error_log('[PainelObras] Erro ao buscar custos previstos: ' . $e->getMessage());
+            $orcadoPorCat = [];
+        }
+        
         // Categorias não mapeadas (DO NIBO)
         $naoMapeadas = count(array_unique(array_column(
             array_filter($data['sem_categoria'], fn($l) => $l['status'] === 'paid'),
@@ -742,7 +783,8 @@ class PainelObrasService
             ],
             'obras' => $obrasProcessadas,
             'obras_alerta' => $obrasAlerta,
-            'gasto_por_cat' => $gastoPorCat, // Categorias de obra
+            'gasto_por_cat' => $gastoPorCat, // Gastos reais do Nibo por categoria
+            'orcado_por_cat' => $orcadoPorCat, // Orçado vem dos custos previstos cadastrados
             'a_pagar_por_cat' => $aPagarPorCat,
             'categorias_nibo' => $categoriaNiboGlobal, // Categorias Nibo originais
             'fornecedores' => $topFornecedoresGlobal, // DO NIBO

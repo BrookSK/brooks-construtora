@@ -49,7 +49,6 @@
   <a href="/admin/painel-obras"><i class="bi bi-speedometer2"></i> Dashboard</a>
   <a href="/admin/painel-obras/obras" class="active"><i class="bi bi-buildings"></i> Obras</a>
   <a href="/admin/painel-obras/lancamentos"><i class="bi bi-cash-stack"></i> Lançamentos</a>
-  <a href="/admin/painel-obras/orcamento"><i class="bi bi-calculator"></i> Orçamento</a>
   <a href="/admin/painel-obras/planilha"><i class="bi bi-table"></i> Planilha de Controle</a>
   <a href="/admin/painel-obras/depara"><i class="bi bi-arrow-left-right"></i> De-para Categorias</a>
   <a href="/admin/painel-obras/pauta"><i class="bi bi-calendar-check"></i> Pauta de Revisão</a>
@@ -246,10 +245,22 @@
     <div class="ob-tab-content" id="tab-custos" style="display:none">
     <div class="row">
       <div class="col-full">
+        <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:14px;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--po-blue-t);margin-bottom:6px">
+            <i class="bi bi-info-circle"></i> Como funciona o controle de custos
+          </div>
+          <div style="font-size:12px;color:#64748b;line-height:1.6">
+            Defina o <strong>custo previsto</strong> para cada categoria abaixo. O sistema irá comparar automaticamente com os 
+            <strong>lançamentos do Nibo</strong> vinculados a esta obra e mostrar no dashboard se você está dentro do orçamento ou se estourou.
+          </div>
+        </div>
+      </div>
+      <div class="col-full">
         <div style="margin-bottom:14px">
-          <label class="ob-label">Tipo de Obra</label>
-          <div style="font-size:13px;color:#60a5fa" id="ob-custos-tipo">—</div>
-          <small style="color:#64748b;font-size:11px">As categorias abaixo são baseadas no tipo de obra selecionado.</small>
+          <label class="ob-label">Categorias do Nibo</label>
+          <small style="color:#64748b;font-size:11px;display:block;margin-top:4px">
+            As categorias são carregadas do Nibo. Preencha os valores previstos para cada uma que será utilizada nesta obra.
+          </small>
         </div>
       </div>
       <div class="col-full">
@@ -301,25 +312,44 @@ function obMudarAba(aba){
 }
 
 function obRenderCustos(){
-  const tipo=document.getElementById('ob-tipo').value;
-  document.getElementById('ob-custos-tipo').textContent=tipo;
+  const id = document.getElementById('ob-id').value;
+  if (!id) {
+    document.getElementById('ob-custos-list').innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:20px;text-align:center">Salve a obra primeiro para cadastrar custos previstos.</div>';
+    return;
+  }
   
-  const cats=obCategorias[tipo]||[];
-  const custosAtuais=JSON.parse(document.getElementById('ob-custos-json')?.value||'{}');
+  const custosAtuais = JSON.parse(document.getElementById('ob-custos-json')?.value||'{}');
   
-  const html=cats.map(cat=>{
-    const val=custosAtuais[cat.id]||'';
-    return `<div class="ob-custo-item">
-      <label>${cat.nome}</label>
-      <input type="text" class="ob-inp" data-cat-id="${cat.id}" 
-             value="${val?fmtBRL(parseFloat(val)):''}" 
-             placeholder="R$ 0,00" 
-             oninput="fmtMoeda(this);obCalcCustosTotal()">
-    </div>`;
-  }).join('');
-  
-  document.getElementById('ob-custos-list').innerHTML=html||'<div style="color:#94a3b8;text-align:center;padding:20px">Nenhuma categoria disponível para este tipo de obra.</div>';
-  obCalcCustosTotal();
+  // Busca categorias do Nibo
+  fetch('/admin/painel-obras/obras/categorias')
+    .then(r => r.json())
+    .then(data => {
+      // Pega todas as categorias (Construção e Reforma são iguais agora)
+      const cats = data.Construção || [];
+      
+      if (cats.length === 0) {
+        document.getElementById('ob-custos-list').innerHTML = '<div style="color:#f59e0b;font-size:13px;padding:20px;text-align:center;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px"><i class="bi bi-exclamation-triangle-fill"></i> Nenhuma categoria encontrada no Nibo. Execute a sincronização primeiro.</div>';
+        return;
+      }
+      
+      const html = cats.map(cat => {
+        const val = custosAtuais[cat.id] || '';
+        return `<div class="ob-custo-item">
+          <label>${cat.nome}</label>
+          <input type="text" class="ob-inp" data-cat-id="${cat.id}" 
+                 value="${val ? fmtBRL(parseFloat(val)) : ''}" 
+                 placeholder="R$ 0,00" 
+                 oninput="fmtMoeda(this);obCalcCustosTotal()">
+        </div>`;
+      }).join('');
+      
+      document.getElementById('ob-custos-list').innerHTML = html || '<div style="color:#94a3b8;text-align:center;padding:20px">Nenhuma categoria disponível.</div>';
+      obCalcCustosTotal();
+    })
+    .catch(err => {
+      console.error('Erro ao carregar categorias:', err);
+      document.getElementById('ob-custos-list').innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;text-align:center;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px"><i class="bi bi-x-circle-fill"></i> Erro ao carregar categorias do Nibo.</div>';
+    });
 }
 
 function obCalcCustosTotal(){

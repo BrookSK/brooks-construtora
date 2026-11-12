@@ -36,17 +36,19 @@ class PainelObrasController extends Controller
         if (!NiboService::isValidCompany($company)) $company = 'brooks';
         $competencia = (string) $this->input('periodo', date('Y-m'));
         
-        // Busca categorias que TÊM gastos > 0 para passar ao frontend
+        // Busca categorias que TÊM ORÇAMENTO cadastrado (não todas as categorias com gastos)
         $categoriasObra = [];
         $dashboardData = PainelObrasService::getDashboardData($competencia, $company);
         
-        foreach (($dashboardData['gasto_por_cat'] ?? []) as $cat => $valor) {
+        // Apenas categorias que têm orçamento cadastrado
+        foreach (($dashboardData['orcado_por_cat'] ?? []) as $cat => $valor) {
             if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado') {
                 $categoriasObra[] = $cat;
             }
         }
         
-        foreach (($dashboardData['a_pagar_por_cat'] ?? []) as $cat => $valor) {
+        // Se houver gastos em categorias que não têm orçamento, adiciona também (para mostrar desvio)
+        foreach (($dashboardData['gasto_por_cat'] ?? []) as $cat => $valor) {
             if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado' && !in_array($cat, $categoriasObra)) {
                 $categoriasObra[] = $cat;
             }
@@ -351,34 +353,90 @@ class PainelObrasController extends Controller
         $company = (string) $this->input('company', 'brooks');
         
         try {
-            // Busca categorias DIRETAMENTE DO NIBO
-            $categories = NiboService::categories($company);
+            error_log('[PainelObras] Buscando categorias para company: ' . $company);
             
-            error_log('[PainelObras] Total de categorias do Nibo: ' . count($categories));
+            // Busca categorias do último snapshot do Nibo
+            $snapshot = \App\Models\NiboSyncSnapshot::latest($company);
             
-            // Formata para o frontend (todas as categorias para ambos os tipos)
+            if (!$snapshot) {
+                error_log('[PainelObras] Nenhum snapshot encontrado para company: ' . $company);
+                $this->json([
+                    'Construção' => [],
+                    'Reforma' => [],
+                    'erro' => 'Nenhuma sincronização encontrada. Execute a sincronização do Nibo primeiro.'
+                ]);
+                return;
+            }
+            
+            error_log('[PainelObras] Snapshot encontrado - ID: ' . $snapshot['id'] . ', created_at: ' . $snapshot['created_at']);
+            
+            $payload = \App\Models\NiboSyncSnapshot::decodePayload($snapshot);
+            
+            if (!isset($payload['masters'])) {
+                error_log('[PainelObras] ERRO: payload não tem chave "masters"');
+                error_log('[PainelObras] Estrutura do payload: ' . print_r(array_keys($payload), true));
+                $this->json([
+                    'Construção' => [],
+                    'Reforma' => [],
+                    'erro' => 'Estrutura do snapshot inválida - masters não encontrado'
+                ]);
+                return;
+            }
+            
+            if (!isset($payload['masters']['categories'])) {
+                error_log('[PainelObras] ERRO: payload[masters] não tem chave "categories"');
+                error_log('[PainelObras] Estrutura do masters: ' . print_r(array_keys($payload['masters']), true));
+                $this->json([
+                    'Construção' => [],
+                    'Reforma' => [],
+                    'erro' => 'Estrutura do snapshot inválida - categories não encontrado'
+                ]);
+                return;
+            }
+            
+            $categories = $payload['masters']['categories'];
+            error_log('[PainelObras] Total de categorias do Nibo no snapshot: ' . count($categories));
+            
+            if (empty($categories)) {
+                error_log('[PainelObras] AVISO: Array de categorias está vazio');
+                $this->json([
+                    'Construção' => [],
+                    'Reforma' => [],
+                    'erro' => 'Nenhuma categoria encontrada no Nibo'
+                ]);
+                return;
+            }
+            
+            // Formata para o frontend
             $categoriasFormatadas = array_map(function($cat) {
                 return [
-                    'id' => $cat['id'],  // ID do Nibo
-                    'nome' => $cat['name'],
-                    'codigo' => $cat['id'],
+                    'id' => $cat['id'] ?? '',
+                    'nome' => $cat['name'] ?? 'Sem nome',
+                    'tipo' => $cat['type'] ?? 'Out', // In (receita) ou Out (despesa)
                 ];
             }, $categories);
             
-            // Retorna as mesmas categorias para Construção e Reforma
-            // (o usuário decide quais usar em cada obra)
+            error_log('[PainelObras] Categorias formatadas: ' . count($categoriasFormatadas));
+            
+            // Filtra apenas categorias de DESPESA (type = Out)
+            $categoriasDespesa = array_filter($categoriasFormatadas, fn($c) => $c['tipo'] === 'Out');
+            
+            error_log('[PainelObras] Categorias de despesa (Out): ' . count($categoriasDespesa));
+            
+            // Retorna as mesmas para ambos os tipos
             $this->json([
-                'Construção' => $categoriasFormatadas,
-                'Reforma' => $categoriasFormatadas,
+                'Construção' => array_values($categoriasDespesa),
+                'Reforma' => array_values($categoriasDespesa),
             ]);
             
         } catch (\Throwable $e) {
-            error_log('[PainelObrasController] Erro ao buscar categorias do Nibo: ' . $e->getMessage());
+            error_log('[PainelObrasController] EXCEÇÃO ao buscar categorias: ' . $e->getMessage());
+            error_log('[PainelObrasController] Stack trace: ' . $e->getTraceAsString());
             $this->json([
                 'Construção' => [],
                 'Reforma' => [],
-                'erro' => $e->getMessage()
-            ]);
+                'erro' => 'Erro ao buscar categorias: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -487,8 +545,9 @@ class PainelObrasController extends Controller
         $this->json(['ok'=>true,'aditivos'=>$rows]);
     }
 
-    // ─── Orçamento ────────────────────────────────────────────────────
+    // ─── Orçamento (DESABILITADO - usar Custos Previstos em Obras) ────
 
+    /*
     public function orcamento(): void
     {
         // Busca configuração de filtro do usuário
@@ -558,9 +617,11 @@ class PainelObrasController extends Controller
             'categoriasObra' => $categoriasObra,
         ]);
     }
+    */
+
+    // ─── Custos Previstos (usado na aba de Obras) ────────────────────
 
     public function orcamentoData(): void
-    {
         $obraId = (int)$this->input('obra_id',0);
         
         try {
@@ -642,10 +703,18 @@ class PainelObrasController extends Controller
             return;
         }
         
-        // Busca categorias do Nibo para pegar o ID
+        // Busca categorias do Nibo (do snapshot) para pegar o ID
         try {
             $company = $obra['company'] ?? 'brooks';
-            $categoriasNibo = NiboService::categories($company);
+            $snapshot = \App\Models\NiboSyncSnapshot::latest($company);
+            
+            if (!$snapshot) {
+                $this->json(['ok'=>false,'error'=>'Sincronização do Nibo não encontrada.'],500);
+                return;
+            }
+            
+            $payload = \App\Models\NiboSyncSnapshot::decodePayload($snapshot);
+            $categoriasNibo = $payload['masters']['categories'] ?? [];
             
             // Cria mapa nome => id
             $categoriaMap = [];

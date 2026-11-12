@@ -1,9 +1,9 @@
 -- =========================================================================
--- EXECUTE ESTE SQL AGORA NO PHPMYADMIN
--- Cria apenas as tabelas, SEM inserir categorias inventadas
+-- PAINEL DE OBRAS - ESTRUTURA FINAL SIMPLIFICADA
+-- Execute este SQL no phpMyAdmin
 -- =========================================================================
 
--- 1. Cria tabela de custos previstos (vinculada às categorias do Nibo)
+-- 1. Tabela de custos previstos por obra (usa categorias do Nibo dinamicamente)
 CREATE TABLE IF NOT EXISTS painel_obras_custos_previstos (
     id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     obra_id          INT UNSIGNED NOT NULL,
@@ -20,9 +20,10 @@ CREATE TABLE IF NOT EXISTS painel_obras_custos_previstos (
     
     CONSTRAINT fk_custo_obra FOREIGN KEY (obra_id) 
         REFERENCES painel_obras(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci 
+COMMENT='Custos previstos por categoria - valores comparados com lançamentos do Nibo';
 
--- 2. Cria tabela de lançamentos manuais (também usa categorias do Nibo)
+-- 2. Tabela de lançamentos manuais (complemento aos lançamentos do Nibo)
 CREATE TABLE IF NOT EXISTS painel_obras_lancamentos (
     id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     obra_id           INT UNSIGNED NOT NULL,
@@ -48,20 +49,44 @@ CREATE TABLE IF NOT EXISTS painel_obras_lancamentos (
     
     CONSTRAINT fk_lancamento_obra FOREIGN KEY (obra_id) 
         REFERENCES painel_obras(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Lançamentos manuais complementares aos do Nibo';
 
--- 3. Tabela de configurações do usuário
+-- 3. Tabela de configurações do usuário (filtros do dashboard)
 CREATE TABLE IF NOT EXISTS painel_obras_config (
     id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id           INT NOT NULL,
-    centros_custo_visiveis JSON NULL,
-    obras_visiveis    JSON NULL,
-    filtros_ativos    JSON NULL,
+    centros_custo_visiveis JSON NULL COMMENT 'IDs dos CCs visíveis no dashboard',
+    obras_visiveis    JSON NULL COMMENT 'IDs das obras visíveis no dashboard',
+    filtros_ativos    JSON NULL COMMENT 'Outros filtros ativos',
     created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at        DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_user (user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Configurações de filtros e visualização por usuário';
 
 -- =========================================================================
--- PRONTO! Agora as categorias virão do Nibo dinamicamente
+-- COMO FUNCIONA:
+-- =========================================================================
+--
+-- 1. CATEGORIAS: Vêm do Nibo dinamicamente (snapshot), não são hardcoded
+--
+-- 2. CUSTOS PREVISTOS: Cadastrados na aba "Custos Previstos" de cada obra
+--    - Seleciona categoria do Nibo
+--    - Define valor previsto
+--    - Sistema compara com lançamentos reais do Nibo
+--
+-- 3. LANÇAMENTOS DO NIBO: Populam automaticamente receitas/despesas
+--    - Vinculados à obra pelo centro de custo
+--    - Separados por tipo (payable = despesa, receivable = receita)
+--    - Agrupados por categoria
+--
+-- 4. DASHBOARD: Mostra previsto vs realizado
+--    - Orçado: soma dos custos previstos por categoria
+--    - Gasto: soma dos lançamentos (payable) pagos do Nibo
+--    - Receitas: soma dos lançamentos (receivable) recebidos do Nibo
+--    - Desvio: diferença entre orçado e gasto
+--
+-- =========================================================================
+-- FONTE ÚNICA DE DADOS: Painel de Obras → Editar Obra → Custos Previstos
 -- =========================================================================

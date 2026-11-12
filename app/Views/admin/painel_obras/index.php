@@ -178,7 +178,6 @@ body { background: #f8f9fa !important; }
   <a href="/admin/painel-obras" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a>
   <a href="/admin/painel-obras/obras"><i class="bi bi-buildings"></i> Obras</a>
   <a href="/admin/painel-obras/lancamentos"><i class="bi bi-cash-stack"></i> Lançamentos</a>
-  <a href="/admin/painel-obras/orcamento"><i class="bi bi-calculator"></i> Orçamento</a>
   <a href="/admin/painel-obras/planilha"><i class="bi bi-table"></i> Planilha de Controle</a>
   <a href="/admin/painel-obras/depara"><i class="bi bi-arrow-left-right"></i> De-para Categorias</a>
   <a href="/admin/painel-obras/pauta"><i class="bi bi-calendar-check"></i> Pauta de Revisão</a>
@@ -629,7 +628,7 @@ window.poFiltrar = function(){
       <td><span class="po-code">${o.codigo}</span><span class="po-name">${o.nome}</span></td>
       <td>${badge}</td>
       <td class="r">${BRL(o.contratado)}</td>
-      <td class="r">${o.orcado>0?BRL(o.orcado):'<a href="/admin/painel-obras/orcamento" style="color:var(--po-blue-t);font-size:11px">— Preencher</a>'}</td>
+      <td class="r">${o.orcado>0?BRL(o.orcado):'<a href="/admin/painel-obras/obras" style="color:var(--po-blue-t);font-size:11px">— Preencher</a>'}</td>
       <td class="r"><a href="#" onclick="poVerLancamentos(${o.id},'${o.codigo}');return false" style="color:var(--po-blue-t)">${BRL(o.gasto)}</a></td>
       <td class="r ${dCls}">${o.orcado>0?(o.desvio>0?'+':'')+BRL(o.desvio):'—'}<br><small>${o.orcado>0?(o.desvio>0?'+':'')+dPct:''}</small></td>
       <td><div class="po-bar-track" style="width:120px"><div class="po-bar-fill" style="width:${pct}%;background:${bc}"></div></div><div style="font-size:10px;color:var(--po-txt2);margin-top:2px">${pct.toFixed(0)}% do orçado</div></td>
