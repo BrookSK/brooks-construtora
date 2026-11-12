@@ -430,23 +430,35 @@ class PainelObrasService
      */
     public static function getDashboardData(string $periodo, string $company = 'completo'): array
     {
-        // Busca dados enriquecidos DO NIBO
-        $data = self::dados($company, $periodo);
-        $lancamentos = $data['lancamentos']; // TODOS os lançamentos do Nibo filtrados
-        $obrasMap = $data['obras_map'];
-        $catMap = $data['cat_map']; // Categorias DO NIBO
-        $deParaMap = $data['depara_map']; // Mapeamento
+        error_log('[PainelObrasService/getDashboardData] ===== INÍCIO =====');
+        error_log('[PainelObrasService/getDashboardData] Período: ' . $periodo . ', Company: ' . $company);
         
-        // Filtra apenas obras únicas
-        $obras = [];
-        $obrasVistas = [];
-        foreach ($obrasMap as $key => $obra) {
-            $id = $obra['id'];
-            if (!in_array($id, $obrasVistas)) {
-                $obras[] = $obra;
-                $obrasVistas[] = $id;
+        try {
+            // Busca dados enriquecidos DO NIBO
+            error_log('[PainelObrasService/getDashboardData] Chamando self::dados()...');
+            $data = self::dados($company, $periodo);
+            error_log('[PainelObrasService/getDashboardData] self::dados() OK');
+            
+            $lancamentos = $data['lancamentos']; // TODOS os lançamentos do Nibo filtrados
+            $obrasMap = $data['obras_map'];
+            $catMap = $data['cat_map']; // Categorias DO NIBO
+            $deParaMap = $data['depara_map']; // Mapeamento
+            
+            error_log('[PainelObrasService/getDashboardData] Lançamentos: ' . count($lancamentos));
+            error_log('[PainelObrasService/getDashboardData] Obras Map: ' . count($obrasMap));
+            
+            // Filtra apenas obras únicas
+            $obras = [];
+            $obrasVistas = [];
+            foreach ($obrasMap as $key => $obra) {
+                $id = $obra['id'];
+                if (!in_array($id, $obrasVistas)) {
+                    $obras[] = $obra;
+                    $obrasVistas[] = $id;
+                }
             }
-        }
+            
+            error_log('[PainelObrasService/getDashboardData] Obras únicas: ' . count($obras));
         
         // Se não houver obras cadastradas, retorna estrutura vazia
         if (empty($obras)) {
@@ -741,6 +753,19 @@ class PainelObrasService
             'synced_at' => $data['synced_at'], // Timestamp da sincronização
             'periodo' => $data['periodo'], // Período filtrado
         ];
+        
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasService/getDashboardData] ===== ERRO FATAL =====');
+            error_log('[PainelObrasService/getDashboardData] Tipo: ' . get_class($e));
+            error_log('[PainelObrasService/getDashboardData] Mensagem: ' . $e->getMessage());
+            error_log('[PainelObrasService/getDashboardData] Arquivo: ' . $e->getFile());
+            error_log('[PainelObrasService/getDashboardData] Linha: ' . $e->getLine());
+            error_log('[PainelObrasService/getDashboardData] Stack Trace:');
+            error_log($e->getTraceAsString());
+            throw $e; // Re-lança
+        }
+        
+        error_log('[PainelObrasService/getDashboardData] ===== FIM (sucesso) =====');
     }
     
     /**
