@@ -464,6 +464,7 @@ class PainelObrasService
                 'obras' => [],
                 'obras_alerta' => [],
                 'gasto_por_cat' => [],
+                'orcado_por_cat' => [], // 🆕 Adicionado
                 'a_pagar_por_cat' => [],
                 'categorias_nibo' => [],
                 'fornecedores' => [],
@@ -587,21 +588,29 @@ class PainelObrasService
             // ORÇADO = Soma dos custos previstos cadastrados na aba "Custos Previstos"
             $orcado = 0;
             $orcadoDetalhado = []; // Por categoria
+            
             try {
-                $custosPrevistos = Database::fetchAll(
-                    "SELECT categoria_nome, valor_previsto
-                     FROM painel_obras_custos_previstos 
-                     WHERE obra_id = ?",
-                    [$obraId]
-                );
+                // Verifica se a tabela existe antes de fazer a query
+                $tabelaExiste = Database::fetch("SHOW TABLES LIKE 'painel_obras_custos_previstos'");
                 
-                foreach ($custosPrevistos as $custo) {
-                    $valorPrevisto = (float)$custo['valor_previsto'];
-                    $orcado += $valorPrevisto;
-                    $orcadoDetalhado[$custo['categoria_nome']] = $valorPrevisto;
+                if ($tabelaExiste) {
+                    $custosPrevistos = Database::fetchAll(
+                        "SELECT categoria_nome, valor_previsto
+                         FROM painel_obras_custos_previstos 
+                         WHERE obra_id = ?",
+                        [$obraId]
+                    );
+                    
+                    foreach ($custosPrevistos as $custo) {
+                        $valorPrevisto = (float)$custo['valor_previsto'];
+                        $orcado += $valorPrevisto;
+                        $orcadoDetalhado[$custo['categoria_nome']] = $valorPrevisto;
+                    }
+                    
+                    error_log('[PainelObras] Obra ' . $obraId . ' - Orçado da tabela custos_previstos: R$ ' . number_format($orcado, 2, ',', '.'));
+                } else {
+                    error_log('[PainelObras] AVISO: Tabela painel_obras_custos_previstos não existe. Execute o SQL de migração.');
                 }
-                
-                error_log('[PainelObras] Obra ' . $obraId . ' - Orçado da tabela custos_previstos: R$ ' . number_format($orcado, 2, ',', '.'));
             } catch (\Throwable $e) {
                 error_log('[PainelObras] Erro ao buscar custos previstos da obra ' . $obraId . ': ' . $e->getMessage());
                 $orcado = 0;
@@ -737,21 +746,28 @@ class PainelObrasService
         // ORÇADO POR CATEGORIA - busca da tabela de custos previstos
         $orcadoPorCat = [];
         try {
-            $custosPrevistos = Database::fetchAll(
-                "SELECT 
-                    cp.categoria_nome,
-                    SUM(cp.valor_previsto) as total_previsto
-                FROM painel_obras_custos_previstos cp
-                INNER JOIN painel_obras o ON o.id = cp.obra_id
-                WHERE o.situacao = 'Ativa'
-                GROUP BY cp.categoria_nome"
-            );
+            // Verifica se a tabela existe
+            $tabelaExiste = Database::fetch("SHOW TABLES LIKE 'painel_obras_custos_previstos'");
             
-            foreach ($custosPrevistos as $custo) {
-                $orcadoPorCat[$custo['categoria_nome']] = (float)$custo['total_previsto'];
+            if ($tabelaExiste) {
+                $custosPrevistos = Database::fetchAll(
+                    "SELECT 
+                        cp.categoria_nome,
+                        SUM(cp.valor_previsto) as total_previsto
+                    FROM painel_obras_custos_previstos cp
+                    INNER JOIN painel_obras o ON o.id = cp.obra_id
+                    WHERE o.situacao = 'Ativa'
+                    GROUP BY cp.categoria_nome"
+                );
+                
+                foreach ($custosPrevistos as $custo) {
+                    $orcadoPorCat[$custo['categoria_nome']] = (float)$custo['total_previsto'];
+                }
+                
+                error_log('[PainelObras] Orçado por categoria (custos previstos): ' . count($orcadoPorCat) . ' categorias');
+            } else {
+                error_log('[PainelObras] AVISO: Tabela painel_obras_custos_previstos não existe. Execute o SQL de migração.');
             }
-            
-            error_log('[PainelObras] Orçado por categoria (custos previstos): ' . print_r($orcadoPorCat, true));
         } catch (\Throwable $e) {
             error_log('[PainelObras] Erro ao buscar custos previstos: ' . $e->getMessage());
             $orcadoPorCat = [];

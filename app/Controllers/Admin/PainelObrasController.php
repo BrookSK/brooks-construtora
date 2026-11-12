@@ -38,23 +38,31 @@ class PainelObrasController extends Controller
         
         // Busca categorias que TÊM ORÇAMENTO cadastrado (não todas as categorias com gastos)
         $categoriasObra = [];
-        $dashboardData = PainelObrasService::getDashboardData($competencia, $company);
         
-        // Apenas categorias que têm orçamento cadastrado
-        foreach (($dashboardData['orcado_por_cat'] ?? []) as $cat => $valor) {
-            if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado') {
-                $categoriasObra[] = $cat;
+        try {
+            $dashboardData = PainelObrasService::getDashboardData($competencia, $company);
+            
+            // Apenas categorias que têm orçamento cadastrado
+            foreach (($dashboardData['orcado_por_cat'] ?? []) as $cat => $valor) {
+                if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado') {
+                    $categoriasObra[] = $cat;
+                }
             }
-        }
-        
-        // Se houver gastos em categorias que não têm orçamento, adiciona também (para mostrar desvio)
-        foreach (($dashboardData['gasto_por_cat'] ?? []) as $cat => $valor) {
-            if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado' && !in_array($cat, $categoriasObra)) {
-                $categoriasObra[] = $cat;
+            
+            // Se houver gastos em categorias que não têm orçamento, adiciona também (para mostrar desvio)
+            foreach (($dashboardData['gasto_por_cat'] ?? []) as $cat => $valor) {
+                if ($valor > 0 && $cat !== 'Sem categoria / Não mapeado' && !in_array($cat, $categoriasObra)) {
+                    $categoriasObra[] = $cat;
+                }
             }
+            
+            sort($categoriasObra);
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] ERRO FATAL ao carregar index: ' . $e->getMessage());
+            error_log('[PainelObrasController] Stack trace: ' . $e->getTraceAsString());
+            // Define vazio para não quebrar a view
+            $categoriasObra = [];
         }
-        
-        sort($categoriasObra);
 
         $this->view('admin.painel_obras.index', [
             'pageTitle'      => 'Painel de Obras',
