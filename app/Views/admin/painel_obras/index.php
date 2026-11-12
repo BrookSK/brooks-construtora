@@ -723,11 +723,6 @@ window.poRenderConfigCc=function(){
   if(!_d||!_d.centros_custo) return;
   const selected=_poConfig.centros_custo_visiveis||[];
   
-  // Se lista vazia = todos visíveis (padrão)
-  const all=selected.length===0;
-  
-  document.getElementById('po-cfg-select-all').checked=all;
-  
   const html=_d.centros_custo.map(cc=>{
     // Se lista vazia, marca todos. Senão, marca apenas os que estão na lista
     const isChecked=selected.length===0||selected.includes(cc.id);
@@ -740,16 +735,15 @@ window.poRenderConfigCc=function(){
   }).join('');
   
   document.getElementById('po-cfg-cc-list').innerHTML=html;
+  
+  // Atualiza checkbox "Selecionar Todos" após renderizar
+  const allChecked = selected.length === 0 || selected.length === _d.centros_custo.length;
+  document.getElementById('po-cfg-select-all').checked = allChecked;
 };
 
 window.poRenderConfigObras=function(){
   if(!_d||!_d.obras) return;
   const selected=_poConfig.obras_visiveis||[];
-  
-  // Se lista vazia = todos visíveis (padrão)
-  const all=selected.length===0;
-  
-  document.getElementById('po-cfg-select-all-obras').checked=all;
   
   const html=_d.obras.map(o=>{
     // Se lista vazia, marca todos. Senão, marca apenas os que estão na lista
@@ -763,97 +757,151 @@ window.poRenderConfigObras=function(){
   }).join('');
   
   document.getElementById('po-cfg-obras-list').innerHTML=html;
+  
+  // Atualiza checkbox "Selecionar Todos" após renderizar
+  const allChecked = selected.length === 0 || selected.length === _d.obras.length;
+  document.getElementById('po-cfg-select-all-obras').checked = allChecked;
 };
 
 window.poToggleCc=function(ccId,checked){
-  // Inicializa com todos se estiver vazio
-  if(!_poConfig.centros_custo_visiveis||_poConfig.centros_custo_visiveis.length===0){
-    _poConfig.centros_custo_visiveis=_d.centros_custo.map(cc=>cc.id);
+  console.log('[DEBUG] Toggle CC:', ccId, checked);
+  
+  // Garante que a lista existe
+  if(!_poConfig.centros_custo_visiveis) {
+    _poConfig.centros_custo_visiveis = [];
+  }
+  
+  // Se lista estava vazia (= todos selecionados), inicializa com todos os IDs
+  if(_poConfig.centros_custo_visiveis.length === 0) {
+    _poConfig.centros_custo_visiveis = _d.centros_custo.map(cc=>cc.id);
+    console.log('[DEBUG] Lista inicializada com todos os CCs');
   }
   
   if(checked){
+    // Adiciona se não estiver na lista
     if(!_poConfig.centros_custo_visiveis.includes(ccId)){
       _poConfig.centros_custo_visiveis.push(ccId);
     }
   }else{
-    _poConfig.centros_custo_visiveis=_poConfig.centros_custo_visiveis.filter(id=>id!==ccId);
+    // Remove da lista
+    _poConfig.centros_custo_visiveis = _poConfig.centros_custo_visiveis.filter(id=>id!==ccId);
   }
   
-  // Atualiza estado do "Selecionar Todos"
-  const allSelected=_poConfig.centros_custo_visiveis.length===_d.centros_custo.length;
-  document.getElementById('po-cfg-select-all').checked=allSelected;
+  console.log('[DEBUG] CCs visíveis:', _poConfig.centros_custo_visiveis.length, 'de', _d.centros_custo.length);
+  
+  // Atualiza checkbox "Selecionar Todos"
+  const allSelected = _poConfig.centros_custo_visiveis.length === _d.centros_custo.length;
+  document.getElementById('po-cfg-select-all').checked = allSelected;
 };
 
 window.poToggleObra=function(obraId,checked){
-  // Inicializa com todos se estiver vazio
-  if(!_poConfig.obras_visiveis||_poConfig.obras_visiveis.length===0){
-    _poConfig.obras_visiveis=_d.obras.map(o=>o.id);
+  console.log('[DEBUG] Toggle Obra:', obraId, checked);
+  
+  // Garante que a lista existe
+  if(!_poConfig.obras_visiveis) {
+    _poConfig.obras_visiveis = [];
+  }
+  
+  // Se lista estava vazia (= todos selecionados), inicializa com todos os IDs
+  if(_poConfig.obras_visiveis.length === 0) {
+    _poConfig.obras_visiveis = _d.obras.map(o=>o.id);
+    console.log('[DEBUG] Lista inicializada com todas as obras');
   }
   
   if(checked){
+    // Adiciona se não estiver na lista
     if(!_poConfig.obras_visiveis.includes(obraId)){
       _poConfig.obras_visiveis.push(obraId);
     }
   }else{
-    _poConfig.obras_visiveis=_poConfig.obras_visiveis.filter(id=>id!==obraId);
+    // Remove da lista
+    _poConfig.obras_visiveis = _poConfig.obras_visiveis.filter(id=>id!==obraId);
   }
   
-  // Atualiza estado do "Selecionar Todos"
-  const allSelected=_poConfig.obras_visiveis.length===_d.obras.length;
-  document.getElementById('po-cfg-select-all-obras').checked=allSelected;
+  console.log('[DEBUG] Obras visíveis:', _poConfig.obras_visiveis.length, 'de', _d.obras.length);
+  
+  // Atualiza checkbox "Selecionar Todos"
+  const allSelected = _poConfig.obras_visiveis.length === _d.obras.length;
+  document.getElementById('po-cfg-select-all-obras').checked = allSelected;
 };
 
 window.poToggleAllCc=function(checked){
+  console.log('[DEBUG] Toggle All CCs:', checked);
   if(!_d||!_d.centros_custo) return;
+  
   if(checked){
     // Marca todos
-    _poConfig.centros_custo_visiveis=_d.centros_custo.map(cc=>cc.id);
+    _poConfig.centros_custo_visiveis = _d.centros_custo.map(cc=>cc.id);
+    console.log('[DEBUG] Todos CCs marcados:', _poConfig.centros_custo_visiveis.length);
   }else{
     // Desmarca todos
-    _poConfig.centros_custo_visiveis=[];
+    _poConfig.centros_custo_visiveis = [];
+    console.log('[DEBUG] Todos CCs desmarcados');
   }
+  
+  // Re-renderiza a lista
   poRenderConfigCc();
 };
 
 window.poToggleAllObras=function(checked){
+  console.log('[DEBUG] Toggle All Obras:', checked);
   if(!_d||!_d.obras) return;
+  
   if(checked){
     // Marca todos
-    _poConfig.obras_visiveis=_d.obras.map(o=>o.id);
+    _poConfig.obras_visiveis = _d.obras.map(o=>o.id);
+    console.log('[DEBUG] Todas obras marcadas:', _poConfig.obras_visiveis.length);
   }else{
     // Desmarca todos
-    _poConfig.obras_visiveis=[];
+    _poConfig.obras_visiveis = [];
+    console.log('[DEBUG] Todas obras desmarcadas');
   }
+  
+  // Re-renderiza a lista
   poRenderConfigObras();
 };
 
 window.poSalvarConfig=function(){
-  // Se todos estão selecionados, salva array vazio (= todos visíveis)
-  const ccTodos=_poConfig.centros_custo_visiveis.length===_d.centros_custo.length;
-  const obrasTodas=_poConfig.obras_visiveis.length===_d.obras.length;
+  console.log('[DEBUG] Salvando configurações...');
+  console.log('[DEBUG] CCs visíveis:', _poConfig.centros_custo_visiveis);
+  console.log('[DEBUG] Obras visíveis:', _poConfig.obras_visiveis);
   
-  const configToSave={
+  // Se todos estão selecionados, salva array vazio (= todos visíveis)
+  const ccTodos = _d.centros_custo && _poConfig.centros_custo_visiveis.length === _d.centros_custo.length;
+  const obrasTodas = _d.obras && _poConfig.obras_visiveis.length === _d.obras.length;
+  
+  console.log('[DEBUG] Todos CCs selecionados?', ccTodos);
+  console.log('[DEBUG] Todas obras selecionadas?', obrasTodas);
+  
+  const configToSave = {
     centros_custo_visiveis: ccTodos ? [] : _poConfig.centros_custo_visiveis,
     obras_visiveis: obrasTodas ? [] : _poConfig.obras_visiveis,
-    filtros_ativos: _poConfig.filtros_ativos||{}
+    filtros_ativos: _poConfig.filtros_ativos || {}
   };
   
-  fetch('/admin/painel-obras/config/save',{
+  console.log('[DEBUG] Config a ser salva:', configToSave);
+  
+  fetch('/admin/painel-obras/config/save', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify(configToSave)
   })
   .then(r=>r.json())
   .then(res=>{
+    console.log('[DEBUG] Resposta do servidor:', res);
     if(res.ok){
       poToast('Configurações salvas!');
       poFecharConfig();
+      console.log('[DEBUG] Recarregando dashboard...');
       poLoad(); // Recarrega dashboard com novos filtros
     }else{
       poToast('Erro ao salvar: '+(res.error||''),'error');
     }
   })
-  .catch(()=>poToast('Erro de conexão','error'));
+  .catch(err=>{
+    console.error('[DEBUG] Erro ao salvar:', err);
+    poToast('Erro de conexão','error');
+  });
 };
 
 window.poLimparFiltros=function(){
