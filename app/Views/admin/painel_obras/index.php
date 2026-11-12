@@ -1,22 +1,23 @@
 <?php $pageTitle = 'Painel de Obras'; $currentPage = 'painel_obras'; ?>
 <?php ob_start(); ?>
+<link rel="stylesheet" href="/css/painel-obras-light.css">
 <style>
 /* Override do layout para tema escuro nesta página */
-.main-content { background: #0b1220 !important; }
-body { background: #0b1220 !important; }
-.top-bar { background: #151f32 !important; color: #e2e8f0 !important; box-shadow: none !important; border-bottom: 1px solid rgba(255,255,255,.06) !important; }
-.top-bar h5 { color: #f8fafc !important; }
-.top-bar .text-muted { color: #94a3b8 !important; }
+.main-content { background: #f8f9fa !important; }
+body { background: #f8f9fa !important; }
+.top-bar { background: #ffffff !important; color: #1e293b !important; box-shadow: none !important; border-bottom: 1px solid #1e293b !important; }
+.top-bar h5 { color: #0f172a !important; }
+.top-bar .text-muted { color: #64748b !important; }
 .top-bar .badge { background: rgba(59,130,246,.2) !important; color: #93c5fd !important; }
 
 /* Design System */
 :root {
-  --po-bg:#0b1220; --po-card:#151f32; --po-input:#0f1829;
-  --po-border:rgba(255,255,255,.06); --po-txt:#e2e8f0; --po-txt2:#94a3b8;
-  --po-blue:#3b82f6; --po-blue-t:#60a5fa; --po-cyan:#22d3ee;
-  --po-green:#10b981; --po-green-t:#6ee7b7;
-  --po-yellow:#f59e0b; --po-yellow-t:#fcd34d;
-  --po-red:#ef4444; --po-red-t:#fca5a5;
+  --po-bg:#f8f9fa; --po-card:#ffffff; --po-input:#f1f5f9;
+  --po-border:#1e293b; --po-txt:#1e293b; --po-txt2:#64748b;
+  --po-blue:#3b82f6; --po-blue-t:#2563eb; --po-cyan:#22d3ee;
+  --po-green:#10b981; --po-green-t:#059669;
+  --po-yellow:#f59e0b; --po-yellow-t:#d97706;
+  --po-red:#ef4444; --po-red-t:#dc2626;
   --po-gray:#64748b; --po-gray2:#334155;
 }
 #po { font-family:'Inter',system-ui,sans-serif; font-variant-numeric:tabular-nums; color:var(--po-txt); padding-bottom:48px; }
@@ -47,7 +48,7 @@ body { background: #0b1220 !important; }
 .po-kpi-icon { width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:10px; }
 .po-kpi-pill { position:absolute;top:16px;right:16px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px; }
 .po-kpi-label { font-size:12px;color:var(--po-txt2);margin-bottom:4px; }
-.po-kpi-value { font-size:22px;font-weight:700;color:#f8fafc;line-height:1.1; }
+.po-kpi-value { font-size:22px;font-weight:700;color:#0f172a;line-height:1.1; }
 .po-kpi-bar   { height:6px;background:rgba(255,255,255,.07);border-radius:3px;margin-top:10px;overflow:hidden; }
 .po-kpi-bar-fill { height:100%;border-radius:3px;transition:width .9s ease; }
 .po-kpi-note  { font-size:11px;color:var(--po-txt2);margin-top:5px; }
@@ -66,7 +67,7 @@ body { background: #0b1220 !important; }
 .po-table tr:last-child td { border-bottom:none; }
 .po-table tbody tr:hover { background:rgba(59,130,246,.05); }
 .po-code { font-size:11px;font-weight:600;color:var(--po-blue-t);display:block; }
-.po-name { font-weight:600;color:#f8fafc; }
+.po-name { font-weight:600;color:#0f172a; }
 .po-desvio-pos { color:var(--po-red-t); }
 .po-desvio-neg { color:var(--po-green-t); }
 .po-bar-track { height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden; }
@@ -93,7 +94,7 @@ body { background: #0b1220 !important; }
 .po-acoes { display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px; }
 @media(max-width:760px){.po-acoes{grid-template-columns:1fr;}}
 /* Seção */
-.po-stitle { font-size:16px;font-weight:600;color:#f8fafc;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px; }
+.po-stitle { font-size:16px;font-weight:600;color:#0f172a;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px; }
 .po-ssub   { font-size:13px;color:var(--po-txt2);margin-bottom:14px; }
 /* Warn bar */
 .po-warn-bar { background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px 16px;font-size:13px;color:var(--po-yellow-t);margin-bottom:16px;display:flex;align-items:center;gap:8px; }
@@ -138,7 +139,7 @@ body { background: #0b1220 !important; }
     <div style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--po-blue-t);background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);border-radius:20px;padding:3px 10px;margin-bottom:8px">
       <i class="bi bi-building"></i> Controladoria • Obras
     </div>
-    <h4 style="font-size:26px;font-weight:700;color:#f8fafc;margin:0 0 4px">Painel Financeiro de Obras</h4>
+    <h4 style="font-size:26px;font-weight:700;color:#0f172a;margin:0 0 4px">Painel Financeiro de Obras</h4>
     <p style="font-size:14px;color:var(--po-txt2);margin:0">Visão consolidada — <span id="po-ativas">…</span> obras ativas</p>
   </div>
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -180,7 +181,7 @@ body { background: #0b1220 !important; }
   <a href="/admin/painel-obras/planilha"><i class="bi bi-table"></i> Planilha de Controle</a>
   <a href="/admin/painel-obras/depara"><i class="bi bi-arrow-left-right"></i> De-para Categorias</a>
   <a href="/admin/painel-obras/pauta"><i class="bi bi-calendar-check"></i> Pauta de Revisão</a>
-  <button class="po-btn-config" onclick="poAbrirConfig()" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:#60a5fa;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;margin-left:auto">
+  <button class="po-btn-config" onclick="poAbrirConfig()" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:#2563eb;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;margin-left:auto">
     <i class="bi bi-funnel"></i> Filtros
   </button>
 </div>
@@ -285,17 +286,17 @@ body { background: #0b1220 !important; }
 <!-- Ações Rápidas -->
 <div class="po-acoes">
   <div class="po-card">
-    <div style="font-size:14px;font-weight:600;color:#f8fafc;margin-bottom:6px">Exportar relatório</div>
+    <div style="font-size:14px;font-weight:600;color:#0f172a;margin-bottom:6px">Exportar relatório</div>
     <div style="font-size:13px;color:var(--po-txt2);margin-bottom:12px">Resumo textual do painel para a diretoria.</div>
     <button class="po-btn po-btn-primary" onclick="poCopiar()"><i class="bi bi-clipboard-check"></i> Gerar relatório</button>
   </div>
   <div class="po-card">
-    <div style="font-size:14px;font-weight:600;color:#f8fafc;margin-bottom:6px">Registrar revisão</div>
+    <div style="font-size:14px;font-weight:600;color:#0f172a;margin-bottom:6px">Registrar revisão</div>
     <div style="font-size:13px;color:var(--po-txt2);margin-bottom:12px">Adiciona obras em alerta à pauta de sexta.</div>
     <button class="po-btn po-btn-ghost" onclick="poAdicionarPauta()"><i class="bi bi-calendar-plus"></i> Adicionar à pauta</button>
   </div>
   <div class="po-card">
-    <div style="font-size:14px;font-weight:600;color:#f8fafc;margin-bottom:6px">Limpar filtros</div>
+    <div style="font-size:14px;font-weight:600;color:#0f172a;margin-bottom:6px">Limpar filtros</div>
     <div style="font-size:13px;color:var(--po-txt2);margin-bottom:12px">Restaura a tabela sem restrições.</div>
     <button class="po-btn po-btn-ghost" onclick="poResetFiltros()"><i class="bi bi-arrow-counterclockwise"></i> Redefinir filtros</button>
   </div>
@@ -329,7 +330,7 @@ body { background: #0b1220 !important; }
   <div style="max-width:1200px;margin:40px auto;background:var(--po-card);border-radius:16px;border:1px solid var(--po-border)">
     <div style="padding:20px;border-bottom:1px solid var(--po-border);display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-size:18px;font-weight:700;color:#f8fafc" id="po-modal-title">Lançamentos da Obra</div>
+        <div style="font-size:18px;font-weight:700;color:#0f172a" id="po-modal-title">Lançamentos da Obra</div>
         <div style="font-size:13px;color:var(--po-txt2);margin-top:4px" id="po-modal-subtitle"></div>
       </div>
       <button onclick="poFecharModal()" style="background:none;border:none;color:var(--po-txt);font-size:24px;cursor:pointer;padding:0;width:32px;height:32px">&times;</button>
@@ -382,7 +383,7 @@ window.poLoad = function(){
   if (!loadingOverlay) {
     loadingOverlay = document.createElement('div');
     loadingOverlay.id = 'po-loading-overlay';
-    loadingOverlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(11,18,32,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#94a3b8';
+    loadingOverlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(11,18,32,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#64748b';
     document.body.appendChild(loadingOverlay);
   }
   loadingOverlay.innerHTML = '<div class="spinner-border" role="status"></div><div style="margin-top:16px">Carregando dados do Nibo...</div>';
@@ -394,7 +395,7 @@ window.poLoad = function(){
       
       if(!res.ok){
         const msg = res.error || 'Erro desconhecido';
-        loadingOverlay.innerHTML = '<div style="text-align:center;padding:40px;max-width:500px"><div style="color:#fca5a5;font-size:48px;margin-bottom:16px"><i class="bi bi-exclamation-triangle"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Erro ao carregar dados</div><div style="color:#94a3b8;font-size:14px;margin-bottom:24px">'+msg+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Tentar novamente</button></div>';
+        loadingOverlay.innerHTML = '<div style="text-align:center;padding:40px;max-width:500px"><div style="color:#dc2626;font-size:48px;margin-bottom:16px"><i class="bi bi-exclamation-triangle"></i></div><div style="color:#0f172a;font-size:18px;font-weight:600;margin-bottom:8px">Erro ao carregar dados</div><div style="color:#64748b;font-size:14px;margin-bottom:24px">'+msg+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Tentar novamente</button></div>';
         loadingOverlay.style.display = 'flex';
         poToast('Erro: '+msg,'error');
         return;
@@ -407,7 +408,7 @@ window.poLoad = function(){
       
       // Verifica se há obras cadastradas
       if(res.data.kpis.obras_total === 0) {
-        loadingOverlay.innerHTML = '<div style="text-align:center;padding:40px;max-width:600px"><div style="color:#60a5fa;font-size:48px;margin-bottom:16px"><i class="bi bi-building-exclamation"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Nenhuma obra/centro de custo encontrado</div><div style="color:#94a3b8;font-size:14px;margin-bottom:16px">O painel de obras funciona a partir dos centros de custo do Nibo.</div><div style="color:#94a3b8;font-size:13px;margin-bottom:24px">Certifique-se de que:<br>1. Há dados sincronizados do Nibo (aba Financeiro)<br>2. Os lançamentos têm centros de custo associados</div><a href="/admin/finance" class="po-btn-primary"><i class="bi bi-arrow-clockwise"></i> Ir para Financeiro</a></div>';
+        loadingOverlay.innerHTML = '<div style="text-align:center;padding:40px;max-width:600px"><div style="color:#2563eb;font-size:48px;margin-bottom:16px"><i class="bi bi-building-exclamation"></i></div><div style="color:#0f172a;font-size:18px;font-weight:600;margin-bottom:8px">Nenhuma obra/centro de custo encontrado</div><div style="color:#64748b;font-size:14px;margin-bottom:16px">O painel de obras funciona a partir dos centros de custo do Nibo.</div><div style="color:#64748b;font-size:13px;margin-bottom:24px">Certifique-se de que:<br>1. Há dados sincronizados do Nibo (aba Financeiro)<br>2. Os lançamentos têm centros de custo associados</div><a href="/admin/finance" class="po-btn-primary"><i class="bi bi-arrow-clockwise"></i> Ir para Financeiro</a></div>';
         loadingOverlay.style.display = 'flex';
         return;
       }
@@ -416,7 +417,7 @@ window.poLoad = function(){
       renderAll(res.data,res.synced_at);
     }).catch(e=>{
       console.error('Erro ao carregar:', e);
-      loadingOverlay.innerHTML = '<div style="text-align:center;padding:40px;max-width:500px"><div style="color:#fca5a5;font-size:48px;margin-bottom:16px"><i class="bi bi-wifi-off"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Falha de conexão</div><div style="color:#94a3b8;font-size:14px;margin-bottom:24px">'+e.message+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Recarregar</button></div>';
+      loadingOverlay.innerHTML = '<div style="text-align:center;padding:40px;max-width:500px"><div style="color:#dc2626;font-size:48px;margin-bottom:16px"><i class="bi bi-wifi-off"></i></div><div style="color:#0f172a;font-size:18px;font-weight:600;margin-bottom:8px">Falha de conexão</div><div style="color:#64748b;font-size:14px;margin-bottom:24px">'+e.message+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Recarregar</button></div>';
       loadingOverlay.style.display = 'flex';
       poToast('Falha: '+e.message,'error');
     });
@@ -457,14 +458,14 @@ function renderMeta(d,at){
 
 function renderKpis(k){
   const defs=[
-    {icon:'bi-file-earmark-text',ib:'rgba(59,130,246,.15)',ic:'#60a5fa',pill:'Período',pc:'info',
+    {icon:'bi-file-earmark-text',ib:'rgba(59,130,246,.15)',ic:'#2563eb',pill:'Período',pc:'info',
      val:BRL(k.contratado),note:'Soma dos contratos das '+k.obras_total+' obras',
      pct:100,bc:'var(--po-blue)'},
-    {icon:'bi-calculator',ib:'rgba(100,116,139,.15)',ic:'#94a3b8',
+    {icon:'bi-calculator',ib:'rgba(100,116,139,.15)',ic:'#64748b',
      pill:k.contratado>0?PCT(((k.orcado/k.contratado)-1)*100)+' do contratado':'—',pc:'pending',
      val:BRL(k.orcado),note:'Base de referência para controle',
      pct:k.contratado>0?Math.min((k.orcado/k.contratado)*100,100):0,bc:'var(--po-gray)'},
-    {icon:'bi-cash-stack',ib:'rgba(59,130,246,.15)',ic:'#60a5fa',
+    {icon:'bi-cash-stack',ib:'rgba(59,130,246,.15)',ic:'#2563eb',
      pill:k.orcado>0?PCT(((k.gasto/k.orcado)-1)*100)+' do orçado':'—',
      pc:k.gasto>k.orcado?'danger':'ok',
      val:BRL(k.gasto),note:'Lançamentos pagos no período',
@@ -513,7 +514,7 @@ function renderAlertas(list){
     const cats=(a.top_cats||[]).filter(Boolean).join(' e ')||'diversas categorias';
     return `<div class="po-card po-alerta-card ${a.situacao==='warn'?'warn':''}">
       <div class="po-code">${a.codigo}</div>
-      <div style="font-size:14px;font-weight:700;color:#f8fafc;margin-bottom:8px">${a.nome}</div>
+      <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:8px">${a.nome}</div>
       <span class="po-pill ${pc}" style="margin-bottom:10px"><span class="dot" style="background:${bc}"></span>${lbl}</span>
       <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:4px"><span>Orçado</span><span style="color:var(--po-txt)">${BRL(a.orcado)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:6px"><span>Gasto</span><span style="color:var(--po-txt)">${BRL(a.gasto)}</span></div>
@@ -708,11 +709,14 @@ window.poFecharConfig=function(){
 window.poRenderConfigCc=function(){
   if(!_d||!_d.centros_custo) return;
   const selected=_poConfig.centros_custo_visiveis||[];
-  const all=selected.length===0||selected.length===_d.centros_custo.length;
+  
+  // Se lista vazia = todos visíveis (padrão)
+  const all=selected.length===0;
   
   document.getElementById('po-cfg-select-all').checked=all;
   
   const html=_d.centros_custo.map(cc=>{
+    // Se lista vazia, marca todos. Senão, marca apenas os que estão na lista
     const isChecked=selected.length===0||selected.includes(cc.id);
     return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--po-text-secondary)">
       <input type="checkbox" value="${cc.id}" ${isChecked?'checked':''} 
@@ -728,11 +732,14 @@ window.poRenderConfigCc=function(){
 window.poRenderConfigObras=function(){
   if(!_d||!_d.obras) return;
   const selected=_poConfig.obras_visiveis||[];
-  const all=selected.length===0||selected.length===_d.obras.length;
+  
+  // Se lista vazia = todos visíveis (padrão)
+  const all=selected.length===0;
   
   document.getElementById('po-cfg-select-all-obras').checked=all;
   
   const html=_d.obras.map(o=>{
+    // Se lista vazia, marca todos. Senão, marca apenas os que estão na lista
     const isChecked=selected.length===0||selected.includes(o.id);
     return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--po-text-secondary)">
       <input type="checkbox" value="${o.id}" ${isChecked?'checked':''} 
@@ -746,7 +753,11 @@ window.poRenderConfigObras=function(){
 };
 
 window.poToggleCc=function(ccId,checked){
-  if(!_poConfig.centros_custo_visiveis) _poConfig.centros_custo_visiveis=[];
+  // Inicializa com todos se estiver vazio
+  if(!_poConfig.centros_custo_visiveis||_poConfig.centros_custo_visiveis.length===0){
+    _poConfig.centros_custo_visiveis=_d.centros_custo.map(cc=>cc.id);
+  }
+  
   if(checked){
     if(!_poConfig.centros_custo_visiveis.includes(ccId)){
       _poConfig.centros_custo_visiveis.push(ccId);
@@ -754,10 +765,18 @@ window.poToggleCc=function(ccId,checked){
   }else{
     _poConfig.centros_custo_visiveis=_poConfig.centros_custo_visiveis.filter(id=>id!==ccId);
   }
+  
+  // Atualiza estado do "Selecionar Todos"
+  const allSelected=_poConfig.centros_custo_visiveis.length===_d.centros_custo.length;
+  document.getElementById('po-cfg-select-all').checked=allSelected;
 };
 
 window.poToggleObra=function(obraId,checked){
-  if(!_poConfig.obras_visiveis) _poConfig.obras_visiveis=[];
+  // Inicializa com todos se estiver vazio
+  if(!_poConfig.obras_visiveis||_poConfig.obras_visiveis.length===0){
+    _poConfig.obras_visiveis=_d.obras.map(o=>o.id);
+  }
+  
   if(checked){
     if(!_poConfig.obras_visiveis.includes(obraId)){
       _poConfig.obras_visiveis.push(obraId);
@@ -765,13 +784,19 @@ window.poToggleObra=function(obraId,checked){
   }else{
     _poConfig.obras_visiveis=_poConfig.obras_visiveis.filter(id=>id!==obraId);
   }
+  
+  // Atualiza estado do "Selecionar Todos"
+  const allSelected=_poConfig.obras_visiveis.length===_d.obras.length;
+  document.getElementById('po-cfg-select-all-obras').checked=allSelected;
 };
 
 window.poToggleAllCc=function(checked){
   if(!_d||!_d.centros_custo) return;
   if(checked){
+    // Marca todos
     _poConfig.centros_custo_visiveis=_d.centros_custo.map(cc=>cc.id);
   }else{
+    // Desmarca todos
     _poConfig.centros_custo_visiveis=[];
   }
   poRenderConfigCc();
@@ -780,18 +805,30 @@ window.poToggleAllCc=function(checked){
 window.poToggleAllObras=function(checked){
   if(!_d||!_d.obras) return;
   if(checked){
+    // Marca todos
     _poConfig.obras_visiveis=_d.obras.map(o=>o.id);
   }else{
+    // Desmarca todos
     _poConfig.obras_visiveis=[];
   }
   poRenderConfigObras();
 };
 
 window.poSalvarConfig=function(){
+  // Se todos estão selecionados, salva array vazio (= todos visíveis)
+  const ccTodos=_poConfig.centros_custo_visiveis.length===_d.centros_custo.length;
+  const obrasTodas=_poConfig.obras_visiveis.length===_d.obras.length;
+  
+  const configToSave={
+    centros_custo_visiveis: ccTodos ? [] : _poConfig.centros_custo_visiveis,
+    obras_visiveis: obrasTodas ? [] : _poConfig.obras_visiveis,
+    filtros_ativos: _poConfig.filtros_ativos||{}
+  };
+  
   fetch('/admin/painel-obras/config/save',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(_poConfig)
+    body:JSON.stringify(configToSave)
   })
   .then(r=>r.json())
   .then(res=>{
@@ -807,7 +844,13 @@ window.poSalvarConfig=function(){
 };
 
 window.poLimparFiltros=function(){
-  _poConfig={centros_custo_visiveis:[],obras_visiveis:[]};
+  if(!_d) return;
+  // Seleciona todos (= array vazio no backend)
+  _poConfig={
+    centros_custo_visiveis:[],
+    obras_visiveis:[],
+    filtros_ativos:{}
+  };
   poRenderConfigCc();
   poRenderConfigObras();
   poToast('Filtros limpos. Clique em Salvar para aplicar.');
@@ -894,14 +937,14 @@ window.poMudarTab=function(tab){
       <h6 style="color:var(--po-text-primary);font-size:13px;font-weight:600;margin-bottom:12px">
         <i class="bi bi-building"></i> Centros de Custo Visíveis
       </h6>
-      <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;max-height:300px;overflow-y:auto">
+      <div style="background:rgba(0,0,0,.2);border:1px solid #1e293b;border-radius:8px;padding:12px;max-height:300px;overflow-y:auto">
         <div style="margin-bottom:10px">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--po-blue-t);font-size:13px">
             <input type="checkbox" id="po-cfg-select-all" onchange="poToggleAllCc(this.checked)" style="width:16px;height:16px">
             <span style="font-weight:600">Selecionar Todos</span>
           </label>
         </div>
-        <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:10px;display:grid;gap:8px" id="po-cfg-cc-list">
+        <div style="border-top:1px solid #1e293b;padding-top:10px;display:grid;gap:8px" id="po-cfg-cc-list">
           <!-- Preenchido via JavaScript -->
         </div>
       </div>
@@ -911,14 +954,14 @@ window.poMudarTab=function(tab){
       <h6 style="color:var(--po-text-primary);font-size:13px;font-weight:600;margin-bottom:12px">
         <i class="bi bi-buildings"></i> Obras Visíveis
       </h6>
-      <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;max-height:200px;overflow-y:auto">
+      <div style="background:rgba(0,0,0,.2);border:1px solid #1e293b;border-radius:8px;padding:12px;max-height:200px;overflow-y:auto">
         <div style="margin-bottom:10px">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--po-blue-t);font-size:13px">
             <input type="checkbox" id="po-cfg-select-all-obras" onchange="poToggleAllObras(this.checked)" style="width:16px;height:16px">
             <span style="font-weight:600">Selecionar Todas</span>
           </label>
         </div>
-        <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:10px;display:grid;gap:8px" id="po-cfg-obras-list">
+        <div style="border-top:1px solid #1e293b;padding-top:10px;display:grid;gap:8px" id="po-cfg-obras-list">
           <!-- Preenchido via JavaScript -->
         </div>
       </div>
@@ -938,3 +981,4 @@ window.poMudarTab=function(tab){
 
 <?php $content = ob_get_clean(); ?>
 <?php require ROOT_PATH . '/app/Views/admin/layouts/app.php'; ?>
+
