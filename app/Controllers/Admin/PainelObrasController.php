@@ -1048,7 +1048,6 @@ class PainelObrasController extends Controller
         $v = str_replace(',','.',$v);
         return (float)$v;
     }
-}
 
     // ─── Lançamentos Financeiros ─────────────────────────────────────────────
     
@@ -1380,3 +1379,4 @@ class PainelObrasController extends Controller
             $this->json(['ok' => false, 'error' => 'Erro ao deletar.'], 500);
         }
     }
+}
