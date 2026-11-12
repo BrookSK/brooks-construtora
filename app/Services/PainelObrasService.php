@@ -69,12 +69,21 @@ class PainelObrasService
             $catId   = $item['category_id'] ?? null;
             $catInfo = $catId ? ($catMap[$catId] ?? null) : null;
             $catNome = $catInfo['nome'] ?? ($item['category'] !== '—' ? $item['category'] : null);
-            if (!$catNome) $catNome = null;
 
-            // Categoria de obra via de-para
+            // NOVA LÓGICA: Usa categoria do Nibo diretamente como categoria de obra
+            // Se houver mapeamento de-para, usa o mapeado, senão usa a categoria Nibo original
             $deParaEntry  = $catId ? ($deParaMap[$catId] ?? null) : null;
-            $catObra      = $deParaEntry['categoria_obra'] ?? null;
-            $ignorar      = $deParaEntry ? (bool) $deParaEntry['ignorar_no_painel'] : false;
+            
+            // Determina categoria de obra: prioridade para mapeamento, depois catNome
+            if ($deParaEntry && !empty($deParaEntry['categoria_obra'])) {
+                $catObra = $deParaEntry['categoria_obra'];
+            } elseif ($catNome) {
+                $catObra = $catNome; // Usa nome da categoria Nibo diretamente
+            } else {
+                $catObra = 'Sem categoria / Não mapeado';
+            }
+            
+            $ignorar = $deParaEntry ? (bool) $deParaEntry['ignorar_no_painel'] : false;
             if ($ignorar) continue;
 
             if ($catId && !$catNome) $catNome = 'Sem categoria';
@@ -394,7 +403,7 @@ class PainelObrasService
         ];
 
         // Lançamento simples (sem rateio explícito)
-        return [array_merge($base, [
+        $linha = array_merge($base, [
             'categoria_nibo_id'   => $catId,
             'categoria_nibo_nome' => $catNome ?? 'Sem categoria',
             'categoria_excluida'  => $catInfo['excluida'] ?? false,
@@ -403,7 +412,14 @@ class PainelObrasService
             'tipo_categoria'      => $catInfo['tipo'] ?? null,
             'categoria_obra'      => $catObra,
             'valor_rateado'       => $valor,
-        ])];
+        ]);
+        
+        // Log para debug
+        if (empty($catObra)) {
+            error_log('[PainelObras] ALERTA: Lançamento SEM categoria_obra - catNome: ' . ($catNome ?? 'NULL') . ', catId: ' . ($catId ?? 'NULL') . ', description: ' . ($item['description'] ?? 'N/A'));
+        }
+        
+        return [$linha];
     }
 
     /**
