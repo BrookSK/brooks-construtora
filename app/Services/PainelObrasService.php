@@ -29,6 +29,10 @@ class PainelObrasService
         // competencia = 'YYYY-MM' ou 'YYYY-Q1' etc.
         [$dataIni, $dataFim] = self::resolverPeriodo($competencia);
 
+        error_log('[PainelObras] ===== INICIANDO BUSCA DE DADOS =====');
+        error_log('[PainelObras] Company: ' . $company . ', Competência: ' . $competencia);
+        error_log('[PainelObras] Período: ' . $dataIni . ' a ' . $dataFim);
+
         // Carrega snapshot
         $snapshot = NiboSyncSnapshot::latest($company);
         $payload  = $snapshot ? NiboSyncSnapshot::decodePayload($snapshot) : [];
@@ -36,20 +40,31 @@ class PainelObrasService
         $receivables = $payload['receivables'] ?? [];
         $todos = array_merge($payables, $receivables);
 
+        error_log('[PainelObras] Total de lançamentos no snapshot: ' . count($todos));
+        error_log('[PainelObras] Payables: ' . count($payables) . ', Receivables: ' . count($receivables));
+
         // Mapas auxiliares
         $catMap    = NiboCategoriesService::mapa($company);
         $deParaMap = PainelCategoriasDepara::mapCompleto();
         $obras     = PainelObra::allAtivas();
         $obrasMap  = self::indexarObras($obras);
 
+        error_log('[PainelObras] Categorias Nibo: ' . count($catMap));
+        error_log('[PainelObras] Mapeamentos de-para: ' . count($deParaMap));
+        error_log('[PainelObras] Obras ativas: ' . count($obras));
+
         $lancamentos = [];
         $semObra     = [];
         $semCat      = [];
+        $filtrados   = 0;
 
         foreach ($todos as $item) {
             // Filtra pelo período
             $dataRef = $item['forecast_date'] ?? $item['due_date'] ?? '';
-            if ($dataRef < $dataIni || $dataRef > $dataFim) continue;
+            if ($dataRef < $dataIni || $dataRef > $dataFim) {
+                $filtrados++;
+                continue;
+            }
 
             $catId   = $item['category_id'] ?? null;
             $catInfo = $catId ? ($catMap[$catId] ?? null) : null;
@@ -77,6 +92,12 @@ class PainelObrasService
                 if (!$linha['categoria_nibo_id']) $semCat[] = $linha;
             }
         }
+
+        error_log('[PainelObras] Lançamentos filtrados pelo período: ' . $filtrados);
+        error_log('[PainelObras] Lançamentos processados: ' . count($lancamentos));
+        error_log('[PainelObras] Sem obra vinculada: ' . count($semObra));
+        error_log('[PainelObras] Sem categoria: ' . count($semCat));
+        error_log('[PainelObras] ===== FIM DA BUSCA DE DADOS =====');
 
         return [
             'lancamentos'  => $lancamentos,

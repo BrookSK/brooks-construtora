@@ -369,6 +369,8 @@ const mesAtual = new Date().getMonth()+1;
 const catObra = <?=json_encode($categoriasObra)?>;
 
 window.poLoad = function(){
+  console.log('%c[PAINEL OBRAS] ========== CARREGANDO DADOS ==========', 'color: #3b82f6; font-weight: bold; font-size: 14px');
+  
   const poEl = document.getElementById('po');
   if (!poEl) {
     console.error('Elemento #po não encontrado');
@@ -377,6 +379,8 @@ window.poLoad = function(){
   
   const per = document.getElementById('po-periodo')?.value || '<?=date('Y-m')?>';
   const co  = document.getElementById('po-company')?.value || 'brooks';
+  
+  console.log('[PAINEL OBRAS] Parâmetros:', { periodo: per, company: co });
   
   // Mostra overlay de loading (não destroi o DOM)
   let loadingOverlay = document.getElementById('po-loading-overlay');
@@ -389,34 +393,81 @@ window.poLoad = function(){
   loadingOverlay.innerHTML = '<div class="spinner-border" role="status"></div><div style="margin-top:16px">Carregando dados do Nibo...</div>';
   loadingOverlay.style.display = 'flex';
   
-  fetch('/admin/painel-obras/dashboard-data?periodo='+per+'&company='+co)
-    .then(r=>r.json()).then(res=>{
+  const url = '/admin/painel-obras/dashboard-data?periodo='+per+'&company='+co;
+  console.log('[PAINEL OBRAS] Fazendo requisição para:', url);
+  
+  fetch(url)
+    .then(r=>{
+      console.log('[PAINEL OBRAS] Resposta recebida, status:', r.status);
+      return r.json();
+    })
+    .then(res=>{
+      console.log('[PAINEL OBRAS] Dados JSON parseados:', res);
+      
       loadingOverlay.style.display = 'none';
       
       if(!res.ok){
         const msg = res.error || 'Erro desconhecido';
+        console.error('[PAINEL OBRAS] ❌ Erro no backend:', msg);
         loadingOverlay.innerHTML = '<div style="text-align:center;padding:40px;max-width:500px"><div style="color:#dc2626;font-size:48px;margin-bottom:16px"><i class="bi bi-exclamation-triangle"></i></div><div style="color:#0f172a;font-size:18px;font-weight:600;margin-bottom:8px">Erro ao carregar dados</div><div style="color:#64748b;font-size:14px;margin-bottom:24px">'+msg+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Tentar novamente</button></div>';
         loadingOverlay.style.display = 'flex';
         poToast('Erro: '+msg,'error');
         return;
       }
       
+      console.log('%c[PAINEL OBRAS] ✅ Dados carregados com sucesso!', 'color: #10b981; font-weight: bold');
+      console.log('[PAINEL OBRAS] 📊 KPIs:', res.data.kpis);
+      console.log('[PAINEL OBRAS] 🏗️  Total de obras:', res.data.obras?.length || 0);
+      console.log('[PAINEL OBRAS] 📋 Lançamentos por obra:', Object.keys(res.data.lancamentos_por_obra || {}).length + ' obras com lançamentos');
+      console.log('[PAINEL OBRAS] 🏷️  Categorias Nibo:', Object.keys(res.data.categorias_nibo || {}).length + ' categorias');
+      console.log('[PAINEL OBRAS] 📦 Gasto por categoria obra:', Object.keys(res.data.gasto_por_cat || {}).length + ' categorias');
+      console.log('[PAINEL OBRAS] ⚠️  Sem obra vinculada:', res.data.sem_obra_count || 0, 'lançamentos (total: R$', (res.data.sem_obra_total || 0).toFixed(2), ')');
+      console.log('[PAINEL OBRAS] 🔄 Sincronização:', res.synced_at || 'N/A');
+      
       // Mostra mensagem se obras foram criadas
       if(res.sync_info && res.sync_info.criadas > 0) {
+        console.log('[PAINEL OBRAS] 🆕 Obras criadas automaticamente:', res.sync_info.criadas);
         poToast(res.sync_info.criadas + ' obra(s) criada(s) automaticamente a partir dos centros de custo do Nibo', 'success');
       }
       
       // Verifica se há obras cadastradas
       if(res.data.kpis.obras_total === 0) {
+        console.warn('[PAINEL OBRAS] ⚠️  NENHUMA OBRA ENCONTRADA!');
+        console.warn('[PAINEL OBRAS] Possíveis causas:');
+        console.warn('  1. Não há dados sincronizados do Nibo');
+        console.warn('  2. Lançamentos não têm centros de custo associados');
+        console.warn('  3. Período selecionado não contém lançamentos');
         loadingOverlay.innerHTML = '<div style="text-align:center;padding:40px;max-width:600px"><div style="color:#2563eb;font-size:48px;margin-bottom:16px"><i class="bi bi-building-exclamation"></i></div><div style="color:#0f172a;font-size:18px;font-weight:600;margin-bottom:8px">Nenhuma obra/centro de custo encontrado</div><div style="color:#64748b;font-size:14px;margin-bottom:16px">O painel de obras funciona a partir dos centros de custo do Nibo.</div><div style="color:#64748b;font-size:13px;margin-bottom:24px">Certifique-se de que:<br>1. Há dados sincronizados do Nibo (aba Financeiro)<br>2. Os lançamentos têm centros de custo associados</div><a href="/admin/finance" class="po-btn-primary"><i class="bi bi-arrow-clockwise"></i> Ir para Financeiro</a></div>';
         loadingOverlay.style.display = 'flex';
         return;
       }
       
+      // Log detalhado de cada obra
+      console.group('[PAINEL OBRAS] 📋 Detalhamento das Obras');
+      (res.data.obras || []).forEach((obra, idx) => {
+        const lancs = res.data.lancamentos_por_obra?.[obra.id];
+        console.log(`Obra ${idx + 1}: ${obra.codigo} - ${obra.nome}`);
+        console.log('  ├─ ID:', obra.id);
+        console.log('  ├─ Tipo:', obra.tipo);
+        console.log('  ├─ Contratado:', 'R$', obra.contratado.toFixed(2));
+        console.log('  ├─ Orçado:', 'R$', obra.orcado.toFixed(2));
+        console.log('  ├─ Gasto:', 'R$', obra.gasto.toFixed(2));
+        console.log('  ├─ A Pagar:', 'R$', obra.a_pagar.toFixed(2));
+        console.log('  ├─ Desvio:', 'R$', obra.desvio.toFixed(2), '(' + obra.desvio_pct.toFixed(1) + '%)');
+        console.log('  ├─ Situação:', obra.situacao);
+        console.log('  ├─ Lançamentos pagos:', lancs?.pagos?.length || 0);
+        console.log('  ├─ Lançamentos a pagar:', lancs?.a_pagar?.length || 0);
+        console.log('  └─ Top categorias:', obra.top_cats || []);
+      });
+      console.groupEnd();
+      
+      console.log('%c[PAINEL OBRAS] ========== FIM DO CARREGAMENTO ==========', 'color: #3b82f6; font-weight: bold; font-size: 14px');
+      
       _d=res.data; 
       renderAll(res.data,res.synced_at);
     }).catch(e=>{
-      console.error('Erro ao carregar:', e);
+      console.error('%c[PAINEL OBRAS] ❌ ERRO FATAL:', 'color: #dc2626; font-weight: bold', e);
+      console.error('[PAINEL OBRAS] Stack:', e.stack);
       loadingOverlay.innerHTML = '<div style="text-align:center;padding:40px;max-width:500px"><div style="color:#dc2626;font-size:48px;margin-bottom:16px"><i class="bi bi-wifi-off"></i></div><div style="color:#0f172a;font-size:18px;font-weight:600;margin-bottom:8px">Falha de conexão</div><div style="color:#64748b;font-size:14px;margin-bottom:24px">'+e.message+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Recarregar</button></div>';
       loadingOverlay.style.display = 'flex';
       poToast('Falha: '+e.message,'error');
