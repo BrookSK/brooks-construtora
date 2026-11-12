@@ -121,6 +121,150 @@ class PainelObrasService
     }
 
     /**
+     * Detecta obras a partir dos centros de custo do Nibo e cria registros automáticos
+     * se não existirem. Retorna lista de obras com seus centros de custo vinculados.
+     */
+    public static function sincronizarObrasDoNibo(string $company = 'brooks'): array
+    {
+        // Busca centros de custo do último snapshot
+        $snapshot = NiboSyncSnapshot::latest($company);
+        if (!$snapshot) {
+            return ['criadas' => 0, 'atualizadas' => 0, 'obras' => []];
+        }
+        
+        $payload = NiboSyncSnapshot::decodePayload($snapshot);
+        $centrosCusto = $payload['filters']['costcenters'] ?? [];
+        
+        $criadas = 0;
+        $atualizadas = 0;
+        $obras = [];
+        
+        foreach ($centrosCusto as $cc) {
+            $ccId = $cc['id'] ?? null;
+            $ccNome = $cc['name'] ?? '';
+            
+            if (!$ccId || !$ccNome || $ccNome === '—') continue;
+            
+            // Verifica se já existe obra com este centro de custo
+            $obraExistente = Database::fetch(
+                "SELECT * FROM painel_obras WHERE JSON_CONTAINS(centros_custo, ?)",
+                [json_encode((string)$ccId)]
+            );
+            
+            if ($obraExistente) {
+                $obras[] = $obraExistente;
+                continue;
+            }
+            
+            // Extrai código da obra do nome do centro de custo
+            // Exemplos: "P007", "P031", "P004.2"
+            $codigo = self::extrairCodigo($ccNome);
+            if (!$codigo) {
+                // Se não conseguir extrair, usa primeiras letras + ID
+                $codigo = 'CC-' . substr(preg_replace('/[^A-Z0-9]/i', '', $ccNome), 0, 6);
+            }
+            
+            // Verifica se já existe obra com este código
+            $porCodigo = Database::fetch(
+                "SELECT * FROM painel_obras WHERE codigo = ?",
+                [$codigo]
+            );
+            
+            if ($porCodigo) {
+                // Adiciona o centro de custo à obra existente
+                $ccsExistentes = json_decode($porCodigo['centros_custo'] ?? '[]', true) ?: [];
+                if (!in_array($ccId, $ccsExistentes)) {
+                    $ccsExistentes[] = (string)$ccId;
+                    Database::query(
+                        "UPDATE painel_obras SET centros_custo = ? WHERE id = ?",
+                        [json_encode($ccsExistentes), $porCodigo['id']]
+                    );
+                    $atualizadas++;
+                }
+                $obras[] = $porCodigo;
+                continue;
+            }
+            
+            // Cria nova obra
+            $tipo = self::detectarTipo($ccNome);
+            $cliente = self::extrairCliente($ccNome);
+            
+            $obraId = Database::insert('painel_obras', [
+                'codigo' => $codigo,
+                'nome' => $ccNome,
+                'tipo' => $tipo,
+                'cliente' => $cliente,
+                'centros_custo' => json_encode([(string)$ccId]),
+                'valor_contratado' => 0, // Será preenchido manualmente depois
+                'data_contrato' => date('Y-m-d'),
+                'situacao' => 'Ativa',
+                'observacoes' => 'Criada automaticamente a partir do centro de custo do Nibo',
+                'created_by' => null,
+            ]);
+            
+            $criadas++;
+            
+            $novaObra = Database::fetch("SELECT * FROM painel_obras WHERE id = ?", [$obraId]);
+            if ($novaObra) {
+                $obras[] = $novaObra;
+            }
+        }
+        
+        return [
+            'criadas' => $criadas,
+            'atualizadas' => $atualizadas,
+            'obras' => $obras,
+        ];
+    }
+    
+    /**
+     * Detecta o tipo de obra pelo nome
+     */
+    private static function detectarTipo(string $nome): string
+    {
+        $nome = strtolower($nome);
+        
+        if (strpos($nome, 'reforma') !== false || strpos($nome, 'ref') !== false) {
+            return 'Reforma';
+        }
+        
+        if (strpos($nome, 'construção') !== false || 
+            strpos($nome, 'construcao') !== false ||
+            strpos($nome, 'const') !== false ||
+            strpos($nome, 'obra') !== false) {
+            return 'Construção';
+        }
+        
+        return 'Reforma'; // Default
+    }
+    
+    /**
+     * Extrai nome do cliente do nome do centro de custo
+     * Exemplo: "Joia Bergamo - João Doria - P031" → "João Doria"
+     */
+    private static function extrairCliente(string $nome): ?string
+    {
+        // Padrão: "Empreendimento - Cliente - Código"
+        // Remove o código do final
+        $semCodigo = preg_replace('/\s*-\s*[A-Z0-9\-]{2,10}$/i', '', $nome);
+        
+        // Pega a parte do meio (entre traços)
+        $partes = explode(' - ', $semCodigo);
+        
+        if (count($partes) >= 2) {
+            // Retorna a segunda parte (cliente)
+            return trim($partes[1]);
+        }
+        
+        if (count($partes) === 1) {
+            // Se só tem uma parte, é o nome do cliente/empreendimento
+            return trim($partes[0]);
+        }
+        
+        return null;
+    }
+    
+    /**
      * Extrai código de obra de um texto (descrição ou centro de custo).
      * Retorna o primeiro match ou null.
      */
@@ -265,6 +409,36 @@ class PainelObrasService
                 $obras[] = $obra;
                 $obrasVistas[] = $id;
             }
+        }
+        
+        // Se não houver obras cadastradas, retorna estrutura vazia
+        if (empty($obras)) {
+            return [
+                'kpis' => [
+                    'obras_total' => 0,
+                    'contratado' => 0,
+                    'orcado' => 0,
+                    'gasto' => 0,
+                    'a_pagar' => 0,
+                    'desvio' => 0,
+                    'obras_estouro' => 0,
+                    'obras_atencao' => 0,
+                ],
+                'obras' => [],
+                'obras_alerta' => [],
+                'gasto_por_cat' => [],
+                'a_pagar_por_cat' => [],
+                'categorias_nibo' => [],
+                'fornecedores' => [],
+                'fluxo_mensal' => [],
+                'lancamentos_por_obra' => [],
+                'nao_mapeadas' => 0,
+                'sem_obra_count' => count($data['sem_obra'] ?? []),
+                'sem_obra_total' => 0,
+                'sem_obra_lancamentos' => [],
+                'synced_at' => $data['synced_at'],
+                'periodo' => $data['periodo'],
+            ];
         }
         
         // Processa cada obra COM DADOS 100% DO NIBO

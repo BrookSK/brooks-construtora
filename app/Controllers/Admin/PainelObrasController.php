@@ -57,6 +57,9 @@ class PainelObrasController extends Controller
         $competencia = (string) $this->input('periodo', date('Y-m'));
 
         try {
+            // Sincroniza obras a partir dos centros de custo do Nibo
+            $sync = PainelObrasService::sincronizarObrasDoNibo($company);
+            
             $dashboardData = PainelObrasService::getDashboardData($competencia, $company);
             
             // Busca snapshot para pegar synced_at
@@ -67,6 +70,7 @@ class PainelObrasController extends Controller
                 'ok' => true,
                 'data' => $dashboardData,
                 'synced_at' => $syncedAt,
+                'sync_info' => $sync, // Info sobre obras criadas/atualizadas
             ]);
         } catch (\Throwable $e) {
             error_log('[PainelObrasController] Erro ao buscar dados: ' . $e->getMessage());
