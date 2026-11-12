@@ -36,25 +36,18 @@ class PainelObrasController extends Controller
         if (!NiboService::isValidCompany($company)) $company = 'brooks';
         $competencia = (string) $this->input('periodo', date('Y-m'));
 
-        // Busca categorias do Nibo para usar no frontend
+        // Busca categorias que TÊM gastos para passar ao frontend
+        $categoriasObra = [];
         try {
-            $catMap = NiboCategoriesService::mapa($company);
-            $categoriasObra = [];
-            foreach ($catMap as $id => $cat) {
-                $nome = $cat['nome'] ?? '';
-                if ($nome && $nome !== '—') {
-                    $categoriasObra[] = $nome;
-                }
-            }
-            $categoriasObra = array_unique($categoriasObra);
+            $dashboardData = PainelObrasService::getDashboardData($competencia, $company);
+            $categoriasComGasto = array_keys($dashboardData['gasto_por_cat'] ?? []);
+            $categoriasComAPagar = array_keys($dashboardData['a_pagar_por_cat'] ?? []);
+            $categoriasObra = array_unique(array_merge($categoriasComGasto, $categoriasComAPagar));
+            $categoriasObra = array_filter($categoriasObra, fn($cat) => $cat !== 'Sem categoria / Não mapeado');
             sort($categoriasObra);
         } catch (\Throwable $e) {
-            // Fallback se houver erro
-            $categoriasObra = [
-                'Material Básico', 'Mão de Obra', 'Equipamento/Locação',
-                'Material de Acabamento', 'Instalações',
-                'Administração/Indiretos', 'Projetos e Taxas', 'Imprevistos',
-            ];
+            // Se falhar, usa array vazio (visão limpa)
+            $categoriasObra = [];
         }
 
         $this->view('admin.painel_obras.index', [
@@ -352,54 +345,36 @@ class PainelObrasController extends Controller
     public function obrasCategorias(): void
     {
         $company = (string) $this->input('company', 'brooks');
+        $periodo = (string) $this->input('periodo', date('Y-m'));
         
         try {
-            // Busca TODAS as categorias do Nibo
-            $catMapNibo = NiboCategoriesService::mapa($company);
+            // Busca dados do dashboard para pegar apenas categorias com gastos
+            $dashboardData = PainelObrasService::getDashboardData($periodo, $company);
             
-            error_log('[PainelObras] Total de categorias do Nibo: ' . count($catMapNibo));
+            // Pega categorias que têm gastos ou a pagar
+            $categoriasComGasto = array_keys($dashboardData['gasto_por_cat'] ?? []);
+            $categoriasComAPagar = array_keys($dashboardData['a_pagar_por_cat'] ?? []);
             
-            $categorias = [];
-            foreach ($catMapNibo as $id => $cat) {
-                $nome = $cat['nome'] ?? '';
-                if ($nome && $nome !== '—') {
-                    $categorias[] = [
-                        'id' => $id,
-                        'nome' => $nome,
-                        'caminho' => $cat['caminho'] ?? '',
-                    ];
-                }
-            }
+            // Combina e remove duplicados
+            $categorias = array_unique(array_merge($categoriasComGasto, $categoriasComAPagar));
             
-            // Remove duplicados por nome
-            $nomes = [];
-            $categoriasUnicas = [];
-            foreach ($categorias as $cat) {
-                if (!in_array($cat['nome'], $nomes)) {
-                    $nomes[] = $cat['nome'];
-                    $categoriasUnicas[] = $cat['nome']; // Retorna apenas os nomes
-                }
-            }
+            // Remove "Sem categoria / Não mapeado" da lista
+            $categorias = array_filter($categorias, fn($cat) => $cat !== 'Sem categoria / Não mapeado');
             
             // Ordena alfabeticamente
-            sort($categoriasUnicas);
+            sort($categorias);
             
-            error_log('[PainelObras] Categorias únicas retornadas: ' . count($categoriasUnicas));
+            error_log('[PainelObras] Categorias COM gastos retornadas: ' . count($categorias));
             
             // Retorna no formato esperado pelo frontend (separado por tipo)
             $this->json([
-                'Construção' => $categoriasUnicas,
-                'Reforma' => $categoriasUnicas, // Mesmas categorias para ambos os tipos
+                'Construção' => $categorias,
+                'Reforma' => $categorias, // Mesmas categorias para ambos os tipos
             ]);
         } catch (\Throwable $e) {
-            error_log('[PainelObrasController] Erro ao buscar categorias do Nibo: ' . $e->getMessage());
-            // Fallback: retorna categorias padrão se houver erro
-            $fallback = [
-                'Material Básico', 'Mão de Obra', 'Equipamento/Locação',
-                'Material de Acabamento', 'Instalações',
-                'Administração/Indiretos', 'Projetos e Taxas', 'Imprevistos',
-            ];
-            $this->json(['Construção' => $fallback, 'Reforma' => $fallback]);
+            error_log('[PainelObrasController] Erro ao buscar categorias: ' . $e->getMessage());
+            // Fallback vazio se houver erro
+            $this->json(['Construção' => [], 'Reforma' => []]);
         }
     }
 
@@ -514,20 +489,18 @@ class PainelObrasController extends Controller
     {
         try { $obras = PainelObra::allWithFilter(); } catch (\Throwable $e) { $obras = []; }
         
-        // Busca categorias do Nibo
+        // Busca apenas categorias com gastos (visão limpa)
         $categoriasObra = [];
         try {
-            $catMap = NiboCategoriesService::mapa('brooks');
-            foreach ($catMap as $id => $cat) {
-                $nome = $cat['nome'] ?? '';
-                if ($nome && $nome !== '—') {
-                    $categoriasObra[] = $nome;
-                }
-            }
-            $categoriasObra = array_unique($categoriasObra);
+            $competencia = date('Y-m');
+            $dashboardData = PainelObrasService::getDashboardData($competencia, 'brooks');
+            $categoriasComGasto = array_keys($dashboardData['gasto_por_cat'] ?? []);
+            $categoriasComAPagar = array_keys($dashboardData['a_pagar_por_cat'] ?? []);
+            $categoriasObra = array_unique(array_merge($categoriasComGasto, $categoriasComAPagar));
+            $categoriasObra = array_filter($categoriasObra, fn($cat) => $cat !== 'Sem categoria / Não mapeado');
             sort($categoriasObra);
         } catch (\Throwable $e) {
-            $categoriasObra = ['Material Básico', 'Mão de Obra', 'Equipamento/Locação', 'Material de Acabamento', 'Instalações', 'Administração/Indiretos', 'Projetos e Taxas', 'Imprevistos'];
+            $categoriasObra = [];
         }
         
         $this->view('admin.painel_obras.orcamento',[
@@ -566,16 +539,18 @@ class PainelObrasController extends Controller
         $v = (PainelObra::versaoVigente($obraId) ?? 0) + 1;
         if ($v >= 2 && !$motivo) { $this->json(['ok'=>false,'error'=>'Motivo da revisão obrigatório a partir da v2.'],422); return; }
         
-        // Busca categorias do Nibo
-        $catMap = NiboCategoriesService::mapa('brooks');
+        // Busca apenas categorias com gastos (visão limpa)
         $categorias = [];
-        foreach ($catMap as $id => $cat) {
-            $nome = $cat['nome'] ?? '';
-            if ($nome && $nome !== '—') {
-                $categorias[] = $nome;
-            }
+        try {
+            $competencia = date('Y-m');
+            $dashboardData = PainelObrasService::getDashboardData($competencia, 'brooks');
+            $categoriasComGasto = array_keys($dashboardData['gasto_por_cat'] ?? []);
+            $categoriasComAPagar = array_keys($dashboardData['a_pagar_por_cat'] ?? []);
+            $categorias = array_unique(array_merge($categoriasComGasto, $categoriasComAPagar));
+            $categorias = array_filter($categorias, fn($cat) => $cat !== 'Sem categoria / Não mapeado');
+        } catch (\Throwable $e) {
+            $categorias = [];
         }
-        $categorias = array_unique($categorias);
         
         foreach ($categorias as $cat) {
             Database::query(
