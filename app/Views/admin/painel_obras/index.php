@@ -690,16 +690,29 @@ let _poConfig = {
 };
 
 window.poAbrirConfig=function(){
+  console.log('[DEBUG] Abrindo configurações...');
+  console.log('[DEBUG] Dados disponíveis:', _d);
+  
   // Busca configuração atual do usuário
   fetch('/admin/painel-obras/config/get')
     .then(r=>r.json())
     .then(cfg=>{
+      console.log('[DEBUG] Config carregada:', cfg);
       _poConfig=cfg||{centros_custo_visiveis:[],obras_visiveis:[]};
+      
+      console.log('[DEBUG] Renderizando CCs...');
       poRenderConfigCc();
+      
+      console.log('[DEBUG] Renderizando Obras...');
       poRenderConfigObras();
+      
+      console.log('[DEBUG] Abrindo modal...');
       document.getElementById('po-modal-config').style.display='flex';
     })
-    .catch(()=>poToast('Erro ao carregar configurações','error'));
+    .catch(err=>{
+      console.error('[DEBUG] Erro ao carregar config:', err);
+      poToast('Erro ao carregar configurações','error');
+    });
 };
 
 window.poFecharConfig=function(){
@@ -718,7 +731,7 @@ window.poRenderConfigCc=function(){
   const html=_d.centros_custo.map(cc=>{
     // Se lista vazia, marca todos. Senão, marca apenas os que estão na lista
     const isChecked=selected.length===0||selected.includes(cc.id);
-    return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--po-text-secondary)">
+    return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#1e293b">
       <input type="checkbox" value="${cc.id}" ${isChecked?'checked':''} 
              onchange="poToggleCc('${cc.id}',this.checked)"
              style="width:16px;height:16px">
@@ -741,7 +754,7 @@ window.poRenderConfigObras=function(){
   const html=_d.obras.map(o=>{
     // Se lista vazia, marca todos. Senão, marca apenas os que estão na lista
     const isChecked=selected.length===0||selected.includes(o.id);
-    return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--po-text-secondary)">
+    return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#1e293b">
       <input type="checkbox" value="${o.id}" ${isChecked?'checked':''} 
              onchange="poToggleObra(${o.id},this.checked)"
              style="width:16px;height:16px">
@@ -934,41 +947,41 @@ window.poMudarTab=function(tab){
     </div>
     
     <div style="margin:20px 0">
-      <h6 style="color:var(--po-text-primary);font-size:13px;font-weight:600;margin-bottom:12px">
+      <h6 style="color:#0f172a;font-size:13px;font-weight:600;margin-bottom:12px">
         <i class="bi bi-building"></i> Centros de Custo Visíveis
       </h6>
-      <div style="background:rgba(0,0,0,.2);border:1px solid #1e293b;border-radius:8px;padding:12px;max-height:300px;overflow-y:auto">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;max-height:300px;overflow-y:auto">
         <div style="margin-bottom:10px">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--po-blue-t);font-size:13px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#2563eb;font-size:13px">
             <input type="checkbox" id="po-cfg-select-all" onchange="poToggleAllCc(this.checked)" style="width:16px;height:16px">
             <span style="font-weight:600">Selecionar Todos</span>
           </label>
         </div>
-        <div style="border-top:1px solid #1e293b;padding-top:10px;display:grid;gap:8px" id="po-cfg-cc-list">
+        <div style="border-top:1px solid #e2e8f0;padding-top:10px;display:grid;gap:8px" id="po-cfg-cc-list">
           <!-- Preenchido via JavaScript -->
         </div>
       </div>
     </div>
     
     <div style="margin:20px 0">
-      <h6 style="color:var(--po-text-primary);font-size:13px;font-weight:600;margin-bottom:12px">
+      <h6 style="color:#0f172a;font-size:13px;font-weight:600;margin-bottom:12px">
         <i class="bi bi-buildings"></i> Obras Visíveis
       </h6>
-      <div style="background:rgba(0,0,0,.2);border:1px solid #1e293b;border-radius:8px;padding:12px;max-height:200px;overflow-y:auto">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;max-height:200px;overflow-y:auto">
         <div style="margin-bottom:10px">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--po-blue-t);font-size:13px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:#2563eb;font-size:13px">
             <input type="checkbox" id="po-cfg-select-all-obras" onchange="poToggleAllObras(this.checked)" style="width:16px;height:16px">
             <span style="font-weight:600">Selecionar Todas</span>
           </label>
         </div>
-        <div style="border-top:1px solid #1e293b;padding-top:10px;display:grid;gap:8px" id="po-cfg-obras-list">
+        <div style="border-top:1px solid #e2e8f0;padding-top:10px;display:grid;gap:8px" id="po-cfg-obras-list">
           <!-- Preenchido via JavaScript -->
         </div>
       </div>
     </div>
     
     <div class="po-modal-footer" style="display:flex;gap:10px;margin-top:20px">
-      <button class="po-btn" onclick="poSalvarConfig()">
+      <button class="po-btn po-btn-primary" onclick="poSalvarConfig()">
         <i class="bi bi-check2"></i> Salvar Filtros
       </button>
       <button class="po-btn-secondary" onclick="poLimparFiltros()">
