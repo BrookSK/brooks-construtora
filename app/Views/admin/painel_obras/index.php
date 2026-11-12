@@ -361,17 +361,28 @@ window.poLoad = function(){
     return;
   }
   
-  const per = document.getElementById('po-periodo').value;
-  const co  = document.getElementById('po-company').value;
+  const per = document.getElementById('po-periodo')?.value || '<?=date('Y-m')?>';
+  const co  = document.getElementById('po-company')?.value || 'brooks';
   
-  // Mostra loading
-  poEl.innerHTML = '<div style="text-align:center;padding:100px 20px;color:#94a3b8"><div class="spinner-border" role="status"></div><div style="margin-top:16px">Carregando dados do Nibo...</div></div>';
+  // Mostra overlay de loading (não destroi o DOM)
+  let loadingOverlay = document.getElementById('po-loading-overlay');
+  if (!loadingOverlay) {
+    loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'po-loading-overlay';
+    loadingOverlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(11,18,32,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#94a3b8';
+    document.body.appendChild(loadingOverlay);
+  }
+  loadingOverlay.innerHTML = '<div class="spinner-border" role="status"></div><div style="margin-top:16px">Carregando dados do Nibo...</div>';
+  loadingOverlay.style.display = 'flex';
   
   fetch('/admin/painel-obras/dashboard-data?periodo='+per+'&company='+co)
     .then(r=>r.json()).then(res=>{
+      loadingOverlay.style.display = 'none';
+      
       if(!res.ok){
         const msg = res.error || 'Erro desconhecido';
-        poEl.innerHTML = '<div style="text-align:center;padding:100px 20px"><div style="color:#fca5a5;font-size:48px;margin-bottom:16px"><i class="bi bi-exclamation-triangle"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Erro ao carregar dados</div><div style="color:#94a3b8;font-size:14px;margin-bottom:24px">'+msg+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Tentar novamente</button></div>';
+        loadingOverlay.innerHTML = '<div style="text-align:center;padding:40px;max-width:500px"><div style="color:#fca5a5;font-size:48px;margin-bottom:16px"><i class="bi bi-exclamation-triangle"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Erro ao carregar dados</div><div style="color:#94a3b8;font-size:14px;margin-bottom:24px">'+msg+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Tentar novamente</button></div>';
+        loadingOverlay.style.display = 'flex';
         poToast('Erro: '+msg,'error');
         return;
       }
@@ -383,14 +394,17 @@ window.poLoad = function(){
       
       // Verifica se há obras cadastradas
       if(res.data.kpis.obras_total === 0) {
-        poEl.innerHTML = '<div style="text-align:center;padding:100px 20px"><div style="color:#60a5fa;font-size:48px;margin-bottom:16px"><i class="bi bi-building-exclamation"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Nenhuma obra/centro de custo encontrado</div><div style="color:#94a3b8;font-size:14px;margin-bottom:16px">O painel de obras funciona a partir dos centros de custo do Nibo.</div><div style="color:#94a3b8;font-size:13px;margin-bottom:24px">Certifique-se de que:<br>1. Há dados sincronizados do Nibo (aba Financeiro)<br>2. Os lançamentos têm centros de custo associados</div><a href="/admin/finance" class="po-btn-primary"><i class="bi bi-arrow-clockwise"></i> Ir para Financeiro</a></div>';
+        loadingOverlay.innerHTML = '<div style="text-align:center;padding:40px;max-width:600px"><div style="color:#60a5fa;font-size:48px;margin-bottom:16px"><i class="bi bi-building-exclamation"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Nenhuma obra/centro de custo encontrado</div><div style="color:#94a3b8;font-size:14px;margin-bottom:16px">O painel de obras funciona a partir dos centros de custo do Nibo.</div><div style="color:#94a3b8;font-size:13px;margin-bottom:24px">Certifique-se de que:<br>1. Há dados sincronizados do Nibo (aba Financeiro)<br>2. Os lançamentos têm centros de custo associados</div><a href="/admin/finance" class="po-btn-primary"><i class="bi bi-arrow-clockwise"></i> Ir para Financeiro</a></div>';
+        loadingOverlay.style.display = 'flex';
         return;
       }
       
-      _d=res.data; renderAll(res.data,res.synced_at);
+      _d=res.data; 
+      renderAll(res.data,res.synced_at);
     }).catch(e=>{
       console.error('Erro ao carregar:', e);
-      poEl.innerHTML = '<div style="text-align:center;padding:100px 20px"><div style="color:#fca5a5;font-size:48px;margin-bottom:16px"><i class="bi bi-wifi-off"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Falha de conexão</div><div style="color:#94a3b8;font-size:14px;margin-bottom:24px">'+e.message+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Recarregar</button></div>';
+      loadingOverlay.innerHTML = '<div style="text-align:center;padding:40px;max-width:500px"><div style="color:#fca5a5;font-size:48px;margin-bottom:16px"><i class="bi bi-wifi-off"></i></div><div style="color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:8px">Falha de conexão</div><div style="color:#94a3b8;font-size:14px;margin-bottom:24px">'+e.message+'</div><button class="po-btn-primary" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Recarregar</button></div>';
+      loadingOverlay.style.display = 'flex';
       poToast('Falha: '+e.message,'error');
     });
 };
