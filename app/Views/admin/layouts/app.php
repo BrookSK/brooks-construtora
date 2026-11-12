@@ -474,6 +474,11 @@
                     <i class="bi bi-cash-coin"></i> <span class="link-text">Financeiro</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link <?= in_array($currentPage ?? '', ['painel_obras','painel_obras_obras','painel_obras_orc','painel_obras_plan','painel_obras_depara','painel_obras_pauta']) ? 'active' : '' ?>" href="/admin/painel-obras" data-title="Painel de Obras">
+                    <i class="bi bi-building-gear"></i> <span class="link-text">Painel de Obras</span>
+                </a>
+            </li>
             <?php endif; ?>
 
             <?php // Veículo - qualquer usuário logado pode acessar ?>
