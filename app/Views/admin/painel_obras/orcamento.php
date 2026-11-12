@@ -132,39 +132,80 @@ function orcCarregar(){
   const id=document.getElementById('orc-obra-sel').value;
   if(!id){document.getElementById('orc-area').style.display='none';return;}
   document.getElementById('orc-area').style.display='block';
-  fetch('/admin/painel-obras/orcamento/data?obra_id='+id).then(r=>r.json()).then(res=>{
-    if(!res.ok) return;
-    document.getElementById('orc-versao').textContent=res.versao||'(nenhuma)';
-    document.getElementById('orc-vigencia').textContent=(res.linhas[0]?.data_vigencia)||'—';
-    const cats=<?=json_encode($categoriasObra)?>;
-    const m={};res.linhas.forEach(l=>{m[l.categoria_obra]=l.valor_orcado;});
-    let tot=0;
-    document.getElementById('orc-tbody').innerHTML=cats.map(c=>{
-      const v=m[c]||0; tot+=parseFloat(v);
-      return `<tr><td style="padding:10px 16px">${c}</td><td style="text-align:right;padding:10px 16px">${v>0?BRL(v):'<span style="color:#64748b">—</span>'}</td></tr>`;
-    }).join('');
-    document.getElementById('orc-total').textContent=BRL(tot);
-    if(res.historico?.length){
-      document.getElementById('orc-historico').innerHTML=`<table class="orc-table"><thead><tr><th>Versão</th><th>Vigência</th><th style="text-align:right">Total</th><th>Motivo</th></tr></thead><tbody>${
-        res.historico.map(h=>`<tr><td style="padding:8px 16px">v${h.versao}</td><td style="padding:8px 16px">${h.data_vigencia||'—'}</td><td style="text-align:right;padding:8px 16px">${BRL(h.total)}</td><td style="color:#64748b;padding:8px 16px">${h.motivo_revisao||'—'}</td></tr>`).join('')
-      }</tbody></table>`;
-    } else {document.getElementById('orc-historico').textContent='Nenhuma versão cadastrada ainda.';}
-  }).catch(e=>{
-    console.error('Erro ao carregar orçamento:',e);
-    alert('Erro ao carregar dados do orçamento');
-  });
+  
+  fetch('/admin/painel-obras/orcamento/data?obra_id='+id)
+    .then(r=>r.json())
+    .then(res=>{
+      console.log('[ORCAMENTO] Dados recebidos:', res);
+      
+      if(!res.ok) {
+        console.error('[ORCAMENTO] Erro:', res.error);
+        return;
+      }
+      
+      // Remove campos de versão/vigência (não usamos mais isso)
+      document.getElementById('orc-versao').textContent='Última edição';
+      document.getElementById('orc-vigencia').textContent=res.linhas[0]?.updated_at ? new Date(res.linhas[0].updated_at).toLocaleDateString('pt-BR') : '—';
+      
+      // Busca categorias personalizadas
+      const cats = <?=json_encode($categoriasObra)?>;
+      
+      // Cria mapa de valores (agora usando valores retornados corretamente)
+      const valores = res.valores || {};
+      
+      let tot=0;
+      document.getElementById('orc-tbody').innerHTML=cats.map(c=>{
+        const v = valores[c] || 0;
+        tot += parseFloat(v);
+        return `<tr>
+          <td style="padding:10px 16px">${c}</td>
+          <td style="text-align:right;padding:10px 16px">
+            ${v>0 ? BRL(v) : '<span style="color:#64748b">—</span>'}
+          </td>
+        </tr>`;
+      }).join('');
+      
+      document.getElementById('orc-total').textContent=BRL(tot);
+      
+      // Remove histórico (não usamos mais versionamento)
+      document.getElementById('orc-historico').innerHTML = tot > 0 
+        ? '<div style="color:#10b981;font-size:13px">✓ Orçamento cadastrado</div>' 
+        : '<div style="color:#64748b;font-size:13px">Nenhum orçamento cadastrado ainda.</div>';
+        
+    }).catch(e=>{
+      console.error('Erro ao carregar orçamento:',e);
+      alert('Erro ao carregar dados do orçamento');
+    });
 }
 
 function orcNovaVersao(){
   const obraId=document.getElementById('orc-obra-sel').value;
   if(!obraId){alert('Selecione uma obra primeiro.');return;}
-  const v=parseInt(document.getElementById('orc-versao').textContent)||0;
-  document.getElementById('orc-motivo-wrap').style.display=v>=1?'block':'none';
+  
+  // Remove check de versão (não usamos mais versionamento)
+  document.getElementById('orc-motivo-wrap').style.display='none';
   document.getElementById('orc-vig').value=new Date().toISOString().substring(0,10);
   document.querySelectorAll('.orc-val').forEach(i=>i.value='');
   document.getElementById('orc-mo-total').textContent='R$ 0,00';
   document.getElementById('orc-err').style.display='none';
   document.getElementById('orc-modal').style.display='flex';
+  
+  // Carrega valores existentes para edição
+  fetch('/admin/painel-obras/orcamento/data?obra_id='+obraId)
+    .then(r=>r.json())
+    .then(res=>{
+      if(res.ok && res.valores){
+        // Preenche os campos com valores existentes
+        document.querySelectorAll('.orc-val').forEach(input=>{
+          const catNome = input.dataset.cat;
+          if(res.valores[catNome]){
+            input.value = BRL(res.valores[catNome]);
+          }
+        });
+        orcCalcTotal();
+      }
+    })
+    .catch(e=>console.error('Erro ao carregar valores para edição:',e));
 }
 
 function orcCalcTotal(){
@@ -177,31 +218,28 @@ function orcCalcTotal(){
 
 function orcSalvar(){
   const id=document.getElementById('orc-obra-sel').value;
-  const v=parseInt(document.getElementById('orc-versao').textContent)||0;
-  const motivo=document.getElementById('orc-motivo').value.trim();
   
-  if(v>=1&&!motivo){
+  const formData = new FormData();
+  formData.append('obra_id', id);
+  
+  // Adiciona valores formatados corretamente
+  let temValor = false;
+  document.querySelectorAll('.orc-val').forEach(i=>{
+    const valor=parseMoeda(i.value);
+    if(valor>0){
+      formData.append('valores['+i.dataset.cat+']',valor);
+      temValor = true;
+    }
+  });
+  
+  if(!temValor){
     const e=document.getElementById('orc-err');
-    e.textContent='Motivo obrigatório a partir da v2.';
+    e.textContent='Informe pelo menos um valor orçado.';
     e.style.display='block';
     return;
   }
   
-  const p=new URLSearchParams({
-    obra_id:id,
-    data_vigencia:document.getElementById('orc-vig').value,
-    motivo_revisao:motivo
-  });
-  
-  // Adiciona valores formatados corretamente
-  document.querySelectorAll('.orc-val').forEach(i=>{
-    const valor=parseMoeda(i.value);
-    if(valor>0){
-      p.append('valores['+i.dataset.cat+']',valor);
-    }
-  });
-  
-  fetch('/admin/painel-obras/orcamento/salvar',{method:'POST',body:p})
+  fetch('/admin/painel-obras/orcamento/salvar',{method:'POST',body:formData})
     .then(r=>r.json())
     .then(res=>{
       if(!res.ok){
@@ -210,9 +248,15 @@ function orcSalvar(){
         e.style.display='block';
         return;
       }
+      
+      console.log('[ORCAMENTO] Salvo com sucesso:', res);
       document.getElementById('orc-modal').style.display='none';
+      
       // Recarrega os dados
       orcCarregar();
+      
+      // Mostra mensagem de sucesso
+      alert(`Orçamento salvo com sucesso!\n${res.inseridas} novas categorias\n${res.atualizadas} categorias atualizadas`);
     })
     .catch(e=>{
       console.error('Erro ao salvar:',e);
