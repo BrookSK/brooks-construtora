@@ -32,6 +32,10 @@ try {
     $config = require_once ROOT_PATH . '/app/Config/app.php';
     echo "<div class='success'>✓ Configuração carregada</div>";
     
+    // Inicializa a aplicação (necessário para Database funcionar)
+    $app = new \App\Core\Application($config);
+    echo "<div class='success'>✓ Aplicação inicializada</div>";
+    
     // Simula session (necessário para o controller)
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
