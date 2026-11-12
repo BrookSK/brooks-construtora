@@ -36,6 +36,27 @@ class PainelObrasController extends Controller
         if (!NiboService::isValidCompany($company)) $company = 'brooks';
         $competencia = (string) $this->input('periodo', date('Y-m'));
 
+        // Busca categorias do Nibo para usar no frontend
+        try {
+            $catMap = NiboCategoriesService::mapa($company);
+            $categoriasObra = [];
+            foreach ($catMap as $id => $cat) {
+                $nome = $cat['nome'] ?? '';
+                if ($nome && $nome !== '—') {
+                    $categoriasObra[] = $nome;
+                }
+            }
+            $categoriasObra = array_unique($categoriasObra);
+            sort($categoriasObra);
+        } catch (\Throwable $e) {
+            // Fallback se houver erro
+            $categoriasObra = [
+                'Material Básico', 'Mão de Obra', 'Equipamento/Locação',
+                'Material de Acabamento', 'Instalações',
+                'Administração/Indiretos', 'Projetos e Taxas', 'Imprevistos',
+            ];
+        }
+
         $this->view('admin.painel_obras.index', [
             'pageTitle'      => 'Painel de Obras',
             'currentPage'    => 'painel_obras',
@@ -44,7 +65,7 @@ class PainelObrasController extends Controller
             'company'        => $company,
             'companies'      => NiboService::companies(),
             'competencia'    => $competencia,
-            'categoriasObra' => self::CATEGORIAS_OBRA,
+            'categoriasObra' => $categoriasObra,
         ]);
     }
 
@@ -492,13 +513,30 @@ class PainelObrasController extends Controller
     public function orcamento(): void
     {
         try { $obras = PainelObra::allWithFilter(); } catch (\Throwable $e) { $obras = []; }
+        
+        // Busca categorias do Nibo
+        $categoriasObra = [];
+        try {
+            $catMap = NiboCategoriesService::mapa('brooks');
+            foreach ($catMap as $id => $cat) {
+                $nome = $cat['nome'] ?? '';
+                if ($nome && $nome !== '—') {
+                    $categoriasObra[] = $nome;
+                }
+            }
+            $categoriasObra = array_unique($categoriasObra);
+            sort($categoriasObra);
+        } catch (\Throwable $e) {
+            $categoriasObra = ['Material Básico', 'Mão de Obra', 'Equipamento/Locação', 'Material de Acabamento', 'Instalações', 'Administração/Indiretos', 'Projetos e Taxas', 'Imprevistos'];
+        }
+        
         $this->view('admin.painel_obras.orcamento',[
             'pageTitle'      => 'Orçamento por Obra',
             'currentPage'    => 'painel_obras',
             'user'           => Auth::user(),
             'flash'          => $this->getFlash(),
             'obras'          => $obras,
-            'categoriasObra' => self::CATEGORIAS_OBRA,
+            'categoriasObra' => $categoriasObra,
         ]);
     }
 
@@ -527,7 +565,19 @@ class PainelObrasController extends Controller
         $valores = $this->input('valores',[]);
         $v = (PainelObra::versaoVigente($obraId) ?? 0) + 1;
         if ($v >= 2 && !$motivo) { $this->json(['ok'=>false,'error'=>'Motivo da revisão obrigatório a partir da v2.'],422); return; }
-        foreach (self::CATEGORIAS_OBRA as $cat) {
+        
+        // Busca categorias do Nibo
+        $catMap = NiboCategoriesService::mapa('brooks');
+        $categorias = [];
+        foreach ($catMap as $id => $cat) {
+            $nome = $cat['nome'] ?? '';
+            if ($nome && $nome !== '—') {
+                $categorias[] = $nome;
+            }
+        }
+        $categorias = array_unique($categorias);
+        
+        foreach ($categorias as $cat) {
             Database::query(
                 "INSERT INTO painel_obras_orcamento (obra_id,categoria_obra,valor_orcado,versao,data_vigencia,motivo_revisao,created_by) VALUES (?,?,?,?,?,?,?)",
                 [$obraId,$cat,$this->parseMoeda($valores[$cat]??'0'),$v,$vigencia,$motivo?:null,$user['id']]
