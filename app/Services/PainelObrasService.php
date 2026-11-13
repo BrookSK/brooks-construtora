@@ -786,12 +786,10 @@ class PainelObrasService
             $semObra
         ));
         
-        // Calcula total recebido de todas as obras ativas
+        // Calcula total recebido de todas as obras
         $result = Database::fetch(
-            "SELECT COALESCE(SUM(r.valor), 0) as total
-             FROM painel_obras_recebimentos r
-             INNER JOIN painel_obras o ON r.obra_id = o.id
-             WHERE o.deleted_at IS NULL"
+            "SELECT COALESCE(SUM(valor), 0) as total
+             FROM painel_obras_recebimentos"
         );
         $totalRecebido = $result ? (float)$result['total'] : 0;
         
