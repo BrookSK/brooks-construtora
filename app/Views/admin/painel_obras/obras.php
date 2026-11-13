@@ -452,7 +452,7 @@ function obEditar(o){
   // Custos previstos (será carregado via AJAX ou já vem no objeto)
   if(o.custos_previstos){
     const custos={};
-    o.custos_previstos.forEach(c=>custos[c.categoria_id]=c.valor_previsto);
+    o.custos_previstos.forEach(c=>custos[c.categoria_nibo_id]=c.valor_previsto);
     document.getElementById('ob-custos-json').value=JSON.stringify(custos);
   } else {
     document.getElementById('ob-custos-json').value='{}';

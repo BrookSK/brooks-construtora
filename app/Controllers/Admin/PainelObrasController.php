@@ -197,7 +197,7 @@ class PainelObrasController extends Controller
                 $o['completude'] = $this->completude($o);
                 try {
                     $o['custos_previstos'] = Database::fetchAll(
-                        "SELECT categoria_id, valor_previsto 
+                        "SELECT categoria_nibo_id, categoria_nome, valor_previsto 
                          FROM painel_obras_custos_previstos 
                          WHERE obra_id = ?",
                         [$o['id']]
@@ -363,18 +363,46 @@ class PainelObrasController extends Controller
                     $categoriaMap[$cat['id']] = $cat['name'];
                 }
                 
-                // Remove custos antigos
-                Database::query("DELETE FROM painel_obras_custos_previstos WHERE obra_id = ?", [$id]);
-                
-                // Insere novos com categoria_nibo_id e categoria_nome
+                // UPSERT: atualiza ou insere cada categoria
                 foreach ($custos as $catNiboId => $valor) {
-                    if ($valor > 0 && isset($categoriaMap[$catNiboId])) {
-                        Database::insert('painel_obras_custos_previstos', [
-                            'obra_id' => $id,
-                            'categoria_nibo_id' => (string)$catNiboId,
-                            'categoria_nome' => $categoriaMap[$catNiboId],
-                            'valor_previsto' => (float)$valor,
-                        ]);
+                    $valorFloat = (float)$valor;
+                    
+                    if (!isset($categoriaMap[$catNiboId])) {
+                        continue; // Ignora categoria inválida
+                    }
+                    
+                    // Verifica se já existe registro para esta obra + categoria
+                    $existe = Database::fetch(
+                        "SELECT id FROM painel_obras_custos_previstos 
+                         WHERE obra_id = ? AND categoria_nibo_id = ?",
+                        [$id, $catNiboId]
+                    );
+                    
+                    if ($valorFloat > 0) {
+                        // Se valor > 0, insere ou atualiza
+                        if ($existe) {
+                            Database::query(
+                                "UPDATE painel_obras_custos_previstos 
+                                 SET valor_previsto = ?, categoria_nome = ?, updated_at = NOW()
+                                 WHERE id = ?",
+                                [$valorFloat, $categoriaMap[$catNiboId], $existe['id']]
+                            );
+                        } else {
+                            Database::insert('painel_obras_custos_previstos', [
+                                'obra_id' => $id,
+                                'categoria_nibo_id' => (string)$catNiboId,
+                                'categoria_nome' => $categoriaMap[$catNiboId],
+                                'valor_previsto' => $valorFloat,
+                            ]);
+                        }
+                    } else {
+                        // Se valor = 0, remove o registro (se existir)
+                        if ($existe) {
+                            Database::query(
+                                "DELETE FROM painel_obras_custos_previstos WHERE id = ?",
+                                [$existe['id']]
+                            );
+                        }
                     }
                 }
             } catch (\Throwable $e) {
