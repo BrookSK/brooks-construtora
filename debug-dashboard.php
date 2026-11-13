@@ -27,7 +27,7 @@ try {
     
     // Test getDashboardData
     echo "3. Testing getDashboardData()...\n";
-    $data = $service->getDashboardData();
+    $data = $service->getDashboardData('mes', 'completo');
     echo "✓ getDashboardData() executed\n\n";
     
     // Show structure
