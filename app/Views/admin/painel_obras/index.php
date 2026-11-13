@@ -188,7 +188,7 @@ body { background: #f8f9fa !important; }
 
 <!-- KPIs -->
 <div class="po-kpis">
-  <?php for($i=0;$i<5;$i++): ?>
+  <?php for($i=0;$i<6;$i++): ?>
   <div class="po-card po-kpi" id="kpi-<?=$i?>">
     <div class="po-skel" style="height:30px;margin-bottom:8px"></div>
     <div class="po-skel" style="height:16px;width:60%"></div>
@@ -542,6 +542,14 @@ function renderKpis(k){
      val:BRL(k.gasto),note:'Lançamentos pagos no período',
      pct:k.orcado>0?Math.min((k.gasto/k.orcado)*100,100):0,
      bc:'linear-gradient(90deg,var(--po-blue),var(--po-cyan))'},
+    {icon:'bi-wallet2',ib:k.saldo>=0?'rgba(16,185,129,.15)':'rgba(239,68,68,.15)',
+     ic:k.saldo>=0?'var(--po-green-t)':'var(--po-red-t)',
+     pill:k.contratado>0?PCT((k.saldo/k.contratado)*100)+' do contratado':'—',
+     pc:k.saldo>=0?'ok':'danger',
+     val:BRL(k.saldo),vc:k.saldo>=0?'var(--po-green-t)':'var(--po-red-t)',
+     note:'Contratado - Gasto Real',
+     pct:k.contratado>0?Math.min(Math.abs((k.saldo/k.contratado)*100),100):0,
+     bc:k.saldo>=0?'var(--po-green)':'var(--po-red)'},
     {icon:'bi-graph-up-arrow',ib:k.desvio>0?'rgba(239,68,68,.15)':'rgba(16,185,129,.15)',
      ic:k.desvio>0?'var(--po-red-t)':'var(--po-green-t)',
      pill:k.orcado>0?PCT((k.desvio/k.orcado)*100):'—',pc:k.desvio>0?'danger':'ok',
@@ -554,7 +562,7 @@ function renderKpis(k){
      val:k.obras_estouro+' de '+k.obras_total,note:'Desvio acima de 5% do orçado',
      pct:k.obras_total>0?(k.obras_estouro/k.obras_total)*100:0,bc:'var(--po-yellow)'},
   ];
-  const labels=['Valor Contratado Total','Orçamento Estimado','Gasto Real Acumulado','Desvio Global','Obras em Estouro'];
+  const labels=['Valor Contratado Total','Orçamento Estimado','Gasto Real Acumulado','Saldo Disponível','Desvio Global','Obras em Estouro'];
   defs.forEach((d,i)=>{
     const el=document.getElementById('kpi-'+i);
     el.innerHTML=`<div class="po-kpi-icon" style="background:${d.ib};color:${d.ic}"><i class="bi ${d.icon}"></i></div>

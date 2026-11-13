@@ -794,6 +794,7 @@ class PainelObrasService
                 'gasto' => $totalGasto, // DO NIBO
                 'a_pagar' => $totalAPagar, // DO NIBO
                 'desvio' => $totalGasto - $totalOrcado,
+                'saldo' => $totalContratado - $totalGasto, // NOVO: Saldo disponível
                 'obras_estouro' => $obrasComEstouro,
                 'obras_atencao' => $obrasComAtencao,
             ],
