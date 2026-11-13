@@ -1134,8 +1134,7 @@ window.poVerLancamentos=function(obraId,codigo){
   document.getElementById('po-tab-count-pagos').textContent=lancs.pagos.length;
   document.getElementById('po-tab-count-a_pagar').textContent=lancs.a_pagar.length;
   
-  // Busca dados da obra para contar parcelas previstas
-  const obra = _d.obras.find(o => o.id === obraId);
+  // Conta parcelas previstas usando a obra já carregada
   let countAReceber = lancs.a_receber.length;
   
   if(obra){
