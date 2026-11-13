@@ -380,29 +380,18 @@ class PainelObrasController extends Controller
             
             $payload = \App\Models\NiboSyncSnapshot::decodePayload($snapshot);
             
-            if (!isset($payload['masters'])) {
-                error_log('[PainelObras] ERRO: payload não tem chave "masters"');
-                error_log('[PainelObras] Estrutura do payload: ' . print_r(array_keys($payload), true));
+            // As categorias estão em filters.categories
+            if (!isset($payload['filters']['categories'])) {
+                error_log('[PainelObras] ERRO: payload não tem chave filters.categories');
                 $this->json([
                     'Construção' => [],
                     'Reforma' => [],
-                    'erro' => 'Estrutura do snapshot inválida - masters não encontrado'
+                    'erro' => 'Nenhuma categoria encontrada no snapshot'
                 ]);
                 return;
             }
             
-            if (!isset($payload['masters']['categories'])) {
-                error_log('[PainelObras] ERRO: payload[masters] não tem chave "categories"');
-                error_log('[PainelObras] Estrutura do masters: ' . print_r(array_keys($payload['masters']), true));
-                $this->json([
-                    'Construção' => [],
-                    'Reforma' => [],
-                    'erro' => 'Estrutura do snapshot inválida - categories não encontrado'
-                ]);
-                return;
-            }
-            
-            $categories = $payload['masters']['categories'];
+            $categories = $payload['filters']['categories'];
             error_log('[PainelObras] Total de categorias do Nibo no snapshot: ' . count($categories));
             
             if (empty($categories)) {
@@ -415,26 +404,47 @@ class PainelObrasController extends Controller
                 return;
             }
             
+            // Filtra apenas categorias que TÊM LANÇAMENTOS no período
+            // Para isso, pega todos os payables e receivables e extrai as category_ids únicas
+            $payables = $payload['payables'] ?? [];
+            $receivables = $payload['receivables'] ?? [];
+            
+            $categoriesComLancamentos = [];
+            foreach ($payables as $item) {
+                if (!empty($item['category_id'])) {
+                    $categoriesComLancamentos[$item['category_id']] = true;
+                }
+            }
+            foreach ($receivables as $item) {
+                if (!empty($item['category_id'])) {
+                    $categoriesComLancamentos[$item['category_id']] = true;
+                }
+            }
+            
+            error_log('[PainelObras] Categorias com lançamentos: ' . count($categoriesComLancamentos));
+            
+            // Filtra apenas as categorias que têm lançamentos
+            $categoriasComDados = array_filter($categories, function($cat) use ($categoriesComLancamentos) {
+                return isset($categoriesComLancamentos[$cat['id']]);
+            });
+            
             // Formata para o frontend
             $categoriasFormatadas = array_map(function($cat) {
                 return [
                     'id' => $cat['id'] ?? '',
                     'nome' => $cat['name'] ?? 'Sem nome',
-                    'tipo' => $cat['type'] ?? 'Out', // In (receita) ou Out (despesa)
                 ];
-            }, $categories);
+            }, $categoriasComDados);
             
-            error_log('[PainelObras] Categorias formatadas: ' . count($categoriasFormatadas));
+            // Ordena por nome
+            usort($categoriasFormatadas, fn($a, $b) => strcmp($a['nome'], $b['nome']));
             
-            // Filtra apenas categorias de DESPESA (type = Out)
-            $categoriasDespesa = array_filter($categoriasFormatadas, fn($c) => $c['tipo'] === 'Out');
-            
-            error_log('[PainelObras] Categorias de despesa (Out): ' . count($categoriasDespesa));
+            error_log('[PainelObras] Categorias formatadas (com lançamentos): ' . count($categoriasFormatadas));
             
             // Retorna as mesmas para ambos os tipos
             $this->json([
-                'Construção' => array_values($categoriasDespesa),
-                'Reforma' => array_values($categoriasDespesa),
+                'Construção' => array_values($categoriasFormatadas),
+                'Reforma' => array_values($categoriasFormatadas),
             ]);
             
         } catch (\Throwable $e) {
@@ -723,7 +733,7 @@ class PainelObrasController extends Controller
             }
             
             $payload = \App\Models\NiboSyncSnapshot::decodePayload($snapshot);
-            $categoriasNibo = $payload['masters']['categories'] ?? [];
+            $categoriasNibo = $payload['filters']['categories'] ?? [];
             
             // Cria mapa nome => id
             $categoriaMap = [];
