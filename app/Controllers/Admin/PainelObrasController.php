@@ -630,6 +630,7 @@ class PainelObrasController extends Controller
     // ─── Custos Previstos (usado na aba de Obras) ────────────────────
 
     public function orcamentoData(): void
+    {
         $obraId = (int)$this->input('obra_id',0);
         
         try {
