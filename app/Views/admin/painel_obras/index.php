@@ -188,7 +188,7 @@ body { background: #f8f9fa !important; }
 
 <!-- KPIs -->
 <div class="po-kpis">
-  <?php for($i=0;$i<6;$i++): ?>
+  <?php for($i=0;$i<7;$i++): ?>
   <div class="po-card po-kpi" id="kpi-<?=$i?>">
     <div class="po-skel" style="height:30px;margin-bottom:8px"></div>
     <div class="po-skel" style="height:16px;width:60%"></div>
@@ -564,8 +564,14 @@ function renderKpis(k){
      pill:k.obras_atencao+' em atenção',pc:'warn',
      val:k.obras_estouro+' de '+k.obras_total,note:'Desvio acima de 5% do orçado',
      pct:k.obras_total>0?(k.obras_estouro/k.obras_total)*100:0,bc:'var(--po-yellow)'},
+    {icon:'bi-cash-coin',ib:'rgba(16,185,129,.15)',ic:'var(--po-green-t)',
+     pill:k.contratado>0?PCT((k.recebido/k.contratado)*100)+' do contratado':'—',pc:'ok',
+     val:BRL(k.recebido||0),vc:'var(--po-green-t)',
+     note:'Total recebido de clientes',
+     pct:k.contratado>0?Math.min((k.recebido/k.contratado)*100,100):0,
+     bc:'var(--po-green)'},
   ];
-  const labels=['Valor Contratado Total','Orçamento Estimado','Gasto Real Acumulado','Saldo Disponível','Desvio Global','Obras em Estouro'];
+  const labels=['Valor Contratado Total','Orçamento Estimado','Gasto Real Acumulado','Saldo Disponível','Desvio Global','Obras em Estouro','Valor Total Recebido'];
   defs.forEach((d,i)=>{
     const el=document.getElementById('kpi-'+i);
     el.innerHTML=`<div class="po-kpi-icon" style="background:${d.ib};color:${d.ic}"><i class="bi ${d.icon}"></i></div>
@@ -1398,6 +1404,10 @@ window.poMudarTab=function(tab){
         }
         
         body.innerHTML = html;
+        
+        // Atualiza contador da aba A Receber com valor correto
+        const countAReceber = (entrada > 0 ? 1 : 0) + parcelasPrevistas.length + receitasReais.length;
+        document.getElementById('po-tab-count-a_receber').textContent = countAReceber;
       })
       .catch(err => {
         console.error('Erro ao buscar dados da obra:', err);

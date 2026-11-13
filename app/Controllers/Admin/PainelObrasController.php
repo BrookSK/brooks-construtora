@@ -153,6 +153,19 @@ class PainelObrasController extends Controller
                         if ($obra['situacao'] === 'warn') $obrasAtencao++;
                     }
                     
+                    // Calcula total recebido apenas das obras filtradas
+                    $obraIds = array_column($dashboardData['obras'], 'id');
+                    $totalRecebido = 0;
+                    if (!empty($obraIds)) {
+                        $placeholders = implode(',', array_fill(0, count($obraIds), '?'));
+                        $totalRecebido = Database::fetchOne(
+                            "SELECT COALESCE(SUM(valor), 0) as total
+                             FROM painel_obras_recebimentos
+                             WHERE obra_id IN ($placeholders)",
+                            $obraIds
+                        )['total'] ?? 0;
+                    }
+                    
                     $dashboardData['kpis'] = [
                         'obras_total' => count($dashboardData['obras']),
                         'contratado' => $totalContratado,
@@ -160,7 +173,8 @@ class PainelObrasController extends Controller
                         'gasto' => $totalGasto,
                         'a_pagar' => $totalAPagar,
                         'desvio' => $totalGasto - $totalOrcado,
-                        'saldo' => $totalContratado - $totalGasto, // NOVO: Saldo disponível
+                        'saldo' => $totalContratado - $totalGasto,
+                        'recebido' => $totalRecebido, // NOVO: Total recebido filtrado
                         'obras_estouro' => $obrasEstouro,
                         'obras_atencao' => $obrasAtencao,
                     ];

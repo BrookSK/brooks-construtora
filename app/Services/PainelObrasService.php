@@ -786,6 +786,13 @@ class PainelObrasService
             $semObra
         ));
         
+        // Calcula total recebido de todas as obras
+        $totalRecebido = Database::fetchOne(
+            "SELECT COALESCE(SUM(valor), 0) as total
+             FROM painel_obras_recebimentos
+             WHERE obra_id IN (SELECT id FROM painel_obras WHERE deleted_at IS NULL)"
+        )['total'] ?? 0;
+        
         $resultado = [
             'kpis' => [
                 'obras_total' => count($obras),
@@ -795,6 +802,7 @@ class PainelObrasService
                 'a_pagar' => $totalAPagar, // DO NIBO
                 'desvio' => $totalGasto - $totalOrcado,
                 'saldo' => $totalContratado - $totalGasto, // NOVO: Saldo disponível
+                'recebido' => $totalRecebido, // NOVO: Total recebido de clientes
                 'obras_estouro' => $obrasComEstouro,
                 'obras_atencao' => $obrasComAtencao,
             ],
