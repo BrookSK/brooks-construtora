@@ -4,6 +4,9 @@ ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/php-errors.log');
 
+// Define ROOT_PATH first
+define('ROOT_PATH', __DIR__);
+
 try {
     require_once __DIR__ . '/app/Config/app.php';
     require_once __DIR__ . '/app/Core/Autoloader.php';
