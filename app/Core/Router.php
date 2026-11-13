@@ -349,6 +349,7 @@ class Router
             'painel-obras/obras/store'            => ['PainelObrasController', 'obraStore'],
             'painel-obras/obras/update'           => ['PainelObrasController', 'obraUpdate'],
             'painel-obras/obras/delete'           => ['PainelObrasController', 'obraDelete'],
+            'painel-obras/obras/data'             => ['PainelObrasController', 'obrasData'],
             'painel-obras/obras/categorias'       => ['PainelObrasController', 'obrasCategorias'],
             'painel-obras/obras/custo-centers'    => ['PainelObrasController', 'costCenters'],
             'painel-obras/config/get'             => ['PainelObrasController', 'configGet'],
