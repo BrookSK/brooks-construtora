@@ -363,7 +363,7 @@ body { background: #f8f9fa !important; }
 'use strict';
 let _d = null;
 let _obras = [];
-const BRL = v => v==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
+const BRL = v => (v==null || v===undefined)?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
 const PCT = v => (v>0?'+':'')+v.toFixed(1).replace('.',',')+' %';
 const mesAtual = new Date().getMonth()+1;
 const catObra = <?=json_encode($categoriasObra)?>;
@@ -528,6 +528,9 @@ function renderMeta(d,at){
 }
 
 function renderKpis(k){
+  console.log('[PAINEL OBRAS] KPIs recebidos:', k);
+  console.log('[PAINEL OBRAS] Saldo:', k.saldo);
+  
   const defs=[
     {icon:'bi-file-earmark-text',ib:'rgba(59,130,246,.15)',ic:'#2563eb',pill:'Período',pc:'info',
      val:BRL(k.contratado),note:'Soma dos contratos das '+k.obras_total+' obras',
