@@ -1152,126 +1152,171 @@ window.poMudarTab=function(tab){
   
   const body=document.getElementById('po-modal-body');
   
-  // Se for "a_receber", mostra parcelas previstas + receitas reais
+  // Se for "a_receber", busca dados atualizados da obra e mostra parcelas previstas
   if(tab === 'a_receber'){
     const obraId = window._currentObraId;
-    const obra = _d.obras.find(o => o.id === obraId);
     
-    if(!obra){
-      body.innerHTML='<div style="text-align:center;padding:40px;color:var(--po-txt2)">Obra não encontrada.</div>';
-      return;
-    }
-    
-    // Calcula parcelas previstas do planejamento financeiro
-    const contratado = parseFloat(obra.valor_contratado || 0);
-    const entrada = parseFloat(obra.valor_entrada || 0);
-    const numParcelas = parseInt(obra.numero_parcelas || 0);
-    const freq = obra.frequencia_parcelas || 'Mensal';
-    const carencia = parseInt(obra.carencia_meses || 0);
-    const dataContrato = obra.data_contrato;
-    
-    let parcelasPrevistas = [];
-    
-    if(numParcelas > 0 && contratado > 0){
-      const valorFinanciado = contratado - entrada;
-      const valorParcela = valorFinanciado / numParcelas;
-      
-      // Calcula datas das parcelas
-      const mesesEntreParcelas = freq === 'Trimestral' ? 3 : freq === 'Semestral' ? 6 : freq === 'Anual' ? 12 : 1;
-      
-      for(let i = 1; i <= numParcelas; i++){
-        const mesesAteVenc = carencia + (i * mesesEntreParcelas);
-        const dataVenc = new Date(dataContrato);
-        dataVenc.setMonth(dataVenc.getMonth() + mesesAteVenc);
+    // Busca dados atualizados da obra no servidor
+    fetch(`/admin/painel-obras/obras/data?id=${obraId}`)
+      .then(r => r.json())
+      .then(res => {
+        if(!res.ok || !res.obra){
+          body.innerHTML='<div style="text-align:center;padding:40px;color:var(--po-txt2)">Erro ao carregar dados da obra.</div>';
+          return;
+        }
         
-        parcelasPrevistas.push({
-          numero: i,
-          valor: valorParcela,
-          vencimento: dataVenc.toISOString().substring(0,10),
-          tipo: 'prevista'
-        });
-      }
-    }
-    
-    // Busca receitas reais do Nibo
-    const receitasReais = window._currentLancs.a_receber || [];
-    
-    // Combina previstas + reais
-    let html = '';
-    
-    // Mostra entrada se houver
-    if(entrada > 0){
-      html += `<div class="po-lanc-item" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-left:4px solid #059669">
-        <div class="po-lanc-header">
-          <div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              <i class="bi-arrow-down-circle-fill" style="color:#059669;font-size:18px"></i>
-              <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(16,185,129,.2);color:#059669">ENTRADA</span>
-              <span style="font-weight:600;color:var(--po-txt)">Valor de Entrada</span>
-            </div>
-            <div class="po-lanc-info"><strong>Vencimento:</strong> ${dataContrato?dataContrato.split('-').reverse().join('/'):'Na assinatura'}</div>
-          </div>
-          <div style="text-align:right">
-            <div class="po-lanc-valor" style="color:#059669;font-size:20px;font-weight:700">+ ${BRL(entrada)}</div>
-            <span class="po-pill pending" style="margin-top:6px"><span class="dot" style="background:var(--po-gray)"></span>Previsto</span>
-          </div>
-        </div>
-      </div>`;
-    }
-    
-    // Mostra parcelas previstas
-    parcelasPrevistas.forEach(p => {
-      html += `<div class="po-lanc-item" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-left:4px solid #059669">
-        <div class="po-lanc-header">
-          <div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              <i class="bi-arrow-down-circle-fill" style="color:#059669;font-size:18px"></i>
-              <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(16,185,129,.2);color:#059669">PARCELA ${p.numero}/${numParcelas}</span>
-              <span style="font-weight:600;color:var(--po-txt)">Parcela ${p.numero} - ${freq}</span>
-            </div>
-            <div class="po-lanc-info"><strong>Vencimento previsto:</strong> ${p.vencimento.split('-').reverse().join('/')}</div>
-          </div>
-          <div style="text-align:right">
-            <div class="po-lanc-valor" style="color:#059669;font-size:20px;font-weight:700">+ ${BRL(p.valor)}</div>
-            <span class="po-pill pending" style="margin-top:6px"><span class="dot" style="background:var(--po-gray)"></span>Previsto</span>
-          </div>
-        </div>
-      </div>`;
-    });
-    
-    // Mostra receitas reais do Nibo
-    if(receitasReais.length > 0){
-      html += '<div style="margin:20px 0;border-top:2px solid var(--po-border);padding-top:16px"><strong style="color:var(--po-txt2);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Receitas Registradas no Nibo</strong></div>';
-      
-      receitasReais.forEach(l => {
-        const statusClass=l.status==='paid'?'ok':l.status==='overdue'?'danger':'warn';
-        const statusLabel=l.status==='paid'?'Recebido':l.status==='overdue'?'Vencido':'A receber';
+        const obra = res.obra;
         
-        html += `<div class="po-lanc-item" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-left:4px solid #059669">
-          <div class="po-lanc-header">
-            <div>
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                <i class="bi-arrow-down-circle-fill" style="color:#059669;font-size:18px"></i>
-                <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(16,185,129,.2);color:#059669">RECEITA NIBO</span>
-                <span style="font-weight:600;color:var(--po-txt)">${l.description||'—'}</span>
-              </div>
-              <div class="po-lanc-info"><strong style="color:#059669">Cliente:</strong> ${l.contact_name||'—'}</div>
-              <div class="po-lanc-info"><strong>Vencimento:</strong> ${l.due_date?l.due_date.substring(0,10).split('-').reverse().join('/'):'—'}</div>
-            </div>
-            <div style="text-align:right">
-              <div class="po-lanc-valor" style="color:#059669;font-size:20px;font-weight:700">+ ${BRL(l.valor_rateado||0)}</div>
-              <span class="po-pill ${statusClass}" style="margin-top:6px"><span class="dot" style="background:var(--po-${statusClass==='ok'?'green':statusClass==='danger'?'red':'yellow'})"></span>${statusLabel}</span>
-            </div>
+        // Calcula parcelas previstas do planejamento financeiro
+        const contratado = parseFloat(obra.valor_contratado || 0);
+        const entrada = parseFloat(obra.valor_entrada || 0);
+        const numParcelas = parseInt(obra.numero_parcelas || 0);
+        const freq = obra.frequencia_parcelas || 'Mensal';
+        const carencia = parseInt(obra.carencia_meses || 0);
+        const dataContrato = obra.data_contrato;
+        
+        let parcelasPrevistas = [];
+        
+        if(numParcelas > 0 && contratado > 0){
+          const valorFinanciado = contratado - entrada;
+          const valorParcela = valorFinanciado / numParcelas;
+          
+          // Calcula datas das parcelas
+          const mesesEntreParcelas = freq === 'Trimestral' ? 3 : freq === 'Semestral' ? 6 : freq === 'Anual' ? 12 : 1;
+          
+          for(let i = 1; i <= numParcelas; i++){
+            const mesesAteVenc = carencia + (i * mesesEntreParcelas);
+            const dataVenc = new Date(dataContrato);
+            dataVenc.setMonth(dataVenc.getMonth() + mesesAteVenc);
+            
+            // Verifica se já passou da data de vencimento
+            const hoje = new Date();
+            const vencida = dataVenc < hoje;
+            
+            parcelasPrevistas.push({
+              numero: i,
+              valor: valorParcela,
+              vencimento: dataVenc.toISOString().substring(0,10),
+              vencida: vencida,
+              tipo: 'prevista'
+            });
+          }
+        }
+        
+        // Busca receitas reais do Nibo
+        const receitasReais = window._currentLancs.a_receber || [];
+        
+        // Calcula totais
+        const totalEntrada = entrada;
+        const totalParcelas = parcelasPrevistas.reduce((sum, p) => sum + p.valor, 0);
+        const totalReceitasNibo = receitasReais.reduce((sum, r) => sum + (r.valor_rateado || 0), 0);
+        const totalReceitasNiboPagas = receitasReais.filter(r => r.status === 'paid').reduce((sum, r) => sum + (r.valor_rateado || 0), 0);
+        const totalAPrevisto = totalEntrada + totalParcelas;
+        const totalAReceber = totalAPrevisto - totalReceitasNiboPagas;
+        
+        // Cards de resumo
+        let html = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px;padding:16px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:10px">
+          <div style="text-align:center">
+            <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Total Previsto</div>
+            <div style="font-size:20px;font-weight:700;color:#059669">${BRL(totalAPrevisto)}</div>
+          </div>
+          <div style="text-align:center;border-left:1px solid rgba(16,185,129,.2)">
+            <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Já Recebido</div>
+            <div style="font-size:20px;font-weight:700;color:#059669">${BRL(totalReceitasNiboPagas)}</div>
+          </div>
+          <div style="text-align:center;border-left:1px solid rgba(16,185,129,.2)">
+            <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">A Receber</div>
+            <div style="font-size:20px;font-weight:700;color:${totalAReceber>=0?'#059669':'#dc2626'}">${BRL(totalAReceber)}</div>
           </div>
         </div>`;
+        
+        // Mostra entrada se houver
+        if(entrada > 0){
+          const dataVencEntrada = dataContrato ? new Date(dataContrato) : new Date();
+          const vencidaEntrada = dataVencEntrada < new Date();
+          const statusEntrada = vencidaEntrada ? 'A confirmar' : 'Previsto';
+          const statusColor = vencidaEntrada ? 'warn' : 'pending';
+          
+          html += `<div class="po-lanc-item" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-left:4px solid #059669">
+            <div class="po-lanc-header">
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <i class="bi-arrow-down-circle-fill" style="color:#059669;font-size:18px"></i>
+                  <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(16,185,129,.2);color:#059669">ENTRADA</span>
+                  <span style="font-weight:600;color:var(--po-txt)">Valor de Entrada</span>
+                </div>
+                <div class="po-lanc-info"><strong>Vencimento:</strong> ${dataContrato?dataContrato.split('-').reverse().join('/'):'Na assinatura'}</div>
+              </div>
+              <div style="text-align:right">
+                <div class="po-lanc-valor" style="color:#059669;font-size:20px;font-weight:700">+ ${BRL(entrada)}</div>
+                <span class="po-pill ${statusColor}" style="margin-top:6px"><span class="dot" style="background:var(--po-${statusColor==='warn'?'yellow':'gray'})"></span>${statusEntrada}</span>
+              </div>
+            </div>
+          </div>`;
+        }
+        
+        // Mostra parcelas previstas
+        parcelasPrevistas.forEach(p => {
+          const statusParcela = p.vencida ? 'A confirmar' : 'Previsto';
+          const statusColor = p.vencida ? 'warn' : 'pending';
+          
+          html += `<div class="po-lanc-item" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-left:4px solid #059669">
+            <div class="po-lanc-header">
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <i class="bi-arrow-down-circle-fill" style="color:#059669;font-size:18px"></i>
+                  <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(16,185,129,.2);color:#059669">PARCELA ${p.numero}/${numParcelas}</span>
+                  <span style="font-weight:600;color:var(--po-txt)">Parcela ${p.numero} - ${freq}</span>
+                </div>
+                <div class="po-lanc-info"><strong>Vencimento previsto:</strong> ${p.vencimento.split('-').reverse().join('/')}</div>
+              </div>
+              <div style="text-align:right">
+                <div class="po-lanc-valor" style="color:#059669;font-size:20px;font-weight:700">+ ${BRL(p.valor)}</div>
+                <span class="po-pill ${statusColor}" style="margin-top:6px"><span class="dot" style="background:var(--po-${statusColor==='warn'?'yellow':'gray'})"></span>${statusParcela}</span>
+              </div>
+            </div>
+          </div>`;
+        });
+        
+        // Mostra receitas reais do Nibo
+        if(receitasReais.length > 0){
+          html += '<div style="margin:20px 0;border-top:2px solid var(--po-border);padding-top:16px"><strong style="color:var(--po-txt2);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Receitas Registradas no Nibo</strong></div>';
+          
+          receitasReais.forEach(l => {
+            const statusClass=l.status==='paid'?'ok':l.status==='overdue'?'danger':'warn';
+            const statusLabel=l.status==='paid'?'Recebido':l.status==='overdue'?'Vencido':'A receber';
+            
+            html += `<div class="po-lanc-item" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-left:4px solid #059669">
+              <div class="po-lanc-header">
+                <div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                    <i class="bi-arrow-down-circle-fill" style="color:#059669;font-size:18px"></i>
+                    <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(16,185,129,.2);color:#059669">RECEITA NIBO</span>
+                    <span style="font-weight:600;color:var(--po-txt)">${l.description||'—'}</span>
+                  </div>
+                  <div class="po-lanc-info"><strong style="color:#059669">Cliente:</strong> ${l.contact_name||'—'}</div>
+                  <div class="po-lanc-info"><strong>Vencimento:</strong> ${l.due_date?l.due_date.substring(0,10).split('-').reverse().join('/'):'—'}</div>
+                </div>
+                <div style="text-align:right">
+                  <div class="po-lanc-valor" style="color:#059669;font-size:20px;font-weight:700">+ ${BRL(l.valor_rateado||0)}</div>
+                  <span class="po-pill ${statusClass}" style="margin-top:6px"><span class="dot" style="background:var(--po-${statusClass==='ok'?'green':statusClass==='danger'?'red':'yellow'})"></span>${statusLabel}</span>
+                </div>
+              </div>
+            </div>`;
+          });
+        }
+        
+        if(!html || (!entrada && parcelasPrevistas.length === 0 && receitasReais.length === 0)){
+          html = '<div style="text-align:center;padding:40px;color:var(--po-txt2)">Configure o Planejamento Financeiro para ver as parcelas previstas.</div>';
+        }
+        
+        body.innerHTML = html;
+      })
+      .catch(err => {
+        console.error('Erro ao buscar dados da obra:', err);
+        body.innerHTML='<div style="text-align:center;padding:40px;color:#ef4444">Erro ao carregar dados da obra.</div>';
       });
-    }
     
-    if(!html){
-      html = '<div style="text-align:center;padding:40px;color:var(--po-txt2)">Configure o Planejamento Financeiro para ver as parcelas previstas.</div>';
-    }
-    
-    body.innerHTML = html;
     return;
   }
   

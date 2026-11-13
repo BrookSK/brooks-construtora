@@ -1600,3 +1600,31 @@ class PainelObrasController extends Controller
         }
     }
 }
+
+    public function obrasData(): void
+    {
+        $obraId = (int)$this->input('id', 0);
+        
+        if (!$obraId) {
+            $this->json(['ok' => false, 'error' => 'ID da obra obrigatório'], 422);
+            return;
+        }
+        
+        try {
+            $obra = Database::fetch("SELECT * FROM painel_obras WHERE id = ?", [$obraId]);
+            
+            if (!$obra) {
+                $this->json(['ok' => false, 'error' => 'Obra não encontrada'], 404);
+                return;
+            }
+            
+            // Decodifica JSON fields
+            $obra['centros_custo'] = json_decode($obra['centros_custo'] ?? '[]', true);
+            $obra['codigos_alt'] = json_decode($obra['codigos_alt'] ?? '[]', true);
+            
+            $this->json(['ok' => true, 'obra' => $obra]);
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] Erro ao buscar dados da obra: ' . $e->getMessage());
+            $this->json(['ok' => false, 'error' => 'Erro ao buscar dados da obra'], 500);
+        }
+    }
