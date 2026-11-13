@@ -556,8 +556,8 @@ function renderKpis(k){
     {icon:'bi-graph-up-arrow',ib:k.desvio>0?'rgba(239,68,68,.15)':'rgba(16,185,129,.15)',
      ic:k.desvio>0?'var(--po-red-t)':'var(--po-green-t)',
      pill:k.orcado>0?PCT((k.desvio/k.orcado)*100):'—',pc:k.desvio>0?'danger':'ok',
-     val:(k.desvio>0?'+':'')+BRL(k.desvio),vc:k.desvio>0?'var(--po-red-t)':'var(--po-green-t)',
-     note:'Gasto '+(k.desvio>0?'acima':'abaixo')+' do orçamento',
+     val:(k.desvio>0?'+':'')+BRL(Math.abs(k.desvio)),vc:k.desvio>0?'var(--po-red-t)':'var(--po-green-t)',
+     note:k.desvio>0?'Gasto acima do orçamento':'Economia no orçamento',
      pct:k.orcado>0?Math.min(Math.abs((k.desvio/k.orcado)*100),100):0,
      bc:k.desvio>0?'var(--po-red)':'var(--po-green)'},
     {icon:'bi-exclamation-triangle',ib:'rgba(245,158,11,.15)',ic:'var(--po-yellow-t)',
@@ -1133,7 +1133,19 @@ window.poVerLancamentos=function(obraId,codigo){
   
   document.getElementById('po-tab-count-pagos').textContent=lancs.pagos.length;
   document.getElementById('po-tab-count-a_pagar').textContent=lancs.a_pagar.length;
-  document.getElementById('po-tab-count-a_receber').textContent=lancs.a_receber.length;
+  
+  // Busca dados da obra para contar parcelas previstas
+  const obraId = window._currentObraId;
+  const obra = _d.obras.find(o => o.id === obraId);
+  let countAReceber = lancs.a_receber.length;
+  
+  if(obra){
+    const numParcelas = parseInt(obra.numero_parcelas || 0);
+    const entrada = parseFloat(obra.valor_entrada || 0);
+    countAReceber += numParcelas + (entrada > 0 ? 1 : 0);
+  }
+  
+  document.getElementById('po-tab-count-a_receber').textContent=countAReceber;
   
   window._currentLancs=lancs;
   poMudarTab('pagos');
@@ -1142,6 +1154,62 @@ window.poVerLancamentos=function(obraId,codigo){
 
 window.poFecharModal=function(){
   document.getElementById('po-modal-lancamentos').style.display='none';
+};
+
+window.poMarcarRecebido=function(tipo, obraId, numeroParcela, valor, vencimento){
+  const mensagem = tipo === 'entrada' 
+    ? `Confirmar recebimento da ENTRADA de ${BRL(valor)}?` 
+    : `Confirmar recebimento da PARCELA ${numeroParcela} de ${BRL(valor)}?`;
+  
+  if(!confirm(mensagem)){
+    return;
+  }
+  
+  const data = {
+    obra_id: obraId,
+    tipo: tipo,
+    numero_parcela: numeroParcela || '',
+    valor: valor,
+    data_vencimento: vencimento || '',
+    data_recebimento: new Date().toISOString().split('T')[0]
+  };
+  
+  fetch('/admin/painel-obras/recebimento/registrar', {
+    method: 'POST',
+    body: new URLSearchParams(data)
+  })
+  .then(r => r.json())
+  .then(res => {
+    if(res.ok){
+      // Mostra modal com total recebido
+      const totalRecebidoFormatado = BRL(res.total_recebido || 0);
+      const html = `
+        <div style="position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:11000;display:flex;align-items:center;justify-content:center;padding:20px" onclick="this.remove()">
+          <div style="background:var(--po-card);border:1px solid rgba(16,185,129,.3);border-radius:16px;padding:32px;max-width:400px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)" onclick="event.stopPropagation()">
+            <div style="width:80px;height:80px;border-radius:50%;background:rgba(16,185,129,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+              <i class="bi-check-circle-fill" style="font-size:48px;color:#059669"></i>
+            </div>
+            <h3 style="color:var(--po-txt);margin:0 0 8px;font-size:20px">Recebimento Registrado!</h3>
+            <p style="color:var(--po-txt2);margin:0 0 20px;font-size:14px">${tipo === 'entrada' ? 'Entrada' : 'Parcela ' + numeroParcela} registrada com sucesso</p>
+            <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:16px;margin-bottom:20px">
+              <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Total Recebido até Agora</div>
+              <div style="font-size:28px;font-weight:700;color:#059669">${totalRecebidoFormatado}</div>
+            </div>
+            <button onclick="this.closest('[style*=fixed]').remove();poLoad();poFecharModal();" style="background:#059669;color:white;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;width:100%">
+              Fechar
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', html);
+    } else {
+      poToast(res.error || 'Erro ao registrar recebimento', 'error');
+    }
+  })
+  .catch(err => {
+    console.error('Erro:', err);
+    poToast('Erro ao registrar recebimento', 'error');
+  });
 };
 
 window.poMudarTab=function(tab){
@@ -1166,6 +1234,15 @@ window.poMudarTab=function(tab){
         }
         
         const obra = res.obra;
+        
+        // Cria mapa de recebimentos já registrados
+        const recebimentosMap = {};
+        if(obra.recebimentos){
+          obra.recebimentos.forEach(r => {
+            const key = r.tipo === 'entrada' ? 'entrada' : `parcela_${r.numero_parcela}`;
+            recebimentosMap[key] = r;
+          });
+        }
         
         // Calcula parcelas previstas do planejamento financeiro
         const contratado = parseFloat(obra.valor_contratado || 0);
@@ -1209,10 +1286,12 @@ window.poMudarTab=function(tab){
         // Calcula totais
         const totalEntrada = entrada;
         const totalParcelas = parcelasPrevistas.reduce((sum, p) => sum + p.valor, 0);
+        const receitasRecebidas = Object.values(recebimentosMap).reduce((sum, r) => sum + parseFloat(r.valor), 0);
         const totalReceitasNibo = receitasReais.reduce((sum, r) => sum + (r.valor_rateado || 0), 0);
         const totalReceitasNiboPagas = receitasReais.filter(r => r.status === 'paid').reduce((sum, r) => sum + (r.valor_rateado || 0), 0);
         const totalAPrevisto = totalEntrada + totalParcelas;
-        const totalAReceber = totalAPrevisto - totalReceitasNiboPagas;
+        const totalJaRecebido = receitasRecebidas + totalReceitasNiboPagas;
+        const totalAReceber = totalAPrevisto - totalJaRecebido;
         
         // Cards de resumo
         let html = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px;padding:16px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:10px">
@@ -1222,7 +1301,7 @@ window.poMudarTab=function(tab){
           </div>
           <div style="text-align:center;border-left:1px solid rgba(16,185,129,.2)">
             <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Já Recebido</div>
-            <div style="font-size:20px;font-weight:700;color:#059669">${BRL(totalReceitasNiboPagas)}</div>
+            <div style="font-size:20px;font-weight:700;color:#059669">${BRL(totalJaRecebido)}</div>
           </div>
           <div style="text-align:center;border-left:1px solid rgba(16,185,129,.2)">
             <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">A Receber</div>
@@ -1234,8 +1313,9 @@ window.poMudarTab=function(tab){
         if(entrada > 0){
           const dataVencEntrada = dataContrato ? new Date(dataContrato) : new Date();
           const vencidaEntrada = dataVencEntrada < new Date();
-          const statusEntrada = vencidaEntrada ? 'A confirmar' : 'Previsto';
-          const statusColor = vencidaEntrada ? 'warn' : 'pending';
+          const jaRecebida = recebimentosMap['entrada'];
+          const statusEntrada = jaRecebida ? 'Recebido' : (vencidaEntrada ? 'A confirmar' : 'Previsto');
+          const statusColor = jaRecebida ? 'ok' : (vencidaEntrada ? 'warn' : 'pending');
           
           html += `<div class="po-lanc-item" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-left:4px solid #059669">
             <div class="po-lanc-header">
@@ -1246,10 +1326,14 @@ window.poMudarTab=function(tab){
                   <span style="font-weight:600;color:var(--po-txt)">Valor de Entrada</span>
                 </div>
                 <div class="po-lanc-info"><strong>Vencimento:</strong> ${dataContrato?dataContrato.split('-').reverse().join('/'):'Na assinatura'}</div>
+                ${jaRecebida ? `<div class="po-lanc-info" style="color:#059669"><strong>Recebido em:</strong> ${jaRecebida.data_recebimento.split('-').reverse().join('/')}</div>` : ''}
               </div>
-              <div style="text-align:right">
+              <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
                 <div class="po-lanc-valor" style="color:#059669;font-size:20px;font-weight:700">+ ${BRL(entrada)}</div>
-                <span class="po-pill ${statusColor}" style="margin-top:6px"><span class="dot" style="background:var(--po-${statusColor==='warn'?'yellow':'gray'})"></span>${statusEntrada}</span>
+                <span class="po-pill ${statusColor}" style="margin-top:0"><span class="dot" style="background:var(--po-${statusColor==='ok'?'green':statusColor==='warn'?'yellow':'gray'})"></span>${statusEntrada}</span>
+                ${!jaRecebida ? `<button onclick="poMarcarRecebido('entrada', ${obraId}, null, ${entrada}, '${dataContrato}')" style="background:#059669;color:white;border:none;padding:6px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">
+                  <i class="bi-check-circle"></i> Marcar como Recebido
+                </button>` : ''}
               </div>
             </div>
           </div>`;
@@ -1257,8 +1341,9 @@ window.poMudarTab=function(tab){
         
         // Mostra parcelas previstas
         parcelasPrevistas.forEach(p => {
-          const statusParcela = p.vencida ? 'A confirmar' : 'Previsto';
-          const statusColor = p.vencida ? 'warn' : 'pending';
+          const jaRecebida = recebimentosMap[`parcela_${p.numero}`];
+          const statusParcela = jaRecebida ? 'Recebido' : (p.vencida ? 'A confirmar' : 'Previsto');
+          const statusColor = jaRecebida ? 'ok' : (p.vencida ? 'warn' : 'pending');
           
           html += `<div class="po-lanc-item" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-left:4px solid #059669">
             <div class="po-lanc-header">
@@ -1269,10 +1354,14 @@ window.poMudarTab=function(tab){
                   <span style="font-weight:600;color:var(--po-txt)">Parcela ${p.numero} - ${freq}</span>
                 </div>
                 <div class="po-lanc-info"><strong>Vencimento previsto:</strong> ${p.vencimento.split('-').reverse().join('/')}</div>
+                ${jaRecebida ? `<div class="po-lanc-info" style="color:#059669"><strong>Recebido em:</strong> ${jaRecebida.data_recebimento.split('-').reverse().join('/')}</div>` : ''}
               </div>
-              <div style="text-align:right">
+              <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
                 <div class="po-lanc-valor" style="color:#059669;font-size:20px;font-weight:700">+ ${BRL(p.valor)}</div>
-                <span class="po-pill ${statusColor}" style="margin-top:6px"><span class="dot" style="background:var(--po-${statusColor==='warn'?'yellow':'gray'})"></span>${statusParcela}</span>
+                <span class="po-pill ${statusColor}" style="margin-top:0"><span class="dot" style="background:var(--po-${statusColor==='ok'?'green':statusColor==='warn'?'yellow':'gray'})"></span>${statusParcela}</span>
+                ${!jaRecebida ? `<button onclick="poMarcarRecebido('parcela', ${obraId}, ${p.numero}, ${p.valor}, '${p.vencimento}')" style="background:#059669;color:white;border:none;padding:6px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">
+                  <i class="bi-check-circle"></i> Marcar como Recebido
+                </button>` : ''}
               </div>
             </div>
           </div>`;

@@ -443,10 +443,89 @@ class PainelObrasController extends Controller
             $obra['centros_custo'] = json_decode($obra['centros_custo'] ?? '[]', true);
             $obra['codigos_alt'] = json_decode($obra['codigos_alt'] ?? '[]', true);
             
+            // Busca recebimentos registrados
+            $recebimentos = Database::fetchAll(
+                "SELECT * FROM painel_obras_recebimentos WHERE obra_id = ? ORDER BY data_recebimento DESC",
+                [$obraId]
+            );
+            
+            $obra['recebimentos'] = $recebimentos;
+            
             $this->json(['ok' => true, 'obra' => $obra]);
         } catch (\Throwable $e) {
             error_log('[PainelObrasController] Erro ao buscar dados da obra: ' . $e->getMessage());
             $this->json(['ok' => false, 'error' => 'Erro ao buscar dados da obra'], 500);
+        }
+    }
+
+    public function recebimentoRegistrar(): void
+    {
+        if (!$this->isPost()) {
+            $this->json(['ok' => false], 400);
+            return;
+        }
+        
+        $user = Auth::user();
+        $obraId = (int)$this->input('obra_id', 0);
+        $tipo = (string)$this->input('tipo', '');
+        $numeroParcela = $this->input('numero_parcela', null);
+        $valor = $this->parseMoeda($this->input('valor', '0'));
+        $dataVencimento = (string)$this->input('data_vencimento', '');
+        $dataRecebimento = (string)$this->input('data_recebimento', date('Y-m-d'));
+        $observacoes = trim((string)$this->input('observacoes', ''));
+        
+        if (!$obraId || !$tipo || !$valor || !$dataVencimento) {
+            $this->json(['ok' => false, 'error' => 'Dados incompletos'], 422);
+            return;
+        }
+        
+        try {
+            // Verifica se já foi registrado
+            $whereClause = "obra_id = ? AND tipo = ?";
+            $params = [$obraId, $tipo];
+            
+            if ($tipo === 'parcela') {
+                $whereClause .= " AND numero_parcela = ?";
+                $params[] = (int)$numeroParcela;
+            }
+            
+            $existe = Database::fetch(
+                "SELECT id FROM painel_obras_recebimentos WHERE $whereClause",
+                $params
+            );
+            
+            if ($existe) {
+                $this->json(['ok' => false, 'error' => 'Este recebimento já foi registrado'], 409);
+                return;
+            }
+            
+            // Registra o recebimento
+            $id = Database::insert('painel_obras_recebimentos', [
+                'obra_id' => $obraId,
+                'tipo' => $tipo,
+                'numero_parcela' => $tipo === 'parcela' ? (int)$numeroParcela : null,
+                'valor' => $valor,
+                'data_vencimento' => $dataVencimento,
+                'data_recebimento' => $dataRecebimento,
+                'observacoes' => $observacoes ?: null,
+                'created_by' => $user['id'],
+            ]);
+            
+            // Busca total já recebido
+            $totalRecebido = Database::fetch(
+                "SELECT SUM(valor) as total FROM painel_obras_recebimentos WHERE obra_id = ?",
+                [$obraId]
+            );
+            
+            $this->json([
+                'ok' => true,
+                'id' => $id,
+                'total_recebido' => (float)($totalRecebido['total'] ?? 0)
+            ]);
+            
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] Erro ao registrar recebimento: ' . $e->getMessage());
+            $this->json(['ok' => false, 'error' => 'Erro ao registrar recebimento'], 500);
         }
     }
 
