@@ -15,14 +15,14 @@ try {
     $autoloader = new App\Core\Autoloader();
     $autoloader->register();
     
-    // Test database connection
-    echo "1. Testing database connection...\n";
-    $db = new App\Core\Database();
-    echo "✓ Database connected\n\n";
+    // Initialize Application (needed for Database)
+    echo "1. Initializing Application...\n";
+    $app = new App\Core\Application();
+    echo "✓ Application initialized\n\n";
     
     // Test PainelObrasService
     echo "2. Testing PainelObrasService...\n";
-    $service = new App\Services\PainelObrasService($db);
+    $service = new App\Services\PainelObrasService(null); // passa null porque usa static
     echo "✓ Service instantiated\n\n";
     
     // Test getDashboardData
