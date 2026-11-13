@@ -273,14 +273,32 @@ class PainelObrasController extends Controller
         $custos = json_decode($custosJson, true) ?: [];
         
         if (!empty($custos)) {
-            foreach ($custos as $catId => $valor) {
-                if ($valor > 0) {
-                    Database::insert('painel_obras_custos_previstos', [
-                        'obra_id' => $id,
-                        'categoria_id' => (int)$catId,
-                        'valor_previsto' => (float)$valor,
-                    ]);
+            // Busca categorias do Nibo para pegar os nomes
+            try {
+                $company = 'brooks'; // Nova obra usa brooks por padrão
+                $snapshot = \App\Models\NiboSyncSnapshot::latest($company);
+                $payload = \App\Models\NiboSyncSnapshot::decodePayload($snapshot);
+                $categoriasNibo = $payload['filters']['categories'] ?? [];
+                
+                // Cria mapa id => nome
+                $categoriaMap = [];
+                foreach ($categoriasNibo as $cat) {
+                    $categoriaMap[$cat['id']] = $cat['name'];
                 }
+                
+                foreach ($custos as $catNiboId => $valor) {
+                    if ($valor > 0 && isset($categoriaMap[$catNiboId])) {
+                        Database::insert('painel_obras_custos_previstos', [
+                            'obra_id' => $id,
+                            'categoria_nibo_id' => (string)$catNiboId,
+                            'categoria_nome' => $categoriaMap[$catNiboId],
+                            'valor_previsto' => (float)$valor,
+                        ]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log('[OBRA STORE] Erro ao salvar custos previstos: ' . $e->getMessage());
+                // Não falha a criação da obra, apenas loga o erro
             }
         }
         
@@ -331,18 +349,37 @@ class PainelObrasController extends Controller
         $custos = json_decode($custosJson, true) ?: [];
         
         if (!empty($custos)) {
-            // Remove custos antigos
-            Database::query("DELETE FROM painel_obras_custos_previstos WHERE obra_id = ?", [$id]);
-            
-            // Insere novos
-            foreach ($custos as $catId => $valor) {
-                if ($valor > 0) {
-                    Database::insert('painel_obras_custos_previstos', [
-                        'obra_id' => $id,
-                        'categoria_id' => (int)$catId,
-                        'valor_previsto' => (float)$valor,
-                    ]);
+            // Busca categorias do Nibo para pegar os nomes
+            try {
+                $company = $obra['company'] ?? 'brooks';
+                $snapshot = \App\Models\NiboSyncSnapshot::latest($company);
+                $payload = \App\Models\NiboSyncSnapshot::decodePayload($snapshot);
+                $categoriasNibo = $payload['filters']['categories'] ?? [];
+                
+                // Cria mapa id => nome
+                $categoriaMap = [];
+                foreach ($categoriasNibo as $cat) {
+                    $categoriaMap[$cat['id']] = $cat['name'];
                 }
+                
+                // Remove custos antigos
+                Database::query("DELETE FROM painel_obras_custos_previstos WHERE obra_id = ?", [$id]);
+                
+                // Insere novos com categoria_nibo_id e categoria_nome
+                foreach ($custos as $catNiboId => $valor) {
+                    if ($valor > 0 && isset($categoriaMap[$catNiboId])) {
+                        Database::insert('painel_obras_custos_previstos', [
+                            'obra_id' => $id,
+                            'categoria_nibo_id' => (string)$catNiboId,
+                            'categoria_nome' => $categoriaMap[$catNiboId],
+                            'valor_previsto' => (float)$valor,
+                        ]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log('[OBRA UPDATE] Erro ao salvar custos previstos: ' . $e->getMessage());
+                $this->json(['ok'=>false,'error'=>'Erro ao salvar custos previstos.'],500);
+                return;
             }
         }
         
