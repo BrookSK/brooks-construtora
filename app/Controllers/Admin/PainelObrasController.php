@@ -160,6 +160,7 @@ class PainelObrasController extends Controller
                         'gasto' => $totalGasto,
                         'a_pagar' => $totalAPagar,
                         'desvio' => $totalGasto - $totalOrcado,
+                        'saldo' => $totalContratado - $totalGasto, // NOVO: Saldo disponível
                         'obras_estouro' => $obrasEstouro,
                         'obras_atencao' => $obrasAtencao,
                     ];
