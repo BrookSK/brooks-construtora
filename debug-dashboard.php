@@ -17,7 +17,7 @@ try {
     
     // Initialize Application (needed for Database)
     echo "1. Initializing Application...\n";
-    $app = new App\Core\Application();
+    $app = new App\Core\Application(getConfig());
     echo "✓ Application initialized\n\n";
     
     // Test PainelObrasService
