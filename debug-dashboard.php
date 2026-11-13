@@ -8,7 +8,9 @@ ini_set('error_log', __DIR__ . '/php-errors.log');
 define('ROOT_PATH', __DIR__);
 
 try {
-    require_once __DIR__ . '/app/Config/app.php';
+    // Load config
+    $config = require __DIR__ . '/app/Config/app.php';
+    
     require_once __DIR__ . '/app/Core/Autoloader.php';
     
     // Initialize autoloader
@@ -17,7 +19,7 @@ try {
     
     // Initialize Application (needed for Database)
     echo "1. Initializing Application...\n";
-    $app = new App\Core\Application(getConfig());
+    $app = new App\Core\Application($config);
     echo "✓ Application initialized\n\n";
     
     // Test PainelObrasService
