@@ -158,7 +158,7 @@ class PainelObrasController extends Controller
                     $totalRecebido = 0;
                     if (!empty($obraIds)) {
                         $placeholders = implode(',', array_fill(0, count($obraIds), '?'));
-                        $totalRecebido = Database::fetchOne(
+                        $totalRecebido = Database::fetch(
                             "SELECT COALESCE(SUM(valor), 0) as total
                              FROM painel_obras_recebimentos
                              WHERE obra_id IN ($placeholders)",

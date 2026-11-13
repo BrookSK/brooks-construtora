@@ -787,7 +787,7 @@ class PainelObrasService
         ));
         
         // Calcula total recebido de todas as obras
-        $totalRecebido = Database::fetchOne(
+        $totalRecebido = Database::fetch(
             "SELECT COALESCE(SUM(valor), 0) as total
              FROM painel_obras_recebimentos
              WHERE obra_id IN (SELECT id FROM painel_obras WHERE deleted_at IS NULL)"
