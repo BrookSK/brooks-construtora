@@ -1856,12 +1856,38 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         const allLancs = [...state.payables, ...state.receivables];
         const lanc = allLancs.find(l => l.id === lancamentoId);
         
-        if (!lanc || !lanc.cost_centers || lanc.cost_centers.length <= 1) {
+        if (!lanc) {
+            alert('Lançamento não encontrado.');
+            return;
+        }
+        
+        // Se foi rateado, busca todos os lançamentos com mesmo ID para reconstruir o rateio completo
+        let costCenters = lanc.cost_centers || [];
+        let valorTotal = Number(lanc.value || 0);
+        
+        // Se o lançamento foi expandido (_rateado = true), reconstrói o array de centros de custo
+        if (lanc._rateado && costCenters.length <= 1) {
+            const lancamentosRateados = allLancs.filter(l => l.id === lancamentoId);
+            
+            if (lancamentosRateados.length > 1) {
+                // Reconstrói o array de centros de custo a partir dos lançamentos expandidos
+                costCenters = lancamentosRateados.map(l => ({
+                    id: l.cost_center_id,
+                    name: l.cost_center,
+                    percent: l._percent || 0,
+                    value: l.value
+                }));
+                
+                // Usa o valor original se disponível
+                valorTotal = Number(lancamentosRateados[0]._valor_original || valorTotal);
+            }
+        }
+        
+        if (!costCenters || costCenters.length <= 1) {
             alert('Rateio não disponível para este lançamento.');
             return;
         }
         
-        const total = Number(lanc.value || 0);
         const tipo = lanc.type === 'receivable' ? 'Receita' : 'Despesa';
         
         let html = `
@@ -1870,7 +1896,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
                     <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
                         <div>
                             <h5 style="margin:0;color:#1e293b"><i class="bi bi-pie-chart-fill text-primary"></i> Rateio por Centro de Custo</h5>
-                            <small style="color:#64748b">${tipo} de ${fmtMoneyFull(total)}</small>
+                            <small style="color:#64748b">${tipo} de ${fmtMoneyFull(valorTotal)}</small>
                         </div>
                         <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;font-size:24px;color:#64748b;cursor:pointer;padding:0;line-height:1">&times;</button>
                     </div>
@@ -1891,7 +1917,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
                         <tbody>
         `;
         
-        lanc.cost_centers.forEach(cc => {
+        costCenters.forEach(cc => {
             const ccName = cc.name || '—';
             const ccPercent = Number(cc.percent || 0);
             const ccValue = Math.abs(Number(cc.value || 0));
@@ -1906,7 +1932,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
                         </div>
                     </td>
                     <td style="padding:12px 8px;text-align:center">
-                        <span style="background:#dbeafe;color:#1e40af;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">${ccPercent.toFixed(1)}%</span>
+                        <span style="background:#dbeafe;color:#1e40af;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">${ccPercent.toFixed(2)}%</span>
                     </td>
                     <td style="padding:12px 8px;text-align:right;font-weight:600;color:#1e293b;font-size:14px">
                         ${fmtMoneyFull(ccValue)}
@@ -1921,7 +1947,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
                     
                     <div style="margin-top:16px;padding-top:16px;border-top:2px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
                         <strong style="color:#1e293b">Total</strong>
-                        <strong style="color:#1e293b;font-size:16px">${fmtMoneyFull(total)}</strong>
+                        <strong style="color:#1e293b;font-size:16px">${fmtMoneyFull(valorTotal)}</strong>
                     </div>
                     
                     <button onclick="this.closest('[style*=fixed]').remove()" style="margin-top:16px;width:100%;background:#3b82f6;color:white;border:none;padding:10px;border-radius:6px;font-weight:600;cursor:pointer">
