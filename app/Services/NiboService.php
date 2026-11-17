@@ -811,13 +811,23 @@ class NiboService
 
         $ccId = $s['costCenterId'] ?? $s['costCenter']['id'] ?? null;
         $ccName = $s['costCenter']['name'] ?? $s['costCenter']['description'] ?? ($ccId !== null ? ($idxCc[(string) $ccId] ?? null) : null);
-        // Alguns retornos trazem rateio de centros de custo em array
-        if (!$ccName && !empty($s['costCenters']) && is_array($s['costCenters'])) {
-            $first = $s['costCenters'][0] ?? null;
-            if ($first) {
-                $fid = $first['costCenterId'] ?? $first['id'] ?? null;
-                if (!$ccId && $fid) $ccId = $fid;
-                $ccName = $first['costCenterDescription'] ?? $first['name'] ?? ($fid !== null ? ($idxCc[(string) $fid] ?? null) : null);
+        
+        // NOVO: Captura array completo de rateio por centro de custo
+        $costCenters = [];
+        if (!empty($s['costCenters']) && is_array($s['costCenters'])) {
+            foreach ($s['costCenters'] as $cc) {
+                $costCenters[] = [
+                    'id' => $cc['costCenterId'] ?? $cc['id'] ?? null,
+                    'name' => $cc['costCenterDescription'] ?? $cc['name'] ?? $cc['description'] ?? null,
+                    'percent' => (float) ($cc['percent'] ?? 0),
+                    'value' => (float) ($cc['value'] ?? 0),
+                ];
+            }
+            
+            // Se não tinha ccId principal, usa o primeiro do rateio
+            if (!$ccId && !empty($costCenters[0]['id'])) {
+                $ccId = $costCenters[0]['id'];
+                $ccName = $costCenters[0]['name'];
             }
         }
 
@@ -864,6 +874,7 @@ class NiboService
             'contact_name' => $contactName ?: '—',
             'cost_center_id' => $ccId !== null ? (string) $ccId : null,
             'cost_center' => $ccName ?: '—',
+            'cost_centers' => $costCenters, // NOVO: Array completo de rateio
             'category_id' => $catId !== null ? (string) $catId : null,
             'category' => $catName ?: '—',
             'status' => $status,

@@ -900,7 +900,9 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
                 + '<td><span class="badge bg-danger">' + dias + ' d</span></td>'
                 + '<td>' + esc(r.contact_name) + '</td>'
                 + '<td style="min-width:220px; white-space:normal; word-break:break-word;">' + esc(r.description) + '</td>'
-                + '<td>' + esc(r.cost_center || '—') + '</td>'
+                + '<td>' + (r.cost_centers && r.cost_centers.length > 1 
+                    ? `${esc(r.cost_center || '—')} <a href="#" onclick="showRateioModal(event, '${r.id}')" style="text-decoration:none" title="Ver distribuição"><i class="bi bi-pie-chart-fill text-primary"></i></a>`
+                    : esc(r.cost_center || '—')) + '</td>'
                 + '<td>' + esc(r.category || '—') + '</td>'
                 + '<td class="text-end fw-semibold" style="color:' + valColor + ';">' + fmtMoneyFull(r.value) + '</td></tr>';
         }).join('');
@@ -916,9 +918,16 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
             const changed = !!r.date_changed;
             const rowClass = changed ? ' class="row-postponed"' : '';
             const mark = changed ? ' <i class="bi bi-arrow-repeat" style="color:#6f42c1;" title="Data postergada"></i>' : '';
+            
+            // NOVO: Indicador de rateio por centro de custo
+            const hasRateio = r.cost_centers && r.cost_centers.length > 1;
+            const ccDisplay = hasRateio 
+                ? `${esc(r.cost_center || '—')} <a href="#" onclick="showRateioModal(event, '${r.id}')" style="text-decoration:none" title="Ver distribuição"><i class="bi bi-pie-chart-fill text-primary"></i></a>`
+                : esc(r.cost_center || '—');
+            
             return '<tr' + rowClass + '><td>' + dateLabel(r.due_date) + mark + '</td>'
                 + '<td>' + esc(r.contact_name && r.contact_name !== '—' ? r.contact_name : (r.description||'—')) + '</td>'
-                + '<td>' + esc(r.cost_center || '—') + '</td>'
+                + '<td>' + ccDisplay + '</td>'
                 + '<td>' + esc(r.category || '—') + '</td>'
                 + '<td class="text-end fw-semibold ' + valClass + '">' + fmtMoneyFull(r.value) + '</td>'
                 + '<td>' + statusBadge(r.status) + '</td></tr>';
@@ -1033,7 +1042,9 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
                 + '<td>' + tipo + '</td>'
                 + '<td>' + esc(r.contact_name) + '</td>'
                 + '<td style="min-width:260px; white-space:normal; word-break:break-word;">' + esc(r.description) + dateHistoryHtml(r) + '</td>'
-                + '<td>' + esc(r.cost_center) + '</td>'
+                + '<td>' + (r.cost_centers && r.cost_centers.length > 1 
+                    ? `${esc(r.cost_center)} <a href="#" onclick="showRateioModal(event, '${r.id}')" style="text-decoration:none" title="Ver distribuição"><i class="bi bi-pie-chart-fill text-primary"></i></a>`
+                    : esc(r.cost_center)) + '</td>'
                 + '<td>' + esc(r.category) + '</td>'
                 + '<td class="text-end fw-semibold text-nowrap">' + fmtMoneyFull(r.value) + '</td>'
                 + '<td>' + statusBadge(r.status) + '</td></tr>';
@@ -1820,6 +1831,93 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         if (!expandModal) expandModal = new bootstrap.Modal(el('expandModal'));
         expandModal.show();
     }
+    
+    // ── Modal de Rateio por Centro de Custo ──────────────────────────
+    window.showRateioModal = function(event, lancamentoId) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // Busca o lançamento em todas as listas
+        const allLancs = [...state.payables, ...state.receivables];
+        const lanc = allLancs.find(l => l.id === lancamentoId);
+        
+        if (!lanc || !lanc.cost_centers || lanc.cost_centers.length <= 1) {
+            alert('Rateio não disponível para este lançamento.');
+            return;
+        }
+        
+        const total = Number(lanc.value || 0);
+        const tipo = lanc.type === 'receivable' ? 'Receita' : 'Despesa';
+        
+        let html = `
+            <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px" onclick="this.remove()">
+                <div style="background:white;border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
+                    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
+                        <div>
+                            <h5 style="margin:0;color:#1e293b"><i class="bi bi-pie-chart-fill text-primary"></i> Rateio por Centro de Custo</h5>
+                            <small style="color:#64748b">${tipo} de ${fmtMoneyFull(total)}</small>
+                        </div>
+                        <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;font-size:24px;color:#64748b;cursor:pointer;padding:0;line-height:1">&times;</button>
+                    </div>
+                    
+                    <div style="background:#f1f5f9;border-radius:8px;padding:12px;margin-bottom:16px">
+                        <strong style="color:#475569;font-size:13px">${esc(lanc.contact_name || 'Sem contato')}</strong>
+                        <div style="color:#64748b;font-size:12px;margin-top:4px">${esc(lanc.description || '—')}</div>
+                    </div>
+                    
+                    <table style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="border-bottom:2px solid #e2e8f0">
+                                <th style="text-align:left;padding:8px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase">Centro de Custo</th>
+                                <th style="text-align:center;padding:8px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase">%</th>
+                                <th style="text-align:right;padding:8px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase">Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+        
+        lanc.cost_centers.forEach(cc => {
+            const ccName = cc.name || '—';
+            const ccPercent = Number(cc.percent || 0);
+            const ccValue = Math.abs(Number(cc.value || 0));
+            const barWidth = Math.min(ccPercent, 100);
+            
+            html += `
+                <tr style="border-bottom:1px solid #f1f5f9">
+                    <td style="padding:12px 8px">
+                        <div style="font-size:13px;color:#1e293b;font-weight:500">${esc(ccName)}</div>
+                        <div style="margin-top:4px;background:#e0e7ff;height:4px;border-radius:2px;overflow:hidden">
+                            <div style="background:#3b82f6;height:100%;width:${barWidth}%"></div>
+                        </div>
+                    </td>
+                    <td style="padding:12px 8px;text-align:center">
+                        <span style="background:#dbeafe;color:#1e40af;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">${ccPercent.toFixed(1)}%</span>
+                    </td>
+                    <td style="padding:12px 8px;text-align:right;font-weight:600;color:#1e293b;font-size:14px">
+                        ${fmtMoneyFull(ccValue)}
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                        </tbody>
+                    </table>
+                    
+                    <div style="margin-top:16px;padding-top:16px;border-top:2px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+                        <strong style="color:#1e293b">Total</strong>
+                        <strong style="color:#1e293b;font-size:16px">${fmtMoneyFull(total)}</strong>
+                    </div>
+                    
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="margin-top:16px;width:100%;background:#3b82f6;color:white;border:none;padding:10px;border-radius:6px;font-weight:600;cursor:pointer">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', html);
+    };
 })();
 </script>
 
