@@ -342,6 +342,10 @@ class FinanceController extends Controller
                 $hasRateio = !empty($costCenters) && count($costCenters) > 1;
                 
                 if ($hasRateio) {
+                    $valorTotal = (float) $item['value'];
+                    $somaRateada = 0;
+                    $rateioItems = [];
+                    
                     // Log SOMENTE para lançamento específico (MARCIO LUIZ) para debug
                     $descricao = $item['description'] ?? '';
                     $contactName = $item['contact_name'] ?? '';
@@ -349,41 +353,72 @@ class FinanceController extends Controller
                     
                     if ($logThis) {
                         self::log("════════════════════════════════════════════");
-                        self::log("🔍 DEBUG RATEIO MARCIO LUIZ");
+                        self::log("🔍 DEBUG RATEIO MARCIO LUIZ - RECÁLCULO");
                         self::log("  Descrição: " . $descricao);
                         self::log("  Fornecedor: " . $contactName);
-                        self::log("  Valor TOTAL original: R$ " . number_format($item['value'], 2, ',', '.'));
+                        self::log("  Valor TOTAL original: R$ " . number_format($valorTotal, 2, ',', '.'));
                         self::log("  Quantidade de centros de custo: " . count($costCenters));
                         self::log("  ─────────────────────────────────────────");
                     }
                     
-                    // Cria um lançamento para cada centro de custo
+                    // Primeira passagem: calcula valores a partir do percentual
                     foreach ($costCenters as $idx => $cc) {
-                        // IMPORTANTE: Usa o valor EXATO vindo do Nibo, não recalcula pelo percentual
-                        // O Nibo já fez o cálculo com precisão de 2 casas decimais no percentual
-                        $valorRateado = abs((float) ($cc['value'] ?? 0));
+                        $percentual = (float) ($cc['percent'] ?? 0);
+                        // Recalcula usando percentual com arredondamento correto
+                        $valorRateado = round($valorTotal * ($percentual / 100), 2);
+                        
+                        $rateioItems[] = [
+                            'cc' => $cc,
+                            'valor' => $valorRateado,
+                            'idx' => $idx,
+                        ];
+                        
+                        $somaRateada += $valorRateado;
+                    }
+                    
+                    // Ajusta o último item para garantir que a soma bate exatamente
+                    $diferenca = round($valorTotal - $somaRateada, 2);
+                    if (abs($diferenca) >= 0.01 && !empty($rateioItems)) {
+                        $ultimoIdx = count($rateioItems) - 1;
+                        $rateioItems[$ultimoIdx]['valor'] += $diferenca;
+                        $rateioItems[$ultimoIdx]['ajustado'] = true;
+                        
+                        if ($logThis) {
+                            self::log("  ⚠️ AJUSTE: Diferença de R$ " . number_format($diferenca, 2, ',', '.') . " aplicada ao último CC");
+                        }
+                    }
+                    
+                    // Cria os lançamentos expandidos
+                    foreach ($rateioItems as $item_rateio) {
+                        $cc = $item_rateio['cc'];
+                        $valorRateado = $item_rateio['valor'];
+                        $idx = $item_rateio['idx'];
                         
                         if ($logThis) {
                             self::log("  Centro de Custo " . ($idx + 1) . ":");
                             self::log("    Nome: " . ($cc['name'] ?? 'sem nome'));
-                            self::log("    Percentual do Nibo: " . ($cc['percent'] ?? 0) . "%");
-                            self::log("    Valor EXATO do Nibo: R$ " . number_format($valorRateado, 2, ',', '.'));
-                            self::log("    Campo 'value' bruto da API: " . var_export($cc['value'] ?? null, true));
+                            self::log("    Percentual: " . ($cc['percent'] ?? 0) . "%");
+                            self::log("    Valor API Nibo: R$ " . number_format((float)($cc['value'] ?? 0), 2, ',', '.'));
+                            self::log("    Valor RECALCULADO: R$ " . number_format($valorRateado, 2, ',', '.'));
+                            if (!empty($item_rateio['ajustado'])) {
+                                self::log("    ✓ AJUSTADO para fechar o total");
+                            }
                             self::log("  ─────────────────────────────────────────");
                         }
                         
                         $expandedItem = $item;
-                        $expandedItem['value'] = $valorRateado; // Valor exato do Nibo
+                        $expandedItem['value'] = $valorRateado; // Valor recalculado
                         $expandedItem['cost_center_id'] = $cc['id'] ?? $item['cost_center_id'];
                         $expandedItem['cost_center'] = $cc['name'] ?? $item['cost_center'];
-                        $expandedItem['_rateado'] = true; // Flag para identificar
-                        $expandedItem['_valor_original'] = $item['value']; // Preserva valor total
-                        $expandedItem['_percent'] = $cc['percent'] ?? 0; // Preserva percentual original
+                        $expandedItem['_rateado'] = true;
+                        $expandedItem['_valor_original'] = $valorTotal;
+                        $expandedItem['_percent'] = $cc['percent'] ?? 0;
                         
                         $expanded[] = $expandedItem;
                     }
                     
                     if ($logThis) {
+                        self::log("  Total verificado: R$ " . number_format(array_sum(array_column($rateioItems, 'valor')), 2, ',', '.'));
                         self::log("════════════════════════════════════════════");
                     }
                 } else {
