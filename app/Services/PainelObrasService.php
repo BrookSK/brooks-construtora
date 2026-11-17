@@ -414,14 +414,25 @@ class PainelObrasService
         $hasRateio = !empty($costCenters) && count($costCenters) > 1;
         
         if ($hasRateio) {
+            // Log detalhado do rateio ANTES de processar
+            error_log("[PainelObras] ════════════════════════════════════════════");
+            error_log("[PainelObras] Processando rateio: " . ($item['description'] ?? 'sem desc'));
+            error_log("[PainelObras] Valor total: R$ " . number_format($valorTotal, 2, ',', '.'));
+            error_log("[PainelObras] JSON costCenters recebido: " . json_encode($costCenters));
+            
             // Cria um lançamento para cada centro de custo no rateio
             $linhas = [];
-            foreach ($costCenters as $cc) {
-                // IMPORTANTE: Usa o valor EXATO vindo do Nibo, não recalcula
+            foreach ($costCenters as $idx => $cc) {
+                // IMPORTANTE: Usa o valor EXATO vindo do Nibo, NÃO recalcula
                 // O Nibo já calculou com precisão de 2 casas decimais no percentual
                 $valorRateado = abs((float) ($cc['value'] ?? 0));
                 $ccId = $cc['id'] ?? null;
                 $ccNome = $cc['name'] ?? $item['cost_center'];
+                
+                error_log("[PainelObras]   -> CC[$idx]: {$ccNome}");
+                error_log("[PainelObras]      Percentual: " . ($cc['percent'] ?? 0) . "%");
+                error_log("[PainelObras]      Valor EXATO do Nibo: R$ " . number_format($valorRateado, 2, ',', '.'));
+                error_log("[PainelObras]      cc['value'] bruto: " . var_export($cc['value'] ?? null, true));
                 
                 $linha = array_merge($base, [
                     'categoria_nibo_id'   => $catId,
@@ -440,6 +451,7 @@ class PainelObrasService
                 
                 $linhas[] = $linha;
             }
+            error_log("[PainelObras] ════════════════════════════════════════════");
             return $linhas;
         }
         

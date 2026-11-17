@@ -816,17 +816,28 @@ class NiboService
         $costCenters = [];
         if (!empty($s['costCenters']) && is_array($s['costCenters'])) {
             foreach ($s['costCenters'] as $cc) {
+                // Captura EXATAMENTE como vem do Nibo, sem arredondamentos
+                $valueFromNibo = $cc['value'] ?? 0;
+                $percentFromNibo = $cc['percent'] ?? 0;
+                
                 $costCenters[] = [
                     'id' => $cc['costCenterId'] ?? $cc['id'] ?? null,
                     'name' => $cc['costCenterDescription'] ?? $cc['name'] ?? $cc['description'] ?? null,
-                    'percent' => (float) ($cc['percent'] ?? 0),
-                    'value' => (float) ($cc['value'] ?? 0),
+                    'percent' => (float) $percentFromNibo,
+                    'value' => (float) $valueFromNibo, // VALOR EXATO DO NIBO
                 ];
             }
             
-            // Log para debug
+            // Log detalhado para debug
             if (count($costCenters) > 1) {
-                error_log("[NiboService] Lançamento com rateio: " . ($s['description'] ?? 'sem desc') . " - " . count($costCenters) . " centros");
+                error_log("[NiboService] ══════════════════════════════════════════");
+                error_log("[NiboService] Lançamento com rateio: " . ($s['description'] ?? 'sem desc'));
+                error_log("[NiboService] Valor total do lançamento: R$ " . number_format($value, 2, ',', '.'));
+                error_log("[NiboService] JSON bruto costCenters: " . json_encode($s['costCenters']));
+                foreach ($costCenters as $idx => $cc) {
+                    error_log("[NiboService]   CC[$idx]: {$cc['name']} = {$cc['percent']}% = R$ " . number_format($cc['value'], 2, ',', '.'));
+                }
+                error_log("[NiboService] ══════════════════════════════════════════");
             }
             
             // Se não tinha ccId principal, usa o primeiro do rateio

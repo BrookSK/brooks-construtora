@@ -342,14 +342,23 @@ class FinanceController extends Controller
                 $hasRateio = !empty($costCenters) && count($costCenters) > 1;
                 
                 if ($hasRateio) {
-                    // Log para debug
-                    error_log("[FinanceSync] Expandindo rateio: " . ($item['description'] ?? 'sem desc') . " - " . count($costCenters) . " centros de custo");
+                    // Log detalhado para debug
+                    error_log("[FinanceSync] ════════════════════════════════════════════");
+                    error_log("[FinanceSync] Expandindo rateio: " . ($item['description'] ?? 'sem desc'));
+                    error_log("[FinanceSync] Valor total original: R$ " . number_format($item['value'], 2, ',', '.'));
+                    error_log("[FinanceSync] Quantidade de CCs: " . count($costCenters));
+                    error_log("[FinanceSync] JSON costCenters: " . json_encode($costCenters));
                     
                     // Cria um lançamento para cada centro de custo
-                    foreach ($costCenters as $cc) {
+                    foreach ($costCenters as $idx => $cc) {
                         // IMPORTANTE: Usa o valor EXATO vindo do Nibo, não recalcula pelo percentual
                         // O Nibo já fez o cálculo com precisão de 2 casas decimais no percentual
                         $valorRateado = abs((float) ($cc['value'] ?? 0));
+                        
+                        error_log("[FinanceSync]   -> CC[$idx]: " . ($cc['name'] ?? 'sem nome'));
+                        error_log("[FinanceSync]      Percentual: " . ($cc['percent'] ?? 0) . "%");
+                        error_log("[FinanceSync]      Valor EXATO: R$ " . number_format($valorRateado, 2, ',', '.'));
+                        error_log("[FinanceSync]      cc['value'] bruto: " . var_export($cc['value'] ?? null, true));
                         
                         $expandedItem = $item;
                         $expandedItem['value'] = $valorRateado; // Valor exato do Nibo
@@ -359,10 +368,9 @@ class FinanceController extends Controller
                         $expandedItem['_valor_original'] = $item['value']; // Preserva valor total
                         $expandedItem['_percent'] = $cc['percent'] ?? 0; // Preserva percentual original
                         
-                        error_log("[FinanceSync]   -> CC: " . ($cc['name'] ?? 'sem nome') . " = " . ($cc['percent'] ?? 0) . "% = R$ " . number_format($valorRateado, 2, ',', '.'));
-                        
                         $expanded[] = $expandedItem;
                     }
+                    error_log("[FinanceSync] ════════════════════════════════════════════");
                 } else {
                     // Lançamento sem rateio, mantém como está
                     $item['_rateado'] = false;
