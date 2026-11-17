@@ -1854,7 +1854,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
         
         // Busca o lançamento em todas as listas
         const allLancs = [...state.payables, ...state.receivables];
-        const lanc = allLancs.find(l => l.id === lancamentoId);
+        let lanc = allLancs.find(l => l.id === lancamentoId);
         
         if (!lanc) {
             alert('Lançamento não encontrado.');
@@ -1875,18 +1875,29 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
                     id: l.cost_center_id,
                     name: l.cost_center,
                     percent: l._percent || 0,
-                    value: l.value
+                    value: l.value // Valor já está correto em cada entrada expandida
                 }));
                 
-                // Usa o valor original se disponível
-                valorTotal = Number(lancamentosRateados[0]._valor_original || valorTotal);
+                // Usa o valor original (total) do primeiro lançamento expandido
+                valorTotal = Number(lancamentosRateados[0]._valor_original || lanc._valor_original || valorTotal);
+                
+                // Usa o primeiro lançamento como referência para descrição e contato
+                lanc = lancamentosRateados[0];
             }
+        }
+        
+        // Se o lançamento tem _valor_original (foi rateado), usa ele como total
+        if (lanc._valor_original && Number(lanc._valor_original) > 0) {
+            valorTotal = Number(lanc._valor_original);
         }
         
         if (!costCenters || costCenters.length <= 1) {
             alert('Rateio não disponível para este lançamento.');
             return;
         }
+        
+        // Calcula o total real somando os valores dos centros de custo
+        const totalCalculado = costCenters.reduce((sum, cc) => sum + Math.abs(Number(cc.value || 0)), 0);
         
         const tipo = lanc.type === 'receivable' ? 'Receita' : 'Despesa';
         
@@ -1896,7 +1907,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
                     <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
                         <div>
                             <h5 style="margin:0;color:#1e293b"><i class="bi bi-pie-chart-fill text-primary"></i> Rateio por Centro de Custo</h5>
-                            <small style="color:#64748b">${tipo} de ${fmtMoneyFull(valorTotal)}</small>
+                            <small style="color:#64748b">${tipo} de ${fmtMoneyFull(totalCalculado)}</small>
                         </div>
                         <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;font-size:24px;color:#64748b;cursor:pointer;padding:0;line-height:1">&times;</button>
                     </div>
@@ -1947,7 +1958,7 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
                     
                     <div style="margin-top:16px;padding-top:16px;border-top:2px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
                         <strong style="color:#1e293b">Total</strong>
-                        <strong style="color:#1e293b;font-size:16px">${fmtMoneyFull(valorTotal)}</strong>
+                        <strong style="color:#1e293b;font-size:16px">${fmtMoneyFull(totalCalculado)}</strong>
                     </div>
                     
                     <button onclick="this.closest('[style*=fixed]').remove()" style="margin-top:16px;width:100%;background:#3b82f6;color:white;border:none;padding:10px;border-radius:6px;font-weight:600;cursor:pointer">
