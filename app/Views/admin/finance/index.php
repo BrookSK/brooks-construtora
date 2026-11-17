@@ -718,11 +718,14 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
     function filteredReceivables() { return state.receivables.filter(matchesAll); }
 
     // Casa um lançamento com o valor do filtro (que pode ser um ID ou um nome)
-    // kind: 'cost_center' | 'contact'
+    // kind: 'cost_center' | 'contact' | 'category'
     function matchContact(x, filterValue, kind) {
         if (filterValue === '__none__') return false; // texto digitado não bate com nada
         if (kind === 'cost_center') {
             return String(x.cost_center_id||'') === filterValue || (x.cost_center||'') === filterValue;
+        }
+        if (kind === 'category') {
+            return String(x.category_id||'') === filterValue || (x.category||'') === filterValue;
         }
         return String(x.contact_id||'') === filterValue || (x.contact_name||'') === filterValue;
     }

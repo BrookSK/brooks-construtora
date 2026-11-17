@@ -95,9 +95,16 @@ class PainelObrasService
             $linhas = self::expandirRateio($item, $catId, $catNome, $catInfo, $catObra, $deParaMap, $catMap);
 
             foreach ($linhas as $linha) {
-                $linha['obra_id']    = $obraId;
+                // NOVO: Se houver rateio, resolve a obra pelo centro de custo de cada linha
+                if (!empty($linha['rateado'])) {
+                    $obraIdLinha = self::resolverObra($linha, $obrasMap);
+                    $linha['obra_id'] = $obraIdLinha;
+                } else {
+                    $linha['obra_id'] = $obraId;
+                }
+                
                 $lancamentos[] = $linha;
-                if (!$obraId) $semObra[] = $linha;
+                if (!$linha['obra_id']) $semObra[] = $linha;
                 if (!$linha['categoria_nibo_id']) $semCat[] = $linha;
             }
         }
@@ -386,9 +393,9 @@ class PainelObrasService
         array $deParaMap,
         array $catMap
     ): array {
-        $valor     = (float) $item['value'];
-        $status    = $item['status'];
-        $isPaid    = $item['is_paid'];
+        $valorTotal = (float) $item['value'];
+        $status     = $item['status'];
+        $isPaid     = $item['is_paid'];
         $base = [
             'schedule_id'      => $item['id'],
             'type'             => $item['type'],
@@ -402,6 +409,37 @@ class PainelObrasService
             'is_paid'          => $isPaid,
         ];
 
+        // NOVO: Se houver rateio por centro de custo, usa o valor rateado específico
+        $costCenters = $item['cost_centers'] ?? [];
+        $hasRateio = !empty($costCenters) && count($costCenters) > 1;
+        
+        if ($hasRateio) {
+            // Cria um lançamento para cada centro de custo no rateio
+            $linhas = [];
+            foreach ($costCenters as $cc) {
+                $valorRateado = abs((float) ($cc['value'] ?? 0));
+                $ccId = $cc['id'] ?? null;
+                $ccNome = $cc['name'] ?? $item['cost_center'];
+                
+                $linha = array_merge($base, [
+                    'categoria_nibo_id'   => $catId,
+                    'categoria_nibo_nome' => $catNome ?? 'Sem categoria',
+                    'categoria_excluida'  => $catInfo['excluida'] ?? false,
+                    'grupo_nome'          => $catInfo['grupo_nome'] ?? null,
+                    'subgrupo_nome'       => $catInfo['subgrupo_nome'] ?? null,
+                    'tipo_categoria'      => $catInfo['tipo'] ?? null,
+                    'categoria_obra'      => $catObra,
+                    'valor_rateado'       => $valorRateado, // NOVO: Valor específico deste CC
+                    'cost_center'         => $ccNome, // NOVO: Nome específico do CC
+                    'cost_center_id'      => $ccId, // NOVO: ID específico do CC
+                    'rateado'             => true, // NOVO: Flag para identificar rateio
+                ]);
+                
+                $linhas[] = $linha;
+            }
+            return $linhas;
+        }
+        
         // Lançamento simples (sem rateio explícito)
         $linha = array_merge($base, [
             'categoria_nibo_id'   => $catId,
@@ -411,7 +449,8 @@ class PainelObrasService
             'subgrupo_nome'       => $catInfo['subgrupo_nome'] ?? null,
             'tipo_categoria'      => $catInfo['tipo'] ?? null,
             'categoria_obra'      => $catObra,
-            'valor_rateado'       => $valor,
+            'valor_rateado'       => $valorTotal,
+            'rateado'             => false,
         ]);
         
         // Log para debug
