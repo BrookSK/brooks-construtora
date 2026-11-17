@@ -417,6 +417,8 @@ class PainelObrasService
             // Cria um lançamento para cada centro de custo no rateio
             $linhas = [];
             foreach ($costCenters as $cc) {
+                // IMPORTANTE: Usa o valor EXATO vindo do Nibo, não recalcula
+                // O Nibo já calculou com precisão de 2 casas decimais no percentual
                 $valorRateado = abs((float) ($cc['value'] ?? 0));
                 $ccId = $cc['id'] ?? null;
                 $ccNome = $cc['name'] ?? $item['cost_center'];
@@ -429,10 +431,11 @@ class PainelObrasService
                     'subgrupo_nome'       => $catInfo['subgrupo_nome'] ?? null,
                     'tipo_categoria'      => $catInfo['tipo'] ?? null,
                     'categoria_obra'      => $catObra,
-                    'valor_rateado'       => $valorRateado, // NOVO: Valor específico deste CC
-                    'cost_center'         => $ccNome, // NOVO: Nome específico do CC
-                    'cost_center_id'      => $ccId, // NOVO: ID específico do CC
-                    'rateado'             => true, // NOVO: Flag para identificar rateio
+                    'valor_rateado'       => $valorRateado, // Valor exato do Nibo
+                    'cost_center'         => $ccNome,
+                    'cost_center_id'      => $ccId,
+                    'rateado'             => true,
+                    'percent'             => $cc['percent'] ?? 0, // Preserva percentual
                 ]);
                 
                 $linhas[] = $linha;

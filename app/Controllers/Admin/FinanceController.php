@@ -347,15 +347,19 @@ class FinanceController extends Controller
                     
                     // Cria um lançamento para cada centro de custo
                     foreach ($costCenters as $cc) {
+                        // IMPORTANTE: Usa o valor EXATO vindo do Nibo, não recalcula pelo percentual
+                        // O Nibo já fez o cálculo com precisão de 2 casas decimais no percentual
                         $valorRateado = abs((float) ($cc['value'] ?? 0));
+                        
                         $expandedItem = $item;
-                        $expandedItem['value'] = $valorRateado;
+                        $expandedItem['value'] = $valorRateado; // Valor exato do Nibo
                         $expandedItem['cost_center_id'] = $cc['id'] ?? $item['cost_center_id'];
                         $expandedItem['cost_center'] = $cc['name'] ?? $item['cost_center'];
                         $expandedItem['_rateado'] = true; // Flag para identificar
                         $expandedItem['_valor_original'] = $item['value']; // Preserva valor total
+                        $expandedItem['_percent'] = $cc['percent'] ?? 0; // Preserva percentual original
                         
-                        error_log("[FinanceSync]   -> CC: " . ($cc['name'] ?? 'sem nome') . " = R$ " . number_format($valorRateado, 2, ',', '.'));
+                        error_log("[FinanceSync]   -> CC: " . ($cc['name'] ?? 'sem nome') . " = " . ($cc['percent'] ?? 0) . "% = R$ " . number_format($valorRateado, 2, ',', '.'));
                         
                         $expanded[] = $expandedItem;
                     }
