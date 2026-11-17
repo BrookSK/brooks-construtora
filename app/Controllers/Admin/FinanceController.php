@@ -343,8 +343,9 @@ class FinanceController extends Controller
                 
                 if ($hasRateio) {
                     $valorTotal = (float) $item['value'];
-                    $somaRateada = 0;
                     $rateioItems = [];
+                    $somaOutros = 0;
+                    $totalCCs = count($costCenters);
                     
                     // Log SOMENTE para lançamento específico (MARCIO LUIZ) para debug
                     $descricao = $item['description'] ?? '';
@@ -353,42 +354,40 @@ class FinanceController extends Controller
                     
                     if ($logThis) {
                         self::log("════════════════════════════════════════════");
-                        self::log("🔍 DEBUG RATEIO MARCIO LUIZ - RECÁLCULO");
+                        self::log("🔍 DEBUG RATEIO MARCIO LUIZ - AJUSTE PRIMEIRO CC");
                         self::log("  Descrição: " . $descricao);
                         self::log("  Fornecedor: " . $contactName);
                         self::log("  Valor TOTAL original: R$ " . number_format($valorTotal, 2, ',', '.'));
-                        self::log("  Quantidade de centros de custo: " . count($costCenters));
+                        self::log("  Quantidade de centros de custo: " . $totalCCs);
                         self::log("  ─────────────────────────────────────────");
                     }
                     
-                    // Primeira passagem: calcula valores a partir do percentual
-                    foreach ($costCenters as $idx => $cc) {
+                    // PRIMEIRA PASSAGEM: calcula todos EXCETO o primeiro
+                    for ($idx = 1; $idx < $totalCCs; $idx++) {
+                        $cc = $costCenters[$idx];
                         $percentual = (float) ($cc['percent'] ?? 0);
-                        // Recalcula usando percentual com arredondamento correto
                         $valorRateado = round($valorTotal * ($percentual / 100), 2);
+                        $somaOutros += $valorRateado;
                         
-                        $rateioItems[] = [
+                        $rateioItems[$idx] = [
                             'cc' => $cc,
                             'valor' => $valorRateado,
                             'idx' => $idx,
+                            'ajustado' => false,
                         ];
-                        
-                        $somaRateada += $valorRateado;
                     }
                     
-                    // Ajusta o último item para garantir que a soma bate exatamente
-                    $diferenca = round($valorTotal - $somaRateada, 2);
-                    if (abs($diferenca) >= 0.01 && !empty($rateioItems)) {
-                        $ultimoIdx = count($rateioItems) - 1;
-                        $rateioItems[$ultimoIdx]['valor'] += $diferenca;
-                        $rateioItems[$ultimoIdx]['ajustado'] = true;
-                        
-                        if ($logThis) {
-                            self::log("  ⚠️ AJUSTE: Diferença de R$ " . number_format($diferenca, 2, ',', '.') . " aplicada ao último CC");
-                        }
-                    }
+                    // PRIMEIRO CC: ajusta para fechar o total
+                    $cc = $costCenters[0];
+                    $valorPrimeiro = round($valorTotal - $somaOutros, 2);
+                    $rateioItems[0] = [
+                        'cc' => $cc,
+                        'valor' => $valorPrimeiro,
+                        'idx' => 0,
+                        'ajustado' => true,
+                    ];
                     
-                    // Cria os lançamentos expandidos
+                    // Log e criação dos lançamentos
                     foreach ($rateioItems as $item_rateio) {
                         $cc = $item_rateio['cc'];
                         $valorRateado = $item_rateio['valor'];
@@ -399,15 +398,15 @@ class FinanceController extends Controller
                             self::log("    Nome: " . ($cc['name'] ?? 'sem nome'));
                             self::log("    Percentual: " . ($cc['percent'] ?? 0) . "%");
                             self::log("    Valor API Nibo: R$ " . number_format((float)($cc['value'] ?? 0), 2, ',', '.'));
-                            self::log("    Valor RECALCULADO: R$ " . number_format($valorRateado, 2, ',', '.'));
-                            if (!empty($item_rateio['ajustado'])) {
-                                self::log("    ✓ AJUSTADO para fechar o total");
+                            self::log("    Valor FINAL: R$ " . number_format($valorRateado, 2, ',', '.'));
+                            if ($item_rateio['ajustado']) {
+                                self::log("    ✓ AJUSTADO (primeiro CC = total - soma dos demais)");
                             }
                             self::log("  ─────────────────────────────────────────");
                         }
                         
                         $expandedItem = $item;
-                        $expandedItem['value'] = $valorRateado; // Valor recalculado
+                        $expandedItem['value'] = $valorRateado;
                         $expandedItem['cost_center_id'] = $cc['id'] ?? $item['cost_center_id'];
                         $expandedItem['cost_center'] = $cc['name'] ?? $item['cost_center'];
                         $expandedItem['_rateado'] = true;
@@ -418,7 +417,8 @@ class FinanceController extends Controller
                     }
                     
                     if ($logThis) {
-                        self::log("  Total verificado: R$ " . number_format(array_sum(array_column($rateioItems, 'valor')), 2, ',', '.'));
+                        $somaTotal = array_sum(array_column($rateioItems, 'valor'));
+                        self::log("  Total verificado: R$ " . number_format($somaTotal, 2, ',', '.'));
                         self::log("════════════════════════════════════════════");
                     }
                 } else {

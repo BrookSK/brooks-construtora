@@ -409,44 +409,53 @@ class PainelObrasService
             'is_paid'          => $isPaid,
         ];
 
-        // NOVO: Se houver rateio por centro de custo, recalcula a partir do percentual
+        // NOVO: Se houver rateio por centro de custo, ajusta primeiro CC
         $costCenters = $item['cost_centers'] ?? [];
         $hasRateio = !empty($costCenters) && count($costCenters) > 1;
         
         if ($hasRateio) {
-            // Recalcula valores a partir do percentual (API do Nibo tem erro de arredondamento)
-            $somaRateada = 0;
-            $rateioItems = [];
-            
-            foreach ($costCenters as $idx => $cc) {
-                $percentual = (float) ($cc['percent'] ?? 0);
-                // Recalcula usando percentual com arredondamento correto
-                $valorRateado = round($valorTotal * ($percentual / 100), 2);
-                
-                $rateioItems[] = [
-                    'cc' => $cc,
-                    'valor' => $valorRateado,
-                ];
-                
-                $somaRateada += $valorRateado;
-            }
-            
-            // Ajusta o último item para garantir que a soma bate exatamente
-            $diferenca = round($valorTotal - $somaRateada, 2);
-            if (abs($diferenca) >= 0.01 && !empty($rateioItems)) {
-                $ultimoIdx = count($rateioItems) - 1;
-                $rateioItems[$ultimoIdx]['valor'] += $diferenca;
-            }
-            
-            // Cria um lançamento para cada centro de custo no rateio
+            // Calcula demais CCs por percentual, primeiro ajusta para fechar
+            $somaOutros = 0;
+            $totalCCs = count($costCenters);
             $linhas = [];
-            foreach ($rateioItems as $item_rateio) {
-                $cc = $item_rateio['cc'];
-                $valorRateado = $item_rateio['valor'];
+            
+            // Calcula todos EXCETO o primeiro
+            for ($idx = 1; $idx < $totalCCs; $idx++) {
+                $cc = $costCenters[$idx];
+                $percentual = (float) ($cc['percent'] ?? 0);
+                $valorRateado = round($valorTotal * ($percentual / 100), 2);
+                $somaOutros += $valorRateado;
+                
                 $ccId = $cc['id'] ?? null;
                 $ccNome = $cc['name'] ?? $item['cost_center'];
                 
-                $linha = array_merge($base, [
+                $linhas[] = [
+                    'linha' => array_merge($base, [
+                        'categoria_nibo_id'   => $catId,
+                        'categoria_nibo_nome' => $catNome ?? 'Sem categoria',
+                        'categoria_excluida'  => $catInfo['excluida'] ?? false,
+                        'grupo_nome'          => $catInfo['grupo_nome'] ?? null,
+                        'subgrupo_nome'       => $catInfo['subgrupo_nome'] ?? null,
+                        'tipo_categoria'      => $catInfo['tipo'] ?? null,
+                        'categoria_obra'      => $catObra,
+                        'valor_rateado'       => $valorRateado,
+                        'cost_center'         => $ccNome,
+                        'cost_center_id'      => $ccId,
+                        'rateado'             => true,
+                        'percent'             => $cc['percent'] ?? 0,
+                    ]),
+                    'ordem' => $idx,
+                ];
+            }
+            
+            // PRIMEIRO CC: ajusta para fechar o total
+            $cc = $costCenters[0];
+            $valorPrimeiro = round($valorTotal - $somaOutros, 2);
+            $ccId = $cc['id'] ?? null;
+            $ccNome = $cc['name'] ?? $item['cost_center'];
+            
+            array_unshift($linhas, [
+                'linha' => array_merge($base, [
                     'categoria_nibo_id'   => $catId,
                     'categoria_nibo_nome' => $catNome ?? 'Sem categoria',
                     'categoria_excluida'  => $catInfo['excluida'] ?? false,
@@ -454,16 +463,16 @@ class PainelObrasService
                     'subgrupo_nome'       => $catInfo['subgrupo_nome'] ?? null,
                     'tipo_categoria'      => $catInfo['tipo'] ?? null,
                     'categoria_obra'      => $catObra,
-                    'valor_rateado'       => $valorRateado, // Valor recalculado
+                    'valor_rateado'       => $valorPrimeiro,
                     'cost_center'         => $ccNome,
                     'cost_center_id'      => $ccId,
                     'rateado'             => true,
                     'percent'             => $cc['percent'] ?? 0,
-                ]);
-                
-                $linhas[] = $linha;
-            }
-            return $linhas;
+                ]),
+                'ordem' => 0,
+            ]);
+            
+            return array_column($linhas, 'linha');
         }
         
         // Lançamento simples (sem rateio explícito)
