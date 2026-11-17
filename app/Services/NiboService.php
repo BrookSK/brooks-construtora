@@ -824,6 +824,11 @@ class NiboService
                 ];
             }
             
+            // Log para debug
+            if (count($costCenters) > 1) {
+                error_log("[NiboService] Lançamento com rateio: " . ($s['description'] ?? 'sem desc') . " - " . count($costCenters) . " centros");
+            }
+            
             // Se não tinha ccId principal, usa o primeiro do rateio
             if (!$ccId && !empty($costCenters[0]['id'])) {
                 $ccId = $costCenters[0]['id'];

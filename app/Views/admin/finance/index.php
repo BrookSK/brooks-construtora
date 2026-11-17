@@ -896,12 +896,16 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
                 : '<span class="text-muted">—</span>';
             const rowClass = 'overdue-row' + (changed ? ' row-postponed' : '');
             const valColor = changed ? '#6f42c1' : '#c05600';
+            const isRateado = r._rateado === true;
+            const rateadoBadge = isRateado 
+                ? ' <span class="badge bg-info" style="font-size:9px">RATEADO</span>'
+                : '';
             return '<tr class="' + rowClass + '" data-id="' + esc(r.id||'') + '" style="cursor:pointer;">'
                 + '<td class="text-nowrap">' + dateLabel(r.due_date) + '</td>'
                 + '<td class="text-nowrap">' + dateLabel(previstoInicial) + '</td>'
                 + '<td class="text-nowrap">' + postergado + '</td>'
                 + '<td><span class="badge bg-danger">' + dias + ' d</span></td>'
-                + '<td>' + esc(r.contact_name) + '</td>'
+                + '<td>' + esc(r.contact_name) + rateadoBadge + '</td>'
                 + '<td style="min-width:220px; white-space:normal; word-break:break-word;">' + esc(r.description) + '</td>'
                 + '<td>' + (r.cost_centers && r.cost_centers.length > 1 
                     ? `${esc(r.cost_center || '—')} <a href="#" onclick="showRateioModal(event, '${r.id}')" style="text-decoration:none" title="Ver distribuição"><i class="bi bi-pie-chart-fill text-primary"></i></a>`
@@ -923,13 +927,17 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
             const mark = changed ? ' <i class="bi bi-arrow-repeat" style="color:#6f42c1;" title="Data postergada"></i>' : '';
             
             // NOVO: Indicador de rateio por centro de custo
+            const isRateado = r._rateado === true;
             const hasRateio = r.cost_centers && r.cost_centers.length > 1;
+            const rateadoBadge = isRateado 
+                ? ' <span class="badge bg-info" style="font-size:9px" title="Valor rateado entre múltiplos centros de custo">RATEADO</span>'
+                : '';
             const ccDisplay = hasRateio 
                 ? `${esc(r.cost_center || '—')} <a href="#" onclick="showRateioModal(event, '${r.id}')" style="text-decoration:none" title="Ver distribuição"><i class="bi bi-pie-chart-fill text-primary"></i></a>`
                 : esc(r.cost_center || '—');
             
             return '<tr' + rowClass + '><td>' + dateLabel(r.due_date) + mark + '</td>'
-                + '<td>' + esc(r.contact_name && r.contact_name !== '—' ? r.contact_name : (r.description||'—')) + '</td>'
+                + '<td>' + esc(r.contact_name && r.contact_name !== '—' ? r.contact_name : (r.description||'—')) + rateadoBadge + '</td>'
                 + '<td>' + ccDisplay + '</td>'
                 + '<td>' + esc(r.category || '—') + '</td>'
                 + '<td class="text-end fw-semibold ' + valClass + '">' + fmtMoneyFull(r.value) + '</td>'
@@ -1038,12 +1046,16 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
             const changed = !!r.date_changed;
             const rowClass = changed ? ' class="row-postponed"' : '';
             const curForecast = r.forecast_date || r.due_date;
+            const isRateado = r._rateado === true;
+            const rateadoBadge = isRateado 
+                ? ' <span class="badge bg-info" style="font-size:9px">RATEADO</span>'
+                : '';
             const dateCell = changed
                 ? '<span class="text-muted text-decoration-line-through">' + dateLabel(r.original_forecast_date) + '</span> <i class="bi bi-arrow-right-short" style="color:#6f42c1;"></i> <strong style="color:#6f42c1;">' + dateLabel(curForecast) + '</strong>'
                 : dateLabel(curForecast);
             return '<tr' + rowClass + '><td class="text-nowrap">' + dateCell + '</td>'
                 + '<td>' + tipo + '</td>'
-                + '<td>' + esc(r.contact_name) + '</td>'
+                + '<td>' + esc(r.contact_name) + rateadoBadge + '</td>'
                 + '<td style="min-width:260px; white-space:normal; word-break:break-word;">' + esc(r.description) + dateHistoryHtml(r) + '</td>'
                 + '<td>' + (r.cost_centers && r.cost_centers.length > 1 
                     ? `${esc(r.cost_center)} <a href="#" onclick="showRateioModal(event, '${r.id}')" style="text-decoration:none" title="Ver distribuição"><i class="bi bi-pie-chart-fill text-primary"></i></a>`

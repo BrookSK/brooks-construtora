@@ -333,6 +333,49 @@ class FinanceController extends Controller
         };
         $applyTracking($payables);
         $applyTracking($receivables);
+        
+        // NOVO: Expande lançamentos com rateio por centro de custo
+        $expandRateio = function (array $list): array {
+            $expanded = [];
+            foreach ($list as $item) {
+                $costCenters = $item['cost_centers'] ?? [];
+                $hasRateio = !empty($costCenters) && count($costCenters) > 1;
+                
+                if ($hasRateio) {
+                    // Log para debug
+                    error_log("[FinanceSync] Expandindo rateio: " . ($item['description'] ?? 'sem desc') . " - " . count($costCenters) . " centros de custo");
+                    
+                    // Cria um lançamento para cada centro de custo
+                    foreach ($costCenters as $cc) {
+                        $valorRateado = abs((float) ($cc['value'] ?? 0));
+                        $expandedItem = $item;
+                        $expandedItem['value'] = $valorRateado;
+                        $expandedItem['cost_center_id'] = $cc['id'] ?? $item['cost_center_id'];
+                        $expandedItem['cost_center'] = $cc['name'] ?? $item['cost_center'];
+                        $expandedItem['_rateado'] = true; // Flag para identificar
+                        $expandedItem['_valor_original'] = $item['value']; // Preserva valor total
+                        
+                        error_log("[FinanceSync]   -> CC: " . ($cc['name'] ?? 'sem nome') . " = R$ " . number_format($valorRateado, 2, ',', '.'));
+                        
+                        $expanded[] = $expandedItem;
+                    }
+                } else {
+                    // Lançamento sem rateio, mantém como está
+                    $item['_rateado'] = false;
+                    $expanded[] = $item;
+                }
+            }
+            
+            error_log("[FinanceSync] Total expandido: " . count($list) . " -> " . count($expanded) . " lançamentos");
+            return $expanded;
+        };
+        
+        $payables = $expandRateio($payables);
+        $receivables = $expandRateio($receivables);
+        
+        // Log para debug
+        $rateadosCount = count(array_filter($payables, fn($x) => $x['_rateado'] ?? false));
+        self::log("Expansão de rateio: {$rateadosCount} lançamentos rateados de " . count($payables) . " a pagar");
 
         $ccMap = [];
         $contactMap = [];
