@@ -342,12 +342,20 @@ class FinanceController extends Controller
                 $hasRateio = !empty($costCenters) && count($costCenters) > 1;
                 
                 if ($hasRateio) {
-                    // Log detalhado para debug
-                    error_log("[FinanceSync] ════════════════════════════════════════════");
-                    error_log("[FinanceSync] Expandindo rateio: " . ($item['description'] ?? 'sem desc'));
-                    error_log("[FinanceSync] Valor total original: R$ " . number_format($item['value'], 2, ',', '.'));
-                    error_log("[FinanceSync] Quantidade de CCs: " . count($costCenters));
-                    error_log("[FinanceSync] JSON costCenters: " . json_encode($costCenters));
+                    // Log SOMENTE para lançamento específico (MARCIO LUIZ) para debug
+                    $descricao = $item['description'] ?? '';
+                    $contactName = $item['contact_name'] ?? '';
+                    $logThis = (stripos($descricao, 'MARCIO') !== false || stripos($contactName, 'MARCIO') !== false);
+                    
+                    if ($logThis) {
+                        self::log("════════════════════════════════════════════");
+                        self::log("🔍 DEBUG RATEIO MARCIO LUIZ");
+                        self::log("  Descrição: " . $descricao);
+                        self::log("  Fornecedor: " . $contactName);
+                        self::log("  Valor TOTAL original: R$ " . number_format($item['value'], 2, ',', '.'));
+                        self::log("  Quantidade de centros de custo: " . count($costCenters));
+                        self::log("  ─────────────────────────────────────────");
+                    }
                     
                     // Cria um lançamento para cada centro de custo
                     foreach ($costCenters as $idx => $cc) {
@@ -355,10 +363,14 @@ class FinanceController extends Controller
                         // O Nibo já fez o cálculo com precisão de 2 casas decimais no percentual
                         $valorRateado = abs((float) ($cc['value'] ?? 0));
                         
-                        error_log("[FinanceSync]   -> CC[$idx]: " . ($cc['name'] ?? 'sem nome'));
-                        error_log("[FinanceSync]      Percentual: " . ($cc['percent'] ?? 0) . "%");
-                        error_log("[FinanceSync]      Valor EXATO: R$ " . number_format($valorRateado, 2, ',', '.'));
-                        error_log("[FinanceSync]      cc['value'] bruto: " . var_export($cc['value'] ?? null, true));
+                        if ($logThis) {
+                            self::log("  Centro de Custo " . ($idx + 1) . ":");
+                            self::log("    Nome: " . ($cc['name'] ?? 'sem nome'));
+                            self::log("    Percentual do Nibo: " . ($cc['percent'] ?? 0) . "%");
+                            self::log("    Valor EXATO do Nibo: R$ " . number_format($valorRateado, 2, ',', '.'));
+                            self::log("    Campo 'value' bruto da API: " . var_export($cc['value'] ?? null, true));
+                            self::log("  ─────────────────────────────────────────");
+                        }
                         
                         $expandedItem = $item;
                         $expandedItem['value'] = $valorRateado; // Valor exato do Nibo
@@ -370,7 +382,10 @@ class FinanceController extends Controller
                         
                         $expanded[] = $expandedItem;
                     }
-                    error_log("[FinanceSync] ════════════════════════════════════════════");
+                    
+                    if ($logThis) {
+                        self::log("════════════════════════════════════════════");
+                    }
                 } else {
                     // Lançamento sem rateio, mantém como está
                     $item['_rateado'] = false;
