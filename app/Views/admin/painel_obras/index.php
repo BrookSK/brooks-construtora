@@ -162,10 +162,14 @@ body { background: #f8f9fa !important; }
         }
         ?>
       </select>
-      <select id="po-company" class="po-period-sel" onchange="poLoad()">
+      <select id="po-company" class="po-period-sel" onchange="poTrocarEmpresa()">
         <?php foreach($companies as $k=>$l): ?>
         <option value="<?=$k?>" <?=$k===$company?'selected':''?>><?=htmlspecialchars($l)?></option>
         <?php endforeach; ?>
+      </select>
+      <label style="font-size:12px;color:var(--po-txt2);margin-left:6px">Snapshot:</label>
+      <select id="po-snapshot" class="po-period-sel" onchange="poLoad()" title="Consultar uma sincronização anterior (somente leitura)">
+        <option value="">Atual (ao vivo)</option>
       </select>
     </div>
     <button class="po-btn po-btn-ghost" onclick="poCopiar()" style="font-size:12px;padding:6px 12px"><i class="bi bi-clipboard"></i> Copiar resumo</button>
@@ -184,6 +188,18 @@ body { background: #f8f9fa !important; }
   <button class="po-btn-config" onclick="poAbrirConfig()" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:#2563eb;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;margin-left:auto">
     <i class="bi bi-funnel"></i> Filtros
   </button>
+</div>
+
+<!-- Banner de snapshot histórico -->
+<div id="po-snap-banner" style="display:none;margin-bottom:16px;background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:12px 16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    <div style="font-size:13px;color:#92400e"><i class="bi bi-camera"></i> <strong>Snapshot de <span id="po-snap-em"></span></strong> — fotografia imutável da sincronização, somente leitura. Os dados atuais não foram alterados.</div>
+    <div style="display:flex;gap:8px">
+      <button class="po-btn po-btn-ghost" style="font-size:12px;padding:5px 10px" onclick="poSnapToggle()"><i class="bi bi-list-ul"></i> Configuração das obras</button>
+      <button class="po-btn po-btn-primary" style="font-size:12px;padding:5px 10px" onclick="poSnapVoltar()"><i class="bi bi-arrow-return-left"></i> Voltar à visão atual</button>
+    </div>
+  </div>
+  <div id="po-snap-detalhe" style="display:none;margin-top:12px;font-size:12px;color:var(--po-txt)"></div>
 </div>
 
 <!-- KPIs -->
@@ -206,6 +222,13 @@ body { background: #f8f9fa !important; }
     <div class="po-card"><div class="po-skel" style="height:80px"></div></div>
     <?php endfor; ?>
   </div>
+</div>
+
+<!-- Alertas de orçamento acumulado (previsão semanal x Nibo) -->
+<div style="margin-bottom:20px;display:none" id="po-orc-wrap">
+  <div class="po-stitle">Estouro de Orçamento por Categoria <span class="po-pill danger" id="po-orc-pill"><span class="dot" style="background:var(--po-red)"></span>0</span></div>
+  <p class="po-ssub">Categorias cujo gasto efetivo ultrapassou todo o orçamento semanal acumulado até a semana de referência</p>
+  <div class="po-alertas" id="po-orc-alertas"></div>
 </div>
 
 <!-- Tabela Desempenho -->
@@ -248,7 +271,7 @@ body { background: #f8f9fa !important; }
   <div class="po-stitle">Orçado × Gasto por Categoria
     <div style="display:flex;gap:12px;font-size:12px"><span style="color:var(--po-gray)">■ Orçado</span><span style="color:var(--po-blue-t)">■ Gasto</span></div>
   </div>
-  <p class="po-ssub">Consolidado das obras ativas no período — valores em reais</p>
+  <p class="po-ssub">Consolidado das obras ativas no período — valores em reais. Na linha "Semana atual": <strong>Orçado</strong> = custo previsto distribuído na semana; <strong>Previsto</strong> = despesas programadas no Nibo (data prevista); <strong>Pago</strong> = despesas baixadas (data do pagamento). Previsto e Pago são visões do mesmo lançamento e não se somam.</p>
   <div id="po-cat-rows"><div class="po-skel" style="height:200px"></div></div>
 </div>
 
@@ -396,7 +419,8 @@ window.poLoad = function(){
   loadingOverlay.innerHTML = '<div class="spinner-border" role="status"></div><div style="margin-top:16px">Carregando dados do Nibo...</div>';
   loadingOverlay.style.display = 'flex';
   
-  const url = '/admin/painel-obras/dashboard-data?periodo='+per+'&company='+co;
+  const snapId = document.getElementById('po-snapshot')?.value || '';
+  const url = '/admin/painel-obras/dashboard-data?periodo='+per+'&company='+co+(snapId?'&snapshot_id='+encodeURIComponent(snapId):'');
   console.log('[PAINEL OBRAS] Fazendo requisição para:', url);
   
   fetch(url)
@@ -485,6 +509,7 @@ window.poLoad = function(){
       
       _d=res.data; 
       renderAll(res.data,res.synced_at);
+      renderSnapBanner(res.snapshot);
     }).catch(e=>{
       console.error('%c[PAINEL OBRAS] ❌ ERRO FATAL:', 'color: #dc2626; font-weight: bold', e);
       console.error('[PAINEL OBRAS] Stack:', e.stack);
@@ -506,8 +531,9 @@ if (document.readyState === 'loading') {
 function renderAll(d,at){
   renderKpis(d.kpis);
   renderAlertas(d.obras_alerta||[]);
+  renderAlertasOrcamento(d.alertas_orcamento||[]);
   renderTabela(d.obras||[]);
-  renderCat(d.gasto_por_cat||{},d.orcado_por_cat||{});
+  renderCat(d.gasto_por_cat||{},d.orcado_por_cat||{},d.semana_categoria||{});
   renderConc(d.conciliacao||{});
   renderFluxo(d.fluxo_mensal||[]);
   renderMeta(d,at);
@@ -613,6 +639,80 @@ function renderAlertas(list){
   }).join('');
 }
 
+const poEsc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const poDt=s=>s?String(s).substring(0,10).split('-').reverse().join('/'):'';
+const poDtHr=(s,seg)=>s?poDt(s)+' '+String(s).substring(11,seg?19:16):'';
+
+function renderAlertasOrcamento(list){
+  const wrap=document.getElementById('po-orc-wrap');
+  if(!list.length){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  document.getElementById('po-orc-pill').innerHTML=`<span class="dot" style="background:var(--po-red)"></span>${list.length} alerta(s)`;
+  document.getElementById('po-orc-alertas').innerHTML=list.map(a=>{
+    const proj=a.tipo==='projetado';
+    const cor=proj?'var(--po-yellow)':'var(--po-red)';
+    return `<div class="po-card po-alerta-card ${proj?'warn':''}">
+    <div class="po-code">${poEsc(a.obra_codigo)}</div>
+    <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px">${poEsc(a.obra_nome)}</div>
+    <div style="font-size:13px;color:var(--po-txt);margin-bottom:6px"><i class="bi bi-tag"></i> ${poEsc(a.categoria)}</div>
+    <span class="po-pill ${proj?'warn':'danger'}" style="margin-bottom:8px"><span class="dot" style="background:${cor}"></span>${proj?'ESTOURO PROJETADO':'ESTOURO'}</span>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:4px"><span>Orçamento acumulado</span><span style="color:var(--po-txt)">${BRL(a.previsto_acumulado)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:4px"><span>Pago acumulado</span><span style="color:var(--po-txt)">${BRL(a.gasto_acumulado)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:4px"><span>Previsto a pagar (em aberto)</span><span style="color:var(--po-txt)">${BRL(a.comprometido)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:${cor};font-weight:700"><span>Desvio${proj?' projetado':''}</span><span>${BRL(a.desvio)}</span></div>
+    <div style="font-size:12px;color:var(--po-txt2);margin-top:8px;border-top:1px solid var(--po-border);padding-top:6px">Semana ${a.semana} (${poDt(a.semana_inicio)} a ${poDt(a.semana_fim)})${proj?' — compromissos em aberto superam o saldo acumulado':''}</div>
+  </div>`;}).join('');
+}
+
+// ─── Snapshots históricos (somente leitura) ───
+function poCarregarSnapshots(){
+  const co=document.getElementById('po-company')?.value||'brooks';
+  const sel=document.getElementById('po-snapshot');
+  const atual=sel.value;
+  fetch('/admin/painel-obras/snapshots?company='+encodeURIComponent(co)).then(r=>r.json()).then(res=>{
+    // Data/hora com segundos + nº do snapshot: várias sincronizações no mesmo minuto continuam distinguíveis
+    sel.innerHTML='<option value="">Atual (ao vivo)</option>'+(res.snapshots||[]).map(s=>`<option value="${s.id}">${poDtHr(s.em,true)} · #${s.id}</option>`).join('');
+    sel.value=atual;
+  }).catch(()=>{});
+}
+window.poTrocarEmpresa=function(){document.getElementById('po-snapshot').value='';poCarregarSnapshots();poLoad();};
+window.poSnapVoltar=function(){document.getElementById('po-snapshot').value='';poLoad();};
+window.poSnapToggle=function(){
+  const box=document.getElementById('po-snap-detalhe');
+  if(box.style.display==='block'){box.style.display='none';return;}
+  const id=document.getElementById('po-snapshot').value;
+  box.style.display='block';box.innerHTML='Carregando…';
+  fetch('/admin/painel-obras/snapshots/detalhe?snapshot_id='+id).then(r=>r.json()).then(res=>{
+    if(!res.ok){box.innerHTML=poEsc(res.error||'Erro');return;}
+    box.innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr style="text-align:left;color:var(--po-txt2)"><th>Obra</th><th>Início</th><th>Fim</th><th style="text-align:right">Contratado</th><th style="text-align:right">Custos previstos</th><th>Alertas</th><th></th></tr></thead><tbody>'
+      +res.obras.map(o=>`<tr style="border-top:1px solid var(--po-border)"><td>${poEsc(o.codigo)} — ${poEsc(o.nome)}</td><td>${poDt(o.data_inicio)}</td><td>${poDt(o.data_prev_fim)}</td><td style="text-align:right">${BRL(o.valor_contratado)}</td><td style="text-align:right">${BRL(o.custos_previstos_total)}</td><td>${o.alertas}</td><td><a href="#" onclick="poSnapObra(${o.id});return false" style="color:var(--po-blue-t)">semanas</a></td></tr><tr id="po-snap-obra-${o.id}" style="display:none"><td colspan="7"></td></tr>`).join('')
+      +'</tbody></table>';
+  }).catch(()=>{box.innerHTML='Falha ao carregar.';});
+};
+window.poSnapObra=function(obraId){
+  const row=document.getElementById('po-snap-obra-'+obraId);
+  if(row.style.display!=='none'){row.style.display='none';return;}
+  const cell=row.firstElementChild;row.style.display='';cell.innerHTML='Carregando…';
+  const id=document.getElementById('po-snapshot').value;
+  fetch('/admin/painel-obras/snapshots/detalhe?snapshot_id='+id+'&obra_id='+obraId).then(r=>r.json()).then(res=>{
+    if(!res.ok){cell.innerHTML=poEsc(res.error||'Erro');return;}
+    const p=res.previsao;
+    if(!p.configurada){cell.innerHTML=poEsc(p.motivo||'Sem previsão semanal.');return;}
+    cell.innerHTML=p.categorias.map(c=>{
+      const linhas=c.semanas.map(s=>`<tr style="${s.saldo!==null&&s.saldo<0?'color:var(--po-red-t)':''}${s.futura?';opacity:.6':''}"><td>${s.semana}${s.atual?' ●':''}</td><td>${poDt(s.inicio)}–${poDt(s.fim)}</td><td style="text-align:right">${BRL(s.orcado)}</td><td style="text-align:right">${BRL(s.previsto)}</td><td style="text-align:right">${BRL(s.pago)}</td><td style="text-align:right">${s.saldo===null?'—':BRL(s.saldo)}</td><td style="text-align:right">${BRL(s.projetado)}</td></tr>`).join('');
+      return `<details style="margin:4px 0"><summary>${poEsc(c.categoria)} — ${BRL(c.previsto_total)} ${c.alerta?'<strong style="color:var(--po-red-t)">('+(c.alerta==='projetado'?'projetado':'estouro')+')</strong>':''}</summary><table style="width:100%;font-size:11px"><thead><tr style="text-align:left"><th>Sem.</th><th>Período</th><th style="text-align:right">Orçado</th><th style="text-align:right">Previsto</th><th style="text-align:right">Pago</th><th style="text-align:right">Saldo</th><th style="text-align:right">Projetado</th></tr></thead><tbody>${linhas}</tbody></table></details>`;
+    }).join('')||'Nenhum custo previsto neste snapshot.';
+  }).catch(()=>{cell.innerHTML='Falha ao carregar.';});
+};
+function renderSnapBanner(snap){
+  const b=document.getElementById('po-snap-banner');
+  if(!snap){b.style.display='none';return;}
+  document.getElementById('po-snap-em').textContent=poDtHr(snap.em,true)+' (#'+snap.id+')';
+  document.getElementById('po-snap-detalhe').style.display='none';
+  b.style.display='block';
+}
+poCarregarSnapshots();
+
 window.poFiltrar = function(){
   if(!_obras.length) return;
   const q=document.getElementById('po-busca').value.toLowerCase();
@@ -662,9 +762,13 @@ window.poResetFiltros=function(){
   poFiltrar();poToast('Filtros redefinidos.');
 };
 
-function renderCat(gasto,orcado){
+function renderCat(gasto,orcado,semana){
+  semana = semana || {};
+  // Em snapshots históricos a lista de categorias pode diferir da atual: une com as chaves recebidas
+  const todasCats = [...catObra];
+  Object.keys(orcado).concat(Object.keys(gasto)).forEach(k=>{ if(k!=='Sem categoria / Não mapeado' && !todasCats.includes(k)) todasCats.push(k); });
   // Filtra apenas categorias com valores > 0
-  const categoriasComValor = catObra.filter(cat => {
+  const categoriasComValor = todasCats.filter(cat => {
     const g = gasto[cat] || 0;
     const o = orcado[cat] || 0;
     return (g > 0 || o > 0);
@@ -682,12 +786,16 @@ function renderCat(gasto,orcado){
     const gP=(g/mx)*100,oP=(o/mx)*100;
     const dv=g-o;
     const dc=dv>0?'var(--po-red-t)':dv<0?'var(--po-green-t)':'var(--po-txt2)';
+    const s=semana[cat];
+    const sc=s&&s.saldo<0?'var(--po-red-t)':'var(--po-green-t)';
+    const semLinha=s?`<div style="font-size:11px;color:var(--po-txt2);margin-top:3px" title="Soma das obras na semana atual de cada uma. Previsto e Pago são o mesmo lançamento visto por datas diferentes.">Semana atual · <span style="color:var(--po-gray)">■</span> Orçado ${BRL(s.orcado)} · <span style="color:var(--po-yellow)">■</span> Previsto ${BRL(s.previsto)} · <span style="color:var(--po-blue-t)">■</span> Pago ${BRL(s.pago)} · Saldo acumulado <span style="color:${sc}">${BRL(s.saldo)}</span>${s.projetado<0?` · <span style="color:var(--po-red-t)">Projetado ${BRL(s.projetado)}</span>`:''}</div>`:'';
     return `<div class="po-cat-row">
       <div class="po-cat-label">${cat}</div>
       <div class="po-cat-bars">
         <div class="po-cat-bar" style="width:${oP}%;background:var(--po-gray2)" title="Orçado: ${BRL(o)}"></div>
         <div class="po-cat-bar" style="width:0%;background:linear-gradient(90deg,var(--po-blue),var(--po-cyan))" data-pct="${gP}" title="Gasto: ${BRL(g)}"></div>
         <div style="font-size:11px;color:var(--po-txt2)">Orçado ${BRL(o)} · Gasto ${BRL(g)} · Desvio <span style="color:${dc}">${(dv>0?'+':'')+BRL(dv)}</span></div>
+        ${semLinha}
       </div>
     </div>`;
   }).join('');

@@ -28,13 +28,122 @@ class PainelObrasService
     {
         // competencia = 'YYYY-MM' ou 'YYYY-Q1' etc.
         [$dataIni, $dataFim] = self::resolverPeriodo($competencia);
+        return self::dadosPeriodo($company, $competencia, $dataIni, $dataFim);
+    }
 
+    /**
+     * Mesmo resultado de dados(), porém para um intervalo arbitrário de datas
+     * (usado pela previsão semanal). Comportamento de dados() permanece idêntico.
+     */
+    public static function dadosIntervalo(string $company, string $dataIni, string $dataFim): array
+    {
+        // Sufixo de hora para incluir datas do Nibo no formato "YYYY-MM-DDTHH:MM:SS" no último dia
+        // Inclui o lançamento se a data prevista OU a data real de pagamento cair no intervalo
+        return self::dadosPeriodo($company, $dataIni . ' a ' . $dataFim, $dataIni, $dataFim . 'T23:59:59', true);
+    }
+
+    /**
+     * Contexto de um snapshot congelado. Quando definido, dados()/getDashboardData() leem
+     * o snapshot do Nibo, obras, custos previstos, de-para, categorias e recebimentos
+     * do contexto em vez do banco "ao vivo". Chaves: snapshot, obras, custos, depara,
+     * catmap, recebido (obra_id => total).
+     */
+    private static ?array $ctx = null;
+
+    /** Define (ou limpa, com null) o contexto congelado até o fim da requisição. Sempre limpe em finally. */
+    public static function definirContexto(?array $ctx): void
+    {
+        self::$ctx = $ctx;
+    }
+
+    public static function comContexto(?array $ctx, callable $fn)
+    {
+        $anterior = self::$ctx;
+        self::$ctx = $ctx;
+        try {
+            return $fn();
+        } finally {
+            self::$ctx = $anterior;
+        }
+    }
+
+    /** Snapshot do Nibo em uso: o do contexto congelado ou o mais recente da empresa. */
+    public static function snapshotAtual(string $company): ?array
+    {
+        return self::$ctx['snapshot'] ?? NiboSyncSnapshot::latest($company);
+    }
+
+    /** Custos previstos da obra (categoria_nome, valor_previsto), do contexto ou do banco. */
+    private static function custosDaObra(int $obraId): array
+    {
+        if (self::$ctx !== null) return self::$ctx['custos'][$obraId] ?? [];
+        $tabelaExiste = Database::fetch("SHOW TABLES LIKE 'painel_obras_custos_previstos'");
+        if (!$tabelaExiste) {
+            error_log('[PainelObras] AVISO: Tabela painel_obras_custos_previstos não existe. Execute o SQL de migração.');
+            return [];
+        }
+        return Database::fetchAll(
+            "SELECT categoria_nome, valor_previsto FROM painel_obras_custos_previstos WHERE obra_id = ?",
+            [$obraId]
+        );
+    }
+
+    /** Soma dos custos previstos por nome de categoria nas obras ativas. */
+    private static function orcadoPorCategoriaAtivas(): array
+    {
+        $out = [];
+        if (self::$ctx !== null) {
+            foreach (self::$ctx['obras'] as $o) {
+                foreach (self::$ctx['custos'][(int) $o['id']] ?? [] as $c) {
+                    $out[$c['categoria_nome']] = ($out[$c['categoria_nome']] ?? 0.0) + (float) $c['valor_previsto'];
+                }
+            }
+            return $out;
+        }
+        if (!Database::fetch("SHOW TABLES LIKE 'painel_obras_custos_previstos'")) return [];
+        $rows = Database::fetchAll(
+            "SELECT cp.categoria_nome, SUM(cp.valor_previsto) AS total_previsto
+             FROM painel_obras_custos_previstos cp
+             INNER JOIN painel_obras o ON o.id = cp.obra_id
+             WHERE o.situacao = 'Ativa'
+             GROUP BY cp.categoria_nome"
+        );
+        foreach ($rows as $r) $out[$r['categoria_nome']] = (float) $r['total_previsto'];
+        return $out;
+    }
+
+    /** Total recebido de clientes (todas as obras ou só as informadas). */
+    public static function totalRecebido(?array $obraIds = null): float
+    {
+        if (self::$ctx !== null) {
+            $rec = self::$ctx['recebido'] ?? [];
+            $total = 0.0;
+            foreach ($rec as $id => $v) {
+                if ($obraIds === null || in_array((int) $id, array_map('intval', $obraIds), true)) $total += (float) $v;
+            }
+            return $total;
+        }
+        if ($obraIds === null) {
+            $r = Database::fetch("SELECT COALESCE(SUM(valor), 0) AS total FROM painel_obras_recebimentos");
+        } else {
+            if (!$obraIds) return 0.0;
+            $ph = implode(',', array_fill(0, count($obraIds), '?'));
+            $r = Database::fetch(
+                "SELECT COALESCE(SUM(valor), 0) AS total FROM painel_obras_recebimentos WHERE obra_id IN ($ph)",
+                array_values($obraIds)
+            );
+        }
+        return $r ? (float) $r['total'] : 0.0;
+    }
+
+    private static function dadosPeriodo(string $company, string $competencia, string $dataIni, string $dataFim, bool $incluirPorPagamento = false): array
+    {
         error_log('[PainelObras] ===== INICIANDO BUSCA DE DADOS =====');
         error_log('[PainelObras] Company: ' . $company . ', Competência: ' . $competencia);
         error_log('[PainelObras] Período: ' . $dataIni . ' a ' . $dataFim);
 
-        // Carrega snapshot
-        $snapshot = NiboSyncSnapshot::latest($company);
+        // Carrega snapshot (do contexto congelado, se houver)
+        $snapshot = self::$ctx['snapshot'] ?? NiboSyncSnapshot::latest($company);
         $payload  = $snapshot ? NiboSyncSnapshot::decodePayload($snapshot) : [];
         $payables    = $payload['payables']    ?? [];
         $receivables = $payload['receivables'] ?? [];
@@ -44,9 +153,9 @@ class PainelObrasService
         error_log('[PainelObras] Payables: ' . count($payables) . ', Receivables: ' . count($receivables));
 
         // Mapas auxiliares
-        $catMap    = NiboCategoriesService::mapa($company);
-        $deParaMap = PainelCategoriasDepara::mapCompleto();
-        $obras     = PainelObra::allAtivas();
+        $catMap    = self::$ctx['catmap']  ?? NiboCategoriesService::mapa($company);
+        $deParaMap = self::$ctx['depara']  ?? PainelCategoriasDepara::mapCompleto();
+        $obras     = self::$ctx['obras']   ?? PainelObra::allAtivas();
         $obrasMap  = self::indexarObras($obras);
 
         error_log('[PainelObras] Categorias Nibo: ' . count($catMap));
@@ -61,7 +170,15 @@ class PainelObrasService
         foreach ($todos as $item) {
             // Filtra pelo período
             $dataRef = $item['forecast_date'] ?? $item['due_date'] ?? '';
-            if ($dataRef < $dataIni || $dataRef > $dataFim) {
+            $dentro = !($dataRef < $dataIni || $dataRef > $dataFim);
+            if (!$dentro && $incluirPorPagamento) {
+                $datasPag = [(string) ($item['payment_date'] ?? '')];
+                foreach (($item['payments'] ?? []) as $b) $datasPag[] = (string) ($b['date'] ?? '');
+                foreach ($datasPag as $pd) {
+                    if ($pd !== '' && !($pd < $dataIni || $pd > $dataFim)) { $dentro = true; break; }
+                }
+            }
+            if (!$dentro) {
                 $filtrados++;
                 continue;
             }
@@ -401,6 +518,10 @@ class PainelObrasService
             'type'             => $item['type'],
             'due_date'         => $item['due_date'],
             'forecast_date'    => $item['forecast_date'],
+            'payment_date'     => $item['payment_date'] ?? null,
+            'payments'         => $item['payments'] ?? [],
+            // Valor total do agendamento no Nibo (antes do rateio por centro de custo), para apurar pagamento parcial
+            'valor_original'   => (float) ($item['_valor_original'] ?? $item['value'] ?? 0),
             'contact_name'     => $item['contact_name'],
             'cost_center'      => $item['cost_center'],
             'cost_center_id'   => $item['cost_center_id'],
@@ -664,27 +785,12 @@ class PainelObrasService
             $orcadoDetalhado = []; // Por categoria
             
             try {
-                // Verifica se a tabela existe antes de fazer a query
-                $tabelaExiste = Database::fetch("SHOW TABLES LIKE 'painel_obras_custos_previstos'");
-                
-                if ($tabelaExiste) {
-                    $custosPrevistos = Database::fetchAll(
-                        "SELECT categoria_nome, valor_previsto
-                         FROM painel_obras_custos_previstos 
-                         WHERE obra_id = ?",
-                        [$obraId]
-                    );
-                    
-                    foreach ($custosPrevistos as $custo) {
-                        $valorPrevisto = (float)$custo['valor_previsto'];
-                        $orcado += $valorPrevisto;
-                        $orcadoDetalhado[$custo['categoria_nome']] = $valorPrevisto;
-                    }
-                    
-                    error_log('[PainelObras] Obra ' . $obraId . ' - Orçado da tabela custos_previstos: R$ ' . number_format($orcado, 2, ',', '.'));
-                } else {
-                    error_log('[PainelObras] AVISO: Tabela painel_obras_custos_previstos não existe. Execute o SQL de migração.');
+                foreach (self::custosDaObra((int) $obraId) as $custo) {
+                    $valorPrevisto = (float)$custo['valor_previsto'];
+                    $orcado += $valorPrevisto;
+                    $orcadoDetalhado[$custo['categoria_nome']] = $valorPrevisto;
                 }
+                error_log('[PainelObras] Obra ' . $obraId . ' - Orçado da tabela custos_previstos: R$ ' . number_format($orcado, 2, ',', '.'));
             } catch (\Throwable $e) {
                 error_log('[PainelObras] Erro ao buscar custos previstos da obra ' . $obraId . ': ' . $e->getMessage());
                 $orcado = 0;
@@ -820,28 +926,8 @@ class PainelObrasService
         // ORÇADO POR CATEGORIA - busca da tabela de custos previstos
         $orcadoPorCat = [];
         try {
-            // Verifica se a tabela existe
-            $tabelaExiste = Database::fetch("SHOW TABLES LIKE 'painel_obras_custos_previstos'");
-            
-            if ($tabelaExiste) {
-                $custosPrevistos = Database::fetchAll(
-                    "SELECT 
-                        cp.categoria_nome,
-                        SUM(cp.valor_previsto) as total_previsto
-                    FROM painel_obras_custos_previstos cp
-                    INNER JOIN painel_obras o ON o.id = cp.obra_id
-                    WHERE o.situacao = 'Ativa'
-                    GROUP BY cp.categoria_nome"
-                );
-                
-                foreach ($custosPrevistos as $custo) {
-                    $orcadoPorCat[$custo['categoria_nome']] = (float)$custo['total_previsto'];
-                }
-                
-                error_log('[PainelObras] Orçado por categoria (custos previstos): ' . count($orcadoPorCat) . ' categorias');
-            } else {
-                error_log('[PainelObras] AVISO: Tabela painel_obras_custos_previstos não existe. Execute o SQL de migração.');
-            }
+            $orcadoPorCat = self::orcadoPorCategoriaAtivas();
+            error_log('[PainelObras] Orçado por categoria (custos previstos): ' . count($orcadoPorCat) . ' categorias');
         } catch (\Throwable $e) {
             error_log('[PainelObras] Erro ao buscar custos previstos: ' . $e->getMessage());
             $orcadoPorCat = [];
@@ -861,11 +947,7 @@ class PainelObrasService
         ));
         
         // Calcula total recebido de todas as obras
-        $result = Database::fetch(
-            "SELECT COALESCE(SUM(valor), 0) as total
-             FROM painel_obras_recebimentos"
-        );
-        $totalRecebido = $result ? (float)$result['total'] : 0;
+        $totalRecebido = self::totalRecebido();
         
         $resultado = [
             'kpis' => [

@@ -231,10 +231,33 @@ class FinanceController extends Controller
         @set_time_limit(60);
 
         $company = $_SESSION['finance_sync']['company'] ?? 'brooks';
-        $type = $this->input('type', 'payable') === 'receivable' ? 'receivable' : 'payable';
+        $typeIn = (string) $this->input('type', 'payable');
+        $type = $typeIn === 'receivable' ? 'receivable' : ($typeIn === 'payment' ? 'payment' : 'payable');
         $skip = max(0, (int) $this->input('skip', 0));
         $pageSize = 100;
         $from = $_SESSION['finance_sync']['from'] ?? '2025-12-01';
+
+        // Pagamentos realizados (GET /payments): datas reais de baixa por scheduleId
+        if ($type === 'payment') {
+            if ($skip === 0) $_SESSION['finance_sync']['payments'] = [];
+            try {
+                $res = NiboService::paymentsPage($skip, $from, null, $pageSize, $company);
+            } catch (\Throwable $e) {
+                self::log("syncPage[{$company}] payments skip={$skip} ERRO: " . $e->getMessage());
+                $this->json(['ok' => false, 'error' => $e->getMessage(), 'type' => $type, 'skip' => $skip], 502);
+                return;
+            }
+            foreach ($res['items'] as $p) $_SESSION['finance_sync']['payments'][] = $p;
+            $received = $res['received'];
+            $total = $res['total'];
+            $accumulated = count($_SESSION['finance_sync']['payments']);
+            $this->json([
+                'ok' => true, 'type' => 'payment', 'received' => $received, 'accumulated' => $accumulated,
+                'total' => $total, 'next_skip' => $skip + $pageSize,
+                'done' => ($received < $pageSize) || ($total !== null && ($skip + $received) >= $total) || ($skip >= 100000),
+            ]);
+            return;
+        }
 
         try {
             $res = NiboService::schedulePage($type, $skip, $from, null, $pageSize, $company);
@@ -333,6 +356,27 @@ class FinanceController extends Controller
         };
         $applyTracking($payables);
         $applyTracking($receivables);
+
+        // ── Data real de pagamento (GET /payments, campo "date") ──────────
+        // Anexa a cada débito: payments[] (data/valor de cada baixa) e payment_date (última baixa).
+        // Não altera due_date nem forecast_date: previsto e pago ficam em campos separados.
+        $payByScheduleId = [];
+        foreach (($acc['payments'] ?? []) as $p) {
+            $payByScheduleId[(string) $p['schedule_id']][] = ['date' => $p['date'], 'value' => $p['value']];
+        }
+        $semDataPagamento = 0;
+        foreach ($payables as &$px) {
+            $list = $payByScheduleId[(string) ($px['id'] ?? '')] ?? [];
+            if ($list) {
+                usort($list, fn($a, $b) => strcmp($a['date'], $b['date']));
+                $px['payments'] = $list;
+                $px['payment_date'] = end($list)['date'];
+            } elseif (($px['status'] ?? '') === 'paid') {
+                $semDataPagamento++;
+            }
+        }
+        unset($px);
+        self::log("syncFinish[{$company}] pagamentos: " . count($acc['payments'] ?? []) . " baixas; pagos sem data de pagamento: {$semDataPagamento}");
         
         // NOVO: Expande lançamentos com rateio por centro de custo
         $expandRateio = function (array $list): array {
@@ -481,8 +525,9 @@ class FinanceController extends Controller
         ];
 
         $createdBy = Auth::user()['name'] ?? 'Sistema';
+        $niboSnapId = 0;
         try {
-            NiboSyncSnapshot::store($result, $createdBy, $company);
+            $niboSnapId = NiboSyncSnapshot::store($result, $createdBy, $company);
         } catch (\Throwable $e) {
             self::log("syncFinish[{$company}] erro ao salvar: " . $e->getMessage());
             $this->json(['ok' => false, 'error' => 'Falha ao salvar os dados: ' . $e->getMessage()], 500);
@@ -492,7 +537,28 @@ class FinanceController extends Controller
         self::log(sprintf('syncFinish[%s] OK — payables=%d receivables=%d contas=%d', $company, count($payables), count($receivables), count($accounts)));
         unset($_SESSION['finance_sync']);
 
-        $this->json(['ok' => true, 'company' => $company, 'synced_at' => $result['generated_at'], 'data' => $result]);
+        // Congela uma fotografia imutável desta sincronização (nunca altera snapshots anteriores)
+        $painelSnapId = null;
+        $painelSnapErro = null;
+        try {
+            if ($niboSnapId > 0) $painelSnapId = \App\Services\PainelSnapshotService::criar($niboSnapId, $company);
+        } catch (\Throwable $e) {
+            $painelSnapErro = $e->getMessage();
+            self::log("syncFinish[{$company}] snapshot do painel NÃO gerado: " . $painelSnapErro);
+        }
+
+        // Atualiza a visão ATUAL da previsão semanal com os novos dados (não afeta o resultado do sync)
+        try {
+            \App\Services\PrevisaoSemanalService::recalcularTodas();
+        } catch (\Throwable $e) {
+            self::log("syncFinish[{$company}] previsão semanal não recalculada: " . $e->getMessage());
+        }
+
+        $this->json([
+            'ok' => true, 'company' => $company, 'synced_at' => $result['generated_at'], 'data' => $result,
+            // Rastreabilidade: informa se a fotografia histórica foi gravada (null + erro = falhou; o sync em si não é afetado)
+            'painel_snapshot_id' => $painelSnapId, 'painel_snapshot_erro' => $painelSnapErro,
+        ]);
     }
 
     /**

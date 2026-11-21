@@ -1575,6 +1575,23 @@ tr.row-postponed:hover > td { background-color:#e6d8f7 !important; }
                 skip = r.next_skip;
             }
 
+            // Pagamentos realizados (datas reais de baixa) — 92% a 96%. Não fatal: sem isso o
+            // sync segue normalmente e os pagos ficam sem data de pagamento.
+            try {
+                skip = 0; page = 0;
+                while (page < MAX_PAGES) {
+                    page++;
+                    setSyncStatus('Buscando datas de pagamento…');
+                    const r = await postJson('/admin/finance/sync-page', { type: 'payment', skip, company: co });
+                    if (!r.ok) throw new Error(r.error || 'erro');
+                    setProgress(92 + Math.min(1, page / 10) * 4, payTotal + ' a pagar · ' + recTotal + ' a receber');
+                    if (r.done || r.received === 0) break;
+                    skip = r.next_skip;
+                }
+            } catch (e) {
+                console.warn('Pagamentos (datas reais) indisponíveis:', e.message);
+            }
+
             setSyncStatus('Consolidando e salvando…');
             setProgress(96, payTotal + ' a pagar · ' + recTotal + ' a receber');
             const fin = await postJson('/admin/finance/sync-finish', { company: co });

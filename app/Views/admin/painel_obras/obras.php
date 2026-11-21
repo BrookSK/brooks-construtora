@@ -276,6 +276,13 @@
           </div>
         </div>
       </div>
+      <div class="col-full" style="margin-top:16px">
+        <label class="ob-label">Previsão semanal acumulativa</label>
+        <small style="color:#64748b;font-size:11px;display:block;margin:4px 0 10px">
+          O previsto de cada categoria é dividido igualmente entre as semanas da obra (início → fim). O saldo não usado passa para a semana seguinte e o gasto efetivo vem do Nibo. Salve a obra para recalcular após alterar datas ou valores.
+        </small>
+        <div id="ob-prev-semanal" style="display:grid;gap:8px"></div>
+      </div>
     </div>
     </div>
     
@@ -345,11 +352,52 @@ function obRenderCustos(){
       
       document.getElementById('ob-custos-list').innerHTML = html || '<div style="color:#94a3b8;text-align:center;padding:20px">Nenhuma categoria disponível.</div>';
       obCalcCustosTotal();
+      obCarregarPrevisao(id);
     })
     .catch(err => {
       console.error('Erro ao carregar categorias:', err);
       document.getElementById('ob-custos-list').innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;text-align:center;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px"><i class="bi bi-x-circle-fill"></i> Erro ao carregar categorias do Nibo.</div>';
     });
+}
+
+function obEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function obData(d){return d?d.split('-').reverse().join('/'):'';}
+
+function obCarregarPrevisao(id){
+  const box=document.getElementById('ob-prev-semanal');
+  if(!box) return;
+  box.innerHTML='<div style="color:#94a3b8;font-size:12px">Calculando previsão semanal…</div>';
+  fetch('/admin/painel-obras/obras/previsao-semanal?id='+encodeURIComponent(id))
+    .then(r=>r.json())
+    .then(d=>{
+      if(!d.ok){box.innerHTML='<div style="color:#fca5a5;font-size:12px">'+obEsc(d.error||'Erro ao calcular.')+'</div>';return;}
+      if(!d.configurada){box.innerHTML='<div style="color:#fcd34d;font-size:12px">'+obEsc(d.motivo)+'</div>';return;}
+      if(!d.categorias.length){box.innerHTML='<div style="color:#94a3b8;font-size:12px">Nenhum custo previsto salvo para distribuir.</div>';return;}
+      const head='<div style="font-size:12px;color:#94a3b8">Obra de '+obData(d.inicio)+' a '+obData(d.fim)+': '+d.total_semanas+' semanas'+(d.semana_atual>0?' (semana atual: '+d.semana_atual+')':' (ainda não iniciada)')+'</div>';
+      box.innerHTML=head+d.categorias.map(c=>{
+        const neg=c.saldo_atual!==null&&c.saldo_atual<0;
+        const cor=neg?'#fca5a5':'#86efac';
+        let badge=c.saldo_atual===null?'':`<span style="color:${cor};font-weight:600">${neg?'Estouro ':'Saldo '}${fmtBRL(c.saldo_atual)}</span>`;
+        if(c.alerta==='projetado') badge+=' <span style="color:#fcd34d;font-weight:600">· estouro projetado</span>';
+        const linhas=c.semanas.map(s=>`<tr style="${s.saldo!==null&&s.saldo<0?'color:#fca5a5;':''}${s.futura?'opacity:.65;':''}${s.atual?'background:rgba(59,130,246,.12);':''}">
+          <td>${s.semana}${s.atual?' ●':''}</td><td>${obData(s.inicio)} – ${obData(s.fim)}</td>
+          <td style="text-align:right">${fmtBRL(s.orcado)}</td><td style="text-align:right">${fmtBRL(s.saldo_anterior)}</td>
+          <td style="text-align:right">${fmtBRL(s.disponivel)}</td><td style="text-align:right">${fmtBRL(s.previsto)}</td>
+          <td style="text-align:right">${fmtBRL(s.pago)}</td>
+          <td style="text-align:right;font-weight:600">${s.saldo===null?'—':fmtBRL(s.saldo)}</td>
+          <td style="text-align:right">${s.projetado===null?'—':fmtBRL(s.projetado)}</td></tr>`).join('');
+        return `<details style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 12px">
+          <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;font-size:13px;color:#e2e8f0">
+            <span>${obEsc(c.categoria)} <small style="color:#64748b">${fmtBRL(c.previsto_total)} · ${fmtBRL(c.orcado_semanal)}/sem</small></span><span>${badge}</span>
+          </summary>
+          <div style="overflow-x:auto;margin-top:8px"><table style="width:100%;font-size:11px;color:#cbd5e1;border-collapse:collapse">
+            <thead><tr style="color:#94a3b8;text-align:left"><th>Sem.</th><th>Período</th><th style="text-align:right" title="Custo previsto distribuído na semana">Orçado</th><th style="text-align:right">Saldo ant.</th><th style="text-align:right">Disponível</th><th style="text-align:right" title="Despesas programadas no Nibo (data prevista)">Previsto</th><th style="text-align:right" title="Despesas pagas (data do pagamento)">Pago</th><th style="text-align:right">Saldo</th><th style="text-align:right" title="Saldo descontando o previsto ainda não pago">Projetado</th></tr></thead>
+            <tbody>${linhas}</tbody></table>
+            <div style="font-size:10px;color:#64748b;margin-top:4px">Previsto e Pago são o mesmo lançamento por datas diferentes (previsão x baixa) e não se somam. O saldo usa só o Pago.</div></div>
+        </details>`;
+      }).join('');
+    })
+    .catch(()=>{box.innerHTML='<div style="color:#fca5a5;font-size:12px">Falha ao carregar a previsão semanal.</div>';});
 }
 
 function obCalcCustosTotal(){

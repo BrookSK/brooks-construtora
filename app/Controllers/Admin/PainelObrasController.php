@@ -10,6 +10,8 @@ use App\Models\PainelCategoriasDepara;
 use App\Services\NiboCategoriesService;
 use App\Services\NiboService;
 use App\Services\PainelObrasService;
+use App\Services\PrevisaoSemanalService;
+use App\Services\PainelSnapshotService;
 use App\Models\NiboSyncSnapshot;
 
 /**
@@ -81,15 +83,37 @@ class PainelObrasController extends Controller
         $company     = (string) $this->input('company', 'brooks');
         $competencia = (string) $this->input('periodo', date('Y-m'));
 
+        // Consulta histórica: lê SOMENTE o snapshot congelado (nada ao vivo é lido ou gravado)
+        $snapshotId = (int) $this->input('snapshot_id', 0);
+        $snapCongelado = null;
+        $ctx = null;
+        if ($snapshotId > 0) {
+            try {
+                $snapCongelado = PainelSnapshotService::carregar($snapshotId);
+                $ctx = $snapCongelado ? PainelSnapshotService::contexto($snapCongelado) : null;
+            } catch (\Throwable $e) {
+                error_log('[PainelObras] Falha ao carregar snapshot ' . $snapshotId . ': ' . $e->getMessage());
+            }
+            if (!$ctx) {
+                $this->json(['ok' => false, 'error' => 'Snapshot não encontrado ou ilegível.'], 404);
+                return;
+            }
+            PainelObrasService::definirContexto($ctx);
+        }
+
         try {
-            // Sincroniza obras a partir dos centros de custo do Nibo
-            $sync = PainelObrasService::sincronizarObrasDoNibo($company);
+            // Sincroniza obras a partir dos centros de custo do Nibo (apenas na visão atual)
+            $sync = $ctx ? ['criadas' => 0, 'atualizadas' => 0, 'obras' => []] : PainelObrasService::sincronizarObrasDoNibo($company);
             
             $dashboardData = PainelObrasService::getDashboardData($competencia, $company);
             
             // Busca snapshot para pegar synced_at
-            $snapshot = NiboSyncSnapshot::latest($company === 'completo' ? 'brooks' : $company);
-            $syncedAt = $snapshot ? $snapshot['created_at'] : null;
+            if ($ctx) {
+                $syncedAt = $snapCongelado['meta']['snapshot_em'];
+            } else {
+                $snapshot = NiboSyncSnapshot::latest($company === 'completo' ? 'brooks' : $company);
+                $syncedAt = $snapshot ? $snapshot['created_at'] : null;
+            }
             
             // Aplica filtros do usuário
             $user = Auth::user();
@@ -155,17 +179,7 @@ class PainelObrasController extends Controller
                     
                     // Calcula total recebido apenas das obras filtradas
                     $obraIds = array_column($dashboardData['obras'], 'id');
-                    $totalRecebido = 0;
-                    if (!empty($obraIds)) {
-                        $placeholders = implode(',', array_fill(0, count($obraIds), '?'));
-                        $result = Database::fetch(
-                            "SELECT COALESCE(SUM(valor), 0) as total
-                             FROM painel_obras_recebimentos
-                             WHERE obra_id IN ($placeholders)",
-                            $obraIds
-                        );
-                        $totalRecebido = $result ? (float)$result['total'] : 0;
-                    }
+                    $totalRecebido = !empty($obraIds) ? PainelObrasService::totalRecebido($obraIds) : 0;
                     
                     $dashboardData['kpis'] = [
                         'obras_total' => count($dashboardData['obras']),
@@ -182,11 +196,35 @@ class PainelObrasController extends Controller
                 }
             }
             
+            // Alertas de estouro acumulado (previsão semanal x gasto efetivo do Nibo)
+            $dashboardData['alertas_orcamento'] = [];
+            $dashboardData['semana_categoria'] = [];
+            try {
+                if ($ctx) {
+                    // Alertas e semana de referência exatamente como foram calculados na sincronização
+                    $alertas = $snapCongelado['data']['alertas'] ?? [];
+                    $linhas = PainelSnapshotService::linhasSemanais($snapCongelado['data']);
+                    $dashboardData['semana_categoria'] = PrevisaoSemanalService::semanaAtualPorCategoria($linhas);
+                } else {
+                    PrevisaoSemanalService::garantirAtualizado();
+                    $empresaFiltro = NiboService::isValidCompany($company) ? $company : null;
+                    $alertas = PrevisaoSemanalService::alertasAtivos($empresaFiltro);
+                    $dashboardData['semana_categoria'] = PrevisaoSemanalService::semanaAtualPorCategoria(null, $empresaFiltro);
+                }
+                if ($config && !empty($obrasVisiveis)) {
+                    $alertas = array_values(array_filter($alertas, fn($a) => in_array((int) $a['obra_id'], $obrasVisiveis, true)));
+                }
+                $dashboardData['alertas_orcamento'] = $alertas;
+            } catch (\Throwable $e) {
+                error_log('[PainelObras] Alertas de orçamento indisponíveis: ' . $e->getMessage());
+            }
+
             $this->json([
                 'ok' => true,
                 'data' => $dashboardData,
                 'synced_at' => $syncedAt,
                 'sync_info' => $sync, // Info sobre obras criadas/atualizadas
+                'snapshot' => $ctx ? ['id' => $snapshotId, 'em' => $syncedAt, 'somente_leitura' => true] : null,
             ]);
         } catch (\Throwable $e) {
             error_log('[PainelObrasController] Erro ao buscar dados: ' . $e->getMessage());
@@ -194,7 +232,80 @@ class PainelObrasController extends Controller
                 'ok' => false,
                 'error' => 'Erro ao carregar dados: ' . $e->getMessage(),
             ], 500);
+        } finally {
+            PainelObrasService::definirContexto(null);
         }
+    }
+
+    /** Lista de snapshots para o filtro (mais recentes primeiro). */
+    public function snapshotsLista(): void
+    {
+        $company = (string) $this->input('company', 'brooks');
+        try {
+            $rows = PainelSnapshotService::listar($company);
+            $this->json(['ok' => true, 'snapshots' => array_map(fn($r) => [
+                'id' => (int) $r['id'],
+                'em' => $r['snapshot_em'],
+                'resumo' => json_decode($r['resumo_json'] ?? '{}', true) ?: [],
+            ], $rows)]);
+        } catch (\Throwable $e) {
+            error_log('[PainelObras] Falha ao listar snapshots: ' . $e->getMessage());
+            $this->json(['ok' => true, 'snapshots' => [], 'aviso' => 'Execute a migration 057 para habilitar snapshots.']);
+        }
+    }
+
+    /**
+     * Configuração congelada de um snapshot: sem obra_id lista as obras; com obra_id devolve
+     * dados da obra, custos previstos e a previsão semanal (orçado/previsto/pago/saldo) da época.
+     */
+    public function snapshotDetalhe(): void
+    {
+        $snapshotId = (int) $this->input('snapshot_id', 0);
+        $obraId = (int) $this->input('obra_id', 0);
+        $snap = $snapshotId ? PainelSnapshotService::carregar($snapshotId) : null;
+        if (!$snap) { $this->json(['ok' => false, 'error' => 'Snapshot não encontrado.'], 404); return; }
+        $d = $snap['data'];
+
+        $alertasPorObra = [];
+        foreach ($d['alertas'] ?? [] as $a) $alertasPorObra[(int) $a['obra_id']][(string) $a['categoria_id']] = $a['tipo'];
+
+        if (!$obraId) {
+            $obras = array_map(fn($o) => [
+                'id' => (int) $o['id'], 'codigo' => $o['codigo'], 'nome' => $o['nome'], 'tipo' => $o['tipo'],
+                'situacao' => $o['situacao'], 'valor_contratado' => (float) $o['valor_contratado'],
+                'data_inicio' => $o['data_inicio'], 'data_prev_fim' => $o['data_prev_fim'],
+                'custos_previstos_total' => array_sum(array_map(fn($c) => (float) $c['valor_previsto'], $d['custos'][(int) $o['id']] ?? [])),
+                'alertas' => count($alertasPorObra[(int) $o['id']] ?? []),
+            ], $d['obras'] ?? []);
+            $this->json(['ok' => true, 'snapshot_em' => $snap['meta']['snapshot_em'], 'obras' => $obras]);
+            return;
+        }
+
+        $obra = null;
+        foreach ($d['obras'] ?? [] as $o) if ((int) $o['id'] === $obraId) $obra = $o;
+        if (!$obra) { $this->json(['ok' => false, 'error' => 'Obra não existia neste snapshot.'], 404); return; }
+
+        $custos = $d['custos'][$obraId] ?? [];
+        $detalhe = ['ok' => true, 'configurada' => false, 'motivo' => 'Obra sem datas de início/fim neste snapshot.', 'categorias' => []];
+        if ($obra['data_inicio'] && $obra['data_prev_fim'] && $obra['data_prev_fim'] >= $obra['data_inicio']) {
+            $detalhe = PrevisaoSemanalService::montarDetalhe(
+                $obra['data_inicio'], $obra['data_prev_fim'], $custos,
+                PainelSnapshotService::linhasSemanais($d, $obraId), $alertasPorObra[$obraId] ?? []
+            );
+        }
+        $this->json([
+            'ok' => true, 'snapshot_em' => $snap['meta']['snapshot_em'],
+            'obra' => [
+                'id' => $obraId, 'codigo' => $obra['codigo'], 'nome' => $obra['nome'], 'tipo' => $obra['tipo'],
+                'cliente' => $obra['cliente'] ?? null, 'situacao' => $obra['situacao'],
+                'valor_contratado' => (float) $obra['valor_contratado'],
+                'data_contrato' => $obra['data_contrato'] ?? null,
+                'data_inicio' => $obra['data_inicio'], 'data_prev_fim' => $obra['data_prev_fim'],
+                'centros_custo' => json_decode($obra['centros_custo'] ?? '[]', true) ?: [],
+            ],
+            'custos_previstos' => $custos,
+            'previsao' => $detalhe,
+        ]);
     }
 
     // ─── Cadastro de Obras ────────────────────────────────────────────
@@ -318,6 +429,7 @@ class PainelObrasController extends Controller
             }
         }
         
+        $this->recalcularPrevisaoSemanal((int)$id);
         $this->json(['ok'=>true,'id'=>$id]);
     }
 
@@ -427,7 +539,31 @@ class PainelObrasController extends Controller
             }
         }
         
+        // Datas ou custos previstos podem ter mudado: recalcula a distribuição semanal
+        $this->recalcularPrevisaoSemanal($id);
         $this->json(['ok'=>true]);
+    }
+
+    /** Detalhe da previsão semanal acumulativa por categoria (aba Custos Previstos). */
+    public function obraPrevisaoSemanal(): void
+    {
+        $obraId = (int)$this->input('id', 0);
+        if (!$obraId) { $this->json(['ok'=>false,'error'=>'ID da obra obrigatório'], 422); return; }
+        try {
+            $this->json(PrevisaoSemanalService::detalhe($obraId));
+        } catch (\Throwable $e) {
+            error_log('[PainelObrasController] Erro previsão semanal: ' . $e->getMessage());
+            $this->json(['ok'=>false,'error'=>'Erro ao calcular previsão semanal. Verifique se a migration 056 foi executada.'], 500);
+        }
+    }
+
+    private function recalcularPrevisaoSemanal(int $obraId): void
+    {
+        try {
+            PrevisaoSemanalService::recalcularObra($obraId);
+        } catch (\Throwable $e) {
+            error_log('[PainelObras] Falha ao recalcular previsão semanal da obra ' . $obraId . ': ' . $e->getMessage());
+        }
     }
 
     public function obraDelete(): void

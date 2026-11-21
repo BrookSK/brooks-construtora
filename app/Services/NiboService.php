@@ -777,6 +777,60 @@ class NiboService
     }
 
     /**
+     * Busca UMA página de pagamentos realizados (GET /v1/payments).
+     * Campos usados (conforme a documentação do Nibo): scheduleId, date, value,
+     * isTransfer. "date" é a data real da baixa. Limite da API: 500 por consulta.
+     *
+     * @return array{items:array,received:int,total:?int,paging_reliable:bool}
+     */
+    public static function paymentsPage(int $skip, string $from, ?string $token = null, int $pageSize = 100, string $company = 'brooks'): array
+    {
+        $token = $token ?: self::token($company);
+        $query = [
+            '$orderby' => 'date',
+            '$top' => (string) $pageSize,
+            '$skip' => (string) $skip,
+            '$filter' => 'date ge ' . $from . 'T00:00:00Z',
+        ];
+        $res = self::request('GET', '/payments', $query, null, $token);
+        $filtrouNoServidor = true;
+        if (!$res['ok']) {
+            // A doc só exemplifica "date" em $orderby: tenta sem $filter e filtra aqui
+            unset($query['$filter']);
+            $res = self::request('GET', '/payments', $query, null, $token);
+            $filtrouNoServidor = false;
+        }
+        if (!$res['ok']) {
+            throw new \RuntimeException("HTTP {$res['status']} " . ($res['error'] ?? ''));
+        }
+
+        $items = [];
+        foreach (self::extractItems($res['response']) as $p) {
+            if (!empty($p['isTransfer'])) continue;
+            $sid = $p['scheduleId'] ?? null;
+            $date = $p['date'] ?? null;
+            if (!$sid || !$date) continue;
+            if (!$filtrouNoServidor && substr((string) $date, 0, 10) < $from) continue;
+            $items[] = [
+                'schedule_id' => (string) $sid,
+                'date' => substr((string) $date, 0, 10),
+                'value' => abs((float) ($p['value'] ?? 0)),
+            ];
+        }
+
+        $total = null;
+        $resp = $res['response'];
+        if (is_array($resp) && isset($resp['count']) && is_numeric($resp['count'])) $total = (int) $resp['count'];
+
+        return [
+            'items' => $items,
+            'received' => is_array($resp['items'] ?? null) ? count($resp['items']) : count($items),
+            'total' => $total,
+            'paging_reliable' => true,
+        ];
+    }
+
+    /**
      * Cria um índice id => nome a partir de uma lista de mestres.
      */
     private static function indexById(array $list): array
@@ -852,6 +906,12 @@ class NiboService
 
         $isPaid = !empty($s['isPaid']) || !empty($s['paid']) || !empty($s['paymentDate']) || !empty($s['isFullyPaid']);
 
+        // A API de agendamentos NÃO traz data de pagamento (só isPaid/paidValue/openValue).
+        // A data real vem de GET /v1/payments (campo "date", ligado por scheduleId) e é
+        // anexada no sync (FinanceController::syncFinish) em payment_date / payments.
+        $paymentDate = null;
+        $paidValue = isset($s['paidValue']) ? abs((float) $s['paidValue']) : null;
+
         // Status derivado (só leitura): pago / vencido / em aberto.
         // O "vencido" é medido pela DATA DE VENCIMENTO (fixa).
         $status = 'open';
@@ -868,6 +928,8 @@ class NiboService
             'type' => $type,
             'due_date' => $dueDate,           // Vencimento (fixo)
             'forecast_date' => $forecastDate, // Previsto para (pode ser postergado)
+            'payment_date' => $paymentDate,   // Preenchido no sync a partir de /payments (data real da baixa)
+            'paid_value' => $paidValue,       // paidValue da API
             'value' => $value,
             'open_value' => $openValue,
             'description' => $s['description'] ?? '',

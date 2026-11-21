@@ -1,0 +1,584 @@
+<?php
+
+namespace App\Services;
+
+use App\Core\Database;
+
+/**
+ * Previsão semanal acumulativa por obra e categoria.
+ *
+ * Três grandezas distintas por categoria e semana (nunca somadas entre si):
+ *  - ORÇADO: custo previsto da categoria distribuído igualmente entre as semanas da obra.
+ *  - PREVISTO (programado): despesas do Nibo classificadas pela data prevista
+ *    (forecast_date; se ausente, vencimento). Inclui lançamentos pagos e em aberto.
+ *  - PAGO: as mesmas despesas já baixadas, classificadas pela data real de pagamento (payment_date).
+ *
+ * Saldo realizado:  saldo_n = saldo_(n-1) + orçado_n - pago_n   (só semanas até a corrente)
+ * Saldo projetado:  desconta apenas o previsto AINDA NÃO PAGO (aberto); um lançamento pago
+ *                   nunca é contado como previsto e pago ao mesmo tempo.
+ *
+ * Alerta 'realizado': saldo realizado da semana corrente < 0.
+ * Alerta 'projetado': saldo realizado >= 0, mas o saldo projetado fica < 0 em alguma semana
+ *                     corrente/futura (compromissos em aberto estouram o orçamento acumulado).
+ *
+ * calcular() é uma função pura (centavos inteiros) usada tanto na visão atual quanto no
+ * congelamento de snapshots.
+ */
+class PrevisaoSemanalService
+{
+    // ─── Cálculo puro ────────────────────────────────────────────────
+
+    public static function totalSemanas(string $ini, string $fim): int
+    {
+        $dias = self::diasEntre($ini, $fim) + 1;
+        return $dias > 0 ? (int) ceil($dias / 7) : 0;
+    }
+
+    /** Semana (1..total) que contém $hoje; 0 se a obra ainda não começou. */
+    public static function semanaAtual(string $ini, string $hoje, int $total): int
+    {
+        $dias = self::diasEntre($ini, $hoje);
+        if ($dias < 0) return 0;
+        return min($total, intdiv($dias, 7) + 1);
+    }
+
+    /** Divide $totalCents em $semanas partes; sobras de centavos vão para as primeiras semanas. */
+    public static function distribuir(int $totalCents, int $semanas): array
+    {
+        if ($semanas <= 0) return [];
+        $base = intdiv($totalCents, $semanas);
+        $resto = $totalCents - $base * $semanas;
+        $out = [];
+        for ($i = 0; $i < $semanas; $i++) $out[] = $base + ($i < $resto ? 1 : 0);
+        return $out;
+    }
+
+    /** Semana (1..total) de uma data dentro da janela da obra; 0 se fora. */
+    public static function semanaDe(string $ini, string $fim, int $total, string $data): int
+    {
+        $data = substr($data, 0, 10);
+        if ($data === '' || $data < $ini || $data > $fim) return 0;
+        $w = intdiv(self::diasEntre($ini, $data), 7) + 1;
+        return $w <= $total ? $w : 0;
+    }
+
+    /**
+     * Calcula a previsão semanal de uma obra. Não acessa banco.
+     *
+     * @param array  $obra        id, data_inicio, data_prev_fim
+     * @param array  $custos      linhas com categoria_nibo_id, categoria_nome, valor_previsto
+     * @param array  $lancamentos lançamentos enriquecidos (PainelObrasService::dadosIntervalo)
+     * @param string $hoje        Y-m-d de referência (data da sync, no caso de snapshots)
+     * @return array{total:int,atual:int,pagos_sem_data:int,categorias:array<string,array>}
+     *         Valores em centavos.
+     */
+    public static function calcular(array $obra, array $custos, array $lancamentos, string $hoje): array
+    {
+        $ini = (string) ($obra['data_inicio'] ?? '');
+        $fim = (string) ($obra['data_prev_fim'] ?? '');
+        $total = ($ini !== '' && $fim !== '' && $fim >= $ini) ? self::totalSemanas($ini, $fim) : 0;
+        if ($total === 0) return ['total' => 0, 'atual' => 0, 'pagos_sem_data' => 0, 'categorias' => []];
+
+        $atual = self::semanaAtual($ini, $hoje, $total);
+        $ag = self::agrupar($lancamentos, (int) $obra['id'], $ini, $fim, $total);
+
+        $categorias = [];
+        foreach ($custos as $c) {
+            $valorCents = (int) round(((float) $c['valor_previsto']) * 100);
+            if ($valorCents <= 0) continue;
+            $catId = (string) $c['categoria_nibo_id'];
+            $orc = self::distribuir($valorCents, $total);
+            $g = $ag['cats'][$catId] ?? ['prog' => [], 'aberto' => [], 'pago' => []];
+
+            $pend = 0; // previsto não pago até a semana corrente
+            for ($n = 1; $n <= $atual; $n++) $pend += $g['aberto'][$n] ?? 0;
+
+            $semanas = [];
+            $saldo = 0;          // realizado
+            $proj = 0;           // projetado (carrega de semana em semana)
+            $cumOrc = $cumPago = $cumAberto = 0;
+            $cumOrcAte = $cumPagoAte = $cumAbertoAte = []; // acumulados por semana (para alertas)
+            $saldoAtual = null;
+
+            for ($n = 1; $n <= $total; $n++) {
+                $o = $orc[$n - 1];
+                $prog = $g['prog'][$n] ?? 0;
+                $aberto = $g['aberto'][$n] ?? 0;
+                $pago = $g['pago'][$n] ?? 0;
+                $cumOrc += $o; $cumPago += $pago; $cumAberto += $aberto;
+                $cumOrcAte[$n] = $cumOrc; $cumPagoAte[$n] = $cumPago; $cumAbertoAte[$n] = $cumAberto;
+                [$si, $sf] = self::periodoSemana($ini, $fim, $n);
+
+                if ($n <= $atual) {
+                    $ant = $saldo;
+                    $disp = $ant + $o;
+                    $saldo = $disp - $pago;
+                    $saldoSem = $saldo;
+                    $proj = ($n === $atual) ? $saldo - $pend : $saldo;
+                    if ($n === $atual) $saldoAtual = $saldo;
+                } else {
+                    $ant = $proj;
+                    $disp = $ant + $o;
+                    $proj = $disp - $aberto - $pago; // pago com data futura também é gasto esperado
+                    $saldoSem = null;
+                }
+
+                $semanas[] = [
+                    'n' => $n, 'inicio' => $si, 'fim' => $sf,
+                    'orcado' => $o, 'saldo_anterior' => $ant, 'disponivel' => $disp,
+                    'programado' => $prog, 'aberto' => $aberto, 'pago' => $pago,
+                    'saldo' => $saldoSem, 'projetado' => $proj, 'atual' => $n === $atual,
+                ];
+            }
+
+            // Alerta
+            $alerta = null;
+            if ($atual >= 1 && $saldoAtual < 0) {
+                $s = $semanas[$atual - 1];
+                $alerta = [
+                    'tipo' => 'realizado', 'semana' => $atual, 'inicio' => $s['inicio'], 'fim' => $s['fim'],
+                    'previsto_acum' => $cumOrcAte[$atual], 'gasto_acum' => $cumPagoAte[$atual],
+                    'comprometido' => $pend, 'desvio' => $saldoAtual,
+                ];
+            } else {
+                for ($n = max($atual, 1); $n <= $total; $n++) {
+                    $s = $semanas[$n - 1];
+                    if ($s['projetado'] < 0) {
+                        $futuroPago = $cumPagoAte[$n] - ($atual >= 1 ? $cumPagoAte[$atual] : 0);
+                        $alerta = [
+                            'tipo' => 'projetado', 'semana' => $n, 'inicio' => $s['inicio'], 'fim' => $s['fim'],
+                            'previsto_acum' => $cumOrcAte[$n],
+                            'gasto_acum' => $atual >= 1 ? $cumPagoAte[$atual] : 0,
+                            'comprometido' => $cumAbertoAte[$n] + $futuroPago,
+                            'desvio' => $s['projetado'],
+                        ];
+                        break;
+                    }
+                }
+            }
+
+            $categorias[$catId] = [
+                'nome' => $c['categoria_nome'], 'previsto_total' => $valorCents,
+                'semanas' => $semanas, 'alerta' => $alerta,
+            ];
+        }
+
+        return ['total' => $total, 'atual' => $atual, 'pagos_sem_data' => $ag['pagos_sem_data'], 'categorias' => $categorias];
+    }
+
+    /** Linhas planas (reais) na ordem das colunas de painel_obras_previsao_semanal (sem calculado_em). */
+    public static function linhasPlanas(int $obraId, array $res): array
+    {
+        $out = [];
+        foreach ($res['categorias'] as $catId => $c) {
+            foreach ($c['semanas'] as $s) {
+                $out[] = [
+                    $obraId, (string) $catId, $c['nome'], $s['n'], $s['inicio'], $s['fim'],
+                    $s['orcado'] / 100, $s['saldo_anterior'] / 100, $s['disponivel'] / 100,
+                    $s['programado'] / 100, $s['aberto'] / 100, $s['pago'] / 100,
+                    $s['saldo'] === null ? null : $s['saldo'] / 100, $s['projetado'] / 100,
+                    $s['atual'] ? 1 : 0,
+                ];
+            }
+        }
+        return $out;
+    }
+
+    public const COLUNAS = [
+        'obra_id', 'categoria_nibo_id', 'categoria_nome', 'semana_num', 'semana_inicio', 'semana_fim',
+        'orcado_semana', 'saldo_anterior', 'disponivel', 'programado_semana', 'programado_aberto',
+        'pago_semana', 'saldo_acumulado', 'saldo_projetado', 'is_atual',
+    ];
+
+    /** Alertas (reais) por categoria, no formato de painel_obras_alertas_orcamento. */
+    public static function alertasPlanos(array $res): array
+    {
+        $out = [];
+        foreach ($res['categorias'] as $catId => $c) {
+            if (!$c['alerta']) continue;
+            $a = $c['alerta'];
+            $out[(string) $catId] = [
+                'categoria_nome' => $c['nome'], 'tipo' => $a['tipo'],
+                'semana_num' => $a['semana'], 'semana_inicio' => $a['inicio'], 'semana_fim' => $a['fim'],
+                'previsto_acumulado' => $a['previsto_acum'] / 100, 'gasto_acumulado' => $a['gasto_acum'] / 100,
+                'comprometido' => $a['comprometido'] / 100, 'desvio' => $a['desvio'] / 100,
+            ];
+        }
+        return $out;
+    }
+
+    // ─── Visão atual (persistida, recalculável) ──────────────────────
+
+    /** Recalcula todas as obras ativas com datas (usado após cada sync do Nibo). */
+    public static function recalcularTodas(): int
+    {
+        $obras = Database::fetchAll(
+            "SELECT id, company, data_inicio, data_prev_fim FROM painel_obras
+             WHERE situacao = 'Ativa' AND data_inicio IS NOT NULL AND data_prev_fim IS NOT NULL"
+        );
+        $porCompany = [];
+        foreach ($obras as $o) $porCompany[$o['company'] ?: 'brooks'][] = $o;
+
+        $n = 0;
+        foreach ($porCompany as $company => $lista) {
+            $lancs = self::carregarLancamentos($company, $lista);
+            foreach ($lista as $o) {
+                try {
+                    self::recalcularObra((int) $o['id'], $lancs);
+                    $n++;
+                } catch (\Throwable $e) {
+                    error_log('[PrevisaoSemanal] Erro na obra ' . $o['id'] . ': ' . $e->getMessage());
+                }
+            }
+        }
+        return $n;
+    }
+
+    /** Recalcula só se houver sync novo, virada de dia ou obra sem cálculo. */
+    public static function garantirAtualizado(): void
+    {
+        $hoje = date('Y-m-d');
+        $obras = Database::fetchAll(
+            "SELECT o.id,
+                    (SELECT MAX(p.calculado_em) FROM painel_obras_previsao_semanal p WHERE p.obra_id = o.id) AS ult
+             FROM painel_obras o
+             WHERE o.situacao = 'Ativa' AND o.data_inicio IS NOT NULL AND o.data_prev_fim IS NOT NULL
+               AND o.data_inicio <= o.data_prev_fim
+               AND EXISTS (SELECT 1 FROM painel_obras_custos_previstos c WHERE c.obra_id = o.id AND c.valor_previsto > 0)"
+        );
+        if (!$obras) return;
+
+        $snap = Database::fetch("SELECT MAX(created_at) AS m FROM nibo_sync_snapshots");
+        $snapEm = $snap['m'] ?? null;
+
+        foreach ($obras as $o) {
+            $ult = $o['ult'];
+            if (!$ult || substr($ult, 0, 10) < $hoje || ($snapEm && $ult < $snapEm)) {
+                self::recalcularTodas();
+                return;
+            }
+        }
+    }
+
+    /** Recalcula e persiste a visão atual de uma obra. Não toca em snapshots congelados. */
+    public static function recalcularObra(int $obraId, ?array $lancamentos = null): void
+    {
+        $obra = Database::fetch("SELECT id, company, situacao, data_inicio, data_prev_fim FROM painel_obras WHERE id = ?", [$obraId]);
+        if (!$obra) return;
+
+        $custos = Database::fetchAll(
+            "SELECT categoria_nibo_id, categoria_nome, valor_previsto FROM painel_obras_custos_previstos
+             WHERE obra_id = ? AND valor_previsto > 0",
+            [$obraId]
+        );
+
+        $temJanela = $obra['data_inicio'] && $obra['data_prev_fim'] && $obra['data_prev_fim'] >= $obra['data_inicio'];
+        if (!$custos || !$temJanela) {
+            self::substituirLinhas($obraId, []);
+            self::sincronizarAlertas($obraId, []);
+            return;
+        }
+
+        if ($lancamentos === null) {
+            $lancamentos = self::carregarLancamentos($obra['company'] ?: 'brooks', [$obra]);
+        }
+
+        $res = self::calcular($obra, $custos, $lancamentos, date('Y-m-d'));
+        $agora = date('Y-m-d H:i:s');
+        $linhas = array_map(fn($l) => array_merge($l, [$agora]), self::linhasPlanas($obraId, $res));
+        self::substituirLinhas($obraId, $linhas);
+        self::sincronizarAlertas($obraId, self::alertasPlanos($res));
+    }
+
+    // ─── Leitura ─────────────────────────────────────────────────────
+
+    /** Detalhe semanal da obra (visão atual), para a aba Custos Previstos. */
+    public static function detalhe(int $obraId): array
+    {
+        $obra = Database::fetch("SELECT id, data_inicio, data_prev_fim FROM painel_obras WHERE id = ?", [$obraId]);
+        if (!$obra) return ['ok' => false, 'error' => 'Obra não encontrada.'];
+
+        $ini = $obra['data_inicio'];
+        $fim = $obra['data_prev_fim'];
+        if (!$ini || !$fim || $fim < $ini) {
+            return ['ok' => true, 'configurada' => false, 'motivo' => 'Informe a data de início e a data prevista de fim da obra.', 'categorias' => []];
+        }
+
+        self::recalcularObra($obraId);
+
+        $custos = Database::fetchAll(
+            "SELECT categoria_nibo_id, categoria_nome, valor_previsto FROM painel_obras_custos_previstos
+             WHERE obra_id = ? AND valor_previsto > 0 ORDER BY categoria_nome",
+            [$obraId]
+        );
+        $rows = Database::fetchAll(
+            "SELECT * FROM painel_obras_previsao_semanal WHERE obra_id = ? ORDER BY categoria_nome, semana_num",
+            [$obraId]
+        );
+        $alertas = [];
+        foreach (Database::fetchAll("SELECT categoria_nibo_id, tipo FROM painel_obras_alertas_orcamento WHERE obra_id = ? AND status = 'ativo'", [$obraId]) as $a) {
+            $alertas[$a['categoria_nibo_id']] = $a['tipo'];
+        }
+        return self::montarDetalhe($ini, $fim, $custos, $rows, $alertas);
+    }
+
+    /**
+     * Monta o detalhe a partir de linhas com as colunas de painel_obras_previsao_semanal
+     * (usado na visão atual e nos snapshots congelados).
+     */
+    public static function montarDetalhe(string $ini, string $fim, array $custos, array $rows, array $alertas): array
+    {
+        $total = self::totalSemanas($ini, $fim);
+        $porCat = [];
+        $atual = 0;
+        foreach ($rows as $r) {
+            $porCat[$r['categoria_nibo_id']][] = $r;
+            if (!empty($r['is_atual'])) $atual = max($atual, (int) $r['semana_num']);
+        }
+
+        $cats = [];
+        foreach ($custos as $c) {
+            $id = (string) $c['categoria_nibo_id'];
+            $semanas = [];
+            foreach ($porCat[$id] ?? [] as $r) {
+                $semanas[] = [
+                    'semana' => (int) $r['semana_num'], 'inicio' => $r['semana_inicio'], 'fim' => $r['semana_fim'],
+                    'orcado' => (float) $r['orcado_semana'], 'saldo_anterior' => (float) $r['saldo_anterior'],
+                    'disponivel' => (float) $r['disponivel'],
+                    'previsto' => (float) $r['programado_semana'], 'previsto_aberto' => (float) $r['programado_aberto'],
+                    'pago' => (float) $r['pago_semana'],
+                    'saldo' => $r['saldo_acumulado'] === null ? null : (float) $r['saldo_acumulado'],
+                    'projetado' => $r['saldo_projetado'] === null ? null : (float) $r['saldo_projetado'],
+                    'atual' => !empty($r['is_atual']),
+                    'futura' => $r['saldo_acumulado'] === null,
+                ];
+            }
+            $saldoAtual = null;
+            foreach ($semanas as $s) if ($s['atual']) $saldoAtual = $s['saldo'];
+            $cats[] = [
+                'categoria_id' => $id,
+                'categoria' => $c['categoria_nome'],
+                'previsto_total' => (float) $c['valor_previsto'],
+                'orcado_semanal' => $total > 0 ? round(((float) $c['valor_previsto']) / $total, 2) : 0,
+                'saldo_atual' => $saldoAtual,
+                'alerta' => $alertas[$id] ?? null,
+                'semanas' => $semanas,
+            ];
+        }
+
+        return [
+            'ok' => true, 'configurada' => true,
+            'inicio' => $ini, 'fim' => $fim,
+            'total_semanas' => $total, 'semana_atual' => $atual,
+            'categorias' => $cats,
+        ];
+    }
+
+    /** Alertas ativos de obras ativas (visão atual), para o dashboard. */
+    public static function alertasAtivos(?string $company = null): array
+    {
+        // Mesmo recorte do snapshot congelado: só obras da empresa selecionada
+        $rows = Database::fetchAll(
+            "SELECT a.*, o.codigo, o.nome AS obra_nome
+             FROM painel_obras_alertas_orcamento a
+             INNER JOIN painel_obras o ON o.id = a.obra_id
+             WHERE a.status = 'ativo' AND o.situacao = 'Ativa'" . ($company ? " AND o.company = ?" : "") . "
+             ORDER BY a.tipo ASC, a.desvio ASC",
+            $company ? [$company] : []
+        );
+        return array_map(fn($a) => [
+            'obra_id' => (int) $a['obra_id'],
+            'obra_codigo' => $a['codigo'],
+            'obra_nome' => $a['obra_nome'],
+            'categoria_id' => $a['categoria_nibo_id'],
+            'categoria' => $a['categoria_nome'],
+            'tipo' => $a['tipo'],
+            'semana' => (int) $a['semana_num'],
+            'semana_inicio' => $a['semana_inicio'],
+            'semana_fim' => $a['semana_fim'],
+            'previsto_acumulado' => (float) $a['previsto_acumulado'],
+            'gasto_acumulado' => (float) $a['gasto_acumulado'],
+            'comprometido' => (float) $a['comprometido'],
+            'desvio' => (float) $a['desvio'],
+            'detectado_em' => $a['detectado_em'],
+        ], $rows);
+    }
+
+    /** Orçado x previsto x pago da semana de referência (is_atual) agregado por nome de categoria. */
+    public static function semanaAtualPorCategoria(?array $rows = null, ?string $company = null): array
+    {
+        if ($rows === null) {
+            $rows = Database::fetchAll(
+                "SELECT p.categoria_nome, p.orcado_semana, p.programado_semana, p.pago_semana, p.saldo_acumulado,
+                        p.saldo_projetado, p.is_atual
+                 FROM painel_obras_previsao_semanal p
+                 INNER JOIN painel_obras o ON o.id = p.obra_id
+                 WHERE p.is_atual = 1 AND o.situacao = 'Ativa'" . ($company ? " AND o.company = ?" : ""),
+                $company ? [$company] : []
+            );
+        }
+        $out = [];
+        foreach ($rows as $r) {
+            if (empty($r['is_atual'])) continue;
+            $k = $r['categoria_nome'];
+            $out[$k] ??= ['orcado' => 0.0, 'previsto' => 0.0, 'pago' => 0.0, 'saldo' => 0.0, 'projetado' => 0.0, 'obras' => 0];
+            $out[$k]['orcado'] += (float) $r['orcado_semana'];
+            $out[$k]['previsto'] += (float) $r['programado_semana'];
+            $out[$k]['pago'] += (float) $r['pago_semana'];
+            $out[$k]['saldo'] += (float) ($r['saldo_acumulado'] ?? 0);
+            $out[$k]['projetado'] += (float) ($r['saldo_projetado'] ?? 0);
+            $out[$k]['obras']++;
+        }
+        foreach ($out as &$v) foreach (['orcado', 'previsto', 'pago', 'saldo', 'projetado'] as $f) $v[$f] = round($v[$f], 2);
+        return $out;
+    }
+
+    // ─── Internos ────────────────────────────────────────────────────
+
+    /** Lançamentos (do snapshot atual ou do contexto congelado) cobrindo as janelas das obras. */
+    public static function carregarLancamentos(string $company, array $obras): array
+    {
+        if (!PainelObrasService::snapshotAtual($company)) return [];
+        $min = $max = null;
+        foreach ($obras as $o) {
+            if (!$o['data_inicio'] || !$o['data_prev_fim']) continue;
+            if ($min === null || $o['data_inicio'] < $min) $min = $o['data_inicio'];
+            if ($max === null || $o['data_prev_fim'] > $max) $max = $o['data_prev_fim'];
+        }
+        if ($min === null) return [];
+        return PainelObrasService::dadosIntervalo($company, $min, $max)['lancamentos'] ?? [];
+    }
+
+    /**
+     * Agrupa despesas (payable) da obra por categoria e semana, em centavos.
+     *  prog   = todas, pela data prevista (forecast_date, senão vencimento)
+     *  aberto = não pagas, pela data prevista
+     *  pago   = pagas, pela data real (payment_date); sem ela, usa a prevista e conta em pagos_sem_data
+     */
+    private static function agrupar(array $lancs, int $obraId, string $ini, string $fim, int $total): array
+    {
+        $cats = [];
+        $semData = 0;
+        foreach ($lancs as $l) {
+            if (($l['obra_id'] ?? null) != $obraId) continue;
+            if (($l['type'] ?? '') !== 'payable') continue;
+            $cat = (string) ($l['categoria_nibo_id'] ?? '');
+            if ($cat === '') continue;
+
+            $cents = (int) round(((float) $l['valor_rateado']) * 100);
+            $paga = ($l['status'] ?? '') === 'paid';
+            $dataPrev = substr((string) (($l['forecast_date'] ?? '') ?: ($l['due_date'] ?? '')), 0, 10);
+
+            $baixas = is_array($l['payments'] ?? null) ? array_values($l['payments']) : [];
+            $somaBaixas = 0.0;
+            foreach ($baixas as $b) $somaBaixas += (float) ($b['value'] ?? 0);
+
+            // Parte já paga e parte ainda em aberto deste lançamento (nunca somam mais que o valor dele):
+            //  - pago (isPaid): 100% pago
+            //  - parcial (não pago, mas com baixas): fração = baixas / valor total do agendamento
+            //  - sem baixas: 100% em aberto
+            if ($paga) {
+                $pagoC = $cents;
+            } elseif ($baixas && $somaBaixas > 0) {
+                $orig = (float) ($l['valor_original'] ?? 0);
+                $pagoC = $orig > 0 ? (int) round($cents * min(1.0, $somaBaixas / $orig)) : 0;
+            } else {
+                $pagoC = 0;
+            }
+            $abertoC = $cents - $pagoC;
+
+            // PREVISTO: valor integral do lançamento na semana da data prevista (informativo)
+            $w = self::semanaDe($ini, $fim, $total, $dataPrev);
+            if ($w) {
+                $cats[$cat]['prog'][$w] = ($cats[$cat]['prog'][$w] ?? 0) + $cents;
+                if ($abertoC > 0) $cats[$cat]['aberto'][$w] = ($cats[$cat]['aberto'][$w] ?? 0) + $abertoC;
+            }
+
+            // PAGO: a parte paga, na semana da data real de cada baixa (GET /payments)
+            if ($pagoC > 0) {
+                if ($baixas && $somaBaixas > 0) {
+                    $resto = $pagoC;
+                    $ultimo = count($baixas) - 1;
+                    foreach ($baixas as $i => $b) {
+                        $parte = $i === $ultimo ? $resto : (int) round($pagoC * ((float) $b['value']) / $somaBaixas);
+                        $resto -= $parte;
+                        $w2 = self::semanaDe($ini, $fim, $total, (string) ($b['date'] ?? ''));
+                        if ($w2) $cats[$cat]['pago'][$w2] = ($cats[$cat]['pago'][$w2] ?? 0) + $parte;
+                    }
+                } else {
+                    $dataPago = substr((string) ($l['payment_date'] ?? ''), 0, 10);
+                    // Sem data real de pagamento (ex.: sync em que /payments falhou): usa a prevista e contabiliza
+                    if ($dataPago === '') { $dataPago = $dataPrev; $semData++; }
+                    $w2 = self::semanaDe($ini, $fim, $total, $dataPago);
+                    if ($w2) $cats[$cat]['pago'][$w2] = ($cats[$cat]['pago'][$w2] ?? 0) + $pagoC;
+                }
+            }
+        }
+        return ['cats' => $cats, 'pagos_sem_data' => $semData];
+    }
+
+    private static function periodoSemana(string $ini, string $fim, int $n): array
+    {
+        $si = gmdate('Y-m-d', strtotime($ini . ' UTC') + ($n - 1) * 7 * 86400);
+        $sf = gmdate('Y-m-d', strtotime($ini . ' UTC') + ($n * 7 - 1) * 86400);
+        return [$si, min($sf, $fim)];
+    }
+
+    private static function diasEntre(string $a, string $b): int
+    {
+        return intdiv(strtotime(substr($b, 0, 10) . ' UTC') - strtotime(substr($a, 0, 10) . ' UTC'), 86400);
+    }
+
+    private static function substituirLinhas(int $obraId, array $linhas): void
+    {
+        $pdo = Database::getConnection();
+        $pdo->beginTransaction();
+        try {
+            Database::query("DELETE FROM painel_obras_previsao_semanal WHERE obra_id = ?", [$obraId]);
+            $cols = implode(', ', self::COLUNAS) . ', calculado_em';
+            $um = '(' . implode(',', array_fill(0, count(self::COLUNAS) + 1, '?')) . ')';
+            foreach (array_chunk($linhas, 150) as $chunk) {
+                $ph = implode(',', array_fill(0, count($chunk), $um));
+                Database::query("INSERT INTO painel_obras_previsao_semanal ($cols) VALUES $ph", array_merge(...$chunk));
+            }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Um registro por obra + categoria (sem duplicidade). Abre/atualiza quando há alerta
+     * (realizado ou projetado) e resolve quando o desvio some ou a categoria deixa de ter previsão.
+     * Afeta apenas a visão atual; snapshots congelados guardam os próprios alertas.
+     */
+    private static function sincronizarAlertas(int $obraId, array $alertas): void
+    {
+        $agora = date('Y-m-d H:i:s');
+        $existentes = [];
+        foreach (Database::fetchAll("SELECT * FROM painel_obras_alertas_orcamento WHERE obra_id = ?", [$obraId]) as $a) {
+            $existentes[$a['categoria_nibo_id']] = $a;
+        }
+
+        foreach ($alertas as $catId => $a) {
+            $ex = $existentes[$catId] ?? null;
+            $dados = $a + ['status' => 'ativo', 'atualizado_em' => $agora, 'resolvido_em' => null];
+            if (!$ex) {
+                Database::insert('painel_obras_alertas_orcamento', $dados + [
+                    'obra_id' => $obraId, 'categoria_nibo_id' => (string) $catId, 'detectado_em' => $agora,
+                ]);
+            } else {
+                if ($ex['status'] === 'resolvido') $dados['detectado_em'] = $agora; // desvio reaberto
+                Database::update('painel_obras_alertas_orcamento', $dados, 'id = ?', [$ex['id']]);
+            }
+        }
+
+        foreach ($existentes as $catId => $ex) {
+            if (!isset($alertas[$catId]) && $ex['status'] === 'ativo') {
+                Database::update('painel_obras_alertas_orcamento',
+                    ['status' => 'resolvido', 'resolvido_em' => $agora, 'atualizado_em' => $agora], 'id = ?', [$ex['id']]);
+            }
+        }
+    }
+}
