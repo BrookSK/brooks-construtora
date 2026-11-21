@@ -384,7 +384,7 @@ function obCarregarPrevisao(id){
           <td style="text-align:right">${fmtBRL(s.orcado)}</td><td style="text-align:right">${fmtBRL(s.saldo_anterior)}</td>
           <td style="text-align:right">${fmtBRL(s.disponivel)}</td><td style="text-align:right">${fmtBRL(s.previsto)}</td>
           <td style="text-align:right">${fmtBRL(s.pago)}</td>
-          <td style="text-align:right;font-weight:600">${s.saldo===null?'—':fmtBRL(s.saldo)}</td>
+          <td style="text-align:right;font-weight:600">${s.saldo===null?(s.projetado===null?'—':`<span style="color:#475569;font-style:italic;font-weight:400" title="Projeção: semana ainda não ocorreu. Considera orçado acumulado menos pago e previsto já lançados.">${fmtBRL(s.projetado)}</span>`):fmtBRL(s.saldo)}</td>
           <td style="text-align:right">${s.projetado===null?'—':fmtBRL(s.projetado)}</td></tr>`).join('');
         return `<details style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px">
           <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;font-size:13px;color:#0f172a">
@@ -393,7 +393,7 @@ function obCarregarPrevisao(id){
           <div style="overflow-x:auto;margin-top:8px"><table style="width:100%;font-size:11px;color:#1e293b;border-collapse:collapse">
             <thead><tr style="color:#475569;text-align:left"><th>Sem.</th><th>Período</th><th style="text-align:right" title="Custo previsto distribuído na semana">Orçado</th><th style="text-align:right">Saldo ant.</th><th style="text-align:right">Disponível</th><th style="text-align:right" title="Programado e ainda NÃO pago (data prevista). Quando é pago, passa para a coluna Pago.">Previsto</th><th style="text-align:right" title="Despesas pagas (data do pagamento)">Pago</th><th style="text-align:right">Saldo</th><th style="text-align:right" title="Saldo descontando o previsto ainda não pago">Projetado</th></tr></thead>
             <tbody>${linhas}</tbody></table>
-            <div style="font-size:10px;color:#475569;margin-top:4px">Cada lançamento conta só em um: Previsto (ainda não pago) ou Pago (já baixado). O saldo usa só o Pago; o Projetado também desconta o Previsto.</div></div>
+            <div style="font-size:10px;color:#475569;margin-top:4px">Cada lançamento conta só em um: Previsto (ainda não pago) ou Pago (já baixado). O saldo usa só o Pago; o Projetado também desconta o Previsto. Em semanas futuras, o Saldo aparece em cinza itálico e é a projeção.</div></div>
         </details>`;
       }).join('');
     })
