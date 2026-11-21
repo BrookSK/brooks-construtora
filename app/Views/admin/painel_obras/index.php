@@ -379,8 +379,8 @@ body { background: #f8f9fa !important; }
   </div>
 </div>
 
-<!-- Fluxo Anual -->
-<div class="po-card" style="margin-bottom:20px">
+<!-- Fluxo Anual (oculto a pedido; o JS continua preenchendo os elementos) -->
+<div class="po-card" style="margin-bottom:20px;display:none">
   <div class="po-stitle">Fluxo de Caixa <?=date('Y')?>
     <div style="display:flex;gap:12px;font-size:12px">
       <span style="color:#3b82f6">■ Realizado</span>
@@ -393,8 +393,8 @@ body { background: #f8f9fa !important; }
   <div class="po-fluxo-boxes" id="po-fluxo-boxes"></div>
 </div>
 
-<!-- Ações Rápidas -->
-<div class="po-acoes">
+<!-- Ações Rápidas (ocultas a pedido) -->
+<div class="po-acoes" style="display:none">
   <div class="po-card">
     <div style="font-size:14px;font-weight:600;color:#0f172a;margin-bottom:6px">Exportar relatório</div>
     <div style="font-size:13px;color:var(--po-txt2);margin-bottom:12px">Resumo textual do painel para a diretoria.</div>
@@ -413,7 +413,7 @@ body { background: #f8f9fa !important; }
 </div>
 
 <!-- Lançamentos sem obra vinculada -->
-<div id="po-sem-obra-wrap" style="display:none;margin-bottom:20px">
+<div id="po-sem-obra-wrap" style="display:none!important;margin-bottom:20px"><!-- oculto a pedido -->
   <div class="po-card">
     <div class="po-stitle" style="color:var(--po-yellow-t)"><i class="bi bi-exclamation-triangle-fill"></i> Lançamentos sem obra vinculada <span id="po-sem-obra-count" class="po-pill warn"></span></div>
     <p class="po-ssub">Centro de custo não está vinculado a nenhuma obra. <a href="/admin/painel-obras/obras" style="color:var(--po-blue-t)">Vincular agora</a></p>
@@ -1156,7 +1156,8 @@ const poForaAjuda={
   sem_custo:'A obra não tem custo previsto cadastrado para esta categoria (Obras → Editar obra → Custos Previstos). Sem orçamento não há semanas para comparar.',
   fora_janela:'A data do lançamento é anterior ao início ou posterior ao fim da obra. Se o período da obra estiver incorreto, ajuste as datas em Obras → Editar obra.'
 };
-function poForaAviso(res){
+function poForaAviso(res){ return ''; // avisos removidos a pedido (painel mais limpo)
+  /* eslint-disable no-unreachable */
   const f=res.fora_orcamento; if(!f||!f.itens||!f.itens.length) return '';
   let pg=0,pv=0,sg=0,sv=0;
   Object.keys(f.totais).forEach(m=>{ const t=f.totais[m]; if(m==='sem_obra'){sg+=t.pago;sv+=t.previsto;} else {pg+=t.pago;pv+=t.previsto;} });
