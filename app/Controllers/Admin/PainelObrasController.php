@@ -723,7 +723,16 @@ class PainelObrasController extends Controller
         $dataVencimento = (string)$this->input('data_vencimento', '');
         $dataRecebimento = (string)$this->input('data_recebimento', date('Y-m-d'));
         $observacoes = trim((string)$this->input('observacoes', ''));
+        $niboScheduleId = trim((string)$this->input('nibo_schedule_id', ''));
         
+        if (!in_array($tipo, ['entrada', 'parcela', 'nibo'], true)) {
+            $this->json(['ok' => false, 'error' => 'Tipo inválido'], 422);
+            return;
+        }
+        if ($tipo === 'nibo' && $niboScheduleId === '') {
+            $this->json(['ok' => false, 'error' => 'Lançamento do Nibo não informado'], 422);
+            return;
+        }
         if (!$obraId || !$tipo || !$valor || !$dataVencimento) {
             $this->json(['ok' => false, 'error' => 'Dados incompletos'], 422);
             return;
@@ -737,6 +746,9 @@ class PainelObrasController extends Controller
             if ($tipo === 'parcela') {
                 $whereClause .= " AND numero_parcela = ?";
                 $params[] = (int)$numeroParcela;
+            } elseif ($tipo === 'nibo') {
+                $whereClause .= " AND nibo_schedule_id = ?";
+                $params[] = $niboScheduleId;
             }
             
             $existe = Database::fetch(
@@ -754,6 +766,7 @@ class PainelObrasController extends Controller
                 'obra_id' => $obraId,
                 'tipo' => $tipo,
                 'numero_parcela' => $tipo === 'parcela' ? (int)$numeroParcela : null,
+                'nibo_schedule_id' => $tipo === 'nibo' ? $niboScheduleId : null,
                 'valor' => $valor,
                 'data_vencimento' => $dataVencimento,
                 'data_recebimento' => $dataRecebimento,

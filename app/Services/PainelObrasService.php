@@ -797,13 +797,7 @@ class PainelObrasService
                 $orcadoDetalhado = [];
             }
             
-            // Se não houver custos previstos cadastrados, usa estimativa baseada no comprometido
-            if ($orcado <= 0) {
-                // Estimativa: gasto + a pagar + margem 10%
-                $orcado = ($gasto + $aPagar) * 1.1;
-                error_log('[PainelObras] Obra ' . $obraId . ' - Usando estimativa: R$ ' . number_format($orcado, 2, ',', '.'));
-            }
-            
+            // Sem custos previstos cadastrados o orçado fica em 0 (nenhum valor é estimado/inventado)
             $desvio = $gasto - $orcado;
             $desvioPct = $orcado > 0 ? ($desvio / $orcado) * 100 : 0;
             

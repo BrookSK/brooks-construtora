@@ -719,7 +719,9 @@ function renderKpis(k){
     <div class="po-kpi-label">${labels[i]}</div>
     <div class="po-kpi-value" style="${d.vc?'color:'+d.vc:''}">${d.val}</div>
     <div class="po-kpi-bar"><div class="po-kpi-bar-fill" style="width:0%;background:${d.bc}" data-pct="${d.pct}"></div></div>
-    <div class="po-kpi-note">${d.note}</div>`;
+    <div class="po-kpi-note">${d.note}</div>
+    <div style="font-size:10px;color:var(--po-txt2);margin-top:6px"><i class="bi bi-info-circle"></i> Clique para ver a composição</div>`;
+    el.style.cursor='pointer'; el.onclick=()=>poKpiDetalhe(i);
   });
   requestAnimationFrame(()=>{
     document.querySelectorAll('.po-kpi-bar-fill').forEach(b=>{b.style.width=Math.min(parseFloat(b.dataset.pct||0),100)+'%';});
@@ -1723,12 +1725,61 @@ window.poConfTrocarObra=function(id){
   window._currentLancs=((_d&&_d.lancamentos_por_obra)||{})[oid]||{pagos:[],a_pagar:[],a_receber:[]};
   poMudarTab('a_receber');
 };
+// ─── Composição dos cards de KPI (clique no card) ───
+window.poKpiDetalhe=function(i){
+  const k=(_d&&_d.kpis)||{}, obras=((_d&&_d.obras)||[]).slice().sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo),'pt',{numeric:true}));
+  const th=(t,r)=>`<th style="padding:8px 10px;font-size:11px;text-transform:uppercase;color:var(--po-txt2);text-align:${r?'right':'left'};border-bottom:1px solid var(--po-border)">${t}</th>`;
+  const td=(v,r,st)=>`<td style="padding:8px 10px;font-size:13px;text-align:${r?'right':'left'};border-bottom:1px solid var(--po-border);${st||''}">${v}</td>`;
+  const cor=v=>v>0?'color:var(--po-green-t);font-weight:600':v<0?'color:var(--po-red-t);font-weight:600':'';
+  const sg=v=>(v>0?'+':'')+BRL(v);
+  const nome=o=>`<strong>${poEsc(o.codigo)}</strong> · ${poEsc(o.nome)}`;
+  let titulo='',intro='',cab='',linhas='',tot='',extra='';
+  if(i===0){
+    titulo='Valor Contratado Total'; intro='Soma do valor contratado cadastrado em cada obra (Obras → Editar obra).';
+    cab=th('Obra')+th('Contratado',1);
+    linhas=obras.map(o=>`<tr>${td(nome(o))}${td(BRL(o.contratado),1)}</tr>`).join('');
+    tot=`<tr>${td('<strong>Total</strong>')}${td('<strong>'+BRL(k.contratado)+'</strong>',1)}</tr>`;
+  }else if(i===2){
+    titulo='Gasto Real Acumulado'; intro='Despesas já pagas no Nibo, por obra, no período selecionado. Clique no valor para ver os lançamentos.';
+    cab=th('Obra')+th('Gasto (pago)',1);
+    linhas=obras.map(o=>`<tr>${td(nome(o))}${td(`<a href="#" onclick="poVerLancamentos(${o.id},'${poEsc(o.codigo)}');return false" style="color:var(--po-blue-t)">${BRL(o.gasto)}</a>`,1)}</tr>`).join('');
+    tot=`<tr>${td('<strong>Total</strong>')}${td('<strong>'+BRL(k.gasto)+'</strong>',1)}</tr>`;
+  }else if(i===3){
+    titulo='Saldo Disponível'; intro='Contratado − Gasto real, por obra. Não usa o orçamento.';
+    cab=th('Obra')+th('Contratado',1)+th('Gasto',1)+th('Saldo',1);
+    linhas=obras.map(o=>{const v=(o.contratado||0)-(o.gasto||0);return `<tr>${td(nome(o))}${td(BRL(o.contratado),1)}${td(BRL(o.gasto),1)}${td(sg(v),1,cor(v))}</tr>`;}).join('');
+    tot=`<tr>${td('<strong>Total</strong>')}${td('<strong>'+BRL(k.contratado)+'</strong>',1)}${td('<strong>'+BRL(k.gasto)+'</strong>',1)}${td('<strong>'+sg(k.saldo)+'</strong>',1,cor(k.saldo))}</tr>`;
+  }else if(i===4||i===5){
+    titulo=i===4?'Saldo do Orçamento':'Obras em Estouro';
+    intro=i===4?'Orçado − Gasto, por obra. O Orçado é a soma dos custos previstos cadastrados na obra. Obras sem custos previstos cadastrados ficam com orçado 0 (nada é estimado).'
+               :'Obra em estouro = gasto acima de 5% do orçado. Atenção = gasto acima do orçado até 5%.';
+    cab=th('Obra')+th('Orçado',1)+th('A pagar',1)+th('Gasto',1)+th(i===4?'Saldo':'Desvio',1)+(i===5?th('Situação'):'');
+    linhas=obras.map(o=>{const v=(o.orcado||0)-(o.gasto||0);
+      const est='';
+      const sit=o.situacao==='danger'?'Estouro':o.situacao==='warn'?'Atenção':'OK';
+      return `<tr>${td(nome(o)+est)}${td((o.orcado>0?BRL(o.orcado):'—'),1)}${td(BRL(o.a_pagar||0),1)}${td(BRL(o.gasto),1)}${i===4?td(sg(v),1,cor(v)):td(PCT(o.desvio_pct||0),1,(o.desvio_pct||0)>0?'color:var(--po-red-t);font-weight:600':'')}${i===5?td(sit):''}</tr>`;}).join('');
+    tot=`<tr>${td('<strong>Total</strong>')}${td('<strong>'+BRL(k.orcado)+'</strong>',1)}${td('<strong>'+BRL(obras.reduce((a,o)=>a+(o.a_pagar||0),0))+'</strong>',1)}${td('<strong>'+BRL(k.gasto)+'</strong>',1)}${i===4?td('<strong>'+sg(-k.desvio)+'</strong>',1,cor(-k.desvio)):td('')}${i===5?td(''):''}</tr>`;
+    if(obras.some(o=>!(o.orcado>0))) extra='<p style="font-size:12px;color:var(--po-txt2);margin-top:10px">— Obra sem custos previstos cadastrados: orçado = 0. Cadastre em Obras → Editar obra → Custos Previstos.</p>';
+  }else if(i===6){
+    titulo='Valor Total Recebido'; intro='Soma dos recebimentos confirmados (entrada, parcelas e receitas do Nibo marcadas como recebidas) nas obras exibidas.';
+    extra='<p style="font-size:13px;margin:12px 0"><strong>Total: '+BRL(k.recebido||0)+'</strong></p><button class="po-btn po-btn-primary" onclick="poAbrirConfirmacoes()"><i class="bi bi-check2-circle"></i> Abrir Confirmações de pagamento</button>';
+  }else return;
+  document.getElementById('po-modal-tabs').style.display='none';
+  document.getElementById('po-modal-title').textContent='Composição — '+titulo;
+  document.getElementById('po-modal-subtitle').textContent='';
+  document.getElementById('po-modal-body').innerHTML=`<p style="font-size:13px;color:var(--po-txt2);margin:0 0 12px">${intro}</p>`
+    +(cab?`<table style="width:100%;border-collapse:collapse"><thead><tr>${cab}</tr></thead><tbody>${linhas||'<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--po-txt2)">Nenhuma obra.</td></tr>'}${tot}</tbody></table>`:'')+extra;
+  document.getElementById('po-modal-lancamentos').style.display='block';
+};
+
 window.poFecharModal=function(){
   document.getElementById('po-modal-lancamentos').style.display='none';
 };
 
-window.poMarcarRecebido=function(tipo, obraId, numeroParcela, valor, vencimento){
-  const mensagem = tipo === 'entrada' 
+window.poMarcarRecebido=function(tipo, obraId, numeroParcela, valor, vencimento, niboId){
+  const mensagem = tipo === 'nibo'
+    ? `Confirmar recebimento de ${BRL(valor)} (lançamento do Nibo)?`
+    : tipo === 'entrada' 
     ? `Confirmar recebimento da ENTRADA de ${BRL(valor)}?` 
     : `Confirmar recebimento da PARCELA ${numeroParcela} de ${BRL(valor)}?`;
   
@@ -1741,7 +1792,8 @@ window.poMarcarRecebido=function(tipo, obraId, numeroParcela, valor, vencimento)
     tipo: tipo,
     numero_parcela: numeroParcela || '',
     valor: valor,
-    data_vencimento: vencimento || '',
+    data_vencimento: vencimento || new Date().toISOString().split('T')[0],
+    nibo_schedule_id: niboId || '',
     data_recebimento: new Date().toISOString().split('T')[0]
   };
   
@@ -1761,7 +1813,7 @@ window.poMarcarRecebido=function(tipo, obraId, numeroParcela, valor, vencimento)
               <i class="bi-check-circle-fill" style="font-size:48px;color:#059669"></i>
             </div>
             <h3 style="color:var(--po-txt);margin:0 0 8px;font-size:20px">Recebimento Registrado!</h3>
-            <p style="color:var(--po-txt2);margin:0 0 20px;font-size:14px">${tipo === 'entrada' ? 'Entrada' : 'Parcela ' + numeroParcela} registrada com sucesso</p>
+            <p style="color:var(--po-txt2);margin:0 0 20px;font-size:14px">${tipo === 'entrada' ? 'Entrada' : tipo === 'nibo' ? 'Receita do Nibo' : 'Parcela ' + numeroParcela} registrada com sucesso</p>
             <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:16px;margin-bottom:20px">
               <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Total Recebido até Agora</div>
               <div style="font-size:28px;font-weight:700;color:#059669">${totalRecebidoFormatado}</div>
@@ -1810,7 +1862,7 @@ window.poMudarTab=function(tab){
         const recebimentosMap = {};
         if(obra.recebimentos){
           obra.recebimentos.forEach(r => {
-            const key = r.tipo === 'entrada' ? 'entrada' : `parcela_${r.numero_parcela}`;
+            const key = r.tipo === 'entrada' ? 'entrada' : r.tipo === 'nibo' ? `nibo_${r.nibo_schedule_id}` : `parcela_${r.numero_parcela}`;
             recebimentosMap[key] = r;
           });
         }
@@ -1860,7 +1912,7 @@ window.poMudarTab=function(tab){
         const receitasRecebidas = Object.values(recebimentosMap).reduce((sum, r) => sum + parseFloat(r.valor), 0);
         const totalReceitasNibo = receitasReais.reduce((sum, r) => sum + (r.valor_rateado || 0), 0);
         const totalReceitasNiboPagas = receitasReais.filter(r => r.status === 'paid').reduce((sum, r) => sum + (r.valor_rateado || 0), 0);
-        const totalAPrevisto = totalEntrada + totalParcelas;
+        const totalAPrevisto = totalEntrada + totalParcelas + totalReceitasNibo; // inclui receitas do Nibo
         const totalJaRecebido = receitasRecebidas + totalReceitasNiboPagas;
         const totalAReceber = totalAPrevisto - totalJaRecebido;
         
@@ -1943,8 +1995,11 @@ window.poMudarTab=function(tab){
           html += '<div style="margin:20px 0;border-top:2px solid var(--po-border);padding-top:16px"><strong style="color:var(--po-txt2);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">Receitas Registradas no Nibo</strong></div>';
           
           receitasReais.forEach(l => {
-            const statusClass=l.status==='paid'?'ok':l.status==='overdue'?'danger':'warn';
-            const statusLabel=l.status==='paid'?'Recebido':l.status==='overdue'?'Vencido':'A receber';
+            const conf=recebimentosMap[`nibo_${l.schedule_id}`];
+            const pagoNibo=l.status==='paid';
+            const statusClass=(pagoNibo||conf)?'ok':l.status==='overdue'?'danger':'warn';
+            const statusLabel=pagoNibo?'Recebido':conf?'Recebido (confirmado)':l.status==='overdue'?'Vencido':'A confirmar';
+            const vencNibo=l.due_date?l.due_date.substring(0,10):'';
             
             html += `<div class="po-lanc-item" style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-left:4px solid #059669">
               <div class="po-lanc-header">
@@ -1956,10 +2011,12 @@ window.poMudarTab=function(tab){
                   </div>
                   <div class="po-lanc-info"><strong style="color:#059669">Cliente:</strong> ${l.contact_name||'—'}</div>
                   <div class="po-lanc-info"><strong>Vencimento:</strong> ${l.due_date?l.due_date.substring(0,10).split('-').reverse().join('/'):'—'}</div>
+                  ${conf?`<div class="po-lanc-info" style="color:#059669"><strong>Recebido em:</strong> ${String(conf.data_recebimento).split('-').reverse().join('/')}</div>`:''}
                 </div>
-                <div style="text-align:right">
+                <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
                   <div class="po-lanc-valor" style="color:#059669;font-size:20px;font-weight:700">+ ${BRL(l.valor_rateado||0)}</div>
-                  <span class="po-pill ${statusClass}" style="margin-top:6px"><span class="dot" style="background:var(--po-${statusClass==='ok'?'green':statusClass==='danger'?'red':'yellow'})"></span>${statusLabel}</span>
+                  <span class="po-pill ${statusClass}" style="margin-top:0"><span class="dot" style="background:var(--po-${statusClass==='ok'?'green':statusClass==='danger'?'red':'yellow'})"></span>${statusLabel}</span>
+                  ${(!pagoNibo&&!conf)?`<button onclick="poMarcarRecebido('nibo', ${obraId}, null, ${l.valor_rateado||0}, '${vencNibo}', '${String(l.schedule_id||'').replace(/[^\w-]/g,'')}')" style="background:#059669;color:white;border:none;padding:6px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'"><i class="bi-check-circle"></i> Marcar como Recebido</button>`:''}
                 </div>
               </div>
             </div>`;
