@@ -32,10 +32,6 @@
 <div class="pl-subnav">
   <a href="/admin/painel-obras"><i class="bi bi-speedometer2"></i> Dashboard</a>
   <a href="/admin/painel-obras/obras"><i class="bi bi-buildings"></i> Obras</a>
-  <a href="/admin/painel-obras/orcamento"><i class="bi bi-calculator"></i> Orçamento</a>
-  <a href="/admin/painel-obras/planilha" class="active"><i class="bi bi-table"></i> Planilha de Controle</a>
-  <a href="/admin/painel-obras/depara"><i class="bi bi-arrow-left-right"></i> De-para Categorias</a>
-  <a href="/admin/painel-obras/pauta"><i class="bi bi-calendar-check"></i> Pauta de Revisão</a>
 </div>
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">

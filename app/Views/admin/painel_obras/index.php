@@ -70,6 +70,24 @@ body { background: #f8f9fa !important; }
 .po-name { font-weight:600;color:#0f172a; }
 .po-desvio-pos { color:var(--po-red-t); }
 .po-desvio-neg { color:var(--po-green-t); }
+/* Saldo = Orçado − Gasto: positivo (ainda há orçamento) = verde; negativo (estourado) = vermelho */
+.po-saldo-pos,.po-table td.po-saldo-pos { color:var(--po-green-t);font-weight:700; }
+.po-saldo-neg,.po-table td.po-saldo-neg { color:var(--po-red-t);font-weight:700; }
+.po-saldo-zero,.po-table td.po-saldo-zero { color:var(--po-txt2);font-weight:700; }
+/* Tabela de desempenho: cabe inteira na tela, sem rolagem lateral */
+.po-table-wrap.po-table-fit-wrap { overflow:visible; }
+.po-table.po-table-fit { table-layout:fixed;width:100%; }
+.po-table.po-table-fit th,.po-table.po-table-fit td { padding:10px 8px;white-space:normal;overflow-wrap:anywhere; }
+.po-table.po-table-fit th { font-size:10.5px;letter-spacing:.3px; }
+.po-table.po-table-fit td { font-size:12.5px; }
+.po-table.po-table-fit td.r,.po-table.po-table-fit th.r { white-space:nowrap;overflow-wrap:normal; }
+.po-table.po-table-fit .po-pill { white-space:nowrap;text-align:center;justify-content:center;padding:2px 7px; }
+.po-table.po-table-fit th:not(.r) { text-align:left; }
+.po-table.po-table-fit .po-bar-track { width:100%;max-width:120px; }
+/* telas estreitas: some Tipo e Consumo para a tabela continuar inteira, sem rolagem lateral */
+@media(max-width:1099px){ .po-hide-sm{display:none !important;} }
+@media(max-width:949px){ .po-hide-xs{display:none !important;} }
+@media(max-width:1280px){ .po-table.po-table-fit th{font-size:9.5px;letter-spacing:0;} .po-table.po-table-fit td{font-size:11.5px;} .po-table.po-table-fit th,.po-table.po-table-fit td{padding:8px 5px;} }
 .po-bar-track { height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden; }
 .po-bar-fill  { height:100%;border-radius:3px; }
 /* Filtros */
@@ -93,9 +111,11 @@ body { background: #f8f9fa !important; }
 .po-cat-navbtn { background:#fff;border:1.5px solid #cbd5e1;border-radius:8px;padding:6px 14px;font-size:16px;font-weight:700;color:#334155;cursor:pointer; }
 .po-cat-navbtn:hover { background:#f1f5f9; }
 .po-cat-hoje { font-size:14px; }
-.po-cat-navlabel { font-size:16px;font-weight:700;color:#0f172a;min-width:190px;text-align:center; }
+.po-cat-navlabel { font-size:16px;font-weight:700;color:#0f172a;min-width:240px;text-align:center; }
 .po-cat-date { border:1.5px solid #cbd5e1;border-radius:8px;padding:6px 10px;font-size:14px;color:#334155; }
-.po-cat-row { align-items:flex-start;padding:16px 0; }
+.po-cat-row { align-items:flex-start;padding:16px 0;min-width:0;max-width:100%; }
+.po-cat-bars,.po-cat-figs>div,.po-fora-row>.po-cat-figs { min-width:0; }
+.po-cat-bar { max-width:100%; }
 .po-cat-label { width:200px;font-size:16px;font-weight:600;color:#0f172a;line-height:1.3; }
 .po-cat-bar { height:12px;border-radius:6px;margin-bottom:6px; }
 .po-cat-figs { display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px 18px;margin-top:8px; }
@@ -234,10 +254,6 @@ body { background: #f8f9fa !important; }
 <div class="po-subnav">
   <a href="/admin/painel-obras" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a>
   <a href="/admin/painel-obras/obras"><i class="bi bi-buildings"></i> Obras</a>
-  <a href="/admin/painel-obras/lancamentos"><i class="bi bi-cash-stack"></i> Lançamentos</a>
-  <a href="/admin/painel-obras/planilha"><i class="bi bi-table"></i> Planilha de Controle</a>
-  <a href="/admin/painel-obras/depara"><i class="bi bi-arrow-left-right"></i> De-para Categorias</a>
-  <a href="/admin/painel-obras/pauta"><i class="bi bi-calendar-check"></i> Pauta de Revisão</a>
   <button class="po-btn-config" onclick="poAbrirConfig()" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:#2563eb;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;margin-left:auto">
     <i class="bi bi-funnel"></i> Filtros
   </button>
@@ -304,18 +320,22 @@ body { background: #f8f9fa !important; }
     </select>
     <button class="po-btn po-btn-ghost" onclick="poResetFiltros()" style="padding:7px 12px;font-size:12px">Limpar</button>
   </div>
-  <div class="po-table-wrap">
-    <table class="po-table">
+  <div class="po-table-wrap po-table-fit-wrap">
+    <table class="po-table po-table-fit">
+      <colgroup>
+        <col style="width:18%"><col class="po-hide-sm" style="width:8%"><col class="po-hide-xs" style="width:11%"><col style="width:11%"><col style="width:10%">
+        <col style="width:12%"><col class="po-hide-sm" style="width:11%"><col style="width:10%"><col class="po-hide-xs" style="width:9%">
+      </colgroup>
       <thead><tr>
-        <th>Obra</th><th>Tipo</th><th class="r">Contratado</th><th class="r">Orçado</th>
-        <th class="r">Gasto</th><th class="r">Desvio</th><th>Consumo</th><th>Situação</th><th>Conciliação</th>
+        <th>Obra</th><th class="po-hide-sm">Tipo</th><th class="r po-hide-xs">Contratado</th><th class="r">Orçado</th>
+        <th class="r">Gasto</th><th class="r" title="Orçado − Gasto. Verde: ainda há orçamento. Vermelho: orçamento estourado.">Saldo</th><th class="po-hide-sm">Consumo</th><th>Situação</th><th class="po-hide-xs">Conciliação</th>
       </tr></thead>
       <tbody id="po-tbody"><tr><td colspan="9" style="text-align:center;padding:32px;color:var(--po-txt2)">Carregando…</td></tr></tbody>
     </table>
   </div>
   <div style="padding:10px 20px;font-size:12px;color:var(--po-txt2);border-top:1px solid var(--po-border)">
     Mostrando <span id="po-mostrando">0</span> obras •
-    Desvio = Gasto − Orçado. Atenção até 5% acima; Estouro acima de 5%.
+    Saldo = Orçado − Gasto: <strong style="color:var(--po-green-t)">verde</strong> = ainda há orçamento disponível; <strong style="color:var(--po-red-t)">vermelho</strong> = orçamento estourado. Atenção até 5% acima do orçado; estouro acima de 5%.
   </div>
 </div>
 
@@ -461,7 +481,29 @@ const catObra = <?=json_encode($categoriasObra)?>;
 console.log('[PAINEL OBRAS] Categorias carregadas:', catObra);
 console.log('[PAINEL OBRAS] Total de categorias:', catObra ? catObra.length : 0);
 
+// ─── Filtros compartilhados entre Dashboard e Obras (localStorage) ───
+const PO_FKEY='po_filtros';
+function poFiltrosLer(){try{return JSON.parse(localStorage.getItem(PO_FKEY)||'{}')||{};}catch(e){return {};}}
+function poFiltrosSalvar(){
+  try{
+    const v=id=>document.getElementById(id)?.value||'';
+    const f=Object.assign(poFiltrosLer(),{busca:v('po-busca'),tipo:v('po-ftipo'),sit:v('po-fsit'),cat:v('po-fcat'),periodo:v('po-periodo'),company:v('po-company')});
+    localStorage.setItem(PO_FKEY,JSON.stringify(f));
+  }catch(e){}
+}
+(function poFiltrosRestaurar(){
+  const f=poFiltrosLer();
+  const set=(id,val)=>{
+    const el=document.getElementById(id); if(!el||val==null||val==='') return;
+    if(el.tagName==='SELECT'&&![...el.options].some(o=>o.value===String(val)||o.text===String(val))) return;
+    el.value=val;
+  };
+  set('po-busca',f.busca);set('po-ftipo',f.tipo);set('po-fsit',f.sit);set('po-fcat',f.cat);
+  set('po-periodo',f.periodo);set('po-company',f.company);
+})();
+
 window.poLoad = function(){
+  poFiltrosSalvar();
   console.log('%c[PAINEL OBRAS] ========== CARREGANDO DADOS ==========', 'color: #3b82f6; font-weight: bold; font-size: 14px');
   
   const poEl = document.getElementById('po');
@@ -650,9 +692,9 @@ function renderKpis(k){
      bc:k.saldo>=0?'var(--po-green)':'var(--po-red)'},
     {icon:'bi-graph-up-arrow',ib:k.desvio>0?'rgba(239,68,68,.15)':'rgba(16,185,129,.15)',
      ic:k.desvio>0?'var(--po-red-t)':'var(--po-green-t)',
-     pill:k.orcado>0?PCT((k.desvio/k.orcado)*100):'—',pc:k.desvio>0?'danger':'ok',
-     val:(k.desvio>0?'+':'')+BRL(Math.abs(k.desvio)),vc:k.desvio>0?'var(--po-red-t)':'var(--po-green-t)',
-     note:k.desvio>0?'Gasto acima do orçamento':'Economia no orçamento',
+     pill:k.orcado>0?PCT((-k.desvio/k.orcado)*100):'—',pc:k.desvio>0?'danger':'ok',
+     val:(k.desvio<0?'+':'')+BRL(-k.desvio),vc:k.desvio>0?'var(--po-red-t)':'var(--po-green-t)',
+     note:k.desvio>0?'Orçamento estourado (gasto acima do orçado)':'Ainda há orçamento disponível (Orçado − Gasto)',
      pct:k.orcado>0?Math.min(Math.abs((k.desvio/k.orcado)*100),100):0,
      bc:k.desvio>0?'var(--po-red)':'var(--po-green)'},
     {icon:'bi-exclamation-triangle',ib:'rgba(245,158,11,.15)',ic:'var(--po-yellow-t)',
@@ -666,7 +708,7 @@ function renderKpis(k){
      pct:k.contratado>0?Math.min((k.recebido/k.contratado)*100,100):0,
      bc:'var(--po-green)'},
   ];
-  const labels=['Valor Contratado Total','Orçamento Estimado','Gasto Real Acumulado','Saldo Disponível','Desvio Global','Obras em Estouro','Valor Total Recebido'];
+  const labels=['Valor Contratado Total','Orçamento Estimado','Gasto Real Acumulado','Saldo Disponível','Saldo do Orçamento','Obras em Estouro','Valor Total Recebido'];
   defs.forEach((d,i)=>{
     const el=document.getElementById('kpi-'+i);
     el.innerHTML=`<div class="po-kpi-icon" style="background:${d.ib};color:${d.ic}"><i class="bi ${d.icon}"></i></div>
@@ -785,6 +827,7 @@ function renderSnapBanner(snap){
 poCarregarSnapshots();
 
 window.poFiltrar = function(){
+  poFiltrosSalvar();
   if(!_obras.length) return;
   const q=document.getElementById('po-busca').value.toLowerCase();
   const tipo=document.getElementById('po-ftipo').value;
@@ -810,8 +853,9 @@ window.poFiltrar = function(){
   tb.innerHTML=f.map(o=>{
     const pct=o.orcado>0?Math.min((o.gasto/o.orcado)*100,120):0;
     const bc=o.situacao==='danger'?'var(--po-red)':o.situacao==='warn'?'var(--po-yellow)':'var(--po-blue)';
-    const dCls=o.desvio>0?'po-desvio-pos':'po-desvio-neg';
-    const dPct=o.orcado>0?((o.desvio/o.orcado)*100).toFixed(1).replace('.',',')+' %':'—';
+    const saldo=-o.desvio;                       // Orçado − Gasto
+    const dCls=saldo>0?'po-saldo-pos':saldo<0?'po-saldo-neg':'po-saldo-zero';
+    const dPct=o.orcado>0?((saldo/o.orcado)*100).toFixed(1).replace('.',',')+' %':'—';
     const badge=o.tipo==='Reforma'?'<span class="po-badge-ref">Reforma</span>':'<span class="po-badge-con">Construção</span>';
     const conc=o.planilha_total==null
       ?'<span class="po-pill pending">Pendente</span>'
@@ -820,14 +864,14 @@ window.poFiltrar = function(){
       :'<span class="po-pill danger">Divergente</span>';
     return `<tr>
       <td><span class="po-code">${o.codigo}</span><span class="po-name">${o.nome}</span></td>
-      <td>${badge}</td>
-      <td class="r">${BRL(o.contratado)}</td>
+      <td class="po-hide-sm">${badge}</td>
+      <td class="r po-hide-xs">${BRL(o.contratado)}</td>
       <td class="r">${o.orcado>0?BRL(o.orcado):'<a href="/admin/painel-obras/obras" style="color:var(--po-blue-t);font-size:11px">— Preencher</a>'}</td>
       <td class="r"><a href="#" onclick="poVerLancamentos(${o.id},'${o.codigo}');return false" style="color:var(--po-blue-t)">${BRL(o.gasto)}</a></td>
-      <td class="r ${dCls}">${o.orcado>0?(o.desvio>0?'+':'')+BRL(o.desvio):'—'}<br><small>${o.orcado>0?(o.desvio>0?'+':'')+dPct:''}</small></td>
-      <td><div class="po-bar-track" style="width:120px"><div class="po-bar-fill" style="width:${pct}%;background:${bc}"></div></div><div style="font-size:10px;color:var(--po-txt2);margin-top:2px">${pct.toFixed(0)}% do orçado</div></td>
+      <td class="r ${dCls}">${o.orcado>0?(saldo>0?'+':'')+BRL(saldo):'—'}<br><small>${o.orcado>0?(saldo>0?'+':'')+dPct:''}</small></td>
+      <td class="po-hide-sm"><div class="po-bar-track"><div class="po-bar-fill" style="width:${pct}%;background:${bc}"></div></div><div style="font-size:10px;color:var(--po-txt2);margin-top:2px">${pct.toFixed(0)}% do orçado</div></td>
       <td><span class="po-pill ${o.situacao}"><span class="dot" style="background:${bc}"></span>${o.situacao==='ok'?'OK':o.situacao==='warn'?'Atenção':'Estouro'}</span></td>
-      <td>${conc}</td>
+      <td class="po-hide-xs">${conc}</td>
     </tr>`;
   }).join('');
 };
@@ -963,12 +1007,13 @@ function drawCatMes(){
   };
   el.innerHTML=cats.map(cat=>{
     const g=gasto[cat]||0,o=orcado[cat]||0,dv=g-o;
-    const dc=dv>0?poVerm:dv<0?poVerde:'var(--po-txt2)';
+    const sal=o-g;                                // Saldo = Orçado − Gasto
+    const dc=sal>0?poVerde:sal<0?poVerm:'var(--po-txt2)';
     // Orçado: custos previstos por obra
     const rOrc=poFechar(((_d&&_d.obras)||[]).filter(ob=>poObraSel(ob.id)&&(ob.orcado_cat||{})[cat]>0).map(ob=>({t:ob.codigo+' · '+ob.nome,s:'custo previsto cadastrado',v:ob.orcado_cat[cat]})),o,'Outras obras (fora do filtro de visualização)');
     const tOrc={t:'Orçado — '+cat,i:'Custo previsto cadastrado (aba "Custos Previstos") por obra. É o orçamento TOTAL da obra, não só do mês.',rows:poRowsCap(rOrc).rows,mais:poRowsCap(rOrc).mais,tot:{l:'Total orçado',v:o},vazio:'Nenhum custo previsto cadastrado.'};
     const tGas=tipGasto(cat,g,'Despesas já PAGAS no Nibo de '+poEscopoTxt()+', com data prevista em '+per+' (nesta visão a data usada é a prevista, não a do pagamento).');
-    const tDes={t:'Desvio — '+cat,i:'Gasto − Orçado. Verde: gasto abaixo do orçado. Vermelho: acima.',rows:[{t:'Gasto',v:g},{t:'Orçado (−)',v:-o}],tot:{l:'Desvio',v:dv}};
+    const tDes={t:'Saldo — '+cat,i:'Orçado − Gasto. Verde (positivo): ainda há orçamento disponível. Vermelho (negativo): o gasto passou do orçado (estouro).',rows:[{t:'Orçado',v:o},{t:'Gasto (−)',v:-g}],tot:{l:'Saldo',v:sal}};
     return `<div class="po-cat-row">
       <div class="po-cat-label">${poEsc(cat)}</div>
       <div class="po-cat-bars">
@@ -977,7 +1022,7 @@ function drawCatMes(){
         <div class="po-cat-figs">
           ${poFig('Orçado',BRL(o),'','var(--po-gray)',tOrc)}
           ${poFig('Gasto',BRL(g),'','var(--po-blue-t)',tGas)}
-          ${poFig('Desvio',poSigned(dv),dc,'',tDes)}
+          ${poFig(sal<0?'Estouro':'Saldo',poSigned(sal),dc,'',tDes)}
         </div>
       </div>
     </div>`;
@@ -1005,8 +1050,8 @@ function poCatCarregar(){
   document.getElementById('po-cat-nav-label').textContent=_catMode==='dia'?dd:dd+' – '+df;
   document.getElementById('po-cat-date').value=_catRef;
   document.getElementById('po-cat-sub').innerHTML=_catMode==='dia'
-    ?'<strong>Dia '+dd+'</strong> — Orçado = parcela diária do custo previsto · Previsto = despesas programadas no Nibo para o dia · Pago = despesas baixadas no dia. Passe o mouse sobre um valor para ver os lançamentos que o formam.'
-    :'<strong>Semana de '+dd+' a '+df+'</strong> — Orçado = custo previsto distribuído na semana · Previsto = despesas programadas no Nibo (data prevista) · Pago = despesas baixadas (data do pagamento). Considera '+poEscopoTxt()+'. Passe o mouse sobre um valor para ver os lançamentos que o formam.';
+    ?'<strong>Dia '+dd+'</strong> — Orçado = parcela diária do custo previsto · Previsto = despesas programadas para o dia e ainda NÃO pagas · Pago = despesas pagas no dia. Cada lançamento conta só em um deles. Passe o mouse sobre um valor para ver os lançamentos que o formam.'
+    :'<strong>Semana de '+dd+' a '+df+'</strong> — Orçado = custo previsto distribuído na semana · Previsto = despesas programadas e ainda NÃO pagas (data prevista) · Pago = despesas já pagas (data do pagamento). Cada lançamento conta só em um deles. Considera '+poEscopoTxt()+'. Passe o mouse sobre um valor para ver os lançamentos que o formam.';
   poCatEscopoBadge();
   const el=document.getElementById('po-cat-rows');
   el.innerHTML='<div class="po-skel" style="height:200px"></div>';
@@ -1018,11 +1063,33 @@ function poCatCarregar(){
     .catch(()=>{ if(tk===_catReq) el.innerHTML='<div style="padding:28px;text-align:center;color:var(--po-red-t);font-size:15px">Falha ao carregar o período.</div>'; });
 }
 
+function poSubPeriodo(res){
+  const dd=poDt(res.inicio), df=poDt(res.fim), a=res.alinhada_obra;
+  const fim=' Considera '+poEscopoTxt()+'. Passe o mouse sobre um valor para ver os lançamentos que o formam.';
+  const pp='Previsto = despesas programadas e ainda NÃO pagas (data prevista) · Pago = despesas já pagas (data do pagamento). Cada lançamento conta só em um deles.';
+  if(res.granularidade==='dia') return '<strong>Dia '+dd+'</strong> — Orçado = parcela diária do custo previsto · Previsto = despesas programadas para o dia e ainda NÃO pagas · Pago = despesas pagas no dia. Cada lançamento conta só em um deles.'+fim;
+  if(a){
+    const nome=a.n<1?'Antes do início da obra '+a.obra:a.n>a.total?'Após o fim da obra '+a.obra:'Semana '+a.n+' de '+a.total+' da obra '+a.obra;
+    return '<strong>'+poEsc(nome)+' ('+dd+' a '+df+')</strong> — Orçado = custo previsto ÷ '+a.total+' semanas da obra ('+poDt(a.inicio_obra)+' a '+poDt(a.fim_obra)+') · '+pp+fim;
+  }
+  return '<strong>Semana civil de '+dd+' a '+df+' (segunda a domingo)</strong> — Orçado = custo previsto ÷ nº de semanas de cada obra; cada semana da obra é contada inteira na semana civil em que ela começa · '+pp+fim;
+}
 function drawCatPeriodo(res){
   const el=document.getElementById('po-cat-rows');
   _tipReg={};
   if(!res.ok){ el.innerHTML='<div style="padding:28px;text-align:center;color:var(--po-red-t);font-size:15px">'+poEsc(res.error||'Erro')+'</div>'; return; }
-  const nomes=Object.keys(res.categorias).filter(n=>{const c=res.categorias[n];return c.orcado>0||c.previsto>0||c.pago>0||c.a_pagar>0;});
+  // Janela definida pelo servidor: semana DA OBRA (uma obra selecionada) ou semana civil seg–dom
+  if(res.inicio){
+    if(_catMode==='semana') _catRef=res.inicio;
+    const a=res.alinhada_obra;
+    let rot=_catMode==='dia'?poDt(res.inicio):poDt(res.inicio)+' – '+poDt(res.fim);
+    if(a&&_catMode==='semana') rot=(a.n<1?'Antes do início da obra':a.n>a.total?'Após o fim da obra':'Semana '+a.n+' de '+a.total)+' · '+rot;
+    document.getElementById('po-cat-nav-label').textContent=rot;
+    document.getElementById('po-cat-date').value=_catRef;
+    document.getElementById('po-cat-sub').innerHTML=poSubPeriodo(res);
+    poCatEscopoBadge();
+  }
+  const nomes=Object.keys(res.categorias).filter(n=>{const c=res.categorias[n];return c.orcado>0||c.previsto>0||c.pago>0;});
   const foraHtml=poForaHtml(res);
   if(!nomes.length){ el.innerHTML='<div style="padding:28px;text-align:center;color:var(--po-txt2);font-size:15px">Nenhuma categoria com orçamento neste período.</div>'+foraHtml; return; }
   const mx=Math.max(...nomes.map(n=>Math.max(res.categorias[n].orcado,res.categorias[n].previsto,res.categorias[n].pago)),1);
@@ -1038,19 +1105,21 @@ function drawCatPeriodo(res){
   };
   const cab=`<div class="po-cat-figs" style="padding:12px 0 16px;border-bottom:2px solid var(--po-border)">
       ${poFig('Total orçado',BRL(t.orcado),'','var(--po-gray)',totTip('Total orçado — '+per,'orcado','Soma do Orçado das categorias abaixo.'))}
-      ${poFig('Total previsto',BRL(t.previsto),'','var(--po-yellow-t)',totTip('Total previsto — '+per,'previsto','Soma do Previsto das categorias abaixo (pagos e em aberto, pela data prevista).'))}
+      ${poFig('Total previsto',BRL(t.previsto),'','var(--po-yellow-t)',totTip('Total previsto — '+per,'previsto','Soma do Previsto das categorias abaixo: despesas programadas que ainda NÃO foram pagas (pela data prevista).'))}
       ${poFig('Total pago',BRL(t.pago),'','var(--po-blue-t)',totTip('Total pago — '+per,'pago','Soma do Pago das categorias abaixo (pela data real do pagamento).'))}
-      ${poFig('A pagar (em aberto)',BRL(t.a_pagar),'','',totTip('A pagar — '+per,'a_pagar','Compromissos ainda não pagos. Não são gasto realizado.'))}</div>`
+    </div>`
     +poForaAviso(res);
   el.innerHTML=cab+nomes.map(n=>{
     const c=res.categorias[n], d=c.det||{};
     const estouro=c.saldo!==null&&c.saldo<0;
-    const sCor=c.saldo===null?'var(--po-txt2)':estouro?poVerm:poVerde;
-    const rOrc=(d.orcado||[]).map(o=>({t:o.obra+' · '+o.nome,s:'custo previsto '+BRL(o.custo)+' ÷ '+o.semanas+' semanas × dias de '+per,v:o.valor}));
-    const tOrc={t:'Orçado — '+n,i:dia?'Parcela diária do custo previsto (orçado da semana ÷ dias da semana), por obra.':'Custo previsto distribuído igualmente entre as semanas da obra e proporcional aos dias de '+per+', por obra.',rows:poFechar(rOrc,c.orcado,'Outras obras'),tot:{l:'Total orçado',v:c.orcado},vazio:'Nenhuma obra tem orçamento semanal (datas + custo previsto) para esta categoria neste período.'};
-    const tPrev={t:'Previsto — '+n,i:'Lançamentos programados no Nibo com data prevista em '+per+' (pagos e em aberto). É o MESMO lançamento que aparece em Pago, visto por outra data: não se somam. Inclui obras sem orçamento semanal (marcadas com ⚠), como o quadro Mês.',rows:poRowsLanc(d.previsto,'prevista'),mais:d.previsto&&d.previsto.mais,tot:{l:'Total previsto',v:c.previsto},vazio:'Nenhum lançamento previsto neste período.'};
-    const tPago={t:'Pago — '+n,i:'Lançamentos baixados no Nibo com data de pagamento em '+per+'. Pagamento parcial conta só o valor já pago. Inclui obras sem orçamento semanal (marcadas com ⚠), como o quadro Mês.',rows:poRowsLanc(d.pago,'pago em'),mais:d.pago&&d.pago.mais,tot:{l:'Total pago',v:c.pago},vazio:'Nenhum pagamento neste período.'};
-    const tAp={t:'A pagar — '+n,i:'Parte do Previsto de '+per+' que ainda NÃO foi paga (em aberto ou vencida). Não é gasto realizado.',rows:poRowsLanc(d.a_pagar,'prevista'),mais:d.a_pagar&&d.a_pagar.mais,tot:{l:'Total a pagar',v:c.a_pagar},vazio:'Nada em aberto neste período.'};
+    const sCor=c.saldo===null?'var(--po-txt2)':estouro?poVerm:c.saldo>0?poVerde:'var(--po-txt2)';
+    const rOrc=(d.orcado||[]).map(o=>({t:o.obra+' · '+o.nome,
+      s:dia?'custo previsto '+BRL(o.custo)+' ÷ '+o.semanas+' semanas = '+BRL(o.por_semana)+' por semana; o dia recebe a parcela diária desta semana'
+           :'custo previsto '+BRL(o.custo)+' ÷ '+o.semanas+' semanas = '+BRL(o.por_semana)+' por semana'+(o.sem_n&&o.sem_n.length?' · semana '+o.sem_n.join(' e ')+' de '+o.semanas+' da obra':''),
+      v:o.valor}));
+    const tOrc={t:'Orçado — '+n,i:dia?'Parcela diária do custo previsto (orçado da semana da obra ÷ dias dessa semana), por obra.':'Custo previsto da categoria dividido igualmente entre as semanas da obra (início → fim). Cada semana da obra é contada INTEIRA no período em que ela começa.',rows:poFechar(rOrc,c.orcado,'Outras obras'),tot:{l:'Total orçado',v:c.orcado},vazio:'Nenhuma obra tem orçamento semanal (datas + custo previsto) para esta categoria neste período.'};
+    const tPrev={t:'Previsto — '+n,i:'Despesas programadas no Nibo com data prevista em '+per+' que ainda NÃO foram pagas (em aberto ou vencidas). Quando o lançamento é pago, ele sai do Previsto e passa a contar em Pago. Não é gasto realizado. Inclui obras sem orçamento semanal (marcadas com ⚠), como o quadro Mês.',rows:poRowsLanc(d.previsto,'prevista'),mais:d.previsto&&d.previsto.mais,tot:{l:'Total previsto (não pago)',v:c.previsto},vazio:'Nada previsto e ainda não pago neste período.'};
+    const tPago={t:'Pago — '+n,i:'Lançamentos baixados no Nibo com data de pagamento em '+per+'. Pagamento parcial conta só o valor já pago (o restante continua em Previsto). Um lançamento pago deixa de ser Previsto. Inclui obras sem orçamento semanal (marcadas com ⚠), como o quadro Mês.',rows:poRowsLanc(d.pago,'pago em'),mais:d.pago&&d.pago.mais,tot:{l:'Total pago',v:c.pago},vazio:'Nenhum pagamento neste período.'};
     const rSal=(d.saldo||[]).map(o=>({t:o.obra+' · '+o.nome,s:'orçado acumulado '+BRL(o.orc_acum)+' − pago acumulado '+BRL(o.pago_acum),v:o.valor}));
     const tSal=c.saldo===null
       ?{t:'Saldo acumulado — '+n,i:(c.orcado<=0&&!(d.saldo&&d.saldo.length))
@@ -1061,14 +1130,13 @@ function drawCatPeriodo(res){
       <div class="po-cat-label">${poEsc(n)}</div>
       <div class="po-cat-bars">
         <div class="po-cat-bar" style="width:${(c.orcado/mx)*100}%;background:var(--po-gray2)" data-tip="Barra cinza — Orçado\n${poEsc(BRL(c.orcado))}. Escala comum a todas as categorias deste período."></div>
-        <div class="po-cat-bar" style="width:${(c.previsto/mx)*100}%;background:var(--po-yellow)" data-tip="Barra amarela — Previsto\n${poEsc(BRL(c.previsto))} programados no Nibo (data prevista). Mesma escala."></div>
+        <div class="po-cat-bar" style="width:${(c.previsto/mx)*100}%;background:var(--po-yellow)" data-tip="Barra amarela — Previsto\n${poEsc(BRL(c.previsto))} programados e ainda não pagos (data prevista). Mesma escala."></div>
         <div class="po-cat-bar" style="width:${Math.min(c.pago/mx*100,100)}%;background:linear-gradient(90deg,var(--po-blue),var(--po-cyan))" data-tip="Barra azul — Pago\n${poEsc(BRL(c.pago))} efetivamente pagos (data do pagamento). Mesma escala."></div>
         <div class="po-cat-figs">
           ${poFig('Orçado',BRL(c.orcado),'','var(--po-gray)',tOrc)}
           ${poFig('Previsto',BRL(c.previsto),'','var(--po-yellow-t)',tPrev)}
           ${poFig('Pago',BRL(c.pago),'','var(--po-blue-t)',tPago)}
-          ${poFig('A pagar',BRL(c.a_pagar),'','',tAp)}
-          ${poFig(estouro?'Estouro acumulado':'Saldo acumulado',c.saldo===null?'—':BRL(c.saldo),sCor,'',tSal)}
+          ${poFig(estouro?'Estouro acumulado':'Saldo acumulado',c.saldo===null?'—':poSigned(c.saldo),sCor,'',tSal)}
         </div>
       </div>
     </div>`;
@@ -1106,17 +1174,16 @@ function poForaHtml(res){
       return `<div class="po-fora-row">
         <div class="po-fora-nome"><strong>${poEsc(i.categoria)}</strong><span>${obra}</span></div>
         <div class="po-cat-figs" style="flex:1;margin-top:0">
-          ${poFig('Previsto',BRL(i.previsto),'','var(--po-yellow-t)',tp('Previsto','previsto','prevista','Lançamentos programados no Nibo em '+per+' (data prevista).',i.previsto))}
+          ${poFig('Previsto',BRL(i.previsto),'','var(--po-yellow-t)',tp('Previsto','previsto','prevista','Lançamentos programados em '+per+' (data prevista) e ainda NÃO pagos.',i.previsto))}
           ${poFig('Pago',BRL(i.pago),'','var(--po-blue-t)',tp('Pago','pago','pago em','Lançamentos pagos em '+per+' (data do pagamento).',i.pago))}
-          ${poFig('A pagar',BRL(i.a_pagar),'','',tp('A pagar','a_pagar','prevista','Parte do previsto em '+per+' ainda não paga.',i.a_pagar))}
         </div></div>`;
     }).join('');
     const rotulo=f.rotulos[m]+(m==='sem_obra'?' — não incluído nas categorias':' — incluído nas categorias');
     return `<div class="po-fora-h po-has-tip" data-tip="${poEsc(f.rotulos[m]+'\n'+(poForaAjuda[m]||''))}" tabindex="0">
-        <div>${poEsc(rotulo)}</div><span>Previsto ${BRL(t.previsto)} · Pago ${BRL(t.pago)}${t.a_pagar>0?' · A pagar '+BRL(t.a_pagar):''}</span></div>${linhas}`;
+        <div>${poEsc(rotulo)}</div><span>Previsto ${BRL(t.previsto)} · Pago ${BRL(t.pago)}</span></div>${linhas}`;
   }).join('');
   return `<div class="po-fora"><div class="po-fora-t">Sem orçamento semanal</div>
-    <p class="po-fora-sub">Detalhe do que, em ${per}, vem de obras sem orçamento semanal. Esses valores já estão somados em Previsto, Pago e A pagar de cada categoria (como no quadro Mês), mas não geram Orçado nem Saldo — exceto "Sem obra vinculada", que fica fora das categorias. Passe o mouse no título de cada grupo para ver como resolver.</p>${grupos}</div>`;
+    <p class="po-fora-sub">Detalhe do que, em ${per}, vem de obras sem orçamento semanal. Esses valores já estão somados em Previsto (não pago) e Pago de cada categoria (como no quadro Mês), mas não geram Orçado nem Saldo — exceto "Sem obra vinculada", que fica fora das categorias. Passe o mouse no título de cada grupo para ver como resolver.</p>${grupos}</div>`;
 }
 
 // ─── Tooltip: texto simples (data-tip) ou lista de lançamentos (data-tipid) ───
@@ -1228,7 +1295,7 @@ window.poCopiar=function(){
   const al=(_d.obras_alerta||[]).map(a=>'  - '+a.codigo+' '+a.nome+' ('+PCT(a.desvio_pct)+')').join('\n');
   const txt=['PAINEL FINANCEIRO DE OBRAS','Período: '+per,'',
     'Contratado: '+BRL(k.contratado),'Orçado: '+BRL(k.orcado),'Gasto: '+BRL(k.gasto),
-    'Desvio: '+(k.desvio>0?'+':'')+BRL(k.desvio),'Obras em Estouro: '+k.obras_estouro+' de '+k.obras_total,
+    'Saldo do orçamento (Orçado − Gasto): '+(k.desvio<0?'+':'')+BRL(-k.desvio),'Obras em Estouro: '+k.obras_estouro+' de '+k.obras_total,
     '','Obras em Alerta:',al||'  Nenhuma'].join('\n');
   navigator.clipboard.writeText(txt).then(()=>poToast('Copiado!')).catch(()=>poToast('Erro ao copiar.','error'));
 };

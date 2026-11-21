@@ -294,22 +294,37 @@ class PainelObrasController extends Controller
                 $obras = array_values(array_filter($obras, fn($o) => in_array((int) $o['id'], $ids, true)));
             }
 
+            // Com UMA obra selecionada, a "semana" é a semana DA OBRA (blocos de 7 dias a partir da data de início),
+            // a mesma usada na distribuição do orçamento. Com várias obras/sem filtro, semana civil (seg-dom).
+            $alinhada = null;
+            if ($gran === 'semana' && $filtroObras !== null && count($ids) === 1 && count($obras) === 1) {
+                $o1 = $obras[0];
+                if (!empty($o1['data_inicio']) && !empty($o1['data_prev_fim']) && $o1['data_prev_fim'] >= $o1['data_inicio']) {
+                    $t0 = strtotime($o1['data_inicio'] . ' UTC');
+                    $k = (int) floor((strtotime($ref . ' UTC') - $t0) / (7 * 86400));   // índice do bloco de 7 dias (negativo = antes do início)
+                    $ini = gmdate('Y-m-d', $t0 + $k * 7 * 86400);
+                    $fim = gmdate('Y-m-d', $t0 + ($k * 7 + 6) * 86400);
+                    $alinhada = ['obra' => $o1['codigo'], 'nome' => $o1['nome'], 'n' => $k + 1,
+                                 'total' => PrevisaoSemanalService::totalSemanas($o1['data_inicio'], $o1['data_prev_fim']),
+                                 'inicio_obra' => $o1['data_inicio'], 'fim_obra' => $o1['data_prev_fim']];
+                }
+            }
+
             // Inclui o período consultado mesmo que seja anterior ao início das obras (para conciliar com o Mês)
             $lancs = PrevisaoSemanalService::carregarLancamentos($company, $obras, $ini, $fim);
             if ($filtroObras !== null) {
                 $lancs = array_values(array_filter($lancs, fn($l) => in_array((int) ($l['obra_id'] ?? 0), $ids, true)));
             }
-            $cats = PrevisaoSemanalService::consolidadoPeriodo($obras, $custos, $lancs, $ini, $fim, $hoje);
+            $cats = PrevisaoSemanalService::consolidadoPeriodo($obras, $custos, $lancs, $ini, $fim, $hoje, $gran === 'semana');
             $fora = PrevisaoSemanalService::foraDoOrcamento($obras, $custos, $lancs, $ini, $fim);
 
             $this->json([
-                'ok' => true, 'granularidade' => $gran, 'inicio' => $ini, 'fim' => $fim, 'hoje' => $hoje,
+                'ok' => true, 'granularidade' => $gran, 'inicio' => $ini, 'fim' => $fim, 'hoje' => $hoje, 'alinhada_obra' => $alinhada,
                 'categorias' => $cats,
                 'fora_orcamento' => $fora,
                 'totais' => [
                     'orcado' => round(array_sum(array_column($cats, 'orcado')), 2),
                     'previsto' => round(array_sum(array_column($cats, 'previsto')), 2),
-                    'a_pagar' => round(array_sum(array_column($cats, 'a_pagar')), 2),
                     'pago' => round(array_sum(array_column($cats, 'pago')), 2),
                 ],
             ]);

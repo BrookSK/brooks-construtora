@@ -2,44 +2,44 @@
 <?php ob_start(); ?>
 <link rel="stylesheet" href="/assets/css/painel-obras-light.css">
 <style>
-.main-content{background:#0b1220!important} body{background:#0b1220!important}
-.top-bar{background:#151f32!important;color:#e2e8f0!important;box-shadow:none!important;border-bottom:1px solid rgba(255,255,255,.06)!important}
-.top-bar h5{color:#f8fafc!important} .top-bar .text-muted{color:#94a3b8!important}
-.top-bar .badge{background:rgba(59,130,246,.2)!important;color:#93c5fd!important}
-#ob{font-family:'Inter',system-ui,sans-serif;font-variant-numeric:tabular-nums;color:#e2e8f0;padding-bottom:48px}
-.ob-card{background:#151f32;border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden}
-.ob-inp{background:#0f1829;border:1px solid rgba(255,255,255,.1);color:#e2e8f0;border-radius:8px;padding:8px 12px;width:100%;outline:none;font-size:14px}
-.ob-inp:focus{border-color:#3b82f6} .ob-inp option{background:#0f1829}
-.ob-label{font-size:12px;color:#94a3b8;margin-bottom:4px;display:block}
-.ob-btn-p{background:linear-gradient(135deg,#3b82f6,#22d3ee);color:#fff;border:none;border-radius:10px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
-.ob-btn-g{background:#151f32;border:1px solid rgba(255,255,255,.12);color:#e2e8f0;border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer}
-.ob-btn-d{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer}
+#ob{font-family:'Inter',system-ui,sans-serif;font-variant-numeric:tabular-nums;color:#0f172a;padding-bottom:48px}
+#ob h5{color:#0f172a}
+.ob-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ob-inp{background:#fff;border:1px solid #cbd5e1;color:#0f172a;border-radius:8px;padding:8px 12px;width:100%;outline:none;font-size:14px}
+.ob-inp::placeholder{color:#64748b;opacity:1}
+.ob-inp:focus{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.15)} .ob-inp option{background:#fff;color:#0f172a}
+.ob-label{font-size:12px;color:#0f172a;font-weight:500;margin-bottom:4px;display:block}
+.ob-btn-p{background:linear-gradient(135deg,#2563eb,#0891b2);color:#fff;border:none;border-radius:10px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.ob-btn-g{background:#fff;border:1px solid #cbd5e1;color:#0f172a;border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer}
+.ob-btn-g:hover{background:#f1f5f9}
+.ob-btn-d{background:#fee2e2;border:1px solid #fecaca;color:#b91c1c;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer}
 .ob-table{width:100%;border-collapse:collapse}
-.ob-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;white-space:nowrap}
-.ob-table td{padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;color:#e2e8f0;vertical-align:middle}
+.ob-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#334155;background:#f8fafc;padding:10px 16px;border-bottom:1px solid #e2e8f0;text-align:left;white-space:nowrap}
+.ob-table td{padding:11px 16px;border-bottom:1px solid #eef2f7;font-size:13px;color:#0f172a;vertical-align:middle}
 .ob-table tr:last-child td{border-bottom:none}
-.ob-table tbody tr:hover{background:rgba(59,130,246,.05)}
-.ob-pill-ok{font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:rgba(16,185,129,.14);color:#6ee7b7}
-.ob-pill-warn{font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:rgba(245,158,11,.14);color:#fcd34d}
-.ob-pill-blue{font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:rgba(59,130,246,.14);color:#93c5fd}
-.ob-pill-gray{font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:rgba(100,116,139,.14);color:#94a3b8}
-.ob-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1050;align-items:center;justify-content:center;padding:16px}
-.ob-modal-box{background:#151f32;border:1px solid rgba(255,255,255,.08);border-radius:16px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;padding:28px}
+.ob-table tbody tr:hover{background:#f1f5f9}
+.ob-pill-ok{font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:#d1fae5;color:#047857}
+.ob-pill-warn{font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:#fef3c7;color:#92400e}
+.ob-pill-blue{font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:#dbeafe;color:#1d4ed8}
+.ob-pill-gray{font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:#e2e8f0;color:#334155}
+.ob-modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1050;align-items:center;justify-content:center;padding:16px}
+.ob-modal-box{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-radius:16px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 20px 50px rgba(15,23,42,.25)}
 .ob-modal-box .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .ob-modal-box .col-full{grid-column:1/-1}
 .ob-modal-box .col-third{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;grid-column:1/-1}
-.ob-cc-tag{background:rgba(59,130,246,.12);color:#60a5fa;font-size:12px;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;margin:2px}
+.ob-modal-box small{color:#475569}
+.ob-cc-tag{background:#dbeafe;color:#1d4ed8;font-size:12px;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:6px;margin:2px}
 .ob-subnav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
-.ob-subnav a{font-size:13px;padding:6px 14px;border-radius:8px;color:#94a3b8;text-decoration:none;border:1px solid rgba(255,255,255,.06);transition:all .15s}
-.ob-subnav a:hover,.ob-subnav a.active{background:rgba(59,130,246,.12);color:#60a5fa;border-color:rgba(59,130,246,.3)}
-.ob-warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px 16px;font-size:13px;color:#fcd34d;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.ob-tab{background:transparent;border:none;color:#94a3b8;font-size:13px;padding:8px 16px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
-.ob-tab:hover{color:#e2e8f0}
-.ob-tab.active{color:#60a5fa;border-bottom-color:#3b82f6}
+.ob-subnav a{font-size:13px;padding:6px 14px;border-radius:8px;color:#334155;background:#fff;text-decoration:none;border:1px solid #e2e8f0;transition:all .15s}
+.ob-subnav a:hover,.ob-subnav a.active{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}
+.ob-warn{background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:10px 16px;font-size:13px;color:#78350f;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.ob-tab{background:transparent;border:none;color:#334155;font-size:13px;padding:8px 16px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.ob-tab:hover{color:#0f172a}
+.ob-tab.active{color:#1d4ed8;border-bottom-color:#2563eb;font-weight:600}
 .ob-tab-content{animation:obFadeIn .2s ease}
 @keyframes obFadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-.ob-custo-item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px 12px}
-.ob-custo-item label{font-size:13px;color:#e2e8f0;margin:0}
+.ob-custo-item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px}
+.ob-custo-item label{font-size:13px;color:#0f172a;margin:0}
 .ob-custo-item input{max-width:160px}
 </style>
 
@@ -48,10 +48,6 @@
 <div class="ob-subnav">
   <a href="/admin/painel-obras"><i class="bi bi-speedometer2"></i> Dashboard</a>
   <a href="/admin/painel-obras/obras" class="active"><i class="bi bi-buildings"></i> Obras</a>
-  <a href="/admin/painel-obras/lancamentos"><i class="bi bi-cash-stack"></i> Lançamentos</a>
-  <a href="/admin/painel-obras/planilha"><i class="bi bi-table"></i> Planilha de Controle</a>
-  <a href="/admin/painel-obras/depara"><i class="bi bi-arrow-left-right"></i> De-para Categorias</a>
-  <a href="/admin/painel-obras/pauta"><i class="bi bi-calendar-check"></i> Pauta de Revisão</a>
 </div>
 
 <?php if($pendentes>0): ?>
@@ -62,7 +58,7 @@
 <?php endif; ?>
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-  <h5 style="margin:0;color:#f8fafc">Obras Cadastradas</h5>
+  <h5 style="margin:0;color:#0f172a">Obras Cadastradas</h5>
   <button class="ob-btn-p" onclick="document.getElementById('ob-modal').style.display='flex'">
     <i class="bi bi-plus-circle"></i> Nova Obra
   </button>
@@ -70,6 +66,9 @@
 
 <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
   <input type="text" id="ob-busca" class="ob-inp" style="max-width:280px" placeholder="Buscar por nome, código ou cliente" oninput="obFiltrar()">
+  <select id="ob-tipo-f" class="ob-inp" style="max-width:160px" onchange="obFiltrar()">
+    <option value="">Todos os tipos</option><option>Reforma</option><option>Construção</option>
+  </select>
   <select id="ob-sit" class="ob-inp" style="max-width:160px" onchange="obFiltrar()">
     <option value="">Todas as situações</option>
     <option>Ativa</option><option>Concluída</option><option>Pausada</option><option>Cancelada</option>
@@ -86,12 +85,13 @@
       <tr data-nome="<?=strtolower(htmlspecialchars($o['nome']))?>"
           data-codigo="<?=strtolower(htmlspecialchars($o['codigo']))?>"
           data-cliente="<?=strtolower(htmlspecialchars($o['cliente']??''))?>"
-          data-sit="<?=htmlspecialchars($o['situacao'])?>">
-        <td><span style="color:#60a5fa;font-weight:600"><?=htmlspecialchars($o['codigo'])?></span></td>
+          data-sit="<?=htmlspecialchars($o['situacao'])?>"
+          data-tipo="<?=htmlspecialchars($o['tipo'])?>">
+        <td><span style="color:#1d4ed8;font-weight:600"><?=htmlspecialchars($o['codigo'])?></span></td>
         <td style="font-weight:600"><?=htmlspecialchars($o['nome'])?></td>
-        <td><?=$o['tipo']==='Reforma'?'<span style="color:#67e8f9;background:rgba(103,232,249,.12);font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px">Reforma</span>':'<span style="color:#93c5fd;background:rgba(147,197,253,.14);font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px">Construção</span>'?></td>
-        <td style="color:#94a3b8"><?=htmlspecialchars($o['cliente']??'—')?></td>
-        <td style="text-align:right"><?=$o['valor_contratado']>0?'R$ '.number_format($o['valor_contratado'],2,',','.'):'<a href="/admin/painel-obras/obras#" style="color:#60a5fa;font-size:11px" onclick="obEditar('.json_encode($o).')">— Preencher</a>'?></td>
+        <td><?=$o['tipo']==='Reforma'?'<span style="color:#0e7490;background:#cffafe;font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px">Reforma</span>':'<span style="color:#1d4ed8;background:#dbeafe;font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px">Construção</span>'?></td>
+        <td style="color:#475569"><?=htmlspecialchars($o['cliente']??'—')?></td>
+        <td style="text-align:right"><?=$o['valor_contratado']>0?'R$ '.number_format($o['valor_contratado'],2,',','.'):'<a href="/admin/painel-obras/obras#" style="color:#1d4ed8;font-size:11px" onclick="obEditar('.json_encode($o).')">— Preencher</a>'?></td>
         <td><?php
           $sit=$o['situacao'];
           $sc=$sit==='Ativa'?'ob-pill-ok':($sit==='Concluída'?'ob-pill-blue':'ob-pill-gray');
@@ -109,7 +109,7 @@
       </tr>
     <?php endforeach; ?>
     <?php if(empty($obras)): ?>
-      <tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8">
+      <tr><td colspan="8" style="text-align:center;padding:40px;color:#475569">
         Nenhuma obra cadastrada.
         <button class="ob-btn-p" style="margin-left:12px" onclick="document.getElementById('ob-modal').style.display='flex'">Cadastrar primeira obra</button>
       </td></tr>
@@ -122,14 +122,14 @@
 <div id="ob-modal" class="ob-modal">
   <div class="ob-modal-box">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <h5 style="margin:0;color:#f8fafc" id="ob-modal-title">Nova Obra</h5>
-      <button style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer" onclick="obFechar()">×</button>
+      <h5 style="margin:0;color:#0f172a" id="ob-modal-title">Nova Obra</h5>
+      <button style="background:none;border:none;color:#475569;font-size:20px;cursor:pointer" onclick="obFechar()">×</button>
     </div>
     <input type="hidden" id="ob-id">
     <input type="hidden" id="ob-custos-json" value="{}">
     
     <!-- Abas -->
-    <div class="ob-tabs" style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,.06)">
+    <div class="ob-tabs" style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid #e2e8f0">
       <button class="ob-tab active" data-tab="geral" onclick="obMudarAba('geral')">Informações Gerais</button>
       <button class="ob-tab" data-tab="financeiro" onclick="obMudarAba('financeiro')">Planejamento Financeiro</button>
       <button class="ob-tab" data-tab="custos" onclick="obMudarAba('custos')">Custos Previstos</button>
@@ -181,7 +181,7 @@
         <input id="ob-dfim" type="date" class="ob-inp">
       </div>
       <div class="col-full">
-        <label class="ob-label">Centros de Custo do Nibo <small style="color:#64748b">(vincula lançamentos à obra)</small></label>
+        <label class="ob-label">Centros de Custo do Nibo <small style="color:#475569">(vincula lançamentos à obra)</small></label>
         <div id="ob-cc-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;min-height:28px"></div>
         <select id="ob-cc-sel" class="ob-inp" onchange="obAddCc()">
           <option value="">— Selecionar centro de custo —</option>
@@ -192,7 +192,7 @@
         <input type="hidden" id="ob-cc-json" value="[]">
       </div>
       <div class="col-full">
-        <label class="ob-label">Códigos alternativos <small style="color:#64748b">(separados por vírgula, ex.: ADM-105, P002)</small></label>
+        <label class="ob-label">Códigos alternativos <small style="color:#475569">(separados por vírgula, ex.: ADM-105, P002)</small></label>
         <input id="ob-codalt" class="ob-inp" placeholder="ADM-105, P002">
       </div>
       <div class="col-full">
@@ -228,12 +228,12 @@
       <div>
         <label class="ob-label">Carência (meses)</label>
         <input id="ob-carencia" type="number" class="ob-inp" placeholder="Ex: 2" min="0" value="0">
-        <small style="color:#64748b;font-size:11px">Meses antes da primeira parcela</small>
+        <small style="color:#475569;font-size:11px">Meses antes da primeira parcela</small>
       </div>
       <div class="col-full">
-        <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:12px;margin-top:8px">
-          <div style="font-size:12px;color:#94a3b8;margin-bottom:6px">Simulação de Parcelas</div>
-          <div id="ob-sim-parcelas" style="font-size:13px;color:#e2e8f0">
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin-top:8px">
+          <div style="font-size:12px;color:#475569;margin-bottom:6px">Simulação de Parcelas</div>
+          <div id="ob-sim-parcelas" style="font-size:13px;color:#0f172a">
             Preencha o valor contratado, número de parcelas e frequência para ver a simulação.
           </div>
         </div>
@@ -245,11 +245,11 @@
     <div class="ob-tab-content" id="tab-custos" style="display:none">
     <div class="row">
       <div class="col-full">
-        <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:16px">
           <div style="font-size:13px;font-weight:600;color:var(--po-blue-t);margin-bottom:6px">
             <i class="bi bi-info-circle"></i> Como funciona o controle de custos
           </div>
-          <div style="font-size:12px;color:#64748b;line-height:1.6">
+          <div style="font-size:12px;color:#475569;line-height:1.6">
             Defina o <strong>custo previsto</strong> para cada categoria abaixo. O sistema irá comparar automaticamente com os 
             <strong>lançamentos do Nibo</strong> vinculados a esta obra e mostrar no dashboard se você está dentro do orçamento ou se estourou.
           </div>
@@ -258,7 +258,7 @@
       <div class="col-full">
         <div style="margin-bottom:14px">
           <label class="ob-label">Categorias do Nibo</label>
-          <small style="color:#64748b;font-size:11px;display:block;margin-top:4px">
+          <small style="color:#475569;font-size:11px;display:block;margin-top:4px">
             As categorias são carregadas do Nibo. Preencha os valores previstos para cada uma que será utilizada nesta obra.
           </small>
         </div>
@@ -269,16 +269,16 @@
         </div>
       </div>
       <div class="col-full" style="margin-top:12px">
-        <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:12px">
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px">
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:12px;color:#94a3b8">Total de Custos Previstos:</span>
-            <span style="font-size:15px;font-weight:600;color:#fcd34d" id="ob-custos-total">R$ 0,00</span>
+            <span style="font-size:12px;color:#475569">Total de Custos Previstos:</span>
+            <span style="font-size:15px;font-weight:600;color:#92400e" id="ob-custos-total">R$ 0,00</span>
           </div>
         </div>
       </div>
       <div class="col-full" style="margin-top:16px">
         <label class="ob-label">Previsão semanal acumulativa</label>
-        <small style="color:#64748b;font-size:11px;display:block;margin:4px 0 10px">
+        <small style="color:#475569;font-size:11px;display:block;margin:4px 0 10px">
           O previsto de cada categoria é dividido igualmente entre as semanas da obra (início → fim). O saldo não usado passa para a semana seguinte e o gasto efetivo vem do Nibo. Salve a obra para recalcular após alterar datas ou valores.
         </small>
         <div id="ob-prev-semanal" style="display:grid;gap:8px"></div>
@@ -286,7 +286,7 @@
     </div>
     </div>
     
-    <div id="ob-err" style="color:#fca5a5;font-size:13px;margin-top:10px;display:none"></div>
+    <div id="ob-err" style="color:#b91c1c;font-size:13px;margin-top:10px;display:none"></div>
     <div style="display:flex;gap:10px;margin-top:16px">
       <button class="ob-btn-p" onclick="obSalvar()"><i class="bi bi-check2"></i> Salvar</button>
       <button class="ob-btn-g" onclick="obFechar()">Cancelar</button>
@@ -321,7 +321,7 @@ function obMudarAba(aba){
 function obRenderCustos(){
   const id = document.getElementById('ob-id').value;
   if (!id) {
-    document.getElementById('ob-custos-list').innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:20px;text-align:center">Salve a obra primeiro para cadastrar custos previstos.</div>';
+    document.getElementById('ob-custos-list').innerHTML = '<div style="color:#475569;font-size:13px;padding:20px;text-align:center">Salve a obra primeiro para cadastrar custos previstos.</div>';
     return;
   }
   
@@ -335,7 +335,7 @@ function obRenderCustos(){
       const cats = data.Construção || [];
       
       if (cats.length === 0) {
-        document.getElementById('ob-custos-list').innerHTML = '<div style="color:#f59e0b;font-size:13px;padding:20px;text-align:center;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px"><i class="bi bi-exclamation-triangle-fill"></i> Nenhuma categoria encontrada no Nibo. Execute a sincronização primeiro.</div>';
+        document.getElementById('ob-custos-list').innerHTML = '<div style="color:#b45309;font-size:13px;padding:20px;text-align:center;background:#fffbeb;border:1px solid #fde68a;border-radius:8px"><i class="bi bi-exclamation-triangle-fill"></i> Nenhuma categoria encontrada no Nibo. Execute a sincronização primeiro.</div>';
         return;
       }
       
@@ -350,13 +350,13 @@ function obRenderCustos(){
         </div>`;
       }).join('');
       
-      document.getElementById('ob-custos-list').innerHTML = html || '<div style="color:#94a3b8;text-align:center;padding:20px">Nenhuma categoria disponível.</div>';
+      document.getElementById('ob-custos-list').innerHTML = html || '<div style="color:#475569;text-align:center;padding:20px">Nenhuma categoria disponível.</div>';
       obCalcCustosTotal();
       obCarregarPrevisao(id);
     })
     .catch(err => {
       console.error('Erro ao carregar categorias:', err);
-      document.getElementById('ob-custos-list').innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;text-align:center;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px"><i class="bi bi-x-circle-fill"></i> Erro ao carregar categorias do Nibo.</div>';
+      document.getElementById('ob-custos-list').innerHTML = '<div style="color:#b91c1c;font-size:13px;padding:20px;text-align:center;background:#fef2f2;border:1px solid #fecaca;border-radius:8px"><i class="bi bi-x-circle-fill"></i> Erro ao carregar categorias do Nibo.</div>';
     });
 }
 
@@ -366,38 +366,38 @@ function obData(d){return d?d.split('-').reverse().join('/'):'';}
 function obCarregarPrevisao(id){
   const box=document.getElementById('ob-prev-semanal');
   if(!box) return;
-  box.innerHTML='<div style="color:#94a3b8;font-size:12px">Calculando previsão semanal…</div>';
+  box.innerHTML='<div style="color:#475569;font-size:12px">Calculando previsão semanal…</div>';
   fetch('/admin/painel-obras/obras/previsao-semanal?id='+encodeURIComponent(id))
     .then(r=>r.json())
     .then(d=>{
-      if(!d.ok){box.innerHTML='<div style="color:#fca5a5;font-size:12px">'+obEsc(d.error||'Erro ao calcular.')+'</div>';return;}
-      if(!d.configurada){box.innerHTML='<div style="color:#fcd34d;font-size:12px">'+obEsc(d.motivo)+'</div>';return;}
-      if(!d.categorias.length){box.innerHTML='<div style="color:#94a3b8;font-size:12px">Nenhum custo previsto salvo para distribuir.</div>';return;}
-      const head='<div style="font-size:12px;color:#94a3b8">Obra de '+obData(d.inicio)+' a '+obData(d.fim)+': '+d.total_semanas+' semanas'+(d.semana_atual>0?' (semana atual: '+d.semana_atual+')':' (ainda não iniciada)')+'</div>';
+      if(!d.ok){box.innerHTML='<div style="color:#b91c1c;font-size:12px">'+obEsc(d.error||'Erro ao calcular.')+'</div>';return;}
+      if(!d.configurada){box.innerHTML='<div style="color:#92400e;font-size:12px">'+obEsc(d.motivo)+'</div>';return;}
+      if(!d.categorias.length){box.innerHTML='<div style="color:#475569;font-size:12px">Nenhum custo previsto salvo para distribuir.</div>';return;}
+      const head='<div style="font-size:12px;color:#475569">Obra de '+obData(d.inicio)+' a '+obData(d.fim)+': '+d.total_semanas+' semanas'+(d.semana_atual>0?' (semana atual: '+d.semana_atual+')':' (ainda não iniciada)')+'</div>';
       box.innerHTML=head+d.categorias.map(c=>{
         const neg=c.saldo_atual!==null&&c.saldo_atual<0;
-        const cor=neg?'#fca5a5':'#86efac';
+        const cor=neg?'#b91c1c':'#047857';
         let badge=c.saldo_atual===null?'':`<span style="color:${cor};font-weight:600">${neg?'Estouro ':'Saldo '}${fmtBRL(c.saldo_atual)}</span>`;
-        if(c.alerta==='projetado') badge+=' <span style="color:#fcd34d;font-weight:600">· estouro projetado</span>';
-        const linhas=c.semanas.map(s=>`<tr style="${s.saldo!==null&&s.saldo<0?'color:#fca5a5;':''}${s.futura?'opacity:.65;':''}${s.atual?'background:rgba(59,130,246,.12);':''}">
+        if(c.alerta==='projetado') badge+=' <span style="color:#92400e;font-weight:600">· estouro projetado</span>';
+        const linhas=c.semanas.map(s=>`<tr style="${s.saldo!==null&&s.saldo<0?'color:#b91c1c;':''}${s.futura?'opacity:.6;':''}${s.atual?'background:rgba(59,130,246,.12);':''}">
           <td>${s.semana}${s.atual?' ●':''}</td><td>${obData(s.inicio)} – ${obData(s.fim)}</td>
           <td style="text-align:right">${fmtBRL(s.orcado)}</td><td style="text-align:right">${fmtBRL(s.saldo_anterior)}</td>
           <td style="text-align:right">${fmtBRL(s.disponivel)}</td><td style="text-align:right">${fmtBRL(s.previsto)}</td>
           <td style="text-align:right">${fmtBRL(s.pago)}</td>
           <td style="text-align:right;font-weight:600">${s.saldo===null?'—':fmtBRL(s.saldo)}</td>
           <td style="text-align:right">${s.projetado===null?'—':fmtBRL(s.projetado)}</td></tr>`).join('');
-        return `<details style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 12px">
-          <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;font-size:13px;color:#e2e8f0">
-            <span>${obEsc(c.categoria)} <small style="color:#64748b">${fmtBRL(c.previsto_total)} · ${fmtBRL(c.orcado_semanal)}/sem</small></span><span>${badge}</span>
+        return `<details style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px">
+          <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;font-size:13px;color:#0f172a">
+            <span>${obEsc(c.categoria)} <small style="color:#475569">${fmtBRL(c.previsto_total)} · ${fmtBRL(c.orcado_semanal)}/sem</small></span><span>${badge}</span>
           </summary>
-          <div style="overflow-x:auto;margin-top:8px"><table style="width:100%;font-size:11px;color:#cbd5e1;border-collapse:collapse">
-            <thead><tr style="color:#94a3b8;text-align:left"><th>Sem.</th><th>Período</th><th style="text-align:right" title="Custo previsto distribuído na semana">Orçado</th><th style="text-align:right">Saldo ant.</th><th style="text-align:right">Disponível</th><th style="text-align:right" title="Despesas programadas no Nibo (data prevista)">Previsto</th><th style="text-align:right" title="Despesas pagas (data do pagamento)">Pago</th><th style="text-align:right">Saldo</th><th style="text-align:right" title="Saldo descontando o previsto ainda não pago">Projetado</th></tr></thead>
+          <div style="overflow-x:auto;margin-top:8px"><table style="width:100%;font-size:11px;color:#1e293b;border-collapse:collapse">
+            <thead><tr style="color:#475569;text-align:left"><th>Sem.</th><th>Período</th><th style="text-align:right" title="Custo previsto distribuído na semana">Orçado</th><th style="text-align:right">Saldo ant.</th><th style="text-align:right">Disponível</th><th style="text-align:right" title="Programado e ainda NÃO pago (data prevista). Quando é pago, passa para a coluna Pago.">Previsto</th><th style="text-align:right" title="Despesas pagas (data do pagamento)">Pago</th><th style="text-align:right">Saldo</th><th style="text-align:right" title="Saldo descontando o previsto ainda não pago">Projetado</th></tr></thead>
             <tbody>${linhas}</tbody></table>
-            <div style="font-size:10px;color:#64748b;margin-top:4px">Previsto e Pago são o mesmo lançamento por datas diferentes (previsão x baixa) e não se somam. O saldo usa só o Pago.</div></div>
+            <div style="font-size:10px;color:#475569;margin-top:4px">Cada lançamento conta só em um: Previsto (ainda não pago) ou Pago (já baixado). O saldo usa só o Pago; o Projetado também desconta o Previsto.</div></div>
         </details>`;
       }).join('');
     })
-    .catch(()=>{box.innerHTML='<div style="color:#fca5a5;font-size:12px">Falha ao carregar a previsão semanal.</div>';});
+    .catch(()=>{box.innerHTML='<div style="color:#b91c1c;font-size:12px">Falha ao carregar a previsão semanal.</div>';});
 }
 
 function obCalcCustosTotal(){
@@ -449,14 +449,27 @@ document.getElementById('ob-tipo')?.addEventListener('change',()=>{
   if(abaAtiva==='custos') obRenderCustos();
 });
 
-function obFiltrar(){
-  const q=document.getElementById('ob-busca').value.toLowerCase();
+const PO_FKEY='po_filtros'; // mesma chave do Dashboard
+function obFiltrosLer(){try{return JSON.parse(localStorage.getItem(PO_FKEY)||'{}')||{};}catch(e){return {};}}
+function obFiltrar(salvar){
+  const q=document.getElementById('ob-busca').value.toLowerCase().trim();
+  const tipo=document.getElementById('ob-tipo-f').value;
   const sit=document.getElementById('ob-sit').value;
+  if(salvar!==false){
+    try{localStorage.setItem(PO_FKEY,JSON.stringify(Object.assign(obFiltrosLer(),{busca:document.getElementById('ob-busca').value,tipo:tipo,obSit:sit})));}catch(e){}
+  }
   document.querySelectorAll('#ob-tbody tr[data-nome]').forEach(tr=>{
-    const ok=(!q||tr.dataset.nome.includes(q)||tr.dataset.codigo.includes(q)||tr.dataset.cliente.includes(q))&&(!sit||tr.dataset.sit===sit);
+    const ok=(!q||tr.dataset.nome.includes(q)||tr.dataset.codigo.includes(q)||tr.dataset.cliente.includes(q))&&(!tipo||tr.dataset.tipo===tipo)&&(!sit||tr.dataset.sit===sit);
     tr.style.display=ok?'':'none';
   });
 }
+(function(){
+  const f=obFiltrosLer();
+  if(f.busca) document.getElementById('ob-busca').value=f.busca;
+  if(f.tipo) document.getElementById('ob-tipo-f').value=f.tipo;
+  if(f.obSit) document.getElementById('ob-sit').value=f.obSit;
+  obFiltrar(false);
+})();
 function obFechar(){
   document.getElementById('ob-modal').style.display='none';
   document.getElementById('ob-id').value='';

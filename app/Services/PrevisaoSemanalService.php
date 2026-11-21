@@ -9,9 +9,11 @@ use App\Core\Database;
  *
  * Três grandezas distintas por categoria e semana (nunca somadas entre si):
  *  - ORÇADO: custo previsto da categoria distribuído igualmente entre as semanas da obra.
- *  - PREVISTO (programado): despesas do Nibo classificadas pela data prevista
- *    (forecast_date; se ausente, vencimento). Inclui lançamentos pagos e em aberto.
- *  - PAGO: as mesmas despesas já baixadas, classificadas pela data real de pagamento (payment_date).
+ *  - PREVISTO: despesas do Nibo ainda NÃO pagas (em aberto ou vencidas), pela data prevista
+ *    (forecast_date; se ausente, vencimento). Quando o lançamento é pago ele SAI do Previsto.
+ *  - PAGO: despesas já baixadas, pela data real de pagamento (payment_date).
+ *  Cada lançamento está em um só lugar: ou é Previsto (não pago) ou é Pago. Pagamento parcial se divide:
+ *  a parte paga vai para Pago e o restante continua em Previsto.
  *
  * Saldo realizado:  saldo_n = saldo_(n-1) + orçado_n - pago_n   (só semanas até a corrente)
  * Saldo projetado:  desconta apenas o previsto AINDA NÃO PAGO (aberto); um lançamento pago
@@ -345,7 +347,7 @@ class PrevisaoSemanalService
                     'semana' => (int) $r['semana_num'], 'inicio' => $r['semana_inicio'], 'fim' => $r['semana_fim'],
                     'orcado' => (float) $r['orcado_semana'], 'saldo_anterior' => (float) $r['saldo_anterior'],
                     'disponivel' => (float) $r['disponivel'],
-                    'previsto' => (float) $r['programado_semana'], 'previsto_aberto' => (float) $r['programado_aberto'],
+                    'previsto' => (float) $r['programado_aberto'],   // só o ainda não pago; o que foi pago está em 'pago'
                     'pago' => (float) $r['pago_semana'],
                     'saldo' => $r['saldo_acumulado'] === null ? null : (float) $r['saldo_acumulado'],
                     'projetado' => $r['saldo_projetado'] === null ? null : (float) $r['saldo_projetado'],
@@ -409,7 +411,7 @@ class PrevisaoSemanalService
     {
         if ($rows === null) {
             $rows = Database::fetchAll(
-                "SELECT p.categoria_nome, p.orcado_semana, p.programado_semana, p.pago_semana, p.saldo_acumulado,
+                "SELECT p.categoria_nome, p.orcado_semana, p.programado_aberto, p.pago_semana, p.saldo_acumulado,
                         p.saldo_projetado, p.is_atual
                  FROM painel_obras_previsao_semanal p
                  INNER JOIN painel_obras o ON o.id = p.obra_id
@@ -423,7 +425,7 @@ class PrevisaoSemanalService
             $k = $r['categoria_nome'];
             $out[$k] ??= ['orcado' => 0.0, 'previsto' => 0.0, 'pago' => 0.0, 'saldo' => 0.0, 'projetado' => 0.0, 'obras' => 0];
             $out[$k]['orcado'] += (float) $r['orcado_semana'];
-            $out[$k]['previsto'] += (float) $r['programado_semana'];
+            $out[$k]['previsto'] += (float) ($r['programado_aberto'] ?? 0);
             $out[$k]['pago'] += (float) $r['pago_semana'];
             $out[$k]['saldo'] += (float) ($r['saldo_acumulado'] ?? 0);
             $out[$k]['projetado'] += (float) ($r['saldo_projetado'] ?? 0);
@@ -633,6 +635,7 @@ class PrevisaoSemanalService
             $nome = (string) (($l['categoria_obra'] ?? '') ?: ($l['categoria_nibo_nome'] ?? 'Sem categoria'));
 
             foreach ($eventos as $e) {
+                if ($e['tipo'] === 'prog') continue;   // o valor integral não é exibido: Previsto = só o não pago
                 if (!$obra) $motivo = 'sem_obra';
                 elseif (!$temJanela) $motivo = 'sem_datas';
                 elseif ($cat === null) $motivo = 'sem_custo';
@@ -640,9 +643,9 @@ class PrevisaoSemanalService
                 else continue; // alocado normalmente no orçamento semanal
                 $k = $motivo . '|' . ($oid ?? 0) . '|' . $nome;
                 $acc[$k] ??= ['motivo' => $motivo, 'obra_id' => $oid, 'obra_codigo' => $obra['codigo'] ?? null, 'obra_nome' => $obra['nome'] ?? null,
-                              'categoria' => $nome, 'previsto' => 0, 'a_pagar' => 0, 'pago' => 0,
-                              'det' => ['previsto' => [], 'a_pagar' => [], 'pago' => []]];
-                $campo = ['prog' => 'previsto', 'aberto' => 'a_pagar', 'pago' => 'pago'][$e['tipo']];
+                              'categoria' => $nome, 'previsto' => 0, 'pago' => 0,
+                              'det' => ['previsto' => [], 'pago' => []]];
+                $campo = ['aberto' => 'previsto', 'pago' => 'pago'][$e['tipo']];
                 $acc[$k][$campo] += $e['c'];
                 $acc[$k]['det'][$campo][] = ['obra' => (string) ($obra['codigo'] ?? ''), 'desc' => $e['r']['d'], 'forn' => $e['r']['f'], 'data' => $e['data'], 'st' => $e['r']['st'], 'valor' => round($e['c'] / 100, 2)];
             }
@@ -651,13 +654,13 @@ class PrevisaoSemanalService
         $itens = [];
         $totais = [];
         foreach ($acc as $it) {
-            foreach (['previsto', 'a_pagar', 'pago'] as $f) $it[$f] = round($it[$f] / 100, 2);
-            if ($it['previsto'] == 0 && $it['a_pagar'] == 0 && $it['pago'] == 0) continue;
-            if (!$bruto) foreach (['previsto', 'a_pagar', 'pago'] as $campo) $it['det'][$campo] = self::capLista($it['det'][$campo], 10);
+            foreach (['previsto', 'pago'] as $f) $it[$f] = round($it[$f] / 100, 2);
+            if ($it['previsto'] == 0 && $it['pago'] == 0) continue;
+            if (!$bruto) foreach (['previsto', 'pago'] as $campo) $it['det'][$campo] = self::capLista($it['det'][$campo], 10);
             $itens[] = $it;
             $t = &$totais[$it['motivo']];
-            $t ??= ['previsto' => 0.0, 'a_pagar' => 0.0, 'pago' => 0.0];
-            foreach (['previsto', 'a_pagar', 'pago'] as $f) $t[$f] = round($t[$f] + $it[$f], 2);
+            $t ??= ['previsto' => 0.0, 'pago' => 0.0];
+            foreach (['previsto', 'pago'] as $f) $t[$f] = round($t[$f] + $it[$f], 2);
             unset($t);
         }
         $ordemTot = [];
@@ -685,7 +688,10 @@ class PrevisaoSemanalService
 
     /**
      * Consolidado por categoria de um período qualquer (semana civil ou dia), somando as obras.
-     * Orçado = distribuição semanal do custo previsto, proporcional aos dias do período.
+     * Orçado = custo previsto ÷ nº de semanas da obra (distribuição igual, a partir da data de início).
+     *   - $porSemana (visão Semana): cada semana da obra conta INTEIRA no período em que ela COMEÇA
+     *     (assim 70.000 em 5 semanas = 14.000 por semana, sem cortar uma semana da obra em duas).
+     *   - Dia: parcela diária (valor da semana ÷ dias da semana).
      * Previsto / Pago / A pagar = eventos do período (mesma regra da visão semanal).
      * Saldo = orçado acumulado - pago acumulado até o fim do período (ou até $hoje, se o período é atual).
      *
@@ -693,12 +699,12 @@ class PrevisaoSemanalService
      * @param array $custos  obra_id => [ [categoria_nibo_id, categoria_nome, valor_previsto], ... ]
      * @return array<string,array<string,float|int|null>> nome da categoria => valores em reais
      */
-    public static function consolidadoPeriodo(array $obras, array $custos, array $lancamentos, string $ini, string $fim, string $hoje): array
+    public static function consolidadoPeriodo(array $obras, array $custos, array $lancamentos, string $ini, string $fim, string $hoje, bool $porSemana = false): array
     {
         $out = [];
         $refSaldo = min($fim, $hoje);
-        $nova = fn() => ['orcado' => 0.0, 'previsto' => 0.0, 'a_pagar' => 0.0, 'pago' => 0.0, 'saldo' => 0.0, 'orc_acum' => 0.0, 'pago_acum' => 0.0, 'saldo_ok' => 0, 'obras' => 0,
-                         'det' => ['orcado' => [], 'previsto' => [], 'a_pagar' => [], 'pago' => [], 'saldo' => []]];
+        $nova = fn() => ['orcado' => 0.0, 'previsto' => 0.0, 'pago' => 0.0, 'saldo' => 0.0, 'orc_acum' => 0.0, 'pago_acum' => 0.0, 'saldo_ok' => 0, 'obras' => 0,
+                         'det' => ['orcado' => [], 'previsto' => [], 'pago' => [], 'saldo' => []]];
         foreach ($obras as $o) {
             $oi = (string) ($o['data_inicio'] ?? '');
             $of = (string) ($o['data_prev_fim'] ?? '');
@@ -714,32 +720,40 @@ class PrevisaoSemanalService
                 $catId = (string) $c['categoria_nibo_id'];
                 $orc = self::distribuir($valorC, $total);
 
-                $orcado = self::orcadoAte($orc, $oi, $of, $fim) - self::orcadoAte($orc, $oi, $of, gmdate('Y-m-d', strtotime($ini . ' UTC') - 86400));
-                $prev = $aberto = $pago = $pagoAcum = 0;
+                $semN = [];
+                if ($porSemana) {
+                    $orcado = 0;
+                    for ($n = 1; $n <= $total; $n++) {
+                        $inicioSem = gmdate('Y-m-d', strtotime($oi . ' UTC') + ($n - 1) * 7 * 86400);
+                        if ($inicioSem >= $ini && $inicioSem <= $fim) { $orcado += $orc[$n - 1]; $semN[] = $n; }
+                    }
+                } else {
+                    $orcado = self::orcadoAte($orc, $oi, $of, $fim) - self::orcadoAte($orc, $oi, $of, gmdate('Y-m-d', strtotime($ini . ' UTC') - 86400));
+                }
+                $prev = $pago = $pagoAcum = 0;
                 $k = $c['categoria_nome'];
-                $linhas = ['previsto' => [], 'a_pagar' => [], 'pago' => []];
+                $linhas = ['previsto' => [], 'pago' => []];
                 $mk = fn($e) => ['obra' => (string) $o['codigo'], 'desc' => $e['r']['d'], 'forn' => $e['r']['f'], 'data' => $e['data'], 'st' => $e['r']['st'], 'valor' => round($e['c'] / 100, 2)];
                 foreach ($ev as $e) {
                     if ($e['cat'] !== $catId) continue;
                     $dentro = $e['data'] >= $ini && $e['data'] <= $fim;
-                    if ($e['tipo'] === 'prog' && $dentro) { $prev += $e['c']; $linhas['previsto'][] = $mk($e); }
-                    elseif ($e['tipo'] === 'aberto' && $dentro) { $aberto += $e['c']; $linhas['a_pagar'][] = $mk($e); }
+                    // PREVISTO = parte ainda NÃO paga (evento 'aberto'); o valor integral ('prog') não é exibido
+                    if ($e['tipo'] === 'aberto' && $dentro) { $prev += $e['c']; $linhas['previsto'][] = $mk($e); }
                     elseif ($e['tipo'] === 'pago') {
                         if ($dentro) { $pago += $e['c']; $linhas['pago'][] = $mk($e); }
                         if ($e['data'] <= $refSaldo) $pagoAcum += $e['c'];
                     }
                 }
-                if ($orcado <= 0 && $prev === 0 && $pago === 0 && $aberto === 0) {
+                if ($orcado <= 0 && $prev === 0 && $pago === 0) {
                     // categoria sem atividade no período e fora da janela da obra: não polui o quadro
                     $janela = $fim >= $oi && $ini <= $of;
                     if (!$janela) continue;
                 }
                 $out[$k] ??= $nova();
                 $out[$k]['orcado'] += $orcado / 100;
-                if ($orcado > 0) $out[$k]['det']['orcado'][] = ['obra' => (string) $o['codigo'], 'nome' => (string) $o['nome'], 'custo' => round($valorC / 100, 2), 'semanas' => $total, 'valor' => round($orcado / 100, 2)];
+                if ($orcado > 0) $out[$k]['det']['orcado'][] = ['obra' => (string) $o['codigo'], 'nome' => (string) $o['nome'], 'custo' => round($valorC / 100, 2), 'semanas' => $total, 'por_semana' => round($valorC / $total / 100, 2), 'sem_n' => $semN, 'valor' => round($orcado / 100, 2)];
                 foreach ($linhas as $campo => $lista) foreach ($lista as $it) $out[$k]['det'][$campo][] = $it;
                 $out[$k]['previsto'] += $prev / 100;
-                $out[$k]['a_pagar'] += $aberto / 100;
                 $out[$k]['pago'] += $pago / 100;
                 if ($ini <= $hoje && $refSaldo >= $oi) {
                     // Mesma regra da previsão semanal: o orçamento da semana inteira (da obra) já está disponível;
@@ -756,7 +770,7 @@ class PrevisaoSemanalService
             }
         }
         // Lançamentos de obras sem datas / sem custo previsto da categoria / fora do período da obra:
-        // contam em Previsto, Pago e A pagar da categoria (igual ao quadro Mês), mas não geram Orçado nem Saldo.
+        // contam em Previsto (não pago) e Pago da categoria (igual ao quadro Mês), mas não geram Orçado nem Saldo.
         // Lançamentos sem obra vinculada ficam de fora, como no Mês (aparecem só no aviso informativo).
         $canon = [];
         foreach ($custos as $lista) foreach ($lista as $c) {
@@ -767,18 +781,18 @@ class PrevisaoSemanalService
             if ($it['motivo'] === 'sem_obra') continue;
             $k = $canon[self::normNome($it['categoria'])] ?? $it['categoria'];
             $out[$k] ??= $nova();
-            foreach (['previsto', 'a_pagar', 'pago'] as $campo) {
+            foreach (['previsto', 'pago'] as $campo) {
                 $out[$k][$campo] += $it[$campo];
                 foreach ($it['det'][$campo] as $d) { $d['sem'] = $it['motivo']; $out[$k]['det'][$campo][] = $d; }
             }
         }
 
         foreach ($out as &$v) {
-            foreach (['orcado', 'previsto', 'a_pagar', 'pago', 'saldo', 'orc_acum', 'pago_acum'] as $f) $v[$f] = round($v[$f], 2);
+            foreach (['orcado', 'previsto', 'pago', 'saldo', 'orc_acum', 'pago_acum'] as $f) $v[$f] = round($v[$f], 2);
             $v['saldo'] = $v['saldo_ok'] > 0 ? $v['saldo'] : null; // período futuro: sem saldo realizado
             unset($v['saldo_ok']);
             // detalhe: quais obras / lançamentos formam cada número (limitado; o excedente fica em "mais")
-            foreach (['previsto', 'a_pagar', 'pago'] as $campo) $v['det'][$campo] = self::capLista($v['det'][$campo]);
+            foreach (['previsto', 'pago'] as $campo) $v['det'][$campo] = self::capLista($v['det'][$campo]);
             usort($v['det']['orcado'], fn($a, $b) => $b['valor'] <=> $a['valor']);
             usort($v['det']['saldo'], fn($a, $b) => $b['valor'] <=> $a['valor']);
         }
