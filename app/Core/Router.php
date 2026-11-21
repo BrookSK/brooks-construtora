@@ -352,6 +352,7 @@ class Router
             'painel-obras/obras/data'             => ['PainelObrasController', 'obrasData'],
             'painel-obras/obras/categorias'       => ['PainelObrasController', 'obrasCategorias'],
             'painel-obras/obras/previsao-semanal' => ['PainelObrasController', 'obraPrevisaoSemanal'],
+            'painel-obras/categorias-periodo'     => ['PainelObrasController', 'categoriasPeriodo'],
             'painel-obras/snapshots'              => ['PainelObrasController', 'snapshotsLista'],
             'painel-obras/snapshots/detalhe'      => ['PainelObrasController', 'snapshotDetalhe'],
             'painel-obras/recebimento/registrar'  => ['PainelObrasController', 'recebimentoRegistrar'],

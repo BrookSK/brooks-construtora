@@ -237,6 +237,77 @@ class PainelObrasController extends Controller
         }
     }
 
+    /**
+     * Orçado x Previsto x Pago por categoria em uma semana (seg-dom) ou em um dia.
+     * GET: granularidade=semana|dia, data=YYYY-MM-DD, company, snapshot_id (opcional, histórico).
+     */
+    public function categoriasPeriodo(): void
+    {
+        $gran = (string) $this->input('granularidade', 'semana') === 'dia' ? 'dia' : 'semana';
+        $ref = (string) $this->input('data', date('Y-m-d'));
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $ref) || strtotime($ref . ' UTC') === false) $ref = date('Y-m-d');
+        $company = (string) $this->input('company', 'brooks');
+        $snapshotId = (int) $this->input('snapshot_id', 0);
+
+        $ts = strtotime($ref . ' UTC');
+        if ($gran === 'semana') {
+            $ini = gmdate('Y-m-d', $ts - ((int) gmdate('N', $ts) - 1) * 86400); // segunda-feira
+            $fim = gmdate('Y-m-d', strtotime($ini . ' UTC') + 6 * 86400);       // domingo
+        } else {
+            $ini = $fim = $ref;
+        }
+
+        $ctx = null;
+        try {
+            $hoje = date('Y-m-d');
+            if ($snapshotId > 0) {
+                $snap = PainelSnapshotService::carregar($snapshotId);
+                $ctx = $snap ? PainelSnapshotService::contexto($snap) : null;
+                if (!$ctx) { $this->json(['ok' => false, 'error' => 'Snapshot não encontrado.'], 404); return; }
+                PainelObrasService::definirContexto($ctx);
+                $hoje = substr((string) $snap['meta']['snapshot_em'], 0, 10);   // "hoje" = data da sincronização
+                $company = (string) $snap['meta']['company'];
+                $obras = $ctx['obras'];
+                $custos = $ctx['custos'];
+            } else {
+                $obras = PainelObra::allAtivas();
+                $custos = [];
+                if ($obras) {
+                    $ids = array_map(fn($o) => (int) $o['id'], $obras);
+                    $ph = implode(',', array_fill(0, count($ids), '?'));
+                    foreach (Database::fetchAll("SELECT obra_id, categoria_nibo_id, categoria_nome, valor_previsto FROM painel_obras_custos_previstos WHERE obra_id IN ($ph)", $ids) as $c) {
+                        $custos[(int) $c['obra_id']][] = $c;
+                    }
+                }
+            }
+
+            // Mesmo recorte do restante do painel: empresa e obras visíveis do usuário
+            $obras = array_values(array_filter($obras, fn($o) => (($o['company'] ?? '') ?: 'brooks') === $company));
+            $cfg = Database::fetch("SELECT obras_visiveis FROM painel_obras_config WHERE user_id = ?", [Auth::user()['id']]);
+            $vis = $cfg ? array_map('intval', json_decode($cfg['obras_visiveis'] ?? '[]', true) ?: []) : [];
+            if ($vis) $obras = array_values(array_filter($obras, fn($o) => in_array((int) $o['id'], $vis, true)));
+
+            $lancs = PrevisaoSemanalService::carregarLancamentos($company, $obras);
+            $cats = PrevisaoSemanalService::consolidadoPeriodo($obras, $custos, $lancs, $ini, $fim, $hoje);
+
+            $this->json([
+                'ok' => true, 'granularidade' => $gran, 'inicio' => $ini, 'fim' => $fim, 'hoje' => $hoje,
+                'categorias' => $cats,
+                'totais' => [
+                    'orcado' => round(array_sum(array_column($cats, 'orcado')), 2),
+                    'previsto' => round(array_sum(array_column($cats, 'previsto')), 2),
+                    'a_pagar' => round(array_sum(array_column($cats, 'a_pagar')), 2),
+                    'pago' => round(array_sum(array_column($cats, 'pago')), 2),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[PainelObras] categoriasPeriodo: ' . $e->getMessage());
+            $this->json(['ok' => false, 'error' => 'Erro ao calcular o período.'], 500);
+        } finally {
+            PainelObrasService::definirContexto(null);
+        }
+    }
+
     /** Lista de snapshots para o filtro (mais recentes primeiro). */
     public function snapshotsLista(): void
     {
