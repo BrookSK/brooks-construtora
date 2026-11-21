@@ -109,6 +109,18 @@ body { background: #f8f9fa !important; }
 .po-has-tip:focus { outline:2px solid rgba(59,130,246,.55);outline-offset:4px;border-radius:6px; }
 #po-tip { display:none;position:fixed;z-index:10000;max-width:380px;background:#0f172a;color:#f1f5f9;padding:12px 15px;border-radius:10px;font-size:13px;line-height:1.55;box-shadow:0 12px 32px rgba(0,0,0,.4);pointer-events:none; }
 #po-tip strong { display:block;font-size:14px;color:#fff;margin-bottom:5px; }
+/* Fora do orçamento semanal (conciliação Mês x Semana/Dia) */
+.po-fora { margin-top:22px;border:1.5px solid #fcd34d;background:#fffbeb;border-radius:12px;padding:16px 18px; }
+.po-fora-t { font-size:17px;font-weight:700;color:#92400e;margin-bottom:4px; }
+.po-fora-sub { font-size:14px;color:#78350f;margin:0 0 12px; }
+.po-fora-h { display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:15px;font-weight:700;color:#78350f;border-top:1px solid #fde68a;padding:12px 0 6px; }
+.po-fora-h span { font-weight:600;font-size:14px; }
+.po-fora-row { display:flex;gap:14px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed #fde68a; }
+.po-fora-row:last-child { border-bottom:none; }
+.po-fora-nome { width:230px;flex-shrink:0;font-size:15px;color:#0f172a; }
+.po-fora-nome span { display:block;font-size:13px;color:#78350f; }
+.po-fora-aviso { margin-top:12px;padding:10px 14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:14px;color:#92400e;font-weight:600; }
+@media(max-width:760px){ .po-fora-row{flex-direction:column;} .po-fora-nome{width:auto;} }
 #po-tip .po-tip-txt { white-space:pre-line; }
 /* Fluxo */
 .po-fluxo-chart { display:flex;align-items:flex-end;gap:4px;height:220px;padding-bottom:20px;position:relative; }
@@ -852,7 +864,7 @@ function drawCatMes(){
     const g=gasto[cat]||0,o=orcado[cat]||0,dv=g-o;
     const dc=dv>0?poVerm:dv<0?poVerde:'var(--po-txt2)';
     const tOrc=`Orçado — ${cat}\nSoma dos custos previstos cadastrados (aba "Custos Previstos" da obra) para esta categoria, em todas as obras ativas: ${BRL(o)}.\nÉ o orçamento TOTAL da obra para a categoria, não apenas a parcela do mês.`;
-    const tGas=`Gasto — ${cat}\nSoma das despesas já PAGAS no Nibo nesta categoria cuja data prevista (campo "previsto para"; se não houver, o vencimento) cai em ${per}: ${BRL(g)}.\nNesta visão mensal a data usada é a prevista, não a do pagamento. Para ver pela data real de pagamento, use Semana ou Dia.`;
+    const tGas=`Gasto — ${cat}\nSoma das despesas já PAGAS no Nibo nesta categoria cuja data prevista (campo "previsto para"; se não houver, o vencimento) cai em ${per}: ${BRL(g)}.\nSoma TODAS as obras ativas, inclusive as sem datas ou sem custo previsto da categoria. Nesta visão a data usada é a prevista, não a do pagamento.\nNa visão Semana/Dia, o que não tem orçamento semanal aparece em "Fora do orçamento semanal", com o motivo.`;
     const tDes=`Desvio — ${cat}\nGasto − Orçado = ${BRL(g)} − ${BRL(o)} = ${poSigned(dv)}.\nVerde: gasto abaixo do orçado. Vermelho: gasto acima do orçado.`;
     return `<div class="po-cat-row">
       <div class="po-cat-label">${poEsc(cat)}</div>
@@ -906,7 +918,8 @@ function drawCatPeriodo(res){
   const el=document.getElementById('po-cat-rows');
   if(!res.ok){ el.innerHTML='<div style="padding:28px;text-align:center;color:var(--po-red-t);font-size:15px">'+poEsc(res.error||'Erro')+'</div>'; return; }
   const nomes=Object.keys(res.categorias).filter(n=>{const c=res.categorias[n];return c.orcado>0||c.previsto>0||c.pago>0||c.a_pagar>0;});
-  if(!nomes.length){ el.innerHTML='<div style="padding:28px;text-align:center;color:var(--po-txt2);font-size:15px">Nenhuma categoria com orçamento ou movimentação neste período.</div>'; return; }
+  const foraHtml=poForaHtml(res);
+  if(!nomes.length){ el.innerHTML='<div style="padding:28px;text-align:center;color:var(--po-txt2);font-size:15px">Nenhuma categoria com orçamento neste período.</div>'+foraHtml; return; }
   const mx=Math.max(...nomes.map(n=>Math.max(res.categorias[n].orcado,res.categorias[n].previsto,res.categorias[n].pago)),1);
   const t=res.totais;
   const dia=res.granularidade==='dia';
@@ -927,7 +940,8 @@ function drawCatPeriodo(res){
       ${poFig('Total orçado',BRL(t.orcado),'','var(--po-gray)','Total orçado\nSoma do Orçado de todas as categorias listadas abaixo para '+per+': '+BRL(t.orcado)+'.')}
       ${poFig('Total previsto',BRL(t.previsto),'','var(--po-yellow-t)','Total previsto\nSoma do Previsto de todas as categorias abaixo para '+per+': '+BRL(t.previsto)+'. Pagos e em aberto, pela data prevista.')}
       ${poFig('Total pago',BRL(t.pago),'','var(--po-blue-t)','Total pago\nSoma do Pago de todas as categorias abaixo para '+per+': '+BRL(t.pago)+'. Pela data real do pagamento.')}
-      ${poFig('A pagar (em aberto)',BRL(t.a_pagar),'','','A pagar\nSoma dos compromissos ainda não pagos de '+per+': '+BRL(t.a_pagar)+'. Não é gasto realizado.')}</div>`;
+      ${poFig('A pagar (em aberto)',BRL(t.a_pagar),'','','A pagar\nSoma dos compromissos ainda não pagos de '+per+': '+BRL(t.a_pagar)+'. Não é gasto realizado.')}</div>`
+    +poForaAviso(res);
   el.innerHTML=cab+nomes.map(n=>{
     const c=res.categorias[n];
     const estouro=c.saldo!==null&&c.saldo<0;
@@ -947,7 +961,44 @@ function drawCatPeriodo(res){
         </div>
       </div>
     </div>`;
+  }).join('')+foraHtml;
+}
+
+// Valores do período que o Mês soma mas o orçamento semanal não aloca (e o motivo de cada um)
+const poForaAjuda={
+  sem_obra:'O lançamento não tem centro de custo que o ligue a uma obra. Vincule o centro de custo à obra (Obras → Editar obra) ou corrija o lançamento no Nibo.',
+  sem_datas:'A obra não tem data de início e/ou fim, então o orçamento não pode ser distribuído por semana. Informe as datas em Obras → Editar obra.',
+  sem_custo:'A obra não tem custo previsto cadastrado para esta categoria (Obras → Editar obra → Custos Previstos). Sem orçamento não há semanas para comparar.',
+  fora_janela:'A data do lançamento é anterior ao início ou posterior ao fim da obra. Se o período da obra estiver incorreto, ajuste as datas em Obras → Editar obra.'
+};
+function poForaAviso(res){
+  const f=res.fora_orcamento; if(!f||!f.itens||!f.itens.length) return '';
+  let pg=0,pv=0; Object.keys(f.totais).forEach(m=>{pg+=f.totais[m].pago;pv+=f.totais[m].previsto;});
+  if(pg<=0&&pv<=0) return '';
+  return `<div class="po-fora-aviso">⚠ ${BRL(pg)} pagos e ${BRL(pv)} previstos neste período estão <u>fora do orçamento semanal</u> e não entram nas categorias abaixo — veja o detalhe e o motivo no fim do quadro. É por isso que o Mês pode mostrar valores que a Semana/Dia não mostra.</div>`;
+}
+function poForaHtml(res){
+  const f=res.fora_orcamento; if(!f||!f.itens||!f.itens.length) return '';
+  const dia=res.granularidade==='dia';
+  const per=dia?poDt(res.inicio):poDt(res.inicio)+' a '+poDt(res.fim);
+  const grupos=Object.keys(f.rotulos).filter(m=>f.totais[m]).map(m=>{
+    const t=f.totais[m];
+    const linhas=f.itens.filter(i=>i.motivo===m).map(i=>{
+      const obra=i.obra_codigo?poEsc(i.obra_codigo+' · '+(i.obra_nome||'')):'Sem obra vinculada';
+      const ctx=`${i.categoria}${i.obra_codigo?' ('+i.obra_codigo+')':''}\nMotivo: ${f.rotulos[m]}.`;
+      return `<div class="po-fora-row">
+        <div class="po-fora-nome"><strong>${poEsc(i.categoria)}</strong><span>${obra}</span></div>
+        <div class="po-cat-figs" style="flex:1;margin-top:0">
+          ${poFig('Previsto',BRL(i.previsto),'','var(--po-yellow-t)','Previsto — '+ctx+'\nValor programado no Nibo em '+per+' (data prevista): '+BRL(i.previsto)+'. Não entrou no orçamento semanal.')}
+          ${poFig('Pago',BRL(i.pago),'','var(--po-blue-t)','Pago — '+ctx+'\nValor efetivamente pago em '+per+' (data do pagamento): '+BRL(i.pago)+'. Não entrou no orçamento semanal.')}
+          ${poFig('A pagar',BRL(i.a_pagar),'','','A pagar — '+ctx+'\nParte do previsto em '+per+' ainda não paga: '+BRL(i.a_pagar)+'.')}
+        </div></div>`;
+    }).join('');
+    return `<div class="po-fora-h po-has-tip" data-tip="${poEsc(f.rotulos[m]+'\n'+(poForaAjuda[m]||''))}" tabindex="0">
+        <div>${poEsc(f.rotulos[m])}</div><span>Previsto ${BRL(t.previsto)} · Pago ${BRL(t.pago)}${t.a_pagar>0?' · A pagar '+BRL(t.a_pagar):''}</span></div>${linhas}`;
   }).join('');
+  return `<div class="po-fora"><div class="po-fora-t">Fora do orçamento semanal</div>
+    <p class="po-fora-sub">Valores de ${per} que existem no Nibo, mas não entram nas categorias acima. O quadro Mês soma todas as obras; aqui você vê o que ficou de fora e por quê. Passe o mouse no título de cada grupo para ver como resolver.</p>${grupos}</div>`;
 }
 
 // ─── Tooltip explicativo: qualquer elemento com data-tip ───

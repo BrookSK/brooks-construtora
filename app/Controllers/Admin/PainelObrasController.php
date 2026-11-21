@@ -287,12 +287,15 @@ class PainelObrasController extends Controller
             $vis = $cfg ? array_map('intval', json_decode($cfg['obras_visiveis'] ?? '[]', true) ?: []) : [];
             if ($vis) $obras = array_values(array_filter($obras, fn($o) => in_array((int) $o['id'], $vis, true)));
 
-            $lancs = PrevisaoSemanalService::carregarLancamentos($company, $obras);
+            // Inclui o período consultado mesmo que seja anterior ao início das obras (para conciliar com o Mês)
+            $lancs = PrevisaoSemanalService::carregarLancamentos($company, $obras, $ini, $fim);
             $cats = PrevisaoSemanalService::consolidadoPeriodo($obras, $custos, $lancs, $ini, $fim, $hoje);
+            $fora = PrevisaoSemanalService::foraDoOrcamento($obras, $custos, $lancs, $ini, $fim);
 
             $this->json([
                 'ok' => true, 'granularidade' => $gran, 'inicio' => $ini, 'fim' => $fim, 'hoje' => $hoje,
                 'categorias' => $cats,
+                'fora_orcamento' => $fora,
                 'totais' => [
                     'orcado' => round(array_sum(array_column($cats, 'orcado')), 2),
                     'previsto' => round(array_sum(array_column($cats, 'previsto')), 2),

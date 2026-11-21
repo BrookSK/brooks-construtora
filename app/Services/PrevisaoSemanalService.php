@@ -80,7 +80,7 @@ class PrevisaoSemanalService
         if ($total === 0) return ['total' => 0, 'atual' => 0, 'pagos_sem_data' => 0, 'categorias' => []];
 
         $atual = self::semanaAtual($ini, $hoje, $total);
-        $ag = self::agrupar($lancamentos, (int) $obra['id'], $ini, $fim, $total);
+        $ag = self::agrupar($lancamentos, (int) $obra['id'], $ini, $fim, $total, $custos);
 
         $categorias = [];
         foreach ($custos as $c) {
@@ -435,100 +435,219 @@ class PrevisaoSemanalService
 
     // ─── Internos ────────────────────────────────────────────────────
 
-    /** Lançamentos (do snapshot atual ou do contexto congelado) cobrindo as janelas das obras. */
-    public static function carregarLancamentos(string $company, array $obras): array
+    /**
+     * Lançamentos (do snapshot atual ou do contexto congelado) cobrindo as janelas das obras
+     * e, opcionalmente, um período extra (ex.: semana consultada, mesmo antes do início das obras).
+     */
+    public static function carregarLancamentos(string $company, array $obras, ?string $extraIni = null, ?string $extraFim = null): array
     {
         if (!PainelObrasService::snapshotAtual($company)) return [];
-        $min = $max = null;
+        $min = $extraIni;
+        $max = $extraFim;
         foreach ($obras as $o) {
             if (!$o['data_inicio'] || !$o['data_prev_fim']) continue;
             if ($min === null || $o['data_inicio'] < $min) $min = $o['data_inicio'];
             if ($max === null || $o['data_prev_fim'] > $max) $max = $o['data_prev_fim'];
         }
-        if ($min === null) return [];
+        if ($min === null || $max === null) return [];
         return PainelObrasService::dadosIntervalo($company, $min, $max)['lancamentos'] ?? [];
     }
 
+    /** Nome normalizado para comparar categorias (o Mês agrupa por NOME; ids podem diferir entre grupos do Nibo). */
+    private static function normNome(?string $n): string
+    {
+        return mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', (string) $n)));
+    }
+
+    /** Índices id/nome das categorias com custo previsto de uma obra. */
+    private static function indiceCustos(array $custos): array
+    {
+        $porId = $porNome = [];
+        foreach ($custos as $c) {
+            $id = (string) $c['categoria_nibo_id'];
+            $porId[$id] = $id;
+            $nm = self::normNome($c['categoria_nome'] ?? '');
+            if ($nm !== '' && !isset($porNome[$nm])) $porNome[$nm] = $id;
+        }
+        return [$porId, $porNome];
+    }
+
     /**
-     * Eventos financeiros (centavos) de uma obra, cada um com data e semana, SEM duplicidade:
-     *  prog   = valor integral do lançamento, na data prevista (forecast_date; senão vencimento)
+     * Categoria (id do custo previsto) a que um lançamento pertence: primeiro pelo ID do Nibo; se a obra não
+     * tem custo com esse ID, pelo NOME da categoria (mesma regra do quadro mensal, que compara por nome).
+     */
+    private static function resolverCategoria(array $l, array $porId, array $porNome): ?string
+    {
+        $id = (string) ($l['categoria_nibo_id'] ?? '');
+        if ($id !== '' && isset($porId[$id])) return $id;
+        foreach ([$l['categoria_obra'] ?? null, $l['categoria_nibo_nome'] ?? null] as $nome) {
+            $nm = self::normNome($nome);
+            if ($nm !== '' && isset($porNome[$nm])) return $porNome[$nm];
+        }
+        return null;
+    }
+
+    /**
+     * Eventos de UM lançamento (centavos), sem considerar janela de obra nem categoria:
+     *  prog   = valor integral, na data prevista (forecast_date; senão vencimento)
      *  aberto = parte ainda não paga, na data prevista
-     *  pago   = parte paga, na data real de cada baixa (GET /payments); sem baixa, usa a prevista e
-     *           contabiliza em pagos_sem_data
-     * "prog" e "pago" são duas perspectivas do mesmo lançamento; o saldo usa apenas "pago" (e "aberto"
-     * no projetado), nunca os dois somados.
+     *  pago   = parte paga, na data real de cada baixa (GET /payments); sem baixa, usa a prevista e marca sem_data
+     * "prog" e "pago" são perspectivas do mesmo lançamento; o saldo usa só "pago" (e "aberto" no projetado).
+     *
+     * @return array{ev:array<int,array{tipo:string,data:string,c:int}>,sem_data:int}
+     */
+    private static function eventosLancamento(array $l): array
+    {
+        $cents = (int) round(((float) $l['valor_rateado']) * 100);
+        $paga = ($l['status'] ?? '') === 'paid';
+        $dataPrev = substr((string) (($l['forecast_date'] ?? '') ?: ($l['due_date'] ?? '')), 0, 10);
+
+        $baixas = is_array($l['payments'] ?? null) ? array_values($l['payments']) : [];
+        $somaBaixas = 0.0;
+        foreach ($baixas as $b) $somaBaixas += (float) ($b['value'] ?? 0);
+
+        // Parte paga / em aberto (nunca somam mais que o valor do lançamento):
+        //  pago (isPaid) = 100% pago; parcial (baixas) = baixas / valor total do agendamento; sem baixas = 100% aberto
+        if ($paga) {
+            $pagoC = $cents;
+        } elseif ($baixas && $somaBaixas > 0) {
+            $orig = (float) ($l['valor_original'] ?? 0);
+            $pagoC = $orig > 0 ? (int) round($cents * min(1.0, $somaBaixas / $orig)) : 0;
+        } else {
+            $pagoC = 0;
+        }
+        $abertoC = $cents - $pagoC;
+
+        $ev = [];
+        $semData = 0;
+        if ($dataPrev !== '') {
+            $ev[] = ['tipo' => 'prog', 'data' => $dataPrev, 'c' => $cents];
+            if ($abertoC > 0) $ev[] = ['tipo' => 'aberto', 'data' => $dataPrev, 'c' => $abertoC];
+        }
+        if ($pagoC > 0) {
+            if ($baixas && $somaBaixas > 0) {
+                $resto = $pagoC;
+                $ultimo = count($baixas) - 1;
+                foreach ($baixas as $i => $b) {
+                    $parte = $i === $ultimo ? $resto : (int) round($pagoC * ((float) $b['value']) / $somaBaixas);
+                    $resto -= $parte;
+                    $d = substr((string) ($b['date'] ?? ''), 0, 10);
+                    if ($d !== '') $ev[] = ['tipo' => 'pago', 'data' => $d, 'c' => $parte];
+                }
+            } else {
+                $dataPago = substr((string) ($l['payment_date'] ?? ''), 0, 10);
+                if ($dataPago === '') { $dataPago = $dataPrev; $semData++; }
+                if ($dataPago !== '') $ev[] = ['tipo' => 'pago', 'data' => $dataPago, 'c' => $pagoC];
+            }
+        }
+        return ['ev' => $ev, 'sem_data' => $semData];
+    }
+
+    /**
+     * Eventos de uma obra: só despesas da obra, com categoria que tenha custo previsto, dentro da janela
+     * [ini, fim] da obra (cada um com a semana 1..total).
      *
      * @return array{ev:array<int,array{cat:string,tipo:string,data:string,w:int,c:int}>,pagos_sem_data:int}
      */
-    private static function eventos(array $lancs, int $obraId, string $ini, string $fim, int $total): array
+    private static function eventos(array $lancs, int $obraId, string $ini, string $fim, int $total, array $custos): array
     {
+        [$porId, $porNome] = self::indiceCustos($custos);
         $ev = [];
         $semData = 0;
         foreach ($lancs as $l) {
             if (($l['obra_id'] ?? null) != $obraId) continue;
             if (($l['type'] ?? '') !== 'payable') continue;
-            $cat = (string) ($l['categoria_nibo_id'] ?? '');
-            if ($cat === '') continue;
+            $cat = self::resolverCategoria($l, $porId, $porNome);
+            if ($cat === null) continue;
 
-            $cents = (int) round(((float) $l['valor_rateado']) * 100);
-            $paga = ($l['status'] ?? '') === 'paid';
-            $dataPrev = substr((string) (($l['forecast_date'] ?? '') ?: ($l['due_date'] ?? '')), 0, 10);
-
-            $baixas = is_array($l['payments'] ?? null) ? array_values($l['payments']) : [];
-            $somaBaixas = 0.0;
-            foreach ($baixas as $b) $somaBaixas += (float) ($b['value'] ?? 0);
-
-            // Parte já paga e parte em aberto (nunca somam mais que o valor do lançamento):
-            //  - pago (isPaid): 100% pago
-            //  - parcial (não pago, mas com baixas): fração = baixas / valor total do agendamento
-            //  - sem baixas: 100% em aberto
-            if ($paga) {
-                $pagoC = $cents;
-            } elseif ($baixas && $somaBaixas > 0) {
-                $orig = (float) ($l['valor_original'] ?? 0);
-                $pagoC = $orig > 0 ? (int) round($cents * min(1.0, $somaBaixas / $orig)) : 0;
-            } else {
-                $pagoC = 0;
-            }
-            $abertoC = $cents - $pagoC;
-
-            $w = self::semanaDe($ini, $fim, $total, $dataPrev);
-            if ($w) {
-                $ev[] = ['cat' => $cat, 'tipo' => 'prog', 'data' => $dataPrev, 'w' => $w, 'c' => $cents];
-                if ($abertoC > 0) $ev[] = ['cat' => $cat, 'tipo' => 'aberto', 'data' => $dataPrev, 'w' => $w, 'c' => $abertoC];
-            }
-
-            if ($pagoC > 0) {
-                if ($baixas && $somaBaixas > 0) {
-                    $resto = $pagoC;
-                    $ultimo = count($baixas) - 1;
-                    foreach ($baixas as $i => $b) {
-                        $parte = $i === $ultimo ? $resto : (int) round($pagoC * ((float) $b['value']) / $somaBaixas);
-                        $resto -= $parte;
-                        $d = substr((string) ($b['date'] ?? ''), 0, 10);
-                        $w2 = self::semanaDe($ini, $fim, $total, $d);
-                        if ($w2) $ev[] = ['cat' => $cat, 'tipo' => 'pago', 'data' => $d, 'w' => $w2, 'c' => $parte];
-                    }
-                } else {
-                    $dataPago = substr((string) ($l['payment_date'] ?? ''), 0, 10);
-                    if ($dataPago === '') { $dataPago = $dataPrev; $semData++; }
-                    $w2 = self::semanaDe($ini, $fim, $total, $dataPago);
-                    if ($w2) $ev[] = ['cat' => $cat, 'tipo' => 'pago', 'data' => $dataPago, 'w' => $w2, 'c' => $pagoC];
-                }
+            $r = self::eventosLancamento($l);
+            $semData += $r['sem_data'];
+            foreach ($r['ev'] as $e) {
+                $w = self::semanaDe($ini, $fim, $total, $e['data']);
+                if ($w) $ev[] = ['cat' => $cat, 'tipo' => $e['tipo'], 'data' => $e['data'], 'w' => $w, 'c' => $e['c']];
             }
         }
         return ['ev' => $ev, 'pagos_sem_data' => $semData];
     }
 
     /** Eventos agrupados por categoria e semana (base da previsão semanal acumulativa). */
-    private static function agrupar(array $lancs, int $obraId, string $ini, string $fim, int $total): array
+    private static function agrupar(array $lancs, int $obraId, string $ini, string $fim, int $total, array $custos): array
     {
-        $r = self::eventos($lancs, $obraId, $ini, $fim, $total);
+        $r = self::eventos($lancs, $obraId, $ini, $fim, $total, $custos);
         $cats = [];
         foreach ($r['ev'] as $e) {
             $cats[$e['cat']][$e['tipo']][$e['w']] = ($cats[$e['cat']][$e['tipo']][$e['w']] ?? 0) + $e['c'];
         }
         return ['cats' => $cats, 'pagos_sem_data' => $r['pagos_sem_data']];
+    }
+
+    public const MOTIVOS_FORA = [
+        'sem_obra'    => 'Sem obra vinculada',
+        'sem_datas'   => 'Obra sem datas de início e fim',
+        'sem_custo'   => 'Obra sem custo previsto para a categoria',
+        'fora_janela' => 'Fora do período da obra (antes do início ou depois do fim)',
+    ];
+
+    /**
+     * Valores do período que NÃO entram nas categorias do orçamento semanal, e por quê.
+     * Responde "por que o Mês mostra um valor que a Semana/Dia não mostra".
+     *
+     * @return array{itens:array,totais:array}
+     */
+    public static function foraDoOrcamento(array $obras, array $custos, array $lancamentos, string $ini, string $fim): array
+    {
+        $porObra = [];
+        foreach ($obras as $o) $porObra[(int) $o['id']] = $o;
+        $idx = [];
+        foreach ($porObra as $id => $_) $idx[$id] = self::indiceCustos($custos[$id] ?? []);
+
+        $acc = [];
+        foreach ($lancamentos as $l) {
+            if (($l['type'] ?? '') !== 'payable') continue;
+            $oid = $l['obra_id'] ?? null;
+            if ($oid !== null && !isset($porObra[(int) $oid])) continue;      // obra de outra empresa / oculta: fora do escopo
+
+            $eventos = array_filter(self::eventosLancamento($l)['ev'], fn($e) => $e['data'] >= $ini && $e['data'] <= $fim);
+            if (!$eventos) continue;
+
+            $obra = $oid !== null ? $porObra[(int) $oid] : null;
+            $oi = (string) ($obra['data_inicio'] ?? '');
+            $of = (string) ($obra['data_prev_fim'] ?? '');
+            $temJanela = $oi !== '' && $of !== '' && $of >= $oi;
+            $cat = $obra ? self::resolverCategoria($l, ...$idx[(int) $oid]) : null;
+            $nome = (string) (($l['categoria_obra'] ?? '') ?: ($l['categoria_nibo_nome'] ?? 'Sem categoria'));
+
+            foreach ($eventos as $e) {
+                if (!$obra) $motivo = 'sem_obra';
+                elseif (!$temJanela) $motivo = 'sem_datas';
+                elseif ($cat === null) $motivo = 'sem_custo';
+                elseif ($e['data'] < $oi || $e['data'] > $of) $motivo = 'fora_janela';
+                else continue; // alocado normalmente no orçamento semanal
+                $k = $motivo . '|' . ($oid ?? 0) . '|' . $nome;
+                $acc[$k] ??= ['motivo' => $motivo, 'obra_id' => $oid, 'obra_codigo' => $obra['codigo'] ?? null, 'obra_nome' => $obra['nome'] ?? null,
+                              'categoria' => $nome, 'previsto' => 0, 'a_pagar' => 0, 'pago' => 0];
+                $campo = ['prog' => 'previsto', 'aberto' => 'a_pagar', 'pago' => 'pago'][$e['tipo']];
+                $acc[$k][$campo] += $e['c'];
+            }
+        }
+
+        $itens = [];
+        $totais = [];
+        foreach ($acc as $it) {
+            foreach (['previsto', 'a_pagar', 'pago'] as $f) $it[$f] = round($it[$f] / 100, 2);
+            if ($it['previsto'] == 0 && $it['a_pagar'] == 0 && $it['pago'] == 0) continue;
+            $itens[] = $it;
+            $t = &$totais[$it['motivo']];
+            $t ??= ['previsto' => 0.0, 'a_pagar' => 0.0, 'pago' => 0.0];
+            foreach (['previsto', 'a_pagar', 'pago'] as $f) $t[$f] = round($t[$f] + $it[$f], 2);
+            unset($t);
+        }
+        $ordemTot = [];
+        foreach (array_keys(self::MOTIVOS_FORA) as $m) if (isset($totais[$m])) $ordemTot[$m] = $totais[$m];
+        $totais = $ordemTot;
+        $ordem = array_flip(array_keys(self::MOTIVOS_FORA));
+        usort($itens, fn($a, $b) => [$ordem[$a['motivo']], -($a['pago'] + $a['previsto'])] <=> [$ordem[$b['motivo']], -($b['pago'] + $b['previsto'])]);
+        return ['itens' => $itens, 'totais' => $totais, 'rotulos' => self::MOTIVOS_FORA];
     }
 
     /** Orçamento acumulado (centavos) de uma lista semanal até o fim de $data; dentro da semana, pro rata diário. */
@@ -567,7 +686,7 @@ class PrevisaoSemanalService
             $lista = $custos[(int) $o['id']] ?? [];
             if (!$lista) continue;
             $total = self::totalSemanas($oi, $of);
-            $ev = self::eventos($lancamentos, (int) $o['id'], $oi, $of, $total)['ev'];
+            $ev = self::eventos($lancamentos, (int) $o['id'], $oi, $of, $total, $lista)['ev'];
 
             foreach ($lista as $c) {
                 $valorC = (int) round(((float) $c['valor_previsto']) * 100);
