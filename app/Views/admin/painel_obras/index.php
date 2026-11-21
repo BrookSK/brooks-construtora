@@ -362,8 +362,8 @@ body { background: #f8f9fa !important; }
   <div id="po-cat-rows"><div class="po-skel" style="height:200px"></div></div>
 </div>
 
-<!-- Conciliação Nibo -->
-<div class="po-card" style="margin-bottom:20px">
+<!-- Conciliação Nibo (oculta a pedido; o JS continua preenchendo) -->
+<div class="po-card" style="margin-bottom:20px;display:none">
   <div class="po-stitle">Conciliação Nibo <span class="po-pill ok" id="po-conc-pill"><span class="dot" style="background:var(--po-green)"></span>…</span></div>
   <p class="po-ssub">Comparativo entre lançamentos do Nibo e a planilha de controle de obra</p>
   <div class="po-conc-cards" id="po-conc-cards">
@@ -1291,7 +1291,7 @@ function renderFluxo(meses){
 
 function renderSemObra(d){
   if(!d.sem_obra_count) return;
-  document.getElementById('po-sem-obra-wrap').style.display='block';
+  /* bloco 'sem obra vinculada' oculto a pedido */
   document.getElementById('po-sem-obra-count').textContent=d.sem_obra_count+' lançamentos';
 }
 
