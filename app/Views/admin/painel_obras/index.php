@@ -255,6 +255,7 @@ body { background: #f8f9fa !important; }
 <div class="po-subnav">
   <a href="/admin/painel-obras" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a>
   <a href="/admin/painel-obras/obras"><i class="bi bi-buildings"></i> Obras</a>
+  <a href="#" onclick="poAbrirConfirmacoes();return false"><i class="bi bi-check2-circle"></i> Confirmações de pagamento</a>
   <button class="po-btn-config" onclick="poAbrirConfig()" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:#2563eb;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;margin-left:auto">
     <i class="bi bi-funnel"></i> Filtros
   </button>
@@ -448,10 +449,9 @@ body { background: #f8f9fa !important; }
     </div>
     
     <!-- Tabs -->
-    <div style="display:flex;gap:4px;padding:16px 20px 0;border-bottom:1px solid var(--po-border)">
+    <div id="po-modal-tabs" style="display:flex;gap:4px;padding:16px 20px 0;border-bottom:1px solid var(--po-border)">
       <button class="po-tab active" data-tab="pagos" onclick="poMudarTab('pagos')">Pagos (<span id="po-tab-count-pagos">0</span>)</button>
       <button class="po-tab" data-tab="a_pagar" onclick="poMudarTab('a_pagar')">A Pagar (<span id="po-tab-count-a_pagar">0</span>)</button>
-      <button class="po-tab" data-tab="a_receber" onclick="poMudarTab('a_receber')">A Receber (<span id="po-tab-count-a_receber">0</span>)</button>
     </div>
     
     <div style="padding:20px;max-height:60vh;overflow-y:auto" id="po-modal-body"></div>
@@ -503,6 +503,7 @@ function poFiltrosSalvar(){
   set('po-periodo',f.periodo);set('po-company',f.company);
 })();
 
+window._abrirConf=/[?&]confirmacoes=1/.test(location.search);
 window.poLoad = function(){
   poFiltrosSalvar();
   console.log('%c[PAINEL OBRAS] ========== CARREGANDO DADOS ==========', 'color: #3b82f6; font-weight: bold; font-size: 14px');
@@ -620,6 +621,7 @@ window.poLoad = function(){
       _d=res.data; 
       renderAll(res.data,res.synced_at);
       renderSnapBanner(res.snapshot);
+      if(window._abrirConf){window._abrirConf=false;poAbrirConfirmacoes();}
     }).catch(e=>{
       console.error('%c[PAINEL OBRAS] ❌ ERRO FATAL:', 'color: #dc2626; font-weight: bold', e);
       console.error('[PAINEL OBRAS] Stack:', e.stack);
@@ -1659,6 +1661,7 @@ window.poVerLancamentos=function(obraId,codigo){
   
   window._currentObraId = obraId; // Salva para usar no cálculo de parcelas
   
+  document.getElementById('po-modal-tabs').style.display='flex';
   document.getElementById('po-modal-title').textContent='Lançamentos da Obra '+codigo;
   
   // Calcula totais de receitas e despesas em "Pagos"
@@ -1694,13 +1697,32 @@ window.poVerLancamentos=function(obraId,codigo){
     countAReceber += numParcelas + (entrada > 0 ? 1 : 0);
   }
   
-  document.getElementById('po-tab-count-a_receber').textContent=countAReceber;
+  (document.getElementById('po-tab-count-a_receber')||{}).textContent=countAReceber;
   
   window._currentLancs=lancs;
   poMudarTab('pagos');
   document.getElementById('po-modal-lancamentos').style.display='block';
 };
 
+// ─── Confirmações de pagamento (antiga aba "A Receber" do modal de lançamentos) ───
+window.poAbrirConfirmacoes=function(obraId){
+  if(!_d||!_d.obras){poToast('Aguarde o carregamento dos dados.','error');return;}
+  const obras=(_d.obras||[]).slice().sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo),'pt',{numeric:true}));
+  if(!obras.length){poToast('Nenhuma obra disponível.','error');return;}
+  const sel=obraId!=null?obraId:(window._currentObraId!=null&&obras.some(o=>o.id===window._currentObraId)?window._currentObraId:obras[0].id);
+  document.getElementById('po-modal-title').textContent='Confirmações de pagamento';
+  document.getElementById('po-modal-subtitle').innerHTML='<label style="font-size:12px;color:var(--po-txt2)">Obra:&nbsp;</label><select id="po-conf-obra" class="po-input-dark" style="min-width:260px" onchange="poConfTrocarObra(this.value)">'
+    +obras.map(o=>`<option value="${o.id}"${o.id===sel?' selected':''}>${poEsc(o.codigo+' · '+o.nome)}</option>`).join('')+'</select>';
+  document.getElementById('po-modal-tabs').style.display='none';
+  poConfTrocarObra(sel);
+  document.getElementById('po-modal-lancamentos').style.display='block';
+};
+window.poConfTrocarObra=function(id){
+  const oid=parseInt(id,10);
+  window._currentObraId=oid;
+  window._currentLancs=((_d&&_d.lancamentos_por_obra)||{})[oid]||{pagos:[],a_pagar:[],a_receber:[]};
+  poMudarTab('a_receber');
+};
 window.poFecharModal=function(){
   document.getElementById('po-modal-lancamentos').style.display='none';
 };
@@ -1952,7 +1974,7 @@ window.poMudarTab=function(tab){
         
         // Atualiza contador da aba A Receber com valor correto
         const countAReceber = (entrada > 0 ? 1 : 0) + parcelasPrevistas.length + receitasReais.length;
-        document.getElementById('po-tab-count-a_receber').textContent = countAReceber;
+        (document.getElementById('po-tab-count-a_receber')||{}).textContent = countAReceber;
       })
       .catch(err => {
         console.error('Erro ao buscar dados da obra:', err);

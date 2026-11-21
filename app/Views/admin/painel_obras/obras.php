@@ -48,6 +48,7 @@
 <div class="ob-subnav">
   <a href="/admin/painel-obras"><i class="bi bi-speedometer2"></i> Dashboard</a>
   <a href="/admin/painel-obras/obras" class="active"><i class="bi bi-buildings"></i> Obras</a>
+  <a href="/admin/painel-obras?confirmacoes=1"><i class="bi bi-check2-circle"></i> Confirmações de pagamento</a>
 </div>
 
 <?php if($pendentes>0): ?>
