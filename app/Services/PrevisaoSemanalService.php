@@ -494,7 +494,7 @@ class PrevisaoSemanalService
      *  pago   = parte paga, na data real de cada baixa (GET /payments); sem baixa, usa a prevista e marca sem_data
      * "prog" e "pago" são perspectivas do mesmo lançamento; o saldo usa só "pago" (e "aberto" no projetado).
      *
-     * @return array{ev:array<int,array{tipo:string,data:string,c:int}>,sem_data:int}
+     * @return array{ev:array<int,array{tipo:string,data:string,c:int,r:array}>,sem_data:int}
      */
     private static function eventosLancamento(array $l): array
     {
@@ -520,9 +520,11 @@ class PrevisaoSemanalService
 
         $ev = [];
         $semData = 0;
+        // Referência do lançamento de origem, usada para mostrar "quais lançamentos formam este número"
+        $r = ['d' => (string) ($l['description'] ?? ''), 'f' => (string) ($l['contact_name'] ?? ''), 'st' => (string) ($l['status'] ?? ''), 'id' => $l['schedule_id'] ?? null];
         if ($dataPrev !== '') {
-            $ev[] = ['tipo' => 'prog', 'data' => $dataPrev, 'c' => $cents];
-            if ($abertoC > 0) $ev[] = ['tipo' => 'aberto', 'data' => $dataPrev, 'c' => $abertoC];
+            $ev[] = ['tipo' => 'prog', 'data' => $dataPrev, 'c' => $cents, 'r' => $r];
+            if ($abertoC > 0) $ev[] = ['tipo' => 'aberto', 'data' => $dataPrev, 'c' => $abertoC, 'r' => $r];
         }
         if ($pagoC > 0) {
             if ($baixas && $somaBaixas > 0) {
@@ -532,12 +534,12 @@ class PrevisaoSemanalService
                     $parte = $i === $ultimo ? $resto : (int) round($pagoC * ((float) $b['value']) / $somaBaixas);
                     $resto -= $parte;
                     $d = substr((string) ($b['date'] ?? ''), 0, 10);
-                    if ($d !== '') $ev[] = ['tipo' => 'pago', 'data' => $d, 'c' => $parte];
+                    if ($d !== '') $ev[] = ['tipo' => 'pago', 'data' => $d, 'c' => $parte, 'r' => $r];
                 }
             } else {
                 $dataPago = substr((string) ($l['payment_date'] ?? ''), 0, 10);
                 if ($dataPago === '') { $dataPago = $dataPrev; $semData++; }
-                if ($dataPago !== '') $ev[] = ['tipo' => 'pago', 'data' => $dataPago, 'c' => $pagoC];
+                if ($dataPago !== '') $ev[] = ['tipo' => 'pago', 'data' => $dataPago, 'c' => $pagoC, 'r' => $r];
             }
         }
         return ['ev' => $ev, 'sem_data' => $semData];
@@ -564,7 +566,7 @@ class PrevisaoSemanalService
             $semData += $r['sem_data'];
             foreach ($r['ev'] as $e) {
                 $w = self::semanaDe($ini, $fim, $total, $e['data']);
-                if ($w) $ev[] = ['cat' => $cat, 'tipo' => $e['tipo'], 'data' => $e['data'], 'w' => $w, 'c' => $e['c']];
+                if ($w) $ev[] = ['cat' => $cat, 'tipo' => $e['tipo'], 'data' => $e['data'], 'w' => $w, 'c' => $e['c'], 'r' => $e['r']];
             }
         }
         return ['ev' => $ev, 'pagos_sem_data' => $semData];
@@ -579,6 +581,19 @@ class PrevisaoSemanalService
             $cats[$e['cat']][$e['tipo']][$e['w']] = ($cats[$e['cat']][$e['tipo']][$e['w']] ?? 0) + $e['c'];
         }
         return ['cats' => $cats, 'pagos_sem_data' => $r['pagos_sem_data']];
+    }
+
+    /** Lista de detalhe ordenada por valor, limitada; o excedente vira {n, valor} para o total fechar. */
+    private static function capLista(array $itens, int $max = 14): array
+    {
+        usort($itens, fn($a, $b) => $b['valor'] <=> $a['valor']);
+        $mais = null;
+        if (count($itens) > $max) {
+            $resto = array_slice($itens, $max);
+            $mais = ['n' => count($resto), 'valor' => round(array_sum(array_column($resto, 'valor')), 2)];
+            $itens = array_slice($itens, 0, $max);
+        }
+        return ['itens' => $itens, 'mais' => $mais];
     }
 
     public const MOTIVOS_FORA = [
@@ -625,9 +640,11 @@ class PrevisaoSemanalService
                 else continue; // alocado normalmente no orçamento semanal
                 $k = $motivo . '|' . ($oid ?? 0) . '|' . $nome;
                 $acc[$k] ??= ['motivo' => $motivo, 'obra_id' => $oid, 'obra_codigo' => $obra['codigo'] ?? null, 'obra_nome' => $obra['nome'] ?? null,
-                              'categoria' => $nome, 'previsto' => 0, 'a_pagar' => 0, 'pago' => 0];
+                              'categoria' => $nome, 'previsto' => 0, 'a_pagar' => 0, 'pago' => 0,
+                              'det' => ['previsto' => [], 'a_pagar' => [], 'pago' => []]];
                 $campo = ['prog' => 'previsto', 'aberto' => 'a_pagar', 'pago' => 'pago'][$e['tipo']];
                 $acc[$k][$campo] += $e['c'];
+                $acc[$k]['det'][$campo][] = ['obra' => (string) ($obra['codigo'] ?? ''), 'desc' => $e['r']['d'], 'forn' => $e['r']['f'], 'data' => $e['data'], 'st' => $e['r']['st'], 'valor' => round($e['c'] / 100, 2)];
             }
         }
 
@@ -636,6 +653,7 @@ class PrevisaoSemanalService
         foreach ($acc as $it) {
             foreach (['previsto', 'a_pagar', 'pago'] as $f) $it[$f] = round($it[$f] / 100, 2);
             if ($it['previsto'] == 0 && $it['a_pagar'] == 0 && $it['pago'] == 0) continue;
+            foreach (['previsto', 'a_pagar', 'pago'] as $campo) $it['det'][$campo] = self::capLista($it['det'][$campo], 10);
             $itens[] = $it;
             $t = &$totais[$it['motivo']];
             $t ??= ['previsto' => 0.0, 'a_pagar' => 0.0, 'pago' => 0.0];
@@ -696,13 +714,16 @@ class PrevisaoSemanalService
 
                 $orcado = self::orcadoAte($orc, $oi, $of, $fim) - self::orcadoAte($orc, $oi, $of, gmdate('Y-m-d', strtotime($ini . ' UTC') - 86400));
                 $prev = $aberto = $pago = $pagoAcum = 0;
+                $k = $c['categoria_nome'];
+                $linhas = ['previsto' => [], 'a_pagar' => [], 'pago' => []];
+                $mk = fn($e) => ['obra' => (string) $o['codigo'], 'desc' => $e['r']['d'], 'forn' => $e['r']['f'], 'data' => $e['data'], 'st' => $e['r']['st'], 'valor' => round($e['c'] / 100, 2)];
                 foreach ($ev as $e) {
                     if ($e['cat'] !== $catId) continue;
                     $dentro = $e['data'] >= $ini && $e['data'] <= $fim;
-                    if ($e['tipo'] === 'prog' && $dentro) $prev += $e['c'];
-                    elseif ($e['tipo'] === 'aberto' && $dentro) $aberto += $e['c'];
+                    if ($e['tipo'] === 'prog' && $dentro) { $prev += $e['c']; $linhas['previsto'][] = $mk($e); }
+                    elseif ($e['tipo'] === 'aberto' && $dentro) { $aberto += $e['c']; $linhas['a_pagar'][] = $mk($e); }
                     elseif ($e['tipo'] === 'pago') {
-                        if ($dentro) $pago += $e['c'];
+                        if ($dentro) { $pago += $e['c']; $linhas['pago'][] = $mk($e); }
                         if ($e['data'] <= $refSaldo) $pagoAcum += $e['c'];
                     }
                 }
@@ -711,9 +732,11 @@ class PrevisaoSemanalService
                     $janela = $fim >= $oi && $ini <= $of;
                     if (!$janela) continue;
                 }
-                $k = $c['categoria_nome'];
-                $out[$k] ??= ['orcado' => 0.0, 'previsto' => 0.0, 'a_pagar' => 0.0, 'pago' => 0.0, 'saldo' => 0.0, 'orc_acum' => 0.0, 'pago_acum' => 0.0, 'saldo_ok' => 0, 'obras' => 0];
+                $out[$k] ??= ['orcado' => 0.0, 'previsto' => 0.0, 'a_pagar' => 0.0, 'pago' => 0.0, 'saldo' => 0.0, 'orc_acum' => 0.0, 'pago_acum' => 0.0, 'saldo_ok' => 0, 'obras' => 0,
+                              'det' => ['orcado' => [], 'previsto' => [], 'a_pagar' => [], 'pago' => [], 'saldo' => []]];
                 $out[$k]['orcado'] += $orcado / 100;
+                if ($orcado > 0) $out[$k]['det']['orcado'][] = ['obra' => (string) $o['codigo'], 'nome' => (string) $o['nome'], 'custo' => round($valorC / 100, 2), 'semanas' => $total, 'valor' => round($orcado / 100, 2)];
+                foreach ($linhas as $campo => $lista) foreach ($lista as $it) $out[$k]['det'][$campo][] = $it;
                 $out[$k]['previsto'] += $prev / 100;
                 $out[$k]['a_pagar'] += $aberto / 100;
                 $out[$k]['pago'] += $pago / 100;
@@ -725,6 +748,7 @@ class PrevisaoSemanalService
                     $out[$k]['saldo'] += ($orcDisp - $pagoAcum) / 100;
                     $out[$k]['orc_acum'] += $orcDisp / 100;      // para explicar a conta do saldo na interface
                     $out[$k]['pago_acum'] += $pagoAcum / 100;
+                    $out[$k]['det']['saldo'][] = ['obra' => (string) $o['codigo'], 'nome' => (string) $o['nome'], 'orc_acum' => round($orcDisp / 100, 2), 'pago_acum' => round($pagoAcum / 100, 2), 'valor' => round(($orcDisp - $pagoAcum) / 100, 2)];
                     $out[$k]['saldo_ok']++;
                 }
                 $out[$k]['obras']++;
@@ -734,6 +758,10 @@ class PrevisaoSemanalService
             foreach (['orcado', 'previsto', 'a_pagar', 'pago', 'saldo', 'orc_acum', 'pago_acum'] as $f) $v[$f] = round($v[$f], 2);
             $v['saldo'] = $v['saldo_ok'] > 0 ? $v['saldo'] : null; // período futuro: sem saldo realizado
             unset($v['saldo_ok']);
+            // detalhe: quais obras / lançamentos formam cada número (limitado; o excedente fica em "mais")
+            foreach (['previsto', 'a_pagar', 'pago'] as $campo) $v['det'][$campo] = self::capLista($v['det'][$campo]);
+            usort($v['det']['orcado'], fn($a, $b) => $b['valor'] <=> $a['valor']);
+            usort($v['det']['saldo'], fn($a, $b) => $b['valor'] <=> $a['valor']);
         }
         unset($v);
         ksort($out, SORT_NATURAL | SORT_FLAG_CASE);

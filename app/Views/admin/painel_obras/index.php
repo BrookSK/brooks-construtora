@@ -122,6 +122,14 @@ body { background: #f8f9fa !important; }
 .po-fora-aviso { margin-top:12px;padding:10px 14px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:14px;color:#92400e;font-weight:600; }
 @media(max-width:760px){ .po-fora-row{flex-direction:column;} .po-fora-nome{width:auto;} }
 #po-tip .po-tip-txt { white-space:pre-line; }
+#po-tip.rico { max-width:600px;min-width:360px; }
+.po-tip-tab { width:100%;border-collapse:collapse;margin-top:8px; }
+.po-tip-tab td { padding:5px 0;border-bottom:1px solid #1e293b;vertical-align:top;font-size:13px; }
+.po-tip-tab tr:last-child td { border-bottom:none; }
+.po-tip-tab td small { display:block;color:#94a3b8;font-size:11.5px;margin-top:1px; }
+.po-tip-tab td.v { text-align:right;white-space:nowrap;padding-left:16px;font-weight:700;color:#fff; }
+.po-tip-total { display:flex;justify-content:space-between;gap:16px;border-top:1px solid #475569;margin-top:8px;padding-top:8px;font-weight:700;font-size:14px;color:#fff; }
+.po-tip-nota { margin-top:6px;font-size:12px;color:#94a3b8; }
 /* Fluxo */
 .po-fluxo-chart { display:flex;align-items:flex-end;gap:4px;height:220px;padding-bottom:20px;position:relative; }
 .po-fluxo-col   { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px; }
@@ -822,13 +830,41 @@ window.poResetFiltros=function(){
 
 // ─── Quadro Orçado × Gasto por Categoria: Mês | Semana | Dia ───
 let _catMode='mes', _catRef=null, _catMes=null, _catReq=0, _snapEm=null;
+let _tipReg={}, _tipSeq=0;
 const poIso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const poAddDias=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return poIso(d);};
 const poSegunda=iso=>{const d=new Date(iso+'T12:00:00');const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return poIso(d);};
 const poRefHoje=()=>_snapEm?String(_snapEm).substring(0,10):poIso(new Date());
-const poFig=(rot,val,cor,cqd,tip)=>`<div${tip?` class="po-has-tip" data-tip="${poEsc(tip)}" tabindex="0"`:''}><div class="po-fig-l">${cqd?`<i style="color:${cqd}">■</i>`:''}${rot}</div><div class="po-fig-v" style="${cor?'color:'+cor:''}">${val}</div></div>`;
-const poSigned=v=>(v>0?'+':'')+BRL(v);
 const poVerde='var(--po-green-t)', poVerm='var(--po-red-t)';
+const poSigned=v=>(v>0?'+':'')+BRL(v);
+const poStatus={paid:'pago',open:'em aberto',overdue:'vencido'};
+
+// Número com tooltip. `tip` pode ser texto simples ou um objeto rico {t,i,rows,mais,tot,n,vazio} (lista de lançamentos)
+const poFig=(rot,val,cor,cqd,tip)=>{
+  let attr='';
+  if(tip){
+    if(typeof tip==='object'){ const id='t'+(++_tipSeq); _tipReg[id]=tip; attr=` class="po-has-tip" data-tipid="${id}" tabindex="0"`; }
+    else attr=` class="po-has-tip" data-tip="${poEsc(tip)}" tabindex="0"`;
+  }
+  return `<div${attr}><div class="po-fig-l">${cqd?`<i style="color:${cqd}">■</i>`:''}${rot}</div><div class="po-fig-v" style="${cor?'color:'+cor:''}">${val}</div></div>`;
+};
+// ordena por valor, limita e informa o excedente (para o total sempre fechar)
+function poRowsCap(rows,max){
+  max=max||14; rows=rows.slice().sort((a,b)=>b.v-a.v);
+  if(rows.length<=max) return {rows,mais:null};
+  const resto=rows.slice(max);
+  return {rows:rows.slice(0,max),mais:{n:resto.length,valor:resto.reduce((s,r)=>s+r.v,0)}};
+}
+// quando a lista detalhada não soma o total exibido, mostra a diferença em vez de esconder
+function poFechar(rows,total,rotulo){
+  const soma=rows.reduce((s,r)=>s+r.v,0), dif=Math.round((total-soma)*100)/100;
+  if(Math.abs(dif)>=0.01) rows=rows.concat([{t:rotulo,s:'não detalhado individualmente',v:dif}]);
+  return rows;
+}
+const poRowsLanc=(lista,rotData)=>(lista&&lista.itens?lista.itens:[]).map(i=>({
+  t:i.desc||'(sem descrição)',
+  s:[i.forn&&i.forn!=='—'?i.forn:'',i.obra,rotData+' '+poDt(i.data),poStatus[i.st]||''].filter(Boolean).join(' · '),
+  v:i.valor}));
 
 function renderCat(gasto,orcado,semana){
   _catMes={gasto:gasto||{},orcado:orcado||{}};
@@ -844,15 +880,34 @@ function poCatRender(){
     ?'<span style="color:var(--po-gray)">■ Orçado</span><span style="color:var(--po-blue-t)">■ Gasto</span>'
     :'<span style="color:var(--po-gray)">■ Orçado</span><span style="color:var(--po-yellow-t)">■ Previsto</span><span style="color:var(--po-blue-t)">■ Pago</span>';
   if(_catMode==='mes'){
-    document.getElementById('po-cat-sub').innerHTML='Consolidado das obras ativas no período selecionado — valores em reais.';
+    document.getElementById('po-cat-sub').innerHTML='Consolidado das obras ativas no período selecionado — valores em reais. Passe o mouse sobre um valor para ver os lançamentos que o formam.';
     drawCatMes();
   } else {
     poCatCarregar();
   }
 }
 
+// Lançamentos pagos (já carregados na página) que formam o Gasto de uma categoria no mês
+function poLancsGastoMes(cat){
+  const por=(_d&&_d.lancamentos_por_obra)||{}, obras={};
+  ((_d&&_d.obras)||[]).forEach(o=>{obras[o.id]=o;});
+  const grupos={};
+  Object.keys(por).forEach(oid=>{
+    ((por[oid]&&por[oid].pagos)||[]).forEach(l=>{
+      if((l.categoria_obra||'Sem categoria / Não mapeado')!==cat) return;
+      const k=oid+'|'+(l.schedule_id||l.description||'');
+      const o=obras[oid];
+      const g=grupos[k]||(grupos[k]={t:l.description||'(sem descrição)',
+        s:[l.contact_name&&l.contact_name!=='—'?l.contact_name:'',o?o.codigo:(l.cost_center||''),'prevista '+poDt(l.forecast_date||l.due_date)].filter(Boolean).join(' · '),v:0});
+      g.v+=Number(l.valor_rateado)||0;
+    });
+  });
+  return Object.values(grupos);
+}
+
 function drawCatMes(){
   if(!_catMes) return;
+  _tipReg={};
   const gasto=_catMes.gasto, orcado=_catMes.orcado;
   const todasCats=[...catObra];
   Object.keys(orcado).concat(Object.keys(gasto)).forEach(k=>{ if(k!=='Sem categoria / Não mapeado' && !todasCats.includes(k)) todasCats.push(k); });
@@ -860,12 +915,18 @@ function drawCatMes(){
   const mx=Math.max(...Object.values(gasto),...Object.values(orcado),1);
   const el=document.getElementById('po-cat-rows');
   const per=document.getElementById('po-periodo')?.selectedOptions?.[0]?.text||'período selecionado';
+  const tipGasto=(cat,g,intro)=>{
+    const cap=poRowsCap(poFechar(poLancsGastoMes(cat),g,'Outros lançamentos'));
+    return {t:'Gasto — '+cat, i:intro, rows:cap.rows, mais:cap.mais, tot:{l:'Total do gasto',v:g}, vazio:'Nenhum lançamento pago encontrado.'};
+  };
   el.innerHTML=cats.map(cat=>{
     const g=gasto[cat]||0,o=orcado[cat]||0,dv=g-o;
     const dc=dv>0?poVerm:dv<0?poVerde:'var(--po-txt2)';
-    const tOrc=`Orçado — ${cat}\nSoma dos custos previstos cadastrados (aba "Custos Previstos" da obra) para esta categoria, em todas as obras ativas: ${BRL(o)}.\nÉ o orçamento TOTAL da obra para a categoria, não apenas a parcela do mês.`;
-    const tGas=`Gasto — ${cat}\nSoma das despesas já PAGAS no Nibo nesta categoria cuja data prevista (campo "previsto para"; se não houver, o vencimento) cai em ${per}: ${BRL(g)}.\nSoma TODAS as obras ativas, inclusive as sem datas ou sem custo previsto da categoria. Nesta visão a data usada é a prevista, não a do pagamento.\nNa visão Semana/Dia, o que não tem orçamento semanal aparece em "Fora do orçamento semanal", com o motivo.`;
-    const tDes=`Desvio — ${cat}\nGasto − Orçado = ${BRL(g)} − ${BRL(o)} = ${poSigned(dv)}.\nVerde: gasto abaixo do orçado. Vermelho: gasto acima do orçado.`;
+    // Orçado: custos previstos por obra
+    const rOrc=poFechar(((_d&&_d.obras)||[]).filter(ob=>(ob.orcado_cat||{})[cat]>0).map(ob=>({t:ob.codigo+' · '+ob.nome,s:'custo previsto cadastrado',v:ob.orcado_cat[cat]})),o,'Outras obras (fora do filtro de visualização)');
+    const tOrc={t:'Orçado — '+cat,i:'Custo previsto cadastrado (aba "Custos Previstos") por obra. É o orçamento TOTAL da obra, não só do mês.',rows:poRowsCap(rOrc).rows,mais:poRowsCap(rOrc).mais,tot:{l:'Total orçado',v:o},vazio:'Nenhum custo previsto cadastrado.'};
+    const tGas=tipGasto(cat,g,'Despesas já PAGAS no Nibo, de todas as obras ativas, com data prevista em '+per+' (nesta visão a data usada é a prevista, não a do pagamento).');
+    const tDes={t:'Desvio — '+cat,i:'Gasto − Orçado. Verde: gasto abaixo do orçado. Vermelho: acima.',rows:[{t:'Gasto',v:g},{t:'Orçado (−)',v:-o}],tot:{l:'Desvio',v:dv}};
     return `<div class="po-cat-row">
       <div class="po-cat-label">${poEsc(cat)}</div>
       <div class="po-cat-bars">
@@ -883,7 +944,7 @@ function drawCatMes(){
   if(sc){
     el.innerHTML+=`<div class="po-cat-row"><div class="po-cat-label" style="color:var(--po-txt2)">Sem categoria</div>
     <div class="po-cat-bars"><div class="po-cat-bar" style="width:${(sc/mx)*100}%;background:var(--po-gray)"></div>
-    <div class="po-cat-figs">${poFig('Gasto',BRL(sc),'','var(--po-blue-t)','Gasto — Sem categoria\nDespesas pagas cuja categoria do Nibo ainda não foi mapeada no De-para. Somam '+BRL(sc)+' e não têm orçado para comparar.\nUse "Mapear categoria" para classificá-las.')}<div style="align-self:end"><a href="/admin/painel-obras/depara" style="color:var(--po-blue-t);font-size:14px;font-weight:600">Mapear categoria</a></div></div></div></div>`;
+    <div class="po-cat-figs">${poFig('Gasto',BRL(sc),'','var(--po-blue-t)',tipGasto('Sem categoria / Não mapeado',sc,'Despesas pagas cuja categoria do Nibo ainda não foi mapeada no De-para. Use "Mapear categoria" para classificá-las.'))}<div style="align-self:end"><a href="/admin/painel-obras/depara" style="color:var(--po-blue-t);font-size:14px;font-weight:600">Mapear categoria</a></div></div></div></div>`;
   }
   if(!cats.length&&!sc) el.innerHTML='<div style="padding:28px;text-align:center;color:var(--po-txt2);font-size:15px">Sem dados de categorias neste período.</div>';
   requestAnimationFrame(()=>{document.querySelectorAll('.po-cat-bar[data-pct]').forEach(b=>{b.style.width=Math.min(parseFloat(b.dataset.pct||0),100)+'%';});});
@@ -902,8 +963,8 @@ function poCatCarregar(){
   document.getElementById('po-cat-nav-label').textContent=_catMode==='dia'?dd:dd+' – '+df;
   document.getElementById('po-cat-date').value=_catRef;
   document.getElementById('po-cat-sub').innerHTML=_catMode==='dia'
-    ?'<strong>Dia '+dd+'</strong> — Orçado = parcela diária do custo previsto · Previsto = despesas programadas no Nibo para o dia · Pago = despesas baixadas no dia. Previsto e Pago são o mesmo lançamento visto por datas diferentes e não se somam.'
-    :'<strong>Semana de '+dd+' a '+df+'</strong> — Orçado = custo previsto distribuído na semana · Previsto = despesas programadas no Nibo (data prevista) · Pago = despesas baixadas (data do pagamento). Previsto e Pago não se somam.';
+    ?'<strong>Dia '+dd+'</strong> — Orçado = parcela diária do custo previsto · Previsto = despesas programadas no Nibo para o dia · Pago = despesas baixadas no dia. Passe o mouse sobre um valor para ver os lançamentos que o formam.'
+    :'<strong>Semana de '+dd+' a '+df+'</strong> — Orçado = custo previsto distribuído na semana · Previsto = despesas programadas no Nibo (data prevista) · Pago = despesas baixadas (data do pagamento). Passe o mouse sobre um valor para ver os lançamentos que o formam.';
   const el=document.getElementById('po-cat-rows');
   el.innerHTML='<div class="po-skel" style="height:200px"></div>';
   const tk=++_catReq;
@@ -916,6 +977,7 @@ function poCatCarregar(){
 
 function drawCatPeriodo(res){
   const el=document.getElementById('po-cat-rows');
+  _tipReg={};
   if(!res.ok){ el.innerHTML='<div style="padding:28px;text-align:center;color:var(--po-red-t);font-size:15px">'+poEsc(res.error||'Erro')+'</div>'; return; }
   const nomes=Object.keys(res.categorias).filter(n=>{const c=res.categorias[n];return c.orcado>0||c.previsto>0||c.pago>0||c.a_pagar>0;});
   const foraHtml=poForaHtml(res);
@@ -925,27 +987,31 @@ function drawCatPeriodo(res){
   const dia=res.granularidade==='dia';
   const per=dia?poDt(res.inicio):poDt(res.inicio)+' a '+poDt(res.fim);
   const refSaldo=res.fim<res.hoje?res.fim:res.hoje;
-  const tx={
-    orc:(n,v)=>`Orçado — ${n}\n`+(dia
-      ?`Custo previsto da categoria dividido igualmente entre as semanas da obra (início → fim); a parcela do dia é o orçado da semana ÷ os dias dessa semana. Somado entre as obras ativas.`
-      :`Custo previsto da categoria dividido igualmente entre as semanas da obra (início → fim) e proporcional aos dias de ${per}. Somado entre as obras ativas.`)+`\nResultado: ${BRL(v)}.`,
-    prev:(n,v)=>`Previsto — ${n}\nDespesas programadas no Nibo cuja data prevista (campo "previsto para"; se não houver, o vencimento) cai em ${per}: ${BRL(v)}.\nInclui as já pagas e as em aberto. É o MESMO lançamento que aparece em Pago, visto pela data prevista — por isso Previsto e Pago não se somam.`,
-    pago:(n,v)=>`Pago — ${n}\nDespesas efetivamente baixadas no Nibo com data de pagamento em ${per}: ${BRL(v)}.\nPagamento parcial conta só o valor já pago. É o que realmente saiu do caixa e entra no saldo.`,
-    ap:(n,v)=>`A pagar — ${n}\nParte do Previsto de ${per} que ainda NÃO foi paga (em aberto ou vencida): ${BRL(v)}.\nSão compromissos: ainda não contam como gasto realizado nem reduzem o saldo, mas entram no alerta de risco de estouro.`,
-    saldo:(n,c)=>c.saldo===null
-      ?`Saldo acumulado — ${n}\nPeríodo futuro: ainda não há pagamento realizado, por isso o saldo não é calculado.`
-      :`Saldo acumulado — ${n}\nOrçamento disponível − já pago, até ${poDt(refSaldo)}:\n${BRL(c.orc_acum)} (orçado acumulado, semana inteira da obra) − ${BRL(c.pago_acum)} (pago acumulado) = ${BRL(c.saldo)}.\n`+(c.saldo<0?'Negativo: o gasto superou todo o orçamento acumulado (estouro).':'Positivo: ainda há orçamento disponível.')+`\nMesmo cálculo da previsão semanal e dos alertas: saldo anterior + orçado da semana − pago.`
+  // Totais do cabeçalho: lista as categorias que os formam
+  const totTip=(titulo,campo,intro)=>{
+    const rows=nomes.filter(n=>res.categorias[n][campo]>0).map(n=>({t:n,v:res.categorias[n][campo]}));
+    const cap=poRowsCap(rows);
+    return {t:titulo,i:intro,rows:cap.rows,mais:cap.mais,tot:{l:'Total',v:t[campo]}};
   };
   const cab=`<div class="po-cat-figs" style="padding:12px 0 16px;border-bottom:2px solid var(--po-border)">
-      ${poFig('Total orçado',BRL(t.orcado),'','var(--po-gray)','Total orçado\nSoma do Orçado de todas as categorias listadas abaixo para '+per+': '+BRL(t.orcado)+'.')}
-      ${poFig('Total previsto',BRL(t.previsto),'','var(--po-yellow-t)','Total previsto\nSoma do Previsto de todas as categorias abaixo para '+per+': '+BRL(t.previsto)+'. Pagos e em aberto, pela data prevista.')}
-      ${poFig('Total pago',BRL(t.pago),'','var(--po-blue-t)','Total pago\nSoma do Pago de todas as categorias abaixo para '+per+': '+BRL(t.pago)+'. Pela data real do pagamento.')}
-      ${poFig('A pagar (em aberto)',BRL(t.a_pagar),'','','A pagar\nSoma dos compromissos ainda não pagos de '+per+': '+BRL(t.a_pagar)+'. Não é gasto realizado.')}</div>`
+      ${poFig('Total orçado',BRL(t.orcado),'','var(--po-gray)',totTip('Total orçado — '+per,'orcado','Soma do Orçado das categorias abaixo.'))}
+      ${poFig('Total previsto',BRL(t.previsto),'','var(--po-yellow-t)',totTip('Total previsto — '+per,'previsto','Soma do Previsto das categorias abaixo (pagos e em aberto, pela data prevista).'))}
+      ${poFig('Total pago',BRL(t.pago),'','var(--po-blue-t)',totTip('Total pago — '+per,'pago','Soma do Pago das categorias abaixo (pela data real do pagamento).'))}
+      ${poFig('A pagar (em aberto)',BRL(t.a_pagar),'','',totTip('A pagar — '+per,'a_pagar','Compromissos ainda não pagos. Não são gasto realizado.'))}</div>`
     +poForaAviso(res);
   el.innerHTML=cab+nomes.map(n=>{
-    const c=res.categorias[n];
+    const c=res.categorias[n], d=c.det||{};
     const estouro=c.saldo!==null&&c.saldo<0;
     const sCor=c.saldo===null?'var(--po-txt2)':estouro?poVerm:poVerde;
+    const rOrc=(d.orcado||[]).map(o=>({t:o.obra+' · '+o.nome,s:'custo previsto '+BRL(o.custo)+' ÷ '+o.semanas+' semanas × dias de '+per,v:o.valor}));
+    const tOrc={t:'Orçado — '+n,i:dia?'Parcela diária do custo previsto (orçado da semana ÷ dias da semana), por obra.':'Custo previsto distribuído igualmente entre as semanas da obra e proporcional aos dias de '+per+', por obra.',rows:poFechar(rOrc,c.orcado,'Outras obras'),tot:{l:'Total orçado',v:c.orcado}};
+    const tPrev={t:'Previsto — '+n,i:'Lançamentos programados no Nibo com data prevista em '+per+' (pagos e em aberto). É o MESMO lançamento que aparece em Pago, visto por outra data: não se somam.',rows:poRowsLanc(d.previsto,'previsto'),mais:d.previsto&&d.previsto.mais,tot:{l:'Total previsto',v:c.previsto},vazio:'Nenhum lançamento previsto neste período.'};
+    const tPago={t:'Pago — '+n,i:'Lançamentos baixados no Nibo com data de pagamento em '+per+'. Pagamento parcial conta só o valor já pago.',rows:poRowsLanc(d.pago,'pago em'),mais:d.pago&&d.pago.mais,tot:{l:'Total pago',v:c.pago},vazio:'Nenhum pagamento neste período.'};
+    const tAp={t:'A pagar — '+n,i:'Parte do Previsto de '+per+' que ainda NÃO foi paga (em aberto ou vencida). Não é gasto realizado.',rows:poRowsLanc(d.a_pagar,'prevista'),mais:d.a_pagar&&d.a_pagar.mais,tot:{l:'Total a pagar',v:c.a_pagar},vazio:'Nada em aberto neste período.'};
+    const rSal=(d.saldo||[]).map(o=>({t:o.obra+' · '+o.nome,s:'orçado acumulado '+BRL(o.orc_acum)+' − pago acumulado '+BRL(o.pago_acum),v:o.valor}));
+    const tSal=c.saldo===null
+      ?{t:'Saldo acumulado — '+n,i:'Período futuro: ainda não há pagamento realizado, por isso o saldo não é calculado.'}
+      :{t:(estouro?'Estouro acumulado — ':'Saldo acumulado — ')+n,i:'Orçamento disponível − já pago, até '+poDt(refSaldo)+', por obra. O orçamento da semana inteira da obra já está disponível. Mesmo cálculo da previsão semanal e dos alertas.',rows:rSal,tot:{l:'Saldo',v:c.saldo},n:estouro?'Negativo: o gasto superou todo o orçamento acumulado.':'Positivo: ainda há orçamento disponível.'};
     return `<div class="po-cat-row">
       <div class="po-cat-label">${poEsc(n)}</div>
       <div class="po-cat-bars">
@@ -953,11 +1019,11 @@ function drawCatPeriodo(res){
         <div class="po-cat-bar" style="width:${(c.previsto/mx)*100}%;background:var(--po-yellow)" data-tip="Barra amarela — Previsto\n${poEsc(BRL(c.previsto))} programados no Nibo (data prevista). Mesma escala."></div>
         <div class="po-cat-bar" style="width:${Math.min(c.pago/mx*100,100)}%;background:linear-gradient(90deg,var(--po-blue),var(--po-cyan))" data-tip="Barra azul — Pago\n${poEsc(BRL(c.pago))} efetivamente pagos (data do pagamento). Mesma escala."></div>
         <div class="po-cat-figs">
-          ${poFig('Orçado',BRL(c.orcado),'','var(--po-gray)',tx.orc(n,c.orcado))}
-          ${poFig('Previsto',BRL(c.previsto),'','var(--po-yellow-t)',tx.prev(n,c.previsto))}
-          ${poFig('Pago',BRL(c.pago),'','var(--po-blue-t)',tx.pago(n,c.pago))}
-          ${poFig('A pagar',BRL(c.a_pagar),'','',tx.ap(n,c.a_pagar))}
-          ${poFig(estouro?'Estouro acumulado':'Saldo acumulado',c.saldo===null?'—':BRL(c.saldo),sCor,'',tx.saldo(n,c))}
+          ${poFig('Orçado',BRL(c.orcado),'','var(--po-gray)',tOrc)}
+          ${poFig('Previsto',BRL(c.previsto),'','var(--po-yellow-t)',tPrev)}
+          ${poFig('Pago',BRL(c.pago),'','var(--po-blue-t)',tPago)}
+          ${poFig('A pagar',BRL(c.a_pagar),'','',tAp)}
+          ${poFig(estouro?'Estouro acumulado':'Saldo acumulado',c.saldo===null?'—':BRL(c.saldo),sCor,'',tSal)}
         </div>
       </div>
     </div>`;
@@ -985,13 +1051,15 @@ function poForaHtml(res){
     const t=f.totais[m];
     const linhas=f.itens.filter(i=>i.motivo===m).map(i=>{
       const obra=i.obra_codigo?poEsc(i.obra_codigo+' · '+(i.obra_nome||'')):'Sem obra vinculada';
-      const ctx=`${i.categoria}${i.obra_codigo?' ('+i.obra_codigo+')':''}\nMotivo: ${f.rotulos[m]}.`;
+      const ctx=i.categoria+(i.obra_codigo?' ('+i.obra_codigo+')':'');
+      const d=i.det||{};
+      const tp=(titulo,campo,rot,intro,total)=>({t:titulo+' — '+ctx,i:intro+' Motivo: '+f.rotulos[m]+'.',rows:poRowsLanc(d[campo],rot),mais:d[campo]&&d[campo].mais,tot:{l:'Total',v:total},vazio:'Nenhum lançamento.'});
       return `<div class="po-fora-row">
         <div class="po-fora-nome"><strong>${poEsc(i.categoria)}</strong><span>${obra}</span></div>
         <div class="po-cat-figs" style="flex:1;margin-top:0">
-          ${poFig('Previsto',BRL(i.previsto),'','var(--po-yellow-t)','Previsto — '+ctx+'\nValor programado no Nibo em '+per+' (data prevista): '+BRL(i.previsto)+'. Não entrou no orçamento semanal.')}
-          ${poFig('Pago',BRL(i.pago),'','var(--po-blue-t)','Pago — '+ctx+'\nValor efetivamente pago em '+per+' (data do pagamento): '+BRL(i.pago)+'. Não entrou no orçamento semanal.')}
-          ${poFig('A pagar',BRL(i.a_pagar),'','','A pagar — '+ctx+'\nParte do previsto em '+per+' ainda não paga: '+BRL(i.a_pagar)+'.')}
+          ${poFig('Previsto',BRL(i.previsto),'','var(--po-yellow-t)',tp('Previsto','previsto','prevista','Lançamentos programados no Nibo em '+per+' (data prevista).',i.previsto))}
+          ${poFig('Pago',BRL(i.pago),'','var(--po-blue-t)',tp('Pago','pago','pago em','Lançamentos pagos em '+per+' (data do pagamento).',i.pago))}
+          ${poFig('A pagar',BRL(i.a_pagar),'','',tp('A pagar','a_pagar','prevista','Parte do previsto em '+per+' ainda não paga.',i.a_pagar))}
         </div></div>`;
     }).join('');
     return `<div class="po-fora-h po-has-tip" data-tip="${poEsc(f.rotulos[m]+'\n'+(poForaAjuda[m]||''))}" tabindex="0">
@@ -1001,7 +1069,7 @@ function poForaHtml(res){
     <p class="po-fora-sub">Valores de ${per} que existem no Nibo, mas não entram nas categorias acima. O quadro Mês soma todas as obras; aqui você vê o que ficou de fora e por quê. Passe o mouse no título de cada grupo para ver como resolver.</p>${grupos}</div>`;
 }
 
-// ─── Tooltip explicativo: qualquer elemento com data-tip ───
+// ─── Tooltip: texto simples (data-tip) ou lista de lançamentos (data-tipid) ───
 let _tipEl=null;
 function poTipEl(){
   if(!_tipEl){ _tipEl=document.createElement('div'); _tipEl.id='po-tip'; _tipEl.setAttribute('role','tooltip'); document.body.appendChild(_tipEl); }
@@ -1016,17 +1084,34 @@ function poTipPos(x,y){
   if(top<8) top=8;
   el.style.left=left+'px'; el.style.top=top+'px';
 }
-function poTipShow(txt,x,y){
-  const el=poTipEl(), linhas=String(txt).split('\n');
-  el.innerHTML='<strong>'+poEsc(linhas[0])+'</strong>'+(linhas.length>1?'<div class="po-tip-txt">'+poEsc(linhas.slice(1).join('\n'))+'</div>':'');
+function poTipHtml(c){
+  if(typeof c==='string'){
+    const l=c.split('\n');
+    return '<strong>'+poEsc(l[0])+'</strong>'+(l.length>1?'<div class="po-tip-txt">'+poEsc(l.slice(1).join('\n'))+'</div>':'');
+  }
+  let h='<strong>'+poEsc(c.t)+'</strong>';
+  if(c.i) h+='<div class="po-tip-txt">'+poEsc(c.i)+'</div>';
+  if(c.rows&&c.rows.length){
+    h+='<table class="po-tip-tab">'+c.rows.map(r=>`<tr><td>${poEsc(r.t)}${r.s?`<small>${poEsc(r.s)}</small>`:''}</td><td class="v">${poEsc(BRL(r.v))}</td></tr>`).join('')
+      +(c.mais?`<tr><td><em>… e mais ${c.mais.n} lançamento(s)</em></td><td class="v">${poEsc(BRL(c.mais.valor))}</td></tr>`:'')+'</table>';
+  } else if(c.vazio){ h+='<div class="po-tip-txt">'+poEsc(c.vazio)+'</div>'; }
+  if(c.tot) h+=`<div class="po-tip-total"><span>${poEsc(c.tot.l)}</span><span>${poEsc(BRL(c.tot.v))}</span></div>`;
+  if(c.n) h+='<div class="po-tip-nota">'+poEsc(c.n)+'</div>';
+  return h;
+}
+function poTipShow(c,x,y){
+  const el=poTipEl();
+  el.innerHTML=poTipHtml(c);
+  el.className=typeof c==='object'?'rico':'';
   el.style.display='block'; poTipPos(x,y);
 }
 function poTipHide(){ if(_tipEl) _tipEl.style.display='none'; }
-const poTipAlvo=e=>e.target&&e.target.closest?e.target.closest('[data-tip]'):null;
-document.addEventListener('mouseover',e=>{ const t=poTipAlvo(e); if(t) poTipShow(t.getAttribute('data-tip'),e.clientX,e.clientY); });
+const poTipAlvo=e=>e.target&&e.target.closest?e.target.closest('[data-tip],[data-tipid]'):null;
+const poTipConteudo=t=>{ const id=t.getAttribute('data-tipid'); return id?_tipReg[id]:t.getAttribute('data-tip'); };
+document.addEventListener('mouseover',e=>{ const t=poTipAlvo(e); if(t){ const c=poTipConteudo(t); if(c) poTipShow(c,e.clientX,e.clientY); } });
 document.addEventListener('mousemove',e=>{ if(_tipEl&&_tipEl.style.display==='block') poTipPos(e.clientX,e.clientY); });
 document.addEventListener('mouseout',e=>{ const t=poTipAlvo(e); if(t&&(!e.relatedTarget||!t.contains(e.relatedTarget))) poTipHide(); });
-document.addEventListener('focusin',e=>{ const t=poTipAlvo(e); if(t){ const r=t.getBoundingClientRect(); poTipShow(t.getAttribute('data-tip'),r.left,r.bottom); } });
+document.addEventListener('focusin',e=>{ const t=poTipAlvo(e); if(t){ const c=poTipConteudo(t); if(c){ const r=t.getBoundingClientRect(); poTipShow(c,r.left,r.bottom); } } });
 document.addEventListener('focusout',poTipHide);
 document.addEventListener('scroll',poTipHide,true);
 
