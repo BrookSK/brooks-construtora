@@ -1112,7 +1112,10 @@ function drawCatPeriodo(res){
   el.innerHTML=cab+nomes.map(n=>{
     const c=res.categorias[n], d=c.det||{};
     const estouro=c.saldo!==null&&c.saldo<0;
-    const sCor=c.saldo===null?'var(--po-txt2)':estouro?poVerm:c.saldo>0?poVerde:'var(--po-txt2)';
+    const proj=c.saldo===null&&c.saldo_proj!=null&&c.saldo_proj!==undefined;
+    const sVal=proj?c.saldo_proj:c.saldo;
+    const estouroP=proj&&c.saldo_proj<0;
+    const sCor=proj?(estouroP?poVerm:c.saldo_proj>0?poVerde:'var(--po-txt2)'):c.saldo===null?'var(--po-txt2)':estouro?poVerm:c.saldo>0?poVerde:'var(--po-txt2)';
     const rOrc=(d.orcado||[]).map(o=>({t:o.obra+' · '+o.nome,
       s:dia?'custo previsto '+BRL(o.custo)+' ÷ '+o.semanas+' semanas = '+BRL(o.por_semana)+' por semana; o dia recebe a parcela diária desta semana'
            :'custo previsto '+BRL(o.custo)+' ÷ '+o.semanas+' semanas = '+BRL(o.por_semana)+' por semana'+(o.sem_n&&o.sem_n.length?' · semana '+o.sem_n.join(' e ')+' de '+o.semanas+' da obra':''),
@@ -1121,7 +1124,10 @@ function drawCatPeriodo(res){
     const tPrev={t:'Previsto — '+n,i:'Despesas programadas no Nibo com data prevista em '+per+' que ainda NÃO foram pagas (em aberto ou vencidas). Quando o lançamento é pago, ele sai do Previsto e passa a contar em Pago. Não é gasto realizado. Inclui obras sem orçamento semanal (marcadas com ⚠), como o quadro Mês.',rows:poRowsLanc(d.previsto,'prevista'),mais:d.previsto&&d.previsto.mais,tot:{l:'Total previsto (não pago)',v:c.previsto},vazio:'Nada previsto e ainda não pago neste período.'};
     const tPago={t:'Pago — '+n,i:'Lançamentos baixados no Nibo com data de pagamento em '+per+'. Pagamento parcial conta só o valor já pago (o restante continua em Previsto). Um lançamento pago deixa de ser Previsto. Inclui obras sem orçamento semanal (marcadas com ⚠), como o quadro Mês.',rows:poRowsLanc(d.pago,'pago em'),mais:d.pago&&d.pago.mais,tot:{l:'Total pago',v:c.pago},vazio:'Nenhum pagamento neste período.'};
     const rSal=(d.saldo||[]).map(o=>({t:o.obra+' · '+o.nome,s:'orçado acumulado '+BRL(o.orc_acum)+' − pago acumulado '+BRL(o.pago_acum),v:o.valor}));
-    const tSal=c.saldo===null
+    const rProj=(d.proj||[]).map(o=>({t:o.obra+' · '+o.nome,s:'orçado acumulado '+BRL(o.orc_acum)+' − pago '+BRL(o.pago_acum)+' − previsto em aberto '+BRL(o.aberto_acum),v:o.valor}));
+    const tSal=proj
+      ?{t:(estouroP?'Estouro projetado — ':'Saldo projetado — ')+n,i:'Período futuro: projeção, não é saldo realizado. Orçado acumulado até '+poDt(res.fim)+' − pago − previsto em aberto (lançamentos já programados até essa data), por obra.',rows:rProj,tot:{l:'Saldo projetado',v:c.saldo_proj},n:estouroP?'Negativo: os compromissos já lançados superam o orçamento acumulado.':'Positivo: o orçamento acumulado cobre o que já está lançado.'}
+      :c.saldo===null
       ?{t:'Saldo acumulado — '+n,i:(c.orcado<=0&&!(d.saldo&&d.saldo.length))
           ?'Nenhuma obra tem orçamento semanal (datas + custo previsto) para esta categoria neste período, então não há saldo a calcular. Os valores de Previsto e Pago acima são só informativos.'
           :'Período futuro: ainda não há pagamento realizado, por isso o saldo não é calculado.'}
@@ -1136,7 +1142,7 @@ function drawCatPeriodo(res){
           ${poFig('Orçado',BRL(c.orcado),'','var(--po-gray)',tOrc)}
           ${poFig('Previsto',BRL(c.previsto),'','var(--po-yellow-t)',tPrev)}
           ${poFig('Pago',BRL(c.pago),'','var(--po-blue-t)',tPago)}
-          ${poFig(estouro?'Estouro acumulado':'Saldo acumulado',c.saldo===null?'—':poSigned(c.saldo),sCor,'',tSal)}
+          ${poFig(proj?(estouroP?'Estouro projetado':'Saldo projetado'):estouro?'Estouro acumulado':'Saldo acumulado',sVal===null?'—':(proj?'<i>'+poSigned(sVal)+'</i>':poSigned(sVal)),sCor,'',tSal)}
         </div>
       </div>
     </div>`;
