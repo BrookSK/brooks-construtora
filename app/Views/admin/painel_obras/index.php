@@ -45,6 +45,7 @@ body { background: #f8f9fa !important; }
 @media(max-width:1280px){.po-kpis{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:760px) {.po-kpis{grid-template-columns:repeat(2,1fr);}}
 .po-kpi { position:relative; }
+#kpi-1 { display:none; } /* Orçamento Estimado: oculto a pedido */
 .po-kpi-icon { width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:10px; }
 .po-kpi-pill { position:absolute;top:16px;right:16px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px; }
 .po-kpi-label { font-size:12px;color:var(--po-txt2);margin-bottom:4px; }
