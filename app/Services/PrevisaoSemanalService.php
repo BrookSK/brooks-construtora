@@ -609,7 +609,7 @@ class PrevisaoSemanalService
      *
      * @return array{itens:array,totais:array}
      */
-    public static function foraDoOrcamento(array $obras, array $custos, array $lancamentos, string $ini, string $fim): array
+    public static function foraDoOrcamento(array $obras, array $custos, array $lancamentos, string $ini, string $fim, bool $bruto = false): array
     {
         $porObra = [];
         foreach ($obras as $o) $porObra[(int) $o['id']] = $o;
@@ -653,7 +653,7 @@ class PrevisaoSemanalService
         foreach ($acc as $it) {
             foreach (['previsto', 'a_pagar', 'pago'] as $f) $it[$f] = round($it[$f] / 100, 2);
             if ($it['previsto'] == 0 && $it['a_pagar'] == 0 && $it['pago'] == 0) continue;
-            foreach (['previsto', 'a_pagar', 'pago'] as $campo) $it['det'][$campo] = self::capLista($it['det'][$campo], 10);
+            if (!$bruto) foreach (['previsto', 'a_pagar', 'pago'] as $campo) $it['det'][$campo] = self::capLista($it['det'][$campo], 10);
             $itens[] = $it;
             $t = &$totais[$it['motivo']];
             $t ??= ['previsto' => 0.0, 'a_pagar' => 0.0, 'pago' => 0.0];
@@ -697,6 +697,8 @@ class PrevisaoSemanalService
     {
         $out = [];
         $refSaldo = min($fim, $hoje);
+        $nova = fn() => ['orcado' => 0.0, 'previsto' => 0.0, 'a_pagar' => 0.0, 'pago' => 0.0, 'saldo' => 0.0, 'orc_acum' => 0.0, 'pago_acum' => 0.0, 'saldo_ok' => 0, 'obras' => 0,
+                         'det' => ['orcado' => [], 'previsto' => [], 'a_pagar' => [], 'pago' => [], 'saldo' => []]];
         foreach ($obras as $o) {
             $oi = (string) ($o['data_inicio'] ?? '');
             $of = (string) ($o['data_prev_fim'] ?? '');
@@ -732,8 +734,7 @@ class PrevisaoSemanalService
                     $janela = $fim >= $oi && $ini <= $of;
                     if (!$janela) continue;
                 }
-                $out[$k] ??= ['orcado' => 0.0, 'previsto' => 0.0, 'a_pagar' => 0.0, 'pago' => 0.0, 'saldo' => 0.0, 'orc_acum' => 0.0, 'pago_acum' => 0.0, 'saldo_ok' => 0, 'obras' => 0,
-                              'det' => ['orcado' => [], 'previsto' => [], 'a_pagar' => [], 'pago' => [], 'saldo' => []]];
+                $out[$k] ??= $nova();
                 $out[$k]['orcado'] += $orcado / 100;
                 if ($orcado > 0) $out[$k]['det']['orcado'][] = ['obra' => (string) $o['codigo'], 'nome' => (string) $o['nome'], 'custo' => round($valorC / 100, 2), 'semanas' => $total, 'valor' => round($orcado / 100, 2)];
                 foreach ($linhas as $campo => $lista) foreach ($lista as $it) $out[$k]['det'][$campo][] = $it;
@@ -754,6 +755,24 @@ class PrevisaoSemanalService
                 $out[$k]['obras']++;
             }
         }
+        // Lançamentos de obras sem datas / sem custo previsto da categoria / fora do período da obra:
+        // contam em Previsto, Pago e A pagar da categoria (igual ao quadro Mês), mas não geram Orçado nem Saldo.
+        // Lançamentos sem obra vinculada ficam de fora, como no Mês (aparecem só no aviso informativo).
+        $canon = [];
+        foreach ($custos as $lista) foreach ($lista as $c) {
+            $nm = self::normNome($c['categoria_nome'] ?? '');
+            if ($nm !== '' && !isset($canon[$nm])) $canon[$nm] = $c['categoria_nome'];
+        }
+        foreach (self::foraDoOrcamento($obras, $custos, $lancamentos, $ini, $fim, true)['itens'] as $it) {
+            if ($it['motivo'] === 'sem_obra') continue;
+            $k = $canon[self::normNome($it['categoria'])] ?? $it['categoria'];
+            $out[$k] ??= $nova();
+            foreach (['previsto', 'a_pagar', 'pago'] as $campo) {
+                $out[$k][$campo] += $it[$campo];
+                foreach ($it['det'][$campo] as $d) { $d['sem'] = $it['motivo']; $out[$k]['det'][$campo][] = $d; }
+            }
+        }
+
         foreach ($out as &$v) {
             foreach (['orcado', 'previsto', 'a_pagar', 'pago', 'saldo', 'orc_acum', 'pago_acum'] as $f) $v[$f] = round($v[$f], 2);
             $v['saldo'] = $v['saldo_ok'] > 0 ? $v['saldo'] : null; // período futuro: sem saldo realizado

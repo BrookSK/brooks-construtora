@@ -197,6 +197,8 @@ class PainelObrasController extends Controller
             }
             
             // Alertas de estouro acumulado (previsão semanal x gasto efetivo do Nibo)
+            // Informa à tela se há filtro de obras visíveis (o quadro de categorias deve segui-lo)
+            $dashboardData['filtro_obras'] = (bool) ($config && !empty($obrasVisiveis));
             $dashboardData['alertas_orcamento'] = [];
             $dashboardData['semana_categoria'] = [];
             try {
@@ -281,14 +283,22 @@ class PainelObrasController extends Controller
                 }
             }
 
-            // Mesmo recorte do restante do painel: empresa e obras visíveis do usuário
-            $obras = array_values(array_filter($obras, fn($o) => (($o['company'] ?? '') ?: 'brooks') === $company));
-            $cfg = Database::fetch("SELECT obras_visiveis FROM painel_obras_config WHERE user_id = ?", [Auth::user()['id']]);
-            $vis = $cfg ? array_map('intval', json_decode($cfg['obras_visiveis'] ?? '[]', true) ?: []) : [];
-            if ($vis) $obras = array_values(array_filter($obras, fn($o) => in_array((int) $o['id'], $vis, true)));
+            // Mesmo escopo do quadro Mês: todas as obras ativas (o Mês também não filtra por empresa da obra
+            // nem por obras visíveis nos valores por categoria); o Nibo consultado é o da empresa selecionada.
+
+            // Filtro de obras (as exibidas na tabela do painel): restringe obras, orçamentos E lançamentos.
+            // Com filtro ativo, lançamentos sem obra vinculada não pertencem a nenhuma obra e ficam de fora.
+            $filtroObras = $this->input('obras', null);
+            if ($filtroObras !== null) {
+                $ids = array_values(array_filter(array_map('intval', explode(',', (string) $filtroObras)), fn($v) => $v > 0));
+                $obras = array_values(array_filter($obras, fn($o) => in_array((int) $o['id'], $ids, true)));
+            }
 
             // Inclui o período consultado mesmo que seja anterior ao início das obras (para conciliar com o Mês)
             $lancs = PrevisaoSemanalService::carregarLancamentos($company, $obras, $ini, $fim);
+            if ($filtroObras !== null) {
+                $lancs = array_values(array_filter($lancs, fn($l) => in_array((int) ($l['obra_id'] ?? 0), $ids, true)));
+            }
             $cats = PrevisaoSemanalService::consolidadoPeriodo($obras, $custos, $lancs, $ini, $fim, $hoje);
             $fora = PrevisaoSemanalService::foraDoOrcamento($obras, $custos, $lancs, $ini, $fim);
 

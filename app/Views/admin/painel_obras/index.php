@@ -109,6 +109,9 @@ body { background: #f8f9fa !important; }
 .po-has-tip:focus { outline:2px solid rgba(59,130,246,.55);outline-offset:4px;border-radius:6px; }
 #po-tip { display:none;position:fixed;z-index:10000;max-width:380px;background:#0f172a;color:#f1f5f9;padding:12px 15px;border-radius:10px;font-size:13px;line-height:1.55;box-shadow:0 12px 32px rgba(0,0,0,.4);pointer-events:none; }
 #po-tip strong { display:block;font-size:14px;color:#fff;margin-bottom:5px; }
+/* Escopo do quadro (obras filtradas) */
+.po-cat-escopo { display:block;margin-top:8px;padding:8px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:14px;color:#1e40af; }
+.po-cat-escopo a { margin-left:8px;font-weight:700;color:#1d4ed8;text-decoration:underline; }
 /* Fora do orçamento semanal (conciliação Mês x Semana/Dia) */
 .po-fora { margin-top:22px;border:1.5px solid #fcd34d;background:#fffbeb;border-radius:12px;padding:16px 18px; }
 .po-fora-t { font-size:17px;font-weight:700;color:#92400e;margin-bottom:4px; }
@@ -593,6 +596,7 @@ if (document.readyState === 'loading') {
 }
 
 function renderAll(d,at){
+  _catSuspende=true;
   renderKpis(d.kpis);
   renderAlertas(d.obras_alerta||[]);
   renderAlertasOrcamento(d.alertas_orcamento||[]);
@@ -602,6 +606,7 @@ function renderAll(d,at){
   renderFluxo(d.fluxo_mensal||[]);
   renderMeta(d,at);
   renderSemObra(d);
+  _catSuspende=false;
 }
 
 function renderMeta(d,at){
@@ -792,6 +797,12 @@ window.poFiltrar = function(){
     if(cat&&!(o.gasto_cat&&o.gasto_cat[cat]>0)) return false;
     return true;
   });
+  // O quadro Orçado × Gasto segue as obras exibidas na tabela (busca, tipo, situação, categoria e obras visíveis)
+  const filtrado=f.length<_obras.length||!!(_d&&_d.filtro_obras);
+  const novoEscopo=filtrado?f.map(o=>o.id):null;
+  const mudouEscopo=JSON.stringify(novoEscopo)!==JSON.stringify(_catObras);
+  _catObras=novoEscopo;
+  if(mudouEscopo&&!_catSuspende&&_catMes) poCatRender();
   document.getElementById('po-mostrando').textContent=f.length;
   document.getElementById('po-obras-pill').innerHTML=`<span class="dot" style="background:var(--po-blue)"></span>${f.length} obras`;
   const tb=document.getElementById('po-tbody');
@@ -830,6 +841,34 @@ window.poResetFiltros=function(){
 
 // ─── Quadro Orçado × Gasto por Categoria: Mês | Semana | Dia ───
 let _catMode='mes', _catRef=null, _catMes=null, _catReq=0, _snapEm=null;
+// Escopo de obras do quadro: null = todas; senão, ids das obras que estão na tabela (filtros de busca/tipo/situação/categoria/obras visíveis)
+let _catObras=null, _catSuspende=false;
+const poObraSel=id=>!_catObras||_catObras.map(String).includes(String(id));
+function poEscopoTxt(){
+  if(!_catObras) return 'todas as obras ativas';
+  if(_catObras.length===0) return 'nenhuma obra (o filtro não encontrou obras)';
+  const nomes=(_obras||[]).filter(o=>poObraSel(o.id)).map(o=>o.codigo);
+  return _catObras.length===1?'a obra '+(nomes[0]||'selecionada'):'as '+_catObras.length+' obras filtradas ('+nomes.slice(0,4).join(', ')+(nomes.length>4?'…':'')+')';
+}
+function poCatEscopoBadge(){
+  if(!_catObras) return;
+  const el=document.getElementById('po-cat-sub');
+  const obras=(_obras||[]).filter(o=>poObraSel(o.id));
+  const lista=obras.slice(0,3).map(o=>poEsc(o.codigo+' · '+o.nome)).join(' | ')+(obras.length>3?' | +'+(obras.length-3):'');
+  el.innerHTML+=`<div class="po-cat-escopo">🔎 Filtrando por <strong>${_catObras.length} obra(s)</strong>: ${lista||'nenhuma'} — todos os valores abaixo são só dessa seleção. <a href="#" onclick="poLimparFiltroObras();return false">Limpar filtro</a></div>`;
+}
+window.poLimparFiltroObras=function(){ ['po-busca','po-ftipo','po-fsit','po-fcat'].forEach(id=>{const e=document.getElementById(id); if(e) e.value='';}); window.poFiltrar(); };
+// totais por categoria considerando só as obras selecionadas (a partir dos dados já carregados por obra)
+function poMesAgregado(){
+  if(!_catObras) return {gasto:_catMes.gasto, orcado:_catMes.orcado};
+  const gasto={}, orcado={};
+  ((_d&&_d.obras)||[]).forEach(o=>{
+    if(!poObraSel(o.id)) return;
+    Object.keys(o.gasto_cat||{}).forEach(k=>{gasto[k]=(gasto[k]||0)+(o.gasto_cat[k]||0);});
+    Object.keys(o.orcado_cat||{}).forEach(k=>{orcado[k]=(orcado[k]||0)+(o.orcado_cat[k]||0);});
+  });
+  return {gasto,orcado};
+}
 let _tipReg={}, _tipSeq=0;
 const poIso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const poAddDias=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return poIso(d);};
@@ -861,9 +900,10 @@ function poFechar(rows,total,rotulo){
   if(Math.abs(dif)>=0.01) rows=rows.concat([{t:rotulo,s:'não detalhado individualmente',v:dif}]);
   return rows;
 }
+const poSemCurto={sem_datas:'obra sem datas de início/fim',sem_custo:'obra sem custo previsto desta categoria',fora_janela:'fora do período da obra'};
 const poRowsLanc=(lista,rotData)=>(lista&&lista.itens?lista.itens:[]).map(i=>({
   t:i.desc||'(sem descrição)',
-  s:[i.forn&&i.forn!=='—'?i.forn:'',i.obra,rotData+' '+poDt(i.data),poStatus[i.st]||''].filter(Boolean).join(' · '),
+  s:[i.forn&&i.forn!=='—'?i.forn:'',i.obra,rotData+' '+poDt(i.data),poStatus[i.st]||'',i.sem?'⚠ sem orçamento semanal: '+(poSemCurto[i.sem]||''):''].filter(Boolean).join(' · '),
   v:i.valor}));
 
 function renderCat(gasto,orcado,semana){
@@ -880,7 +920,8 @@ function poCatRender(){
     ?'<span style="color:var(--po-gray)">■ Orçado</span><span style="color:var(--po-blue-t)">■ Gasto</span>'
     :'<span style="color:var(--po-gray)">■ Orçado</span><span style="color:var(--po-yellow-t)">■ Previsto</span><span style="color:var(--po-blue-t)">■ Pago</span>';
   if(_catMode==='mes'){
-    document.getElementById('po-cat-sub').innerHTML='Consolidado das obras ativas no período selecionado — valores em reais. Passe o mouse sobre um valor para ver os lançamentos que o formam.';
+    document.getElementById('po-cat-sub').innerHTML='Consolidado de '+poEscopoTxt()+' no período selecionado — valores em reais. Passe o mouse sobre um valor para ver os lançamentos que o formam.';
+    poCatEscopoBadge();
     drawCatMes();
   } else {
     poCatCarregar();
@@ -893,6 +934,7 @@ function poLancsGastoMes(cat){
   ((_d&&_d.obras)||[]).forEach(o=>{obras[o.id]=o;});
   const grupos={};
   Object.keys(por).forEach(oid=>{
+    if(!poObraSel(oid)) return;
     ((por[oid]&&por[oid].pagos)||[]).forEach(l=>{
       if((l.categoria_obra||'Sem categoria / Não mapeado')!==cat) return;
       const k=oid+'|'+(l.schedule_id||l.description||'');
@@ -908,7 +950,7 @@ function poLancsGastoMes(cat){
 function drawCatMes(){
   if(!_catMes) return;
   _tipReg={};
-  const gasto=_catMes.gasto, orcado=_catMes.orcado;
+  const agg=poMesAgregado(), gasto=agg.gasto, orcado=agg.orcado;
   const todasCats=[...catObra];
   Object.keys(orcado).concat(Object.keys(gasto)).forEach(k=>{ if(k!=='Sem categoria / Não mapeado' && !todasCats.includes(k)) todasCats.push(k); });
   const cats=todasCats.filter(c=>(gasto[c]||0)>0||(orcado[c]||0)>0);
@@ -923,9 +965,9 @@ function drawCatMes(){
     const g=gasto[cat]||0,o=orcado[cat]||0,dv=g-o;
     const dc=dv>0?poVerm:dv<0?poVerde:'var(--po-txt2)';
     // Orçado: custos previstos por obra
-    const rOrc=poFechar(((_d&&_d.obras)||[]).filter(ob=>(ob.orcado_cat||{})[cat]>0).map(ob=>({t:ob.codigo+' · '+ob.nome,s:'custo previsto cadastrado',v:ob.orcado_cat[cat]})),o,'Outras obras (fora do filtro de visualização)');
+    const rOrc=poFechar(((_d&&_d.obras)||[]).filter(ob=>poObraSel(ob.id)&&(ob.orcado_cat||{})[cat]>0).map(ob=>({t:ob.codigo+' · '+ob.nome,s:'custo previsto cadastrado',v:ob.orcado_cat[cat]})),o,'Outras obras (fora do filtro de visualização)');
     const tOrc={t:'Orçado — '+cat,i:'Custo previsto cadastrado (aba "Custos Previstos") por obra. É o orçamento TOTAL da obra, não só do mês.',rows:poRowsCap(rOrc).rows,mais:poRowsCap(rOrc).mais,tot:{l:'Total orçado',v:o},vazio:'Nenhum custo previsto cadastrado.'};
-    const tGas=tipGasto(cat,g,'Despesas já PAGAS no Nibo, de todas as obras ativas, com data prevista em '+per+' (nesta visão a data usada é a prevista, não a do pagamento).');
+    const tGas=tipGasto(cat,g,'Despesas já PAGAS no Nibo de '+poEscopoTxt()+', com data prevista em '+per+' (nesta visão a data usada é a prevista, não a do pagamento).');
     const tDes={t:'Desvio — '+cat,i:'Gasto − Orçado. Verde: gasto abaixo do orçado. Vermelho: acima.',rows:[{t:'Gasto',v:g},{t:'Orçado (−)',v:-o}],tot:{l:'Desvio',v:dv}};
     return `<div class="po-cat-row">
       <div class="po-cat-label">${poEsc(cat)}</div>
@@ -964,13 +1006,14 @@ function poCatCarregar(){
   document.getElementById('po-cat-date').value=_catRef;
   document.getElementById('po-cat-sub').innerHTML=_catMode==='dia'
     ?'<strong>Dia '+dd+'</strong> — Orçado = parcela diária do custo previsto · Previsto = despesas programadas no Nibo para o dia · Pago = despesas baixadas no dia. Passe o mouse sobre um valor para ver os lançamentos que o formam.'
-    :'<strong>Semana de '+dd+' a '+df+'</strong> — Orçado = custo previsto distribuído na semana · Previsto = despesas programadas no Nibo (data prevista) · Pago = despesas baixadas (data do pagamento). Passe o mouse sobre um valor para ver os lançamentos que o formam.';
+    :'<strong>Semana de '+dd+' a '+df+'</strong> — Orçado = custo previsto distribuído na semana · Previsto = despesas programadas no Nibo (data prevista) · Pago = despesas baixadas (data do pagamento). Considera '+poEscopoTxt()+'. Passe o mouse sobre um valor para ver os lançamentos que o formam.';
+  poCatEscopoBadge();
   const el=document.getElementById('po-cat-rows');
   el.innerHTML='<div class="po-skel" style="height:200px"></div>';
   const tk=++_catReq;
   const co=document.getElementById('po-company')?.value||'brooks';
   const sn=document.getElementById('po-snapshot')?.value||'';
-  fetch('/admin/painel-obras/categorias-periodo?granularidade='+_catMode+'&data='+_catRef+'&company='+encodeURIComponent(co)+(sn?'&snapshot_id='+sn:''))
+  fetch('/admin/painel-obras/categorias-periodo?granularidade='+_catMode+'&data='+_catRef+'&company='+encodeURIComponent(co)+(sn?'&snapshot_id='+sn:'')+(_catObras?'&obras='+_catObras.join(','):''))
     .then(r=>r.json()).then(res=>{ if(tk!==_catReq) return; drawCatPeriodo(res); })
     .catch(()=>{ if(tk===_catReq) el.innerHTML='<div style="padding:28px;text-align:center;color:var(--po-red-t);font-size:15px">Falha ao carregar o período.</div>'; });
 }
@@ -1004,13 +1047,15 @@ function drawCatPeriodo(res){
     const estouro=c.saldo!==null&&c.saldo<0;
     const sCor=c.saldo===null?'var(--po-txt2)':estouro?poVerm:poVerde;
     const rOrc=(d.orcado||[]).map(o=>({t:o.obra+' · '+o.nome,s:'custo previsto '+BRL(o.custo)+' ÷ '+o.semanas+' semanas × dias de '+per,v:o.valor}));
-    const tOrc={t:'Orçado — '+n,i:dia?'Parcela diária do custo previsto (orçado da semana ÷ dias da semana), por obra.':'Custo previsto distribuído igualmente entre as semanas da obra e proporcional aos dias de '+per+', por obra.',rows:poFechar(rOrc,c.orcado,'Outras obras'),tot:{l:'Total orçado',v:c.orcado}};
-    const tPrev={t:'Previsto — '+n,i:'Lançamentos programados no Nibo com data prevista em '+per+' (pagos e em aberto). É o MESMO lançamento que aparece em Pago, visto por outra data: não se somam.',rows:poRowsLanc(d.previsto,'previsto'),mais:d.previsto&&d.previsto.mais,tot:{l:'Total previsto',v:c.previsto},vazio:'Nenhum lançamento previsto neste período.'};
-    const tPago={t:'Pago — '+n,i:'Lançamentos baixados no Nibo com data de pagamento em '+per+'. Pagamento parcial conta só o valor já pago.',rows:poRowsLanc(d.pago,'pago em'),mais:d.pago&&d.pago.mais,tot:{l:'Total pago',v:c.pago},vazio:'Nenhum pagamento neste período.'};
+    const tOrc={t:'Orçado — '+n,i:dia?'Parcela diária do custo previsto (orçado da semana ÷ dias da semana), por obra.':'Custo previsto distribuído igualmente entre as semanas da obra e proporcional aos dias de '+per+', por obra.',rows:poFechar(rOrc,c.orcado,'Outras obras'),tot:{l:'Total orçado',v:c.orcado},vazio:'Nenhuma obra tem orçamento semanal (datas + custo previsto) para esta categoria neste período.'};
+    const tPrev={t:'Previsto — '+n,i:'Lançamentos programados no Nibo com data prevista em '+per+' (pagos e em aberto). É o MESMO lançamento que aparece em Pago, visto por outra data: não se somam. Inclui obras sem orçamento semanal (marcadas com ⚠), como o quadro Mês.',rows:poRowsLanc(d.previsto,'prevista'),mais:d.previsto&&d.previsto.mais,tot:{l:'Total previsto',v:c.previsto},vazio:'Nenhum lançamento previsto neste período.'};
+    const tPago={t:'Pago — '+n,i:'Lançamentos baixados no Nibo com data de pagamento em '+per+'. Pagamento parcial conta só o valor já pago. Inclui obras sem orçamento semanal (marcadas com ⚠), como o quadro Mês.',rows:poRowsLanc(d.pago,'pago em'),mais:d.pago&&d.pago.mais,tot:{l:'Total pago',v:c.pago},vazio:'Nenhum pagamento neste período.'};
     const tAp={t:'A pagar — '+n,i:'Parte do Previsto de '+per+' que ainda NÃO foi paga (em aberto ou vencida). Não é gasto realizado.',rows:poRowsLanc(d.a_pagar,'prevista'),mais:d.a_pagar&&d.a_pagar.mais,tot:{l:'Total a pagar',v:c.a_pagar},vazio:'Nada em aberto neste período.'};
     const rSal=(d.saldo||[]).map(o=>({t:o.obra+' · '+o.nome,s:'orçado acumulado '+BRL(o.orc_acum)+' − pago acumulado '+BRL(o.pago_acum),v:o.valor}));
     const tSal=c.saldo===null
-      ?{t:'Saldo acumulado — '+n,i:'Período futuro: ainda não há pagamento realizado, por isso o saldo não é calculado.'}
+      ?{t:'Saldo acumulado — '+n,i:(c.orcado<=0&&!(d.saldo&&d.saldo.length))
+          ?'Nenhuma obra tem orçamento semanal (datas + custo previsto) para esta categoria neste período, então não há saldo a calcular. Os valores de Previsto e Pago acima são só informativos.'
+          :'Período futuro: ainda não há pagamento realizado, por isso o saldo não é calculado.'}
       :{t:(estouro?'Estouro acumulado — ':'Saldo acumulado — ')+n,i:'Orçamento disponível − já pago, até '+poDt(refSaldo)+', por obra. O orçamento da semana inteira da obra já está disponível. Mesmo cálculo da previsão semanal e dos alertas.',rows:rSal,tot:{l:'Saldo',v:c.saldo},n:estouro?'Negativo: o gasto superou todo o orçamento acumulado.':'Positivo: ainda há orçamento disponível.'};
     return `<div class="po-cat-row">
       <div class="po-cat-label">${poEsc(n)}</div>
@@ -1039,9 +1084,12 @@ const poForaAjuda={
 };
 function poForaAviso(res){
   const f=res.fora_orcamento; if(!f||!f.itens||!f.itens.length) return '';
-  let pg=0,pv=0; Object.keys(f.totais).forEach(m=>{pg+=f.totais[m].pago;pv+=f.totais[m].previsto;});
-  if(pg<=0&&pv<=0) return '';
-  return `<div class="po-fora-aviso">⚠ ${BRL(pg)} pagos e ${BRL(pv)} previstos neste período estão <u>fora do orçamento semanal</u> e não entram nas categorias abaixo — veja o detalhe e o motivo no fim do quadro. É por isso que o Mês pode mostrar valores que a Semana/Dia não mostra.</div>`;
+  let pg=0,pv=0,sg=0,sv=0;
+  Object.keys(f.totais).forEach(m=>{ const t=f.totais[m]; if(m==='sem_obra'){sg+=t.pago;sv+=t.previsto;} else {pg+=t.pago;pv+=t.previsto;} });
+  let h='';
+  if(pg>0||pv>0) h+=`<div class="po-fora-aviso">ℹ ${BRL(pv)} previstos e ${BRL(pg)} pagos vêm de <strong>obras sem orçamento semanal</strong> (sem datas, sem custo previsto da categoria ou fora do período da obra). Estão <strong>incluídos</strong> nos valores abaixo — como no quadro Mês —, mas não geram Orçado nem Saldo. Passe o mouse num valor para ver cada lançamento (marcado com ⚠).</div>`;
+  if(sg>0||sv>0) h+=`<div class="po-fora-aviso">⚠ ${BRL(sv)} previstos e ${BRL(sg)} pagos <strong>não têm obra vinculada</strong> e ficam fora das categorias (como no quadro Mês). Veja o detalhe no fim do quadro.</div>`;
+  return h;
 }
 function poForaHtml(res){
   const f=res.fora_orcamento; if(!f||!f.itens||!f.itens.length) return '';
@@ -1053,7 +1101,8 @@ function poForaHtml(res){
       const obra=i.obra_codigo?poEsc(i.obra_codigo+' · '+(i.obra_nome||'')):'Sem obra vinculada';
       const ctx=i.categoria+(i.obra_codigo?' ('+i.obra_codigo+')':'');
       const d=i.det||{};
-      const tp=(titulo,campo,rot,intro,total)=>({t:titulo+' — '+ctx,i:intro+' Motivo: '+f.rotulos[m]+'.',rows:poRowsLanc(d[campo],rot),mais:d[campo]&&d[campo].mais,tot:{l:'Total',v:total},vazio:'Nenhum lançamento.'});
+      const nota=m==='sem_obra'?' NÃO está somado nas categorias acima.':' Já está somado nas categorias acima.';
+      const tp=(titulo,campo,rot,intro,total)=>({t:titulo+' — '+ctx,i:intro+' Motivo: '+f.rotulos[m]+'.'+nota,rows:poRowsLanc(d[campo],rot),mais:d[campo]&&d[campo].mais,tot:{l:'Total',v:total},vazio:'Nenhum lançamento.'});
       return `<div class="po-fora-row">
         <div class="po-fora-nome"><strong>${poEsc(i.categoria)}</strong><span>${obra}</span></div>
         <div class="po-cat-figs" style="flex:1;margin-top:0">
@@ -1062,11 +1111,12 @@ function poForaHtml(res){
           ${poFig('A pagar',BRL(i.a_pagar),'','',tp('A pagar','a_pagar','prevista','Parte do previsto em '+per+' ainda não paga.',i.a_pagar))}
         </div></div>`;
     }).join('');
+    const rotulo=f.rotulos[m]+(m==='sem_obra'?' — não incluído nas categorias':' — incluído nas categorias');
     return `<div class="po-fora-h po-has-tip" data-tip="${poEsc(f.rotulos[m]+'\n'+(poForaAjuda[m]||''))}" tabindex="0">
-        <div>${poEsc(f.rotulos[m])}</div><span>Previsto ${BRL(t.previsto)} · Pago ${BRL(t.pago)}${t.a_pagar>0?' · A pagar '+BRL(t.a_pagar):''}</span></div>${linhas}`;
+        <div>${poEsc(rotulo)}</div><span>Previsto ${BRL(t.previsto)} · Pago ${BRL(t.pago)}${t.a_pagar>0?' · A pagar '+BRL(t.a_pagar):''}</span></div>${linhas}`;
   }).join('');
-  return `<div class="po-fora"><div class="po-fora-t">Fora do orçamento semanal</div>
-    <p class="po-fora-sub">Valores de ${per} que existem no Nibo, mas não entram nas categorias acima. O quadro Mês soma todas as obras; aqui você vê o que ficou de fora e por quê. Passe o mouse no título de cada grupo para ver como resolver.</p>${grupos}</div>`;
+  return `<div class="po-fora"><div class="po-fora-t">Sem orçamento semanal</div>
+    <p class="po-fora-sub">Detalhe do que, em ${per}, vem de obras sem orçamento semanal. Esses valores já estão somados em Previsto, Pago e A pagar de cada categoria (como no quadro Mês), mas não geram Orçado nem Saldo — exceto "Sem obra vinculada", que fica fora das categorias. Passe o mouse no título de cada grupo para ver como resolver.</p>${grupos}</div>`;
 }
 
 // ─── Tooltip: texto simples (data-tip) ou lista de lançamentos (data-tipid) ───
