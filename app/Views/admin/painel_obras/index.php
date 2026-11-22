@@ -671,6 +671,13 @@ function renderKpis(k){
   console.log('[PAINEL OBRAS] KPIs recebidos:', k);
   console.log('[PAINEL OBRAS] Saldo:', k.saldo);
   
+  // Saldos só consideram obras que TÊM a base cadastrada (contratado / orçado); sem base não há o que comparar
+  const _ob=(_d&&_d.obras)||[];
+  const oC=_ob.filter(o=>o.contratado>0), oO=_ob.filter(o=>o.orcado>0);
+  const sDisp=oC.reduce((a,o)=>a+o.contratado-o.gasto,0), sOrc=oO.reduce((a,o)=>a+o.orcado-o.gasto,0);
+  const cBase=oC.reduce((a,o)=>a+o.contratado,0), oBase=oO.reduce((a,o)=>a+o.orcado,0);
+  const fora=(n)=>n>0?' · '+n+' obra(s) sem base cadastrada ficaram de fora':'';
+  const dispOk=oC.length>0, orcOk=oO.length>0;
   const defs=[
     {icon:'bi-file-earmark-text',ib:'rgba(59,130,246,.15)',ic:'#2563eb',pill:'Período',pc:'info',
      val:BRL(k.contratado),note:'Soma dos contratos das '+k.obras_total+' obras',
@@ -685,21 +692,21 @@ function renderKpis(k){
      val:BRL(k.gasto),note:'Lançamentos pagos no período',
      pct:k.orcado>0?Math.min((k.gasto/k.orcado)*100,100):0,
      bc:'linear-gradient(90deg,var(--po-blue),var(--po-cyan))'},
-    {icon:'bi-wallet2',ib:k.saldo>=0?'rgba(16,185,129,.15)':'rgba(239,68,68,.15)',
-     ic:k.saldo>=0?'var(--po-green-t)':'var(--po-red-t)',
-     pill:k.contratado>0?PCT((k.saldo/k.contratado)*100)+' do contratado':'—',
-     pc:k.saldo>=0?'ok':'danger',
-     val:BRL(k.saldo),vc:k.saldo>=0?'var(--po-green-t)':'var(--po-red-t)',
-     note:'Contratado - Gasto Real',
-     pct:k.contratado>0?Math.min(Math.abs((k.saldo/k.contratado)*100),100):0,
-     bc:k.saldo>=0?'var(--po-green)':'var(--po-red)'},
-    {icon:'bi-graph-up-arrow',ib:k.desvio>0?'rgba(239,68,68,.15)':'rgba(16,185,129,.15)',
-     ic:k.desvio>0?'var(--po-red-t)':'var(--po-green-t)',
-     pill:k.orcado>0?PCT((-k.desvio/k.orcado)*100):'—',pc:k.desvio>0?'danger':'ok',
-     val:(k.desvio<0?'+':'')+BRL(-k.desvio),vc:k.desvio>0?'var(--po-red-t)':'var(--po-green-t)',
-     note:k.desvio>0?'Orçamento estourado (gasto acima do orçado)':'Ainda há orçamento disponível (Orçado − Gasto)',
-     pct:k.orcado>0?Math.min(Math.abs((k.desvio/k.orcado)*100),100):0,
-     bc:k.desvio>0?'var(--po-red)':'var(--po-green)'},
+    {icon:'bi-wallet2',ib:!dispOk?'rgba(100,116,139,.15)':sDisp>=0?'rgba(16,185,129,.15)':'rgba(239,68,68,.15)',
+     ic:!dispOk?'#64748b':sDisp>=0?'var(--po-green-t)':'var(--po-red-t)',
+     pill:dispOk&&cBase>0?PCT((sDisp/cBase)*100)+' do contratado':'—',
+     pc:!dispOk?'pending':sDisp>=0?'ok':'danger',
+     val:dispOk?BRL(sDisp):'—',vc:!dispOk?'':sDisp>=0?'var(--po-green-t)':'var(--po-red-t)',
+     note:dispOk?'Contratado - Gasto Real'+fora(_ob.length-oC.length):'Nenhuma obra com valor contratado cadastrado',
+     pct:dispOk&&cBase>0?Math.min(Math.abs((sDisp/cBase)*100),100):0,
+     bc:sDisp>=0?'var(--po-green)':'var(--po-red)'},
+    {icon:'bi-graph-up-arrow',ib:!orcOk?'rgba(100,116,139,.15)':sOrc<0?'rgba(239,68,68,.15)':'rgba(16,185,129,.15)',
+     ic:!orcOk?'#64748b':sOrc<0?'var(--po-red-t)':'var(--po-green-t)',
+     pill:orcOk&&oBase>0?PCT((sOrc/oBase)*100):'—',pc:!orcOk?'pending':sOrc<0?'danger':'ok',
+     val:orcOk?(sOrc>0?'+':'')+BRL(sOrc):'—',vc:!orcOk?'':sOrc<0?'var(--po-red-t)':'var(--po-green-t)',
+     note:!orcOk?'Nenhuma obra com custos previstos (orçamento) cadastrados':(sOrc<0?'Orçamento estourado (gasto acima do orçado)':'Ainda há orçamento disponível (Orçado − Gasto)')+fora(_ob.length-oO.length),
+     pct:orcOk&&oBase>0?Math.min(Math.abs((sOrc/oBase)*100),100):0,
+     bc:sOrc<0?'var(--po-red)':'var(--po-green)'},
     {icon:'bi-exclamation-triangle',ib:'rgba(245,158,11,.15)',ic:'var(--po-yellow-t)',
      pill:k.obras_atencao+' em atenção',pc:'warn',
      val:k.obras_estouro+' de '+k.obras_total,note:'Desvio acima de 5% do orçado',
@@ -1747,18 +1754,18 @@ window.poKpiDetalhe=function(i){
   }else if(i===3){
     titulo='Saldo Disponível'; intro='Contratado − Gasto real, por obra. Não usa o orçamento.';
     cab=th('Obra')+th('Contratado',1)+th('Gasto',1)+th('Saldo',1);
-    linhas=obras.map(o=>{const v=(o.contratado||0)-(o.gasto||0);return `<tr>${td(nome(o))}${td(BRL(o.contratado),1)}${td(BRL(o.gasto),1)}${td(sg(v),1,cor(v))}</tr>`;}).join('');
-    tot=`<tr>${td('<strong>Total</strong>')}${td('<strong>'+BRL(k.contratado)+'</strong>',1)}${td('<strong>'+BRL(k.gasto)+'</strong>',1)}${td('<strong>'+sg(k.saldo)+'</strong>',1,cor(k.saldo))}</tr>`;
+    linhas=obras.map(o=>{const ok=o.contratado>0,v=(o.contratado||0)-(o.gasto||0);return `<tr>${td(nome(o))}${td(ok?BRL(o.contratado):'—',1)}${td(BRL(o.gasto),1)}${td(ok?sg(v):'sem contratado',1,ok?cor(v):'color:var(--po-txt2)')}</tr>`;}).join('');
+    {const oc=obras.filter(o=>o.contratado>0),sd=oc.reduce((a,o)=>a+o.contratado-o.gasto,0);tot=`<tr>${td('<strong>Total (só obras com contratado)</strong>')}${td('<strong>'+BRL(oc.reduce((a,o)=>a+o.contratado,0))+'</strong>',1)}${td('<strong>'+BRL(oc.reduce((a,o)=>a+o.gasto,0))+'</strong>',1)}${td(oc.length?'<strong>'+sg(sd)+'</strong>':'—',1,cor(sd))}</tr>`;}
   }else if(i===4||i===5){
     titulo=i===4?'Saldo do Orçamento':'Obras em Estouro';
     intro=i===4?'Orçado − Gasto, por obra. O Orçado é a soma dos custos previstos cadastrados na obra. Obras sem custos previstos cadastrados ficam com orçado 0 (nada é estimado).'
                :'Obra em estouro = gasto acima de 5% do orçado. Atenção = gasto acima do orçado até 5%.';
     cab=th('Obra')+th('Orçado',1)+th('A pagar',1)+th('Gasto',1)+th(i===4?'Saldo':'Desvio',1)+(i===5?th('Situação'):'');
-    linhas=obras.map(o=>{const v=(o.orcado||0)-(o.gasto||0);
+    linhas=obras.map(o=>{const ok=o.orcado>0,v=(o.orcado||0)-(o.gasto||0);
       const est='';
       const sit=o.situacao==='danger'?'Estouro':o.situacao==='warn'?'Atenção':'OK';
-      return `<tr>${td(nome(o)+est)}${td((o.orcado>0?BRL(o.orcado):'—'),1)}${td(BRL(o.a_pagar||0),1)}${td(BRL(o.gasto),1)}${i===4?td(sg(v),1,cor(v)):td(PCT(o.desvio_pct||0),1,(o.desvio_pct||0)>0?'color:var(--po-red-t);font-weight:600':'')}${i===5?td(sit):''}</tr>`;}).join('');
-    tot=`<tr>${td('<strong>Total</strong>')}${td('<strong>'+BRL(k.orcado)+'</strong>',1)}${td('<strong>'+BRL(obras.reduce((a,o)=>a+(o.a_pagar||0),0))+'</strong>',1)}${td('<strong>'+BRL(k.gasto)+'</strong>',1)}${i===4?td('<strong>'+sg(-k.desvio)+'</strong>',1,cor(-k.desvio)):td('')}${i===5?td(''):''}</tr>`;
+      return `<tr>${td(nome(o)+est)}${td((o.orcado>0?BRL(o.orcado):'—'),1)}${td(BRL(o.a_pagar||0),1)}${td(BRL(o.gasto),1)}${i===4?td(ok?sg(v):'sem orçamento',1,ok?cor(v):'color:var(--po-txt2)'):td(ok?PCT(o.desvio_pct||0):'—',1,(o.desvio_pct||0)>0?'color:var(--po-red-t);font-weight:600':'')}${i===5?td(sit):''}</tr>`;}).join('');
+    tot=`<tr>${td('<strong>Total</strong>')}${td('<strong>'+BRL(k.orcado)+'</strong>',1)}${td('<strong>'+BRL(obras.reduce((a,o)=>a+(o.a_pagar||0),0))+'</strong>',1)}${td('<strong>'+BRL(k.gasto)+'</strong>',1)}${i===4?(()=>{const oo=obras.filter(o=>o.orcado>0),sv=oo.reduce((a,o)=>a+o.orcado-o.gasto,0);return td(oo.length?'<strong>'+sg(sv)+'</strong>':'—',1,cor(sv));})():td('')}${i===5?td(''):''}</tr>`;
     if(obras.some(o=>!(o.orcado>0))) extra='<p style="font-size:12px;color:var(--po-txt2);margin-top:10px">— Obra sem custos previstos cadastrados: orçado = 0. Cadastre em Obras → Editar obra → Custos Previstos.</p>';
   }else if(i===6){
     titulo='Valor Total Recebido'; intro='Soma dos recebimentos confirmados (entrada, parcelas e receitas do Nibo marcadas como recebidas) nas obras exibidas.';
