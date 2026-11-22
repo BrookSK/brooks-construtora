@@ -340,10 +340,12 @@ function obRenderCustos(){
         return;
       }
       
+      const contaNome = {}; cats.forEach(c => { contaNome[c.nome] = (contaNome[c.nome]||0)+1; });
       const html = cats.map(cat => {
         const val = custosAtuais[cat.id] || '';
+        const dup = contaNome[cat.nome] > 1 ? ` <small style="color:#b45309" title="Existem 2 categorias com este nome no Nibo. Preencha só a que você usa nos lançamentos.">⚠ ID …${obEsc(String(cat.id).slice(-6))}</small>` : '';
         return `<div class="ob-custo-item">
-          <label>${cat.nome}</label>
+          <label>${cat.nome}${dup}</label>
           <input type="text" class="ob-inp" data-cat-id="${cat.id}" 
                  value="${val ? fmtBRL(parseFloat(val)) : ''}" 
                  placeholder="R$ 0,00" 

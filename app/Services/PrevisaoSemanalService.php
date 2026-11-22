@@ -753,7 +753,7 @@ class PrevisaoSemanalService
                 }
                 $out[$k] ??= $nova();
                 $out[$k]['orcado'] += $orcado / 100;
-                if ($orcado > 0) $out[$k]['det']['orcado'][] = ['obra' => (string) $o['codigo'], 'nome' => (string) $o['nome'], 'custo' => round($valorC / 100, 2), 'semanas' => $total, 'por_semana' => round($valorC / $total / 100, 2), 'sem_n' => $semN, 'valor' => round($orcado / 100, 2)];
+                if ($orcado > 0) $out[$k]['det']['orcado'][] = ['cat_id' => $catId, 'obra' => (string) $o['codigo'], 'nome' => (string) $o['nome'], 'custo' => round($valorC / 100, 2), 'semanas' => $total, 'por_semana' => round($valorC / $total / 100, 2), 'sem_n' => $semN, 'valor' => round($orcado / 100, 2)];
                 foreach ($linhas as $campo => $lista) foreach ($lista as $it) $out[$k]['det'][$campo][] = $it;
                 $out[$k]['previsto'] += $prev / 100;
                 $out[$k]['pago'] += $pago / 100;

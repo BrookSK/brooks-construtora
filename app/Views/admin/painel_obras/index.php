@@ -127,6 +127,8 @@ body { background: #f8f9fa !important; }
 /* Tooltip explicativo dos números */
 .po-has-tip { cursor:help; }
 .po-has-tip .po-fig-v { display:inline-block;border-bottom:1.5px dotted #94a3b8; }
+[data-tip] { cursor:help; }
+.po-tv { border-bottom:1.5px dotted #94a3b8; }
 .po-has-tip:focus { outline:2px solid rgba(59,130,246,.55);outline-offset:4px;border-radius:6px; }
 #po-tip { display:none;position:fixed;z-index:10000;max-width:380px;background:#0f172a;color:#f1f5f9;padding:12px 15px;border-radius:10px;font-size:13px;line-height:1.55;box-shadow:0 12px 32px rgba(0,0,0,.4);pointer-events:none; }
 #po-tip strong { display:block;font-size:14px;color:#fff;margin-bottom:5px; }
@@ -678,6 +680,16 @@ function renderKpis(k){
   const cBase=oC.reduce((a,o)=>a+o.contratado,0), oBase=oO.reduce((a,o)=>a+o.orcado,0);
   const fora=(n)=>n>0?' · '+n+' obra(s) sem base cadastrada ficaram de fora':'';
   const dispOk=oC.length>0, orcOk=oO.length>0;
+  const gO=oO.reduce((a,o)=>a+o.gasto,0), gC=oC.reduce((a,o)=>a+o.gasto,0);
+  const kTips=[
+    'Valor Contratado Total = soma do valor contratado cadastrado em cada obra ('+k.obras_total+' obra(s)).\n= '+BRL(k.contratado),
+    '',
+    'Gasto Real Acumulado = soma das despesas pagas no Nibo (pela data do pagamento) nas obras exibidas, no período selecionado.\n= '+BRL(k.gasto),
+    'Saldo Disponível = Contratado − Gasto real, só das obras com valor contratado cadastrado ('+oC.length+' de '+_ob.length+').\n= '+BRL(cBase)+' − '+BRL(gC)+' = '+BRL(sDisp),
+    'Saldo do Orçamento = Orçado − Gasto, só das obras com custos previstos cadastrados ('+oO.length+' de '+_ob.length+'). Orçado = soma dos custos previstos de cada obra.\n= '+BRL(oBase)+' − '+BRL(gO)+' = '+BRL(sOrc),
+    'Obras em Estouro = obras cujo gasto passou mais de 5% do orçado ('+k.obras_estouro+'). Em atenção = gasto acima do orçado até 5% ('+k.obras_atencao+'). Obras sem orçado não entram.',
+    'Valor Total Recebido = soma dos recebimentos confirmados (entrada, parcelas e receitas do Nibo marcadas como recebidas) das obras exibidas.\n= '+BRL(k.recebido||0)
+  ];
   const defs=[
     {icon:'bi-file-earmark-text',ib:'rgba(59,130,246,.15)',ic:'#2563eb',pill:'Período',pc:'info',
      val:BRL(k.contratado),note:'Soma dos contratos das '+k.obras_total+' obras',
@@ -724,7 +736,7 @@ function renderKpis(k){
     el.innerHTML=`<div class="po-kpi-icon" style="background:${d.ib};color:${d.ic}"><i class="bi ${d.icon}"></i></div>
     <span class="po-kpi-pill po-pill ${d.pc}">${d.pill||''}</span>
     <div class="po-kpi-label">${labels[i]}</div>
-    <div class="po-kpi-value" style="${d.vc?'color:'+d.vc:''}">${d.val}</div>
+    <div class="po-kpi-value" style="${d.vc?'color:'+d.vc:''}"><span class="po-tv"${poTa(kTips[i])}>${d.val}</span></div>
     <div class="po-kpi-bar"><div class="po-kpi-bar-fill" style="width:0%;background:${d.bc}" data-pct="${d.pct}"></div></div>
     <div class="po-kpi-note">${d.note}</div>
     <div style="font-size:10px;color:var(--po-txt2);margin-top:6px"><i class="bi bi-info-circle"></i> Clique para ver a composição</div>`;
@@ -753,15 +765,16 @@ function renderAlertas(list){
       <div class="po-code">${a.codigo}</div>
       <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:8px">${a.nome}</div>
       <span class="po-pill ${pc}" style="margin-bottom:10px"><span class="dot" style="background:${bc}"></span>${lbl}</span>
-      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:4px"><span>Orçado</span><span style="color:var(--po-txt)">${BRL(a.orcado)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:6px"><span>Gasto</span><span style="color:var(--po-txt)">${BRL(a.gasto)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:4px"${poTa('Orçado = soma dos custos previstos cadastrados nesta obra (Obras → Editar obra → Custos Previstos). Sem custos previstos, o orçado é 0.\nValor: '+BRL(a.orcado))}><span>Orçado</span><span class="po-tv" style="color:var(--po-txt)">${BRL(a.orcado)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:6px"${poTa('Gasto = despesas desta obra já pagas no Nibo no período (valor rateado por centro de custo, pela data do pagamento).\nValor: '+BRL(a.gasto))}><span>Gasto</span><span class="po-tv" style="color:var(--po-txt)">${BRL(a.gasto)}</span></div>
       <div class="po-kpi-bar"><div class="po-bar-fill" style="height:6px;width:${pct}%;background:${bc}"></div></div>
-      <div style="font-size:12px;color:${bc};margin-top:4px">${a.desvio>0?'+':''}${BRL(a.desvio)} (${PCT(a.desvio_pct)})</div>
+      <div style="font-size:12px;color:${bc};margin-top:4px"${poTa('Desvio = Gasto − Orçado = '+BRL(a.gasto)+' − '+BRL(a.orcado)+' = '+BRL(a.desvio)+'\nPercentual = Desvio ÷ Orçado = '+PCT(a.desvio_pct)+'\nAtenção: gasto acima do orçado até 5%. Estouro: acima de 5%. Crítico: acima de 10%.')}><span class="po-tv">${a.desvio>0?'+':''}${BRL(a.desvio)} (${PCT(a.desvio_pct)})</span></div>
       <div style="font-size:12px;color:var(--po-txt2);margin-top:8px;border-top:1px solid var(--po-border);padding-top:6px">Concentrado em <strong style="color:var(--po-txt)">${cats}</strong></div>
     </div>`;
   }).join('');
 }
 
+const poTa=t=>` data-tip="${String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}" tabindex="0"`;
 const poEsc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const poDt=s=>s?String(s).substring(0,10).split('-').reverse().join('/'):'';
 const poDtHr=(s,seg)=>s?poDt(s)+' '+String(s).substring(11,seg?19:16):'';
@@ -774,16 +787,25 @@ function renderAlertasOrcamento(list){
   document.getElementById('po-orc-alertas').innerHTML=list.map(a=>{
     const proj=a.tipo==='projetado';
     const cor=proj?'var(--po-yellow)':'var(--po-red)';
+    const tOrc='Orçamento acumulado = soma do orçado semanal desta categoria nesta obra, da semana 1 até a semana '+a.semana+' (até '+poDt(a.semana_fim)+').\nOrçado semanal = custo previsto da categoria ÷ nº de semanas da obra (início → fim), dividido igualmente.\nO que não foi gasto numa semana passa para a seguinte.\nValor: '+BRL(a.previsto_acumulado);
+    const tPago='Pago acumulado = despesas desta categoria nesta obra já pagas no Nibo (pela data real do pagamento), da semana 1 até a semana '+a.semana+'.\nValor: '+BRL(a.gasto_acumulado);
+    const tPrev=proj
+      ?'Previsto a pagar = despesas programadas ainda NÃO pagas (pela data prevista) até a semana '+a.semana+', mais o que já foi pago com data posterior a esta semana. Quando um lançamento é pago, ele sai daqui e passa a contar em Pago.\nValor: '+BRL(a.comprometido)
+      :'Previsto a pagar = despesas programadas ainda NÃO pagas (data prevista). Informativo neste alerta: o estouro já aconteceu só com o que foi pago.\nValor: '+BRL(a.comprometido);
+    const tDes=proj
+      ?'Desvio projetado = Orçamento acumulado − Pago acumulado − Previsto a pagar\n= '+BRL(a.previsto_acumulado)+' − '+BRL(a.gasto_acumulado)+' − '+BRL(a.comprometido)+' = '+BRL(a.desvio)+'\nNegativo = os compromissos já lançados superam o orçamento acumulado.'
+      :'Desvio = Orçamento acumulado − Pago acumulado\n= '+BRL(a.previsto_acumulado)+' − '+BRL(a.gasto_acumulado)+' = '+BRL(a.desvio)+'\nNegativo = o que já foi pago superou o orçamento acumulado.';
+    const tPill=proj?'ESTOURO PROJETADO: até agora o pago está dentro do orçamento acumulado, mas somando o que está previsto a pagar o saldo fica negativo.':'ESTOURO: o que já foi pago supera o orçamento acumulado até a semana atual.';
     return `<div class="po-card po-alerta-card ${proj?'warn':''}">
     <div class="po-code">${poEsc(a.obra_codigo)}</div>
     <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px">${poEsc(a.obra_nome)}</div>
     <div style="font-size:13px;color:var(--po-txt);margin-bottom:6px"><i class="bi bi-tag"></i> ${poEsc(a.categoria)}</div>
-    <span class="po-pill ${proj?'warn':'danger'}" style="margin-bottom:8px"><span class="dot" style="background:${cor}"></span>${proj?'ESTOURO PROJETADO':'ESTOURO'}</span>
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:4px"><span>Orçamento acumulado</span><span style="color:var(--po-txt)">${BRL(a.previsto_acumulado)}</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:4px"><span>Pago acumulado</span><span style="color:var(--po-txt)">${BRL(a.gasto_acumulado)}</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:4px"><span>Previsto a pagar (em aberto)</span><span style="color:var(--po-txt)">${BRL(a.comprometido)}</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:${cor};font-weight:700"><span>Desvio${proj?' projetado':''}</span><span>${BRL(a.desvio)}</span></div>
-    <div style="font-size:12px;color:var(--po-txt2);margin-top:8px;border-top:1px solid var(--po-border);padding-top:6px">Semana ${a.semana} (${poDt(a.semana_inicio)} a ${poDt(a.semana_fim)})${proj?' — compromissos em aberto superam o saldo acumulado':''}</div>
+    <span class="po-pill ${proj?'warn':'danger'}" style="margin-bottom:8px"${poTa(tPill)}><span class="dot" style="background:${cor}"></span>${proj?'ESTOURO PROJETADO':'ESTOURO'}</span>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:4px"${poTa(tOrc)}><span>Orçamento acumulado</span><span class="po-tv" style="color:var(--po-txt)">${BRL(a.previsto_acumulado)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:4px"${poTa(tPago)}><span>Pago acumulado</span><span class="po-tv" style="color:var(--po-txt)">${BRL(a.gasto_acumulado)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--po-txt2);margin-bottom:4px"${poTa(tPrev)}><span>Previsto a pagar (em aberto)</span><span class="po-tv" style="color:var(--po-txt)">${BRL(a.comprometido)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:${cor};font-weight:700"${poTa(tDes)}><span>Desvio${proj?' projetado':''}</span><span class="po-tv">${BRL(a.desvio)}</span></div>
+    <div style="font-size:12px;color:var(--po-txt2);margin-top:8px;border-top:1px solid var(--po-border);padding-top:6px"${poTa('Semana '+a.semana+' da obra ('+poDt(a.semana_inicio)+' a '+poDt(a.semana_fim)+'). As semanas contam a partir da data de início da obra, de 7 em 7 dias.')}>Semana ${a.semana} (${poDt(a.semana_inicio)} a ${poDt(a.semana_fim)})${proj?' — compromissos em aberto superam o saldo acumulado':''}</div>
   </div>`;}).join('');
 }
 
@@ -877,12 +899,12 @@ window.poFiltrar = function(){
     return `<tr>
       <td><span class="po-code">${o.codigo}</span><span class="po-name">${o.nome}</span></td>
       <td class="po-hide-sm">${badge}</td>
-      <td class="r po-hide-xs">${BRL(o.contratado)}</td>
-      <td class="r">${o.orcado>0?BRL(o.orcado):'<a href="/admin/painel-obras/obras" style="color:var(--po-blue-t);font-size:11px">— Preencher</a>'}</td>
-      <td class="r"><a href="#" onclick="poVerLancamentos(${o.id},'${o.codigo}');return false" style="color:var(--po-blue-t)">${BRL(o.gasto)}</a></td>
-      <td class="r ${dCls}">${o.orcado>0?(saldo>0?'+':'')+BRL(saldo):'—'}<br><small>${o.orcado>0?(saldo>0?'+':'')+dPct:''}</small></td>
-      <td class="po-hide-sm"><div class="po-bar-track"><div class="po-bar-fill" style="width:${pct}%;background:${bc}"></div></div><div style="font-size:10px;color:var(--po-txt2);margin-top:2px">${pct.toFixed(0)}% do orçado</div></td>
-      <td><span class="po-pill ${o.situacao}"><span class="dot" style="background:${bc}"></span>${o.situacao==='ok'?'OK':o.situacao==='warn'?'Atenção':'Estouro'}</span></td>
+      <td class="r po-hide-xs"${poTa('Contratado = valor do contrato cadastrado na obra: '+BRL(o.contratado))}>${BRL(o.contratado)}</td>
+      <td class="r"${poTa(o.orcado>0?'Orçado = soma dos custos previstos cadastrados na obra: '+BRL(o.orcado):'Obra sem custos previstos cadastrados: orçado = 0 (nada é estimado).')}>${o.orcado>0?BRL(o.orcado):'<a href="/admin/painel-obras/obras" style="color:var(--po-blue-t);font-size:11px">— Preencher</a>'}</td>
+      <td class="r"${poTa('Gasto = despesas pagas no Nibo (data do pagamento) vinculadas a esta obra no período: '+BRL(o.gasto)+'. Clique para ver os lançamentos.')}><a href="#" onclick="poVerLancamentos(${o.id},'${o.codigo}');return false" style="color:var(--po-blue-t)">${BRL(o.gasto)}</a></td>
+      <td class="r ${dCls}"${poTa(o.orcado>0?'Saldo = Orçado − Gasto = '+BRL(o.orcado)+' − '+BRL(o.gasto)+' = '+BRL(saldo)+'\nPercentual = Saldo ÷ Orçado = '+dPct+'\nVerde: ainda há orçamento. Vermelho: orçamento estourado.':'Sem orçado cadastrado, não há saldo a calcular.')}>${o.orcado>0?(saldo>0?'+':'')+BRL(saldo):'—'}<br><small>${o.orcado>0?(saldo>0?'+':'')+dPct:''}</small></td>
+      <td class="po-hide-sm"${poTa(o.orcado>0?'Consumo = Gasto ÷ Orçado = '+BRL(o.gasto)+' ÷ '+BRL(o.orcado)+' = '+pct.toFixed(0)+'% (barra limitada a 120%).':'Sem orçado cadastrado.')}><div class="po-bar-track"><div class="po-bar-fill" style="width:${pct}%;background:${bc}"></div></div><div style="font-size:10px;color:var(--po-txt2);margin-top:2px">${pct.toFixed(0)}% do orçado</div></td>
+      <td${poTa('Situação pelo desvio = (Gasto − Orçado) ÷ Orçado. OK: gasto dentro do orçado. Atenção: acima do orçado até 5%. Estouro: acima de 5%. Obra sem orçado fica OK.')}><span class="po-pill ${o.situacao}"><span class="dot" style="background:${bc}"></span>${o.situacao==='ok'?'OK':o.situacao==='warn'?'Atenção':'Estouro'}</span></td>
       <td class="po-hide-xs">${conc}</td>
     </tr>`;
   }).join('');
@@ -1128,7 +1150,8 @@ function drawCatPeriodo(res){
     const sVal=proj?c.saldo_proj:c.saldo;
     const estouroP=proj&&c.saldo_proj<0;
     const sCor=proj?(estouroP?poVerm:c.saldo_proj>0?poVerde:'var(--po-txt2)'):c.saldo===null?'var(--po-txt2)':estouro?poVerm:c.saldo>0?poVerde:'var(--po-txt2)';
-    const rOrc=(d.orcado||[]).map(o=>({t:o.obra+' · '+o.nome,
+    const dupObra=ob=>(d.orcado||[]).filter(x=>x.obra===ob).length>1;
+    const rOrc=(d.orcado||[]).map(o=>({t:o.obra+' · '+o.nome+(dupObra(o.obra)?' ⚠ categoria Nibo ID '+poEsc(String(o.cat_id||'').slice(-8))+' (a obra tem mais de uma categoria com este nome)':''),
       s:dia?'custo previsto '+BRL(o.custo)+' ÷ '+o.semanas+' semanas = '+BRL(o.por_semana)+' por semana; o dia recebe a parcela diária desta semana'
            :'custo previsto '+BRL(o.custo)+' ÷ '+o.semanas+' semanas = '+BRL(o.por_semana)+' por semana'+(o.sem_n&&o.sem_n.length?' · semana '+o.sem_n.join(' e ')+' de '+o.semanas+' da obra':''),
       v:o.valor}));
