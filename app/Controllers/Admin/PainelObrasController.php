@@ -336,6 +336,24 @@ class PainelObrasController extends Controller
         }
     }
 
+    /** Lançamentos que formam os números de um alerta de orçamento (obra + categoria). GET: obra_id, categoria_id, company. */
+    public function alertaDetalhe(): void
+    {
+        $obraId = (int) $this->input('obra_id', 0);
+        $catId = (string) $this->input('categoria_id', '');
+        $company = (string) $this->input('company', 'brooks');
+        try {
+            $obra = $obraId ? PainelObra::find($obraId) : null;
+            if (!$obra || $catId === '') { $this->json(['ok' => false, 'error' => 'Alerta não encontrado.'], 404); return; }
+            $custos = Database::fetchAll("SELECT obra_id, categoria_nibo_id, categoria_nome, valor_previsto FROM painel_obras_custos_previstos WHERE obra_id = ?", [$obraId]);
+            $lancs = PrevisaoSemanalService::carregarLancamentos($company, [$obra]);
+            $this->json(PrevisaoSemanalService::detalheAlerta($obra, $custos, $lancs, $catId, date('Y-m-d')));
+        } catch (\Throwable $e) {
+            error_log('[PainelObras] alertaDetalhe: ' . $e->getMessage());
+            $this->json(['ok' => false, 'error' => 'Erro ao carregar o detalhe.'], 500);
+        }
+    }
+
     /** Lista de snapshots para o filtro (mais recentes primeiro). */
     public function snapshotsLista(): void
     {

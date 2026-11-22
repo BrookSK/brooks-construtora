@@ -168,6 +168,40 @@ class PrevisaoSemanalService
         return ['total' => $total, 'atual' => $atual, 'pagos_sem_data' => $ag['pagos_sem_data'], 'categorias' => $categorias];
     }
 
+    /**
+     * Lançamentos que formam os números de um alerta (obra + categoria): semanas do orçado, pagos e em aberto.
+     * Cada item traz a semana da obra (w); o chamador filtra até a semana do alerta.
+     */
+    public static function detalheAlerta(array $obra, array $custos, array $lancs, string $catId, string $hoje): array
+    {
+        $ini = (string) ($obra['data_inicio'] ?? '');
+        $fim = (string) ($obra['data_prev_fim'] ?? '');
+        $total = ($ini !== '' && $fim !== '' && $fim >= $ini) ? self::totalSemanas($ini, $fim) : 0;
+        if ($total === 0) return ['ok' => false, 'error' => 'Obra sem datas de início/fim.'];
+        $atual = self::semanaAtual($ini, $hoje, $total);
+
+        $valorC = 0; $nome = '';
+        foreach ($custos as $c) if ((string) $c['categoria_nibo_id'] === $catId) { $valorC = (int) round(((float) $c['valor_previsto']) * 100); $nome = (string) $c['categoria_nome']; }
+        $orc = self::distribuir($valorC, $total);
+        $semanas = [];
+        for ($n = 1; $n <= $total; $n++) {
+            [$si, $sf] = self::periodoSemana($ini, $fim, $n);
+            $semanas[] = ['n' => $n, 'inicio' => $si, 'fim' => $sf, 'valor' => round($orc[$n - 1] / 100, 2)];
+        }
+
+        $pagos = $abertos = [];
+        foreach (self::eventos($lancs, (int) $obra['id'], $ini, $fim, $total, $custos)['ev'] as $e) {
+            if ($e['cat'] !== $catId) continue;
+            $item = ['data' => $e['data'], 'desc' => $e['r']['d'], 'forn' => $e['r']['f'], 'st' => $e['r']['st'], 'valor' => round($e['c'] / 100, 2), 'w' => $e['w']];
+            if ($e['tipo'] === 'pago') $pagos[] = $item;
+            elseif ($e['tipo'] === 'aberto') $abertos[] = $item;
+        }
+        $ord = fn($a, $b) => strcmp($a['data'], $b['data']);
+        usort($pagos, $ord); usort($abertos, $ord);
+        return ['ok' => true, 'categoria' => $nome, 'semana_atual' => $atual, 'total_semanas' => $total,
+                'semanas' => $semanas, 'pagos' => $pagos, 'abertos' => $abertos];
+    }
+
     /** Linhas planas (reais) na ordem das colunas de painel_obras_previsao_semanal (sem calculado_em). */
     public static function linhasPlanas(int $obraId, array $res): array
     {
